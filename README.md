@@ -149,6 +149,58 @@ Extract and run:
 
 Issues and Pull Requests are welcome!
 
+## 🧑‍💻 Developer Guide
+
+To build or contribute to Bichon, the following environment is recommended:
+
+### Prerequisites
+- **Rust**: Use the latest stable toolchain for best compatibility and performance.
+- **Node.js**: Version **20+** is required.
+- **pnpm**: Recommended package manager for the WebUI.
+
+### Steps
+
+#### 1. Clone the repository
+```bash
+git clone https://github.com/rustmailer/bichon.git
+cd bichon
+````
+
+#### 2. Build the WebUI
+
+```bash
+cd web
+pnpm install
+pnpm run build
+```
+
+Run the WebUI in development mode if needed:
+
+```bash
+pnpm run dev
+```
+
+#### 3. Build or Run the Backend
+
+After the WebUI is built, return to the project root:
+
+```bash
+cd ..
+cargo build
+```
+
+Or run directly:
+
+```bash
+cargo run -- --bichon-root-dir e:\bichon-data
+```
+`--bichon-root-dir` specifies the directory where **all Bichon data** will be stored.
+
+### WebUI Access
+
+* The WebUI runs on **[http://localhost:15630](http://localhost:15630)** by default.
+* **HTTPS is not enabled** in development or default builds.  
+
 <cite/>
 
 ## 📄 License
