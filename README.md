@@ -21,9 +21,7 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-AGPLv3-blue.svg" alt="License">
   </a>
-  <a href="https://deepwiki.com/rustmailer/bichon">
-    <img src="https://deepwiki.com/badge-maker?url=https%3A%2F%2Fdeepwiki.com%2Frustmailer%2Fbichon" alt="DeepWiki">
-  </a>
+  <a href="https://deepwiki.com/rustmailer/bichon"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 </div>
 
