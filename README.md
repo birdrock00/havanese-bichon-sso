@@ -224,7 +224,7 @@ This project is licensed under [AGPLv3](LICENSE).
 - [Official Website](https://rustmailer.com)
 - [Docker Hub](https://hub.docker.com/r/rustmailer/bichon)
 - [Issue Tracker](https://github.com/rustmailer/bichon/issues)
-
+- [Discord](https://discord.gg/k7hpc3zs)
 ---
 
 <div align="center">
