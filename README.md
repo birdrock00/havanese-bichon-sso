@@ -124,7 +124,26 @@ docker run -d \
   rustmailer/bichon:latest
 ```
 
-Access `http://localhost:15630` to start using Bichon.
+* If you are accessing Bichon on the same machine where it is installed (Machine A), open:
+  ```
+  http://localhost:15630
+  ```
+
+* If you are accessing Bichon from another machine (Machine B), make sure to set CORS with the IP of Machine B, for example:
+
+```bash
+# Run container
+docker run -d \
+  --name bichon \
+  -p 15630:15630 \
+  -v $(pwd)/bichon-data:/data \
+  -e BICHON_LOG_LEVEL=info \
+  -e BICHON_ROOT_DIR=/data \
+  -e BICHON_CORS_ORIGINS="http://localhost:15630,http://B_MACHINE_IP:15630,*" \
+  rustmailer/bichon:latest
+```
+Access instructions:
+This allows Machine B to access the Bichon interface on Machine A via a browser.
 
 ### Binary Deployment
 
