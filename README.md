@@ -22,6 +22,9 @@
     <img src="https://img.shields.io/badge/license-AGPLv3-blue.svg" alt="License">
   </a>
   <a href="https://deepwiki.com/rustmailer/bichon"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+  <a href="https://discord.gg/evFnSpdpaE">
+  <img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?logo=discord&logoColor=white" alt="Discord">
+  </a>
 </p>
 </div>
 
@@ -224,7 +227,7 @@ This project is licensed under [AGPLv3](LICENSE).
 - [Official Website](https://rustmailer.com)
 - [Docker Hub](https://hub.docker.com/r/rustmailer/bichon)
 - [Issue Tracker](https://github.com/rustmailer/bichon/issues)
-- [Discord](https://discord.gg/k7hpc3zs)
+- [Discord](https://discord.gg/evFnSpdpaE)
 ---
 
 <div align="center">
