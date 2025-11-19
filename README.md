@@ -116,8 +116,8 @@ docker run -d \
   --name bichon \
   -p 15630:15630 \
   -v $(pwd)/bichon-data:/data \
-  -e RUSTMAILER_LOG_LEVEL=info \
-  -e RUSTMAILER_ROOT_DIR=/data \
+  -e BICHON_LOG_LEVEL=info \
+  -e BICHON_ROOT_DIR=/data \
   rustmailer/bichon:latest
 ```
 
