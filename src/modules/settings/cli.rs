@@ -77,7 +77,7 @@ pub struct Settings {
     /// CORS allowed origins (default: "*")
     #[clap(
         long,
-        default_value = "http://localhost:5173, http://localhost:15630, http://192.168.3.2:15630, *",
+        default_value = "http://localhost:5173, http://localhost:15630, *",
         env,
         help = "Set the allowed CORS origins (comma-separated list, e.g., \"https://example.com, https://another.com\")",
         value_parser = ValueParser::new(|s: &str| -> Result<HashSet<String>, String> {
