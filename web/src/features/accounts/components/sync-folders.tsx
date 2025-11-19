@@ -38,6 +38,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { update_account } from '@/api/account/api'
 import { ToastAction } from '@/components/ui/toast'
 import { AxiosError } from 'axios'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface Props {
     open: boolean
@@ -142,23 +143,32 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
                             {selectedFolders.length} folder(s) selected
                         </div>
                     </div>
-                    {isLoading && (
-                        <div className="space-y-2">
-                            {[...Array(5)].map((_, i) => (
-                                <Skeleton key={i} className="h-8 w-full" />
-                            ))}
-                        </div>
-                    )}
-                    {!isLoading && (
-                        <TreeView
-                            data={treeData}
-                            multiple
-                            expandAll
-                            clickRowToSelect={false}
-                            initialSelectedItemIds={initialSelectedItemIds}
-                            onSelectItemsChange={handleSelectItems}
-                        />
-                    )}
+                    <ScrollArea className="h-[30rem] w-full pr-4 -mr-4 py-1">
+                        {isLoading && (
+                            <div className="p-8 space-y-8">
+                                <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                                    <Loader2 className="h-6 w-6 animate-spin" />
+                                    <span className="text-sm font-medium">Loading mailbox folders…</span>
+                                </div>
+
+                                <div className="space-y-2">
+                                    {[...Array(8)].map((_, i) => (
+                                        <Skeleton key={i} className="h-8 w-full" />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                        {!isLoading && (
+                            <TreeView
+                                data={treeData}
+                                multiple
+                                expandAll
+                                clickRowToSelect={false}
+                                initialSelectedItemIds={initialSelectedItemIds}
+                                onSelectItemsChange={handleSelectItems}
+                            />
+                        )}
+                    </ScrollArea>
                 </div>
 
                 <DialogFooter>
