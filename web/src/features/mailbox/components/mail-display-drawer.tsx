@@ -20,11 +20,12 @@
 
 import {
   Sheet,
-  SheetContent
+  SheetContent,
+  SheetTitle
 } from '@/components/ui/sheet'
 import { useMailboxContext } from '../context'
 import { MailMessageView } from './mail-message-view'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
 
 
 interface Props {
@@ -37,8 +38,11 @@ export function MailDisplayDrawer({ open, onOpenChange }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
+      <VisuallyHidden asChild>
+        <SheetTitle />
+      </VisuallyHidden>
       <SheetContent className="md:w-[80rem] h-full p-0">
-        <ScrollArea>
+
           <div className='m-5'>
             {currentEnvelope ? (
               <MailMessageView envelope={currentEnvelope} />
@@ -46,8 +50,8 @@ export function MailDisplayDrawer({ open, onOpenChange }: Props) {
               <div className="p-8 text-center text-muted-foreground">No message selected</div>
             )}
           </div>
-        </ScrollArea>
-      </SheetContent>
+
+        </SheetContent>
     </Sheet>
   );
 }
