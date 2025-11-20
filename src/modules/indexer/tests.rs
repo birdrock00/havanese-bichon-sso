@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use std::{path::PathBuf, time::Duration};
 
 use chrono::Utc;
@@ -145,20 +144,20 @@ async fn test2() {
     let delete_term3 = Term::from_field_u64(a, 3u64);
 
     let operations = vec![
-        //UserOperation::Delete(delete_term1),
+        UserOperation::Delete(delete_term1),
         UserOperation::Add(doc!(
         a => 1u64,
-        b => "test1"
+        b => "v1"
         )),
-        //UserOperation::Delete(delete_term2),
+        UserOperation::Delete(delete_term2),
         UserOperation::Add(doc!(
         a => 2u64,
-        b => "test1"
+        b => "v1"
         )),
-        //UserOperation::Delete(delete_term3),
+        UserOperation::Delete(delete_term3),
         UserOperation::Add(doc!(
         a => 3u64,
-        b => "test1"
+        b => "v1"
         )),
     ];
 
@@ -166,13 +165,10 @@ async fn test2() {
     index_writer.commit().unwrap();
 
     let reader = index.reader().unwrap();
-
     let searcher = reader.searcher();
-
     let tq = TermQuery::new(Term::from_field_u64(a, 3), IndexRecordOption::Basic);
-
     let docs = searcher.search(&tq, &TopDocs::with_limit(1)).unwrap();
-
+    assert!(docs.first().is_some());
     if let Some((_, doc_address)) = docs.first() {
         let old_doc: TantivyDocument = searcher.doc_async(*doc_address).await.unwrap();
 
@@ -181,12 +177,14 @@ async fn test2() {
             if field == a {
                 new_doc.add_field_value(a, value);
             }
+            if field == b {
+                assert_eq!(Some("v1"), value.as_str())
+            }
         }
-        new_doc.add_text(b, "test2");
+        new_doc.add_text(b, "v2");
 
         let delete_term = Term::from_field_u64(a, 3);
         index_writer.delete_term(delete_term);
-        index_writer.commit().unwrap();
         index_writer.add_document(new_doc).unwrap();
         index_writer.commit().unwrap();
     }
@@ -194,17 +192,14 @@ async fn test2() {
     reader.reload().unwrap();
     let searcher = reader.searcher();
     let docs = searcher.search(&tq, &TopDocs::with_limit(1)).unwrap();
-
+    assert!(docs.first().is_some());
     if let Some((_, doc_address)) = docs.first() {
         let doc: TantivyDocument = searcher.doc_async(*doc_address).await.unwrap();
         for (field, value) in doc.field_values() {
             if field == b {
-                let value = value.as_str();
-                println!("{:#?}", value);
+                assert_eq!(Some("v2"), value.as_str())
             }
         }
-    } else {
-        println!("not found")
     }
 
     let delete_term = Term::from_field_u64(a, 3);
@@ -214,7 +209,7 @@ async fn test2() {
     reader.reload().unwrap();
     let searcher = reader.searcher();
     let docs = searcher.search(&tq, &TopDocs::with_limit(1)).unwrap();
-
+    assert!(docs.first().is_none());
     if let Some((_, doc_address)) = docs.first() {
         let doc: TantivyDocument = searcher.doc_async(*doc_address).await.unwrap();
         for (field, value) in doc.field_values() {
@@ -223,7 +218,5 @@ async fn test2() {
                 println!("{:#?}", value);
             }
         }
-    } else {
-        println!("not found")
     }
 }

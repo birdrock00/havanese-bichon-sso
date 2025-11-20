@@ -1,6 +1,7 @@
 # Use Debian bullseye-slim as the base image for newer OpenSSL
 FROM ubuntu:24.04
 ARG CRATE_VERSION
+ARG TARGETARCH
 
 # Set maintainer metadata
 LABEL maintainer="rustmailer <rustmailer.git@gmail.com>"
@@ -11,15 +12,13 @@ LABEL description="Dockerized Bichon service"
 WORKDIR /opt/bichon
 
 # Copy compiled binary (ensure it's statically linked or compatible with bullseye)
-COPY bichon /opt/bichon/bichon
+COPY ${TARGETARCH}/bichon /opt/bichon/bichon
 COPY LICENSE /opt/bichon/
 # Set proper permissions
 RUN chmod +x /opt/bichon/bichon
 
 # Install ca-certificates to ensure HTTPS certificate verification works correctly
-RUN apt update && apt install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 RUN apt update && apt install -y ca-certificates curl && rm -rf /var/lib/apt/lists/*
-
 # Create data directory
 RUN mkdir -p /data
 
