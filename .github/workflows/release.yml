@@ -60,6 +60,12 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - name: Build Rust backend
+        env:
+            CC: gcc
+            CXX: g++
+            CC_aarch64_unknown_linux_gnu: gcc
+            CXX_aarch64_unknown_linux_gnu: g++
+            CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: gcc
         run: cargo build --release --features vendored-openssl --target=${{ matrix.target }}
 
       - name: Strip binary (Linux and macOS)
