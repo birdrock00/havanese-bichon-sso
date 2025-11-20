@@ -23,7 +23,10 @@
   </a>
   <a href="https://deepwiki.com/rustmailer/bichon"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
   <a href="https://discord.gg/evFnSpdpaE">
-  <img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?logo=discord&logoColor=white" alt="Discord">
+    <img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?logo=discord&logoColor=white" alt="Discord">
+  </a>
+  <a href="https://x.com/rustmailer">
+    <img src="https://img.shields.io/twitter/follow/rustmailer?style=social" alt="Follow on X">
   </a>
 </p>
 </div>
