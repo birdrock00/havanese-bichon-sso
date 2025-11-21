@@ -162,11 +162,17 @@ jobs:
           name: x86_64-unknown-linux-musl
           path: artifacts
           
-      - name: Prepare Docker context
+      - name: Extract amd64 binary
         run: |
-          mkdir -p docker/amd64 docker/arm64
-          tar -xzf artifacts/bichon-*x86_64-unknown-linux-gnu.tar.gz -C docker/amd64
-          tar -xzf artifacts/bichon-*aarch64-unknown-linux-gnu.tar.gz -C docker/arm64
+          AMD64_FILE=$(ls artifacts | grep x86_64-unknown-linux-gnu.tar.gz)
+          echo "Extracting $AMD64_FILE"
+          tar -xzf artifacts/$AMD64_FILE -C docker/amd64
+
+      - name: Extract arm64 binary
+        run: |
+          ARM64_FILE=$(ls artifacts | grep aarch64-unknown-linux-gnu.tar.gz)
+          echo "Extracting $ARM64_FILE"
+          tar -xzf artifacts/$ARM64_FILE -C docker/arm64
           
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
