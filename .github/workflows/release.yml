@@ -170,12 +170,14 @@ jobs:
           
       - name: Extract amd64 binary
         run: |
+          mkdir -p docker/amd64
           AMD64_FILE=$(ls artifacts | grep x86_64-unknown-linux-gnu.tar.gz)
           echo "Extracting $AMD64_FILE"
           tar -xzf artifacts/$AMD64_FILE -C docker/amd64
 
       - name: Extract arm64 binary
         run: |
+          mkdir -p docker/arm64
           ARM64_FILE=$(ls artifacts | grep aarch64-unknown-linux-gnu.tar.gz)
           echo "Extracting $ARM64_FILE"
           tar -xzf artifacts/$ARM64_FILE -C docker/arm64
