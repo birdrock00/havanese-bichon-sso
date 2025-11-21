@@ -60,14 +60,16 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
-      - name: Build Rust backend
+      - name: Build aarch64 Rust backend
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
-          if [[ "${{ matrix.target }}" == "aarch64-unknown-linux-gnu" ]]; then
-            cargo install cross --force
-            cross build --release --features vendored-openssl --target=${{ matrix.target }}
-          else
-            cargo build --release --features vendored-openssl --target=${{ matrix.target }}
-          fi
+          cargo install cross --force
+          cross build --release --features vendored-openssl --target=${{ matrix.target }}
+
+      - name: Build Rust backend
+        if: matrix.target != 'aarch64-unknown-linux-gnu'
+        run: |
+          cargo build --release --features vendored-openssl --target=${{ matrix.target }}  
 
       - name: Strip binary (Linux and macOS)
         if: matrix.os != 'windows-latest'
