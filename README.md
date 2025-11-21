@@ -167,6 +167,54 @@ Extract and run:
 .\bichon.exe --bichon-root-dir e:\bichon-data
 ```
 
+## 🔑 Root User Login Information
+
+**Bichon currently supports a single Root user login for system access and management.**
+
+### First Login and Enabling Access
+
+To enable the login feature, you must specify a command-line argument or set an environment variable when starting Bichon.
+
+#### 1\. Command-Line Argument
+
+Add the `--bichon-enable-access-token` flag to your startup command:
+
+```bash
+# Linux/macOS Binary Deployment Example
+./bichon --bichon-root-dir /tmp/bichon-data --bichon-enable-access-token
+```
+
+#### 2\. Environment Variable (Recommended for Docker)
+
+Set the environment variable `BICHON_ENABLE_ACCESS_TOKEN` to `true`:
+
+```bash
+# Docker Deployment Example
+docker run -d \
+  --name bichon \
+  -p 15630:15630 \
+  -v $(pwd)/bichon-data:/data \
+  -e BICHON_LOG_LEVEL=info \
+  -e BICHON_ROOT_DIR=/data \
+  -e BICHON_ENABLE_ACCESS_TOKEN=true \
+  rustmailer/bichon:latest
+```
+
+### Default Credentials
+
+  * **Initial Login Account:** `root`
+  * **Initial Password:** `root`
+
+### Changing the Password
+
+**It is strongly recommended that you change the default password immediately after your first login.**
+
+You can change the password via the WebUI:
+
+1.  Log in to the WebUI.
+2.  Navigate to the **Settings** page.
+3.  Use the **Reset Root Password** option to modify your password.
+
 
 ## 📖 Documentation
 
