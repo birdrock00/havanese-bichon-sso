@@ -13,7 +13,7 @@ WORKDIR /opt/bichon
 
 # Copy compiled binary (ensure it's statically linked or compatible with bullseye)
 COPY ${TARGETARCH}/bichon /opt/bichon/bichon
-COPY LICENSE /opt/bichon/
+COPY ${TARGETARCH}/LICENSE /opt/bichon/
 # Set proper permissions
 RUN chmod +x /opt/bichon/bichon
 
