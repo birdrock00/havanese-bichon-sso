@@ -224,10 +224,12 @@ You can change the password via the WebUI:
 ## 🛠️ Tech Stack
 
 - **Backend**: Rust + Poem
-- **Frontend**: React + TypeScript + Vite + ShadCN
-- **Storage**: Native_DB
-- **Search Engine**: Tantivy
-- **Email Protocols**: IMAP (Password & OAuth2)
+- **Frontend**: React + TypeScript + Vite + ShadCN UI
+- **Core Engine (Storage & Search)**: Tantivy
+  - Acts as both the primary storage for email content and the full-text search index. This unified approach ensures high performance and eliminates data redundancy.
+- **Metadata Storage**: Native_DB
+  - Used exclusively for lightweight configuration and account metadata.
+- **Email Protocols**: IMAP (Supports standard Password & OAuth2)
 
 
 ## 🤝 Contributing
