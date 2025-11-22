@@ -104,8 +104,6 @@ It’s not perfect, but I hope it brings you value.
 <img width="1920" height="910" alt="image" src="https://github.com/user-attachments/assets/14561b74-ed53-4017-9c5b-a64920ec3526" />
 <img width="1913" height="909" alt="image" src="https://github.com/user-attachments/assets/6fd54cb0-c86f-4ceb-a955-c81107614fc4" />
 
-
-
 ## 🚀 Quick Start
 
 ### Docker Deployment (Recommended)
@@ -127,26 +125,41 @@ docker run -d \
   rustmailer/bichon:latest
 ```
 
-* If you are accessing Bichon on the same machine where it is installed (Machine A), open:
-  ```
-  http://localhost:15630
-  ```
 
-* If you are accessing Bichon from another machine (Machine B), make sure to set CORS with the IP of Machine B, for example:
+* **Accessing Bichon from a browser:**
+  You need to add the exact address you use in your browser to `BICHON_CORS_ORIGINS`.
+
+  * If you access via **IP**, add `IP:port`, e.g.:
+
+    ```
+    http://192.168.1.16:15630
+    ```
+  * If you access via **hostname**, add `hostname:port`, e.g.:
+
+    ```
+    http://myserver.local:15630
+    ```
+  * If you access via **domain name**, add the domain, e.g.:
+
+    ```
+    http://mydomain.com
+    ```
+  * **If Bichon is running on port 80**, you **do not need to include the port**.
+  * If you want to access Bichon in **multiple ways**, include all of them separated by commas.
+
+Example Docker run:
 
 ```bash
-# Run container
 docker run -d \
   --name bichon \
   -p 15630:15630 \
   -v $(pwd)/bichon-data:/data \
   -e BICHON_LOG_LEVEL=info \
   -e BICHON_ROOT_DIR=/data \
-  -e BICHON_CORS_ORIGINS="http://localhost:15630,http://B_MACHINE_IP:15630,*" \
+  -e BICHON_CORS_ORIGINS="http://192.168.1.16:15630,http://myserver.local:15630,http://mydomain.com" \
   rustmailer/bichon:latest
 ```
-Access instructions:
-This allows Machine B to access the Bichon interface on Machine A via a browser.
+> **Tip:** Do not add a trailing `/`. Using `*` allows all addresses, but is **not recommended** for security.
 
 ### Binary Deployment
 
