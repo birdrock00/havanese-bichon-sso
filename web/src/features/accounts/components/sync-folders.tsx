@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
+import { Loader2, CheckSquare, Square } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { AccountModel } from '../data/schema'
 import { toast } from '@/hooks/use-toast'
@@ -50,6 +50,7 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
     const [selectedFolders, setSelectedFolders] = useState<string[]>(currentRow.sync_folders || []);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const queryClient = useQueryClient();
+
     const { data: mailboxes, isLoading } = useQuery({
         queryKey: ['account-mailboxes', currentRow.id],
         queryFn: () => list_mailboxes(currentRow.id, true),
@@ -64,19 +65,54 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
             .map(mailbox => mailbox.id.toString());
     }, [mailboxes, selectedFolders]);
 
-    // Convert data to tree structure
     const treeData = useMemo(() => {
         if (!mailboxes) return [];
         return buildTree(mailboxes, undefined, true, true);
     }, [mailboxes]);
 
     const handleSelectItems = useCallback((selectedItems: TreeDataItem[]) => {
+        const allMailboxes = mailboxes || [];
         const selected = selectedItems
             .map(item => mailboxes?.find(m => m.id === parseInt(item.id, 10))?.name)
             .filter(Boolean) as string[];
 
+        const allMailSelected = selected.some(selectedName => {
+            const mailbox = allMailboxes.find(m => m.name === selectedName);
+            if (!mailbox) return false;
+            return mailbox.attributes.some(a => a.attr === 'All');
+        });
+
+        if (allMailSelected) {
+            toast({
+                title: 'Heads Up: "All Mail" Folder Selected',
+                description: 'Selecting folders with the "All Mail" attribute will likely lead to duplicating messages already synced from folders like Inbox and Sent. This may consume significantly more storage space.',
+                action: <ToastAction altText="I Understand">OK</ToastAction>,
+            });
+        }
         setSelectedFolders(selected);
     }, [mailboxes]);
+
+
+    const handleSelectAll = useCallback(() => {
+        if (!mailboxes) return;
+        const validFolderNames = mailboxes
+            .filter(mailbox => {
+                const isAllMail = mailbox.attributes.some(a => a.attr === 'All');
+                if (isAllMail) return false;
+                return true;
+            })
+            .map(m => m.name);
+        setSelectedFolders(validFolderNames);
+        if (validFolderNames.length < mailboxes.length) {
+            toast({
+                description: "Selected standard folders. 'All Mail' was skipped to avoid duplicates.",
+            });
+        }
+    }, [mailboxes]);
+
+    const handleDeselectAll = useCallback(() => {
+        setSelectedFolders([]);
+    }, []);
 
 
     const updateMutation = useMutation({
@@ -96,6 +132,7 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
         setIsSubmitting(false);
         onOpenChange(false);
     }
+
     function handleError(error: AxiosError) {
         const errorMessage = (error.response?.data as { message?: string })?.message ||
             error.message ||
@@ -110,7 +147,6 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
         setIsSubmitting(false);
         console.error(error);
     }
-
 
     const handleSubmit = async () => {
         if (selectedFolders.length === 0) {
@@ -138,7 +174,29 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
                 </DialogHeader>
 
                 <div className="space-y-4">
-                    <div className="flex items-center justify-end">
+                    <div className="flex items-center justify-between pt-2">
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleSelectAll}
+                                disabled={isLoading || !mailboxes || mailboxes.length === 0}
+                                className="h-8"
+                            >
+                                <CheckSquare className="w-4 h-4 mr-2" />
+                                Select All
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleDeselectAll}
+                                disabled={isLoading || selectedFolders.length === 0}
+                                className="h-8"
+                            >
+                                <Square className="w-4 h-4 mr-2" />
+                                Deselect All
+                            </Button>
+                        </div>
                         <div className="text-sm text-muted-foreground">
                             {selectedFolders.length} folder(s) selected
                         </div>
@@ -160,6 +218,7 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
                         )}
                         {!isLoading && (
                             <TreeView
+                                key={selectedFolders.length > 0 ? `tree-${selectedFolders.length}-${selectedFolders[0]}` : 'tree-empty'}
                                 data={treeData}
                                 multiple
                                 expandAll
