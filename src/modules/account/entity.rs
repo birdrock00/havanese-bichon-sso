@@ -70,7 +70,6 @@ pub struct AuthConfig {
     ///
     /// Users should provide a plaintext password (1 to 256 characters).
     /// The server will encrypt the password using AES-256-GCM and securely store it.
-    /// The plaintext password is never stored, so users must remember it for authentication.
     #[oai(validator(max_length = 256, min_length = 1))]
     pub password: Option<String>,
 }

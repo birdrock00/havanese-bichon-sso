@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use native_db::*;
 use native_model::{native_model, Model};
 
@@ -323,12 +322,17 @@ impl AccountV1 {
 
         if matches!(old.account_type, AccountType::IMAP) {
             if let Some(imap) = &request.imap {
-                let mut new_imap = imap.clone();
-                if let Some(password) = &new_imap.auth.password {
-                    let encrypted_password = encrypt!(password)?;
-                    new_imap.auth.password = Some(encrypted_password);
+                if let Some(current_imap) = &mut new.imap {
+                    current_imap.host = imap.host.clone();
+                    current_imap.port = imap.port.clone();
+                    current_imap.encryption = imap.encryption.clone();
+                    current_imap.auth.auth_type = imap.auth.auth_type.clone();
+                    if let Some(password) = &imap.auth.password {
+                        let encrypted_password = encrypt!(password)?;
+                        current_imap.auth.password = Some(encrypted_password);
+                    }
+                    current_imap.use_proxy = imap.use_proxy;
                 }
-                new.imap = Some(new_imap);
             }
 
             if let Some(folder_names) = request.sync_folders {

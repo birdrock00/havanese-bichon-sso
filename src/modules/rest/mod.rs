@@ -122,7 +122,7 @@ pub async fn start_http_server() -> BichonResult<()> {
         .with(CatchPanic::new());
 
     let server = Server::new(listener)
-        .name("RustMailer API Service")
+        .name("Bichon Service")
         .idle_timeout(Duration::from_secs(60))
         .run_with_graceful_shutdown(
             route.catch_all_error(error_handler),
@@ -130,7 +130,7 @@ pub async fn start_http_server() -> BichonResult<()> {
             Some(Duration::from_secs(5)),
         );
     println!(
-        "RustMailer API Service is now running on port {}.",
+        "Bichon Service is now running on port {}.",
         SETTINGS.bichon_http_port
     );
     server
