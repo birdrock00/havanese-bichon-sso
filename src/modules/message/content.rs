@@ -68,7 +68,7 @@ pub async fn retrieve_email_content(
     account_id: u64,
     id: u64,
 ) -> BichonResult<FullMessageContent> {
-    AccountModel::check_account_active(account_id).await?;
+    AccountModel::check_account_exists(account_id).await?;
     let eml = EML_INDEX_MANAGER
         .get(account_id, id)
         .await?

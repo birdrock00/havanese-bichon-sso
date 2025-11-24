@@ -112,7 +112,7 @@ impl AccountV1 {
         })
     }
 
-    pub async fn check_account_active(account_id: u64) -> BichonResult<AccountModel> {
+    pub async fn check_account_exists(account_id: u64) -> BichonResult<AccountModel> {
         let account =
             secondary_find_impl::<AccountModel>(DB_MANAGER.meta_db(), AccountV1Key::id, account_id)
                 .await?
@@ -123,12 +123,12 @@ impl AccountV1 {
                     )
                 })?;
 
-        if !account.enabled {
-            return Err(raise_error!(
-                format!("Account id='{account_id}' is disabled"),
-                ErrorCode::AccountDisabled
-            ));
-        }
+        // if !account.enabled {
+        //     return Err(raise_error!(
+        //         format!("Account id='{account_id}' is disabled"),
+        //         ErrorCode::AccountDisabled
+        //     ));
+        // }
         Ok(account)
     }
 
@@ -277,7 +277,7 @@ impl AccountV1 {
         let result = list_all_impl(DB_MANAGER.meta_db())
             .await?
             .into_iter()
-            .filter(|a: &AccountModel| a.enabled)
+            //.filter(|a: &AccountModel| a.enabled)
             .map(|account: AccountModel| MinimalAccount {
                 id: account.id,
                 email: account.email,

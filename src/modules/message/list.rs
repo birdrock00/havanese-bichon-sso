@@ -33,7 +33,7 @@ pub async fn list_messages_impl(
     page: u64,
     page_size: u64,
 ) -> BichonResult<DataPage<Envelope>> {
-    AccountModel::check_account_active(account_id).await?;
+    AccountModel::check_account_exists(account_id).await?;
     validate_pagination_params(page, page_size)?;
     ENVELOPE_INDEX_MANAGER
         .list_mailbox_envelopes(account_id, mailbox_id, page, page_size, true)
@@ -62,7 +62,7 @@ pub async fn get_thread_messages(
     page: u64,
     page_size: u64,
 ) -> BichonResult<DataPage<Envelope>> {
-    AccountModel::check_account_active(account_id).await?;
+    AccountModel::check_account_exists(account_id).await?;
     ENVELOPE_INDEX_MANAGER
         .list_thread_envelopes(account_id, thread_id, page, page_size, true)
         .await

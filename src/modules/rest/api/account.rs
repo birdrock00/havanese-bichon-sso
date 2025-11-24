@@ -16,14 +16,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use std::collections::BTreeSet;
 
+use crate::modules::account::migration::AccountModel;
 use crate::modules::account::payload::{
     filter_accessible_accounts, AccountCreateRequest, AccountUpdateRequest, MinimalAccount,
 };
 use crate::modules::account::state::AccountRunningState;
-use crate::modules::account::migration::AccountModel;
 use crate::modules::common::auth::ClientContext;
 use crate::modules::common::paginated::paginate_vec;
 use crate::modules::error::code::ErrorCode;
@@ -114,11 +113,7 @@ impl AccountApi {
     }
 
     /// List accounts with optional pagination parameters
-    #[oai(
-        path = "/accounts",
-        method = "get",
-        operation_id = "list_accounts"
-    )]
+    #[oai(path = "/accounts", method = "get", operation_id = "list_accounts")]
     async fn list_accounts(
         &self,
         /// Optional. The page number to retrieve (starting from 1).
@@ -172,6 +167,7 @@ impl AccountApi {
         context: ClientContext,
     ) -> ApiResult<Json<AccountRunningState>> {
         let account_id = account_id.0;
+        AccountModel::check_account_exists(account_id).await?;
         context.require_account_access(account_id)?;
         let state = AccountRunningState::get(account_id).await?.ok_or_else(|| {
             raise_error!(

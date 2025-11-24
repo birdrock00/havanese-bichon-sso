@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
+use crate::modules::account::migration::AccountModel;
 use crate::modules::common::auth::ClientContext;
 use crate::modules::indexer::envelope::Envelope;
 use crate::modules::indexer::manager::EML_INDEX_MANAGER;
@@ -156,6 +156,7 @@ impl MessageApi {
         context: ClientContext,
     ) -> ApiResult<Attachment<Body>> {
         let account_id = account_id.0;
+        AccountModel::check_account_exists(account_id).await?;
         context.require_account_access(account_id)?;
         let id = id.0;
         let reader = EML_INDEX_MANAGER.get_reader(account_id, id).await?;
@@ -180,6 +181,7 @@ impl MessageApi {
         context: ClientContext,
     ) -> ApiResult<Attachment<Body>> {
         let account_id = account_id.0;
+        AccountModel::check_account_exists(account_id).await?;
         context.require_account_access(account_id)?;
         let email_id = id.0;
         let name = name.0.trim();
