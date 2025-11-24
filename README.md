@@ -73,9 +73,9 @@ It runs as a single binary, requires no external dependencies, and provides fast
 - Visualize email statistics: **counts**, **time distribution**, **top senders**, **largest emails**, **account rankings**.
 
 ### 🌐 Internationalization (i18n)
-* WebUI supports **17 languages** with easy language switching.
-* All UI labels, messages, and notifications are fully translatable.
-* Ready to add more languages in the future with minimal effort.
+* WebUI fully supports **17 languages** for all interface elements.
+* Backend responses (e.g., system messages, API data) are **not yet internationalized**.
+* Frontend is ready to support more languages in the future with minimal effort.
 
 ### 🛠️ OpenAPI Support
 - Provides **OpenAPI documentation**.  
