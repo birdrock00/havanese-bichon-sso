@@ -33,7 +33,6 @@ import { get_thread_messages } from '@/api/mailbox/envelope/api';
 import { MailMessageView } from './mail-message-view';
 import { useSearchContext } from './context';
 import { useTranslation } from 'react-i18next';
-import { formatTimestamp } from '@/lib/utils';
 import { format } from 'date-fns';
 
 interface MailThreadDialogProps {
