@@ -27,12 +27,14 @@ import { toast } from '@/hooks/use-toast'
 import { AxiosError } from 'axios'
 import { OAuth2Entity } from '../data/schema'
 import { update_oauth2 } from '@/api/oauth2/api'
+import { useTranslation } from 'react-i18next'
 
 interface DataTableRowActionsProps {
   row: Row<OAuth2Entity>
 }
 
 export function EnableAction({ row }: DataTableRowActionsProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -42,9 +44,9 @@ export function EnableAction({ row }: DataTableRowActionsProps) {
     onSuccess: () => {
       setOpen(false);
       toast({
-        title: 'OAuth2 client Updated',
-        description: `OAuth2 client has been successfully ${row.original.enabled ? 'disabled' : 'enabled'}.`,
-        action: <ToastAction altText="Close">Close</ToastAction>,
+        title: t('oauth2.oauth2ClientUpdated'),
+        description: t('oauth2.oauth2ClientHasBeenSuccessfully', { action: row.original.enabled ? t('oauth2.disabled').toLowerCase() : t('oauth2.enabled').toLowerCase() }),
+        action: <ToastAction altText={t('common.close')}>{t('common.close')}</ToastAction>,
       })
       queryClient.invalidateQueries({ queryKey: ['oauth2-list'] })
     },
@@ -56,9 +58,9 @@ export function EnableAction({ row }: DataTableRowActionsProps) {
 
       toast({
         variant: "destructive",
-        title: 'Update Failed',
+        title: t('oauth2.updateFailed'),
         description: errorMessage,
-        action: <ToastAction altText="Try again">Try again</ToastAction>,
+        action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
       })
     }
   })
@@ -77,13 +79,13 @@ export function EnableAction({ row }: DataTableRowActionsProps) {
       <ConfirmDialog
         open={open}
         onOpenChange={setOpen}
-        title={`${row.original.enabled ? 'Disable' : 'Enable'} OAuth2 Client`}
+        title={row.original.enabled ? t('oauth2.disableOAuth2Client') : t('oauth2.enableOAuth2Client')}
         desc={
-          `Are you sure you want to ${row.original.enabled ? 'disable' : 'enable'} this OAuth2 client?` +
-          (row.original.enabled ? ' This will prevent the OAuth2 client from being used.' : '')
+          t('oauth2.areYouSureYouWantTo', { action: row.original.enabled ? t('oauth2.disable').toLowerCase() : t('oauth2.enable').toLowerCase() }) +
+          (row.original.enabled ? ' ' + t('oauth2.thisWillPreventTheOAuth2ClientFromBeingUsed') : '')
         }
         destructive={row.original.enabled}
-        confirmText={row.original.enabled ? 'Disable' : 'Enable'}
+        confirmText={row.original.enabled ? t('oauth2.disable') : t('oauth2.enable')}
         isLoading={updateMutation.isPending}
         handleConfirm={handleConfirm}
       />

@@ -27,12 +27,16 @@ import { format } from 'date-fns'
 import { OAuth2Action } from './oauth2-action'
 import { RunningStateCellAction } from './running-state-action'
 import { EnableAction } from './enable-action'
+import { useTranslation } from 'react-i18next'
 
-export const columns: ColumnDef<AccountModel>[] = [
+export function useColumns(): ColumnDef<AccountModel>[] {
+  const { t } = useTranslation()
+  
+  return [
   {
     accessorKey: "id",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='ID' />
+      <DataTableColumnHeader column={column} title={t('accounts.id')} />
     ),
     cell: ({ row }) => {
       return <LongText>{row.original.id}</LongText>
@@ -43,7 +47,7 @@ export const columns: ColumnDef<AccountModel>[] = [
   {
     accessorKey: "email",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Email' />
+      <DataTableColumnHeader column={column} title={t('accounts.email')} />
     ),
     cell: ({ row }) => {
       return <LongText>{row.original.email}</LongText>
@@ -53,7 +57,7 @@ export const columns: ColumnDef<AccountModel>[] = [
   {
     accessorKey: "enabled",
     header: ({ column }) => (
-      <DataTableColumnHeader className="ml-4" column={column} title='Enabled' />
+      <DataTableColumnHeader className="ml-4" column={column} title={t('accounts.enabled')} />
     ),
     cell: EnableAction,
     meta: { className: 'w-8 text-center' },
@@ -62,7 +66,7 @@ export const columns: ColumnDef<AccountModel>[] = [
   {
     id: 'auth_type',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Auth' />
+      <DataTableColumnHeader column={column} title={t('accounts.auth')} />
     ),
     cell: OAuth2Action,
     meta: { className: 'w-8' },
@@ -72,7 +76,7 @@ export const columns: ColumnDef<AccountModel>[] = [
   {
     id: 'account_type',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Type' />
+      <DataTableColumnHeader column={column} title={t('accounts.type')} />
     ),
     cell: ({ row }) => {
       return <LongText>{row.original.account_type}</LongText>
@@ -84,7 +88,7 @@ export const columns: ColumnDef<AccountModel>[] = [
   {
     accessorKey: "sync_interval_sec",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Inc Sync' />
+      <DataTableColumnHeader column={column} title={t('accounts.incSync')} />
     ),
     cell: ({ row }) => {
       let account_type = row.original.account_type;
@@ -99,7 +103,7 @@ export const columns: ColumnDef<AccountModel>[] = [
   {
     id: 'running_state',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='State' />
+      <DataTableColumnHeader column={column} title={t('accounts.state')} />
     ),
     cell: RunningStateCellAction,
     meta: { className: 'w-36' },
@@ -108,7 +112,7 @@ export const columns: ColumnDef<AccountModel>[] = [
   {
     accessorKey: 'created_at',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Created At' />
+      <DataTableColumnHeader column={column} title={t('accounts.createdAt')} />
     ),
     cell: ({ row }) => {
       const created_at = row.original.created_at;
@@ -121,7 +125,7 @@ export const columns: ColumnDef<AccountModel>[] = [
   {
     accessorKey: 'updated_at',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Updated At' />
+      <DataTableColumnHeader column={column} title={t('accounts.updatedAt')} />
     ),
     cell: ({ row }) => {
       const updated_at = row.original.updated_at;
@@ -135,4 +139,5 @@ export const columns: ColumnDef<AccountModel>[] = [
     id: 'actions',
     cell: DataTableRowActions,
   },
-]
+  ]
+}

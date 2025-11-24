@@ -19,6 +19,7 @@
 
 import { IconLogout } from '@tabler/icons-react'
 import { ConfirmDialog } from '@/components/confirm-dialog'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
     open: boolean
@@ -27,6 +28,7 @@ interface Props {
 }
 
 export function LogoutConfirmDialog({ open, onOpenChange, handleConfirm }: Props) {
+    const { t } = useTranslation()
     const handleLogout = () => {
         handleConfirm();
         onOpenChange(false);
@@ -44,18 +46,18 @@ export function LogoutConfirmDialog({ open, onOpenChange, handleConfirm }: Props
                         className='mr-1 inline-block stroke-destructive'
                         size={18}
                     />{' '}
-                    Log out
+                    {t('auth.logout')}
                 </span>
             }
             desc={
                 <p>
-                    Are you sure you want to log out?
+                    {t('auth.areYouSureYouWantToLogOut')}
                     <br />
-                    You will need to log in again to access your account.
+                    {t('auth.youWillNeedToLogInAgain')}
                 </p>
             }
-            confirmText='Log out'
-            cancelBtnText='Cancel'
+            confirmText={t('auth.logout')}
+            cancelBtnText={t('common.cancel')}
         />
     )
 }

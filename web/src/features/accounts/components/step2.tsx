@@ -37,12 +37,14 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { Account } from "./action-dialog";
 import { PasswordInput } from "@/components/password-input";
 import useProxyList from "@/hooks/use-proxy";
+import { useTranslation } from "react-i18next";
 
 interface StepProps {
     isEdit: boolean;
 }
 
 export default function Step2({ isEdit }: StepProps) {
+    const { t } = useTranslation()
     const { control } = useFormContext<Account>();
     const { proxyOptions } = useProxyList();
     const imapAuthMethod = useWatch({
@@ -59,10 +61,10 @@ export default function Step2({ isEdit }: StepProps) {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel className="flex items-center justify-between">
-                                IMAP Host:
+                                {t('accounts.imapHost')}:
                             </FormLabel>
                             <FormControl>
-                                <Input placeholder="e.g imap.example.com" {...field} />
+                                <Input placeholder={t('accounts.imapHostPlaceholder')} {...field} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -74,10 +76,10 @@ export default function Step2({ isEdit }: StepProps) {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel className="flex items-center justify-between">
-                                IMAP Port:
+                                {t('accounts.imapPort')}:
                             </FormLabel>
                             <FormControl>
-                                <Input type="number" placeholder="e.g 993" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10))} />
+                                <Input type="number" placeholder={t('accounts.imapPortPlaceholder')} {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10))} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -88,11 +90,11 @@ export default function Step2({ isEdit }: StepProps) {
                     name="imap.encryption"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>IMAP Auth Method:</FormLabel>
+                            <FormLabel>{t('accounts.imapEncryption')}:</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select an authentication method" />
+                                        <SelectValue placeholder={t('accounts.selectEncryptionMethod')} />
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -102,7 +104,7 @@ export default function Step2({ isEdit }: StepProps) {
                                 </SelectContent>
                             </Select>
                             <FormDescription>
-                                Choose the authentication method for IMAP.
+                                {t('accounts.chooseEncryptionMethod')}
                             </FormDescription>
                             <FormMessage />
                         </FormItem>
@@ -113,11 +115,11 @@ export default function Step2({ isEdit }: StepProps) {
                     name="imap.auth.auth_type"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>IMAP Auth Method:</FormLabel>
+                            <FormLabel>{t('accounts.imapAuthMethod')}:</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                                 <FormControl>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select an authentication method" />
+                                        <SelectValue placeholder={t('accounts.selectAuthMethod')} />
                                     </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
@@ -126,7 +128,7 @@ export default function Step2({ isEdit }: StepProps) {
                                 </SelectContent>
                             </Select>
                             <FormDescription>
-                                Choose the authentication method for IMAP.
+                                {t('accounts.chooseAuthMethod')}
                             </FormDescription>
                             <FormMessage />
                         </FormItem>
@@ -139,15 +141,15 @@ export default function Step2({ isEdit }: StepProps) {
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel className="flex items-center justify-between">
-                                    IMAP Password:
+                                    {t('accounts.imapPassword')}:
                                 </FormLabel>
                                 <FormControl>
-                                    <PasswordInput placeholder={isEdit ? "Leave empty to keep current password" : "Enter your password"} {...field} />
+                                    <PasswordInput placeholder={isEdit ? t('accounts.leaveEmptyToKeepPassword') : t('accounts.enterPassword')} {...field} />
                                 </FormControl>
                                 <FormMessage />
                                 {isEdit && (
                                     <FormDescription>
-                                        Leave empty to keep the existing password, or enter a new password to update it.
+                                        {t('accounts.leaveEmptyToKeepExisting')}
                                     </FormDescription>
                                 )}
                             </FormItem>
@@ -159,7 +161,7 @@ export default function Step2({ isEdit }: StepProps) {
                     name='imap.use_proxy'
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel className="flex items-center justify-between">Use Proxy(optional):</FormLabel>
+                            <FormLabel className="flex items-center justify-between">{t('accounts.useProxy')} ({t('accounts.optional')}):</FormLabel>
                             <FormControl>
                                 <Select
                                     onValueChange={(val) => field.onChange(Number(val))}
@@ -167,7 +169,7 @@ export default function Step2({ isEdit }: StepProps) {
                                 >
                                     <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Select a proxy" />
+                                            <SelectValue placeholder={t('accounts.selectProxy')} />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
@@ -178,13 +180,13 @@ export default function Step2({ isEdit }: StepProps) {
                                                 </SelectItem>
                                             ))
                                         ) : (
-                                            <SelectItem disabled value="__none__">No proxy available</SelectItem>
+                                            <SelectItem disabled value="__none__">{t('settings.noProxies')}</SelectItem>
                                         )}
                                     </SelectContent>
                                 </Select>
                             </FormControl>
                             <FormDescription className='flex-1'>
-                                Use a SOCKS5 proxy for IMAP connections.
+                                {t('accounts.imapProxy')}
                             </FormDescription>
                             <FormMessage />
                         </FormItem>

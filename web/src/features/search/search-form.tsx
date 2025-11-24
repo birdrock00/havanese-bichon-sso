@@ -36,27 +36,28 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchContext } from "./context";
 import { toast } from "@/hooks/use-toast";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useTranslation } from "react-i18next";
 
-const searchFilterSchema = z.object({
+const getSearchFilterSchema = (t: (key: string) => string) => z.object({
     text: z.string().optional().or(z.literal("")),
     from: z
         .string()
-        .email({ message: "Please enter a valid email address" })
+        .email({ message: t('validation.invalidEmail') })
         .optional()
         .or(z.literal("")),
     to: z
         .string()
-        .email({ message: "Please enter a valid email address" })
+        .email({ message: t('validation.invalidEmail') })
         .optional()
         .or(z.literal("")),
     cc: z
         .string()
-        .email({ message: "Please enter a valid email address" })
+        .email({ message: t('validation.invalidEmail') })
         .optional()
         .or(z.literal("")),
     bcc: z
         .string()
-        .email({ message: "Please enter a valid email address" })
+        .email({ message: t('validation.invalidEmail') })
         .optional()
         .or(z.literal("")),
     has_attachment: z.boolean().optional(),
@@ -70,7 +71,7 @@ const searchFilterSchema = z.object({
     message_id: z.string().optional().or(z.literal("")),
 });
 
-type SearchFilterForm = z.infer<typeof searchFilterSchema>;
+type SearchFilterForm = z.infer<ReturnType<typeof getSearchFilterSchema>>;
 
 
 interface Props {
@@ -98,11 +99,13 @@ const cleanEmpty = <T extends Record<string, any>>(obj: T): Partial<T> => {
 };
 
 export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChange }: Props) {
+    const { t } = useTranslation()
     const [showAdvanced, setShowAdvanced] = useState(false);
     const [selectedAccountId, setSelectedAccountId] = useState<number | undefined>(undefined);
     const { accountsOptions, isLoading: accountsIsLoading } = useMinimalAccountList();
     const { selectedTags } = useSearchContext();
 
+    const searchFilterSchema = getSearchFilterSchema(t)
     const form = useForm<SearchFilterForm>({
         resolver: zodResolver(searchFilterSchema),
         defaultValues: {
@@ -147,7 +150,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
             onSubmit(cleaned);
         } else {
             toast({
-                title: 'Please select at least one search condition',
+                title: t('search.pleaseSelectAtLeastOne'),
             });
         }
     }
@@ -180,12 +183,12 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
             <SheetHeader className="p-4 pb-3 border-b shrink-0">
                 <div className="flex items-center justify-between">
                     <SheetTitle className="flex items-center gap-2">
-                        Search Archived Emails
+                        {t('search.searchArchivedEmails')}
                     </SheetTitle>
                 </div>
             </SheetHeader>
             <SheetDescription>
-                Full-text · Multi-account · Advanced filters
+                {t('search.fullTextMultiAccount')}
             </SheetDescription>
             <Form {...form}>
                 <form id="email-search-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -197,7 +200,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                 render={({ field }) => (
                                     <FormItem className="min-w-[180px]">
                                         <div className="flex items-center gap-2">
-                                            <FormLabel className="text-xs whitespace-nowrap">Account:</FormLabel>
+                                            <FormLabel className="text-xs whitespace-nowrap">{t('search.account')}:</FormLabel>
                                             <FormControl className="flex-1">
                                                 <VirtualizedSelect
                                                     options={accountsOptions}
@@ -208,17 +211,17 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                                         field.onChange(account_id);
                                                     }}
                                                     value={field.value?.toString() ?? ""}
-                                                    placeholder="Select account"
+                                                    placeholder={t('search.selectAccount')}
                                                     className="h-10 w-full"
                                                     noItemsComponent={
                                                         <div className="p-2">
-                                                            <p className="text-xs">No active email account.</p>
+                                                            <p className="text-xs">{t('search.noActiveEmailAccount')}</p>
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
                                                                 onClick={() => navigate({ to: "/accounts" })}
                                                             >
-                                                                Add Email Account
+                                                                {t('search.addEmailAccount')}
                                                             </Button>
                                                         </div>
                                                     }
@@ -235,19 +238,19 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                 render={({ field }) => (
                                     <FormItem className="min-w-[180px]">
                                         <div className="flex items-center gap-2">
-                                            <FormLabel className="text-xs whitespace-nowrap">Mailbox:</FormLabel>
+                                            <FormLabel className="text-xs whitespace-nowrap">{t('search.mailbox')}:</FormLabel>
                                             <FormControl className="flex-1">
                                                 <VirtualizedSelect
                                                     options={mailboxesOptions}
                                                     isLoading={isMailboxesLoading}
                                                     onSelectOption={(values) => field.onChange(parseInt(values[0], 10))}
                                                     value={field.value?.toString() ?? ""}
-                                                    placeholder="Select mailbox"
+                                                    placeholder={t('search.selectMailbox')}
                                                     className="h-10 w-full"
                                                     noItemsComponent={
                                                         <div className="p-2">
                                                             <p className="text-xs">
-                                                                No mailbox. Please select an account first.
+                                                                {t('search.noMailboxSelectAccount')}
                                                             </p>
                                                         </div>
                                                     }
@@ -267,7 +270,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                     <FormItem className="flex-1">
                                         <FormControl>
                                             <Input
-                                                placeholder="Search in subject, body, attachments..."
+                                                placeholder={t('search.searchInSubjectBody')}
                                                 className="h-11 text-base"
                                                 {...field}
                                             />
@@ -279,7 +282,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
 
                             <div className="flex gap-2 sm:ml-auto sm:self-center">
                                 <Button type="submit" className="h-11 px-6" disabled={isLoading}>
-                                    {isLoading ? "Searching..." : <>Search</>}
+                                    {isLoading ? t('search.searchingButton') : <>{t('search.searchButton')}</>}
                                 </Button>
                                 <Button
                                     type="button"
@@ -288,7 +291,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                     onClick={() => setShowAdvanced(!showAdvanced)}
                                 >
                                     <Filter className="w-4 h-4 mr-1" />
-                                    Advanced
+                                    {t('search.advanced')}
                                     {showAdvanced ? <ChevronUp className="w-4 h-4 ml-1" /> : <ChevronDown className="w-4 h-4 ml-1" />}
                                 </Button>
                                 <Button
@@ -298,7 +301,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                     onClick={() => { handleClear(); reset(); }}
                                 >
                                     <RotateCcw className="w-4 h-4 mr-1" />
-                                    Clear
+                                    {t('search.clear')}
                                 </Button>
                             </div>
                         </div>
@@ -308,10 +311,10 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                 name="since"
                                 render={({ field }) => (
                                     <FormItem className="flex items-center gap-2">
-                                        <FormLabel className="text-xs whitespace-nowrap">Since:</FormLabel>
+                                        <FormLabel className="text-xs whitespace-nowrap">{t('search.since')}</FormLabel>
                                         <FormControl>
                                             <DatePicker
-                                                placeholder="Select a date"
+                                                placeholder={t('search.selectDate')}
                                                 selected={field.value}
                                                 onSelect={field.onChange}
                                             />
@@ -325,10 +328,10 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                 name="before"
                                 render={({ field }) => (
                                     <FormItem className="flex items-center gap-2">
-                                        <FormLabel className="text-xs whitespace-nowrap">Before:</FormLabel>
+                                        <FormLabel className="text-xs whitespace-nowrap">{t('search.before')}</FormLabel>
                                         <FormControl>
                                             <DatePicker
-                                                placeholder="Select a date"
+                                                placeholder={t('search.selectDate')}
                                                 selected={field.value}
                                                 onSelect={field.onChange}
                                             />
@@ -348,7 +351,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                             onCheckedChange={field.onChange}
                                         />
                                         <FormLabel htmlFor="attach" className="cursor-pointer text-sm font-normal">
-                                            Has attachments
+                                            {t('search.hasAttachment')}
                                         </FormLabel>
                                     </FormItem>
                                 )}
@@ -361,7 +364,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                             {/* Sender & Recipients */}
                             <AccordionItem value="people">
                                 <AccordionTrigger className="text-sm">
-                                    Sender / Recipients
+                                    {t('search.sender')} / {t('search.recipient')}
                                 </AccordionTrigger>
                                 <AccordionContent>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
@@ -373,7 +376,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                                 render={({ field }) => (
                                                     <FormItem>
                                                         <FormLabel className="capitalize text-xs">
-                                                            {key === 'from' ? 'From' : key === 'to' ? 'To' : key.toUpperCase()}
+                                                            {key === 'from' ? t('search.from') : key === 'to' ? t('search.to') : key === 'cc' ? t('search.cc') : t('search.bcc')}:
                                                         </FormLabel>
                                                         <FormControl>
                                                             <Input
@@ -392,7 +395,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                             </AccordionItem>
                             <AccordionItem value="attachment">
                                 <AccordionTrigger className="text-sm">
-                                    Attachments & Size
+                                    {t('search.attachmentsSize')}
                                 </AccordionTrigger>
                                 <AccordionContent>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2">
@@ -401,7 +404,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                             name="attachment_name"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel className="text-xs">Attachment name</FormLabel>
+                                                    <FormLabel className="text-xs">{t('search.attachmentName')}:</FormLabel>
                                                     <FormControl>
                                                         <Input placeholder="invoice.pdf" className="h-9" {...field} />
                                                     </FormControl>
@@ -414,7 +417,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                             name="min_size"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel className="text-xs">Minimum (bytes)</FormLabel>
+                                                    <FormLabel className="text-xs">{t('search.minSize')} (bytes):</FormLabel>
                                                     <FormControl>
                                                         <Input type="number" placeholder="1MB = 1048576" className="h-9" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10))} />
                                                     </FormControl>
@@ -427,7 +430,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                             name="max_size"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel className="text-xs">Maximum (bytes)</FormLabel>
+                                                    <FormLabel className="text-xs">{t('search.maxSize')} (bytes):</FormLabel>
                                                     <FormControl>
                                                         <Input type="number" placeholder="10MB = 10485760" className="h-9" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10))} />
                                                     </FormControl>
@@ -440,7 +443,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                             </AccordionItem>
                             <AccordionItem value="ids">
                                 <AccordionTrigger className="text-sm">
-                                    Message-ID
+                                    {t('search.messageId')}
                                 </AccordionTrigger>
                                 <AccordionContent>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2">
@@ -453,7 +456,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                                         <Input placeholder="<abc123@example.com>" className="h-9" {...field} />
                                                     </FormControl>
                                                     <FormDescription className="text-xs">
-                                                        Original email Message-ID header
+                                                        {t('search.originalMessageIdHeader')}
                                                     </FormDescription>
                                                 </FormItem>
                                             )}

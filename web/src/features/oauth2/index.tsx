@@ -22,7 +22,7 @@ import useDialogState from '@/hooks/use-dialog-state'
 import { Button } from '@/components/ui/button'
 import { Main } from '@/components/layout/main'
 import { ActionDialog } from './components/action-dialog'
-import { columns } from './components/columns'
+import { getColumns } from './components/columns'
 import { TokenDeleteDialog } from './components/delete-dialog'
 import { Oauth2Table } from './components/oauth2-table'
 import OAuth2Provider, {
@@ -36,8 +36,10 @@ import { get_oauth2_list } from '@/api/oauth2/api'
 import { TableSkeleton } from '@/components/table-skeleton'
 import { AuthorizeDialog } from './components/authorize-dialog'
 import { FixedHeader } from '@/components/layout/fixed-header'
+import { useTranslation } from 'react-i18next'
 
 export default function OAuth2() {
+  const { t } = useTranslation()
   const [currentRow, setCurrentRow] = useState<OAuth2Entity | null>(null)
   const [open, setOpen] = useDialogState<OAuth2DialogType>(null)
 
@@ -46,6 +48,8 @@ export default function OAuth2() {
     queryKey: ['oauth2-list'],
     queryFn: get_oauth2_list,
   })
+
+  const columns = getColumns(t)
 
   return (
     <OAuth2Provider value={{ open, setOpen, currentRow, setCurrentRow }}>
@@ -57,14 +61,14 @@ export default function OAuth2() {
           {/* Header */}
           <div className="mb-2 flex items-start flex-wrap gap-x-4 gap-y-2">
             <div className="flex-1 min-w-[300px]">
-              <h2 className="text-2xl font-bold tracking-tight">OAuth2</h2>
+              <h2 className="text-2xl font-bold tracking-tight">{t('oauth2.title')}</h2>
               <p className="text-muted-foreground">
-                Automatically handling access token retrieval, storage, and refreshing, ensuring a seamless and always-ready authentication experience.
+                {t('oauth2.description')}
               </p>
             </div>
             <div className="flex gap-2 ml-auto">
               <Button className="space-x-1" onClick={() => setOpen("add")}>
-                <span>Add</span>
+                <span>{t('common.add')}</span>
                 <Plus size={18} />
               </Button>
             </div>
@@ -81,13 +85,13 @@ export default function OAuth2() {
                   <img
                     src={Logo}
                     className="max-h-[100px] w-auto opacity-20 saturate-0 transition-all duration-300 hover:opacity-100 hover:saturate-100 object-contain"
-                    alt="RustMailer Logo"
+                    alt="Bichon Logo"
                   />
-                  <h3 className="mt-4 text-lg font-semibold">No OAuth2 Configurations</h3>
+                  <h3 className="mt-4 text-lg font-semibold">{t('oauth2.noConfigurations')}</h3>
                   <p className="mb-4 mt-2 text-sm text-muted-foreground">
-                    You haven't added any OAuth2 configurations yet. Add one to start using OAuth2 features.
+                    {t('oauth2.noConfigurationsDesc')}
                   </p>
-                  <Button onClick={() => setOpen("add")}>Add Configuration</Button>
+                  <Button onClick={() => setOpen("add")}>{t('oauth2.addConfiguration')}</Button>
                 </div>
               </div>
             )}

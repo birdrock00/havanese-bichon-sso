@@ -46,6 +46,7 @@ import { ToastAction } from '@/components/ui/toast'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { add_proxy, update_proxy } from '@/api/system/api'
+import { useTranslation } from 'react-i18next'
 
 
 const proxyFormSchema = z.object({
@@ -127,6 +128,7 @@ const mapCurrentRowToFormValues = (currentRow: Proxy) => {
 };
 
 export function ProxyActionDialog({ currentRow, open, onOpenChange }: Props) {
+  const { t } = useTranslation()
   const isEdit = !!currentRow
   const queryClient = useQueryClient();
   const form = useForm<ProxyForm>({
@@ -151,9 +153,9 @@ export function ProxyActionDialog({ currentRow, open, onOpenChange }: Props) {
 
   function handleSuccess() {
     toast({
-      title: `Proxy ${isEdit ? 'Updated' : 'Added'}`,
-      description: `Your Proxy has been successfully ${isEdit ? 'updated' : 'added'}.`,
-      action: <ToastAction altText="Close">Close</ToastAction>,
+      title: `${t('settings.proxy')} ${isEdit ? t('common.update') : t('common.add')}`,
+      description: t('settings.yourProxyHasBeenSuccessfully', { action: isEdit ? t('common.update').toLowerCase() : t('common.add').toLowerCase() }),
+      action: <ToastAction altText={t('common.close')}>{t('common.close')}</ToastAction>,
     });
 
     queryClient.invalidateQueries({ queryKey: ['proxy-list'] });
@@ -164,13 +166,13 @@ export function ProxyActionDialog({ currentRow, open, onOpenChange }: Props) {
   function handleError(error: AxiosError) {
     const errorMessage = (error.response?.data as { message?: string })?.message ||
       error.message ||
-      `${isEdit ? 'Update' : 'Add'} failed, please try again later`;
+      t('settings.proxyUpdateOrAddFailed', { action: isEdit ? t('common.update') : t('common.add') });
 
     toast({
       variant: "destructive",
-      title: `Proxy ${isEdit ? 'Update' : 'Add'} Failed`,
+      title: `${t('settings.proxy')} ${isEdit ? t('common.update') : t('common.add')} ${t('common.error')}`,
       description: errorMessage as string,
-      action: <ToastAction altText="Try again">Try again</ToastAction>,
+      action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
     });
     console.error(error);
   }
@@ -195,10 +197,10 @@ export function ProxyActionDialog({ currentRow, open, onOpenChange }: Props) {
     >
       <DialogContent className='max-w-xl'>
         <DialogHeader className='text-left mb-4'>
-          <DialogTitle>{isEdit ? 'Edit Proxy' : 'Add New Proxy'}</DialogTitle>
+          <DialogTitle>{isEdit ? t('settings.edit') + ' ' + t('settings.proxy') : t('common.add') + ' ' + t('settings.proxy')}</DialogTitle>
           <DialogDescription>
-            {isEdit ? 'Update the Proxy here. ' : 'Add new Proxy here. '}
-            Click save when you&apos;re done.
+            {isEdit ? t('settings.updateTheProxyHere') : t('settings.addNewProxyHere')}
+            {t('accounts.clickSaveWhenDone')}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -212,7 +214,7 @@ export function ProxyActionDialog({ currentRow, open, onOpenChange }: Props) {
               name="url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Proxy URL</FormLabel>
+                  <FormLabel>{t('settings.proxy')} URL</FormLabel>
                   <FormControl>
                     <Input
                       placeholder="socks5://127.0.0.1:22308"
@@ -221,7 +223,7 @@ export function ProxyActionDialog({ currentRow, open, onOpenChange }: Props) {
                   </FormControl>
                   <FormMessage />
                   <FormDescription>
-                    Please use an IP address (e.g., 127.0.0.1) rather than a hostname or domain for better reliability.
+                    {t('settings.pleaseUseAnIpAddressForBetterReliability')}
                   </FormDescription>
                 </FormItem>
               )}
@@ -242,11 +244,11 @@ export function ProxyActionDialog({ currentRow, open, onOpenChange }: Props) {
               <span>
                 {isEdit
                   ? updateMutation.isPending
-                    ? "Saving..."
-                    : "Save changes"
+                    ? t('oauth2.saving')
+                    : t('accounts.saveChanges')
                   : createMutation.isPending
-                    ? "Adding..."
-                    : "Add"}
+                    ? t('settings.adding')
+                    : t('common.add')}
               </span>
             </span>
           </Button>

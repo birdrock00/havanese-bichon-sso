@@ -27,6 +27,7 @@ import { useUpdateTags } from '@/hooks/use-update-tags';
 import { toast } from '@/hooks/use-toast';
 import { EmailEnvelope } from '@/api';
 import { validateTag } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
     open: boolean
@@ -40,6 +41,7 @@ export function EditTagsDialog({ open, onOpenChange, currentEnvelope }: Props) {
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [commandOpen, setCommandOpen] = useState(false);
+    const { t } = useTranslation();
 
     useEffect(() => {
         if (open && currentEnvelope) {
@@ -54,7 +56,7 @@ export function EditTagsDialog({ open, onOpenChange, currentEnvelope }: Props) {
         const result = validateTag(normalized);
         if (!result.valid) {
             toast({
-                title: 'Invalid tag',
+                title: t('search.addTags.invalidTitle'),
                 description: result.error,
                 variant: 'destructive',
             });
@@ -84,11 +86,11 @@ export function EditTagsDialog({ open, onOpenChange, currentEnvelope }: Props) {
             {
                 onSuccess: () => {
                     toast({
-                        title: 'Tags updated',
+                        title: t('search.addTags.updatedTitle'),
                         description: (
                             <div className="flex items-center gap-2">
                                 <Check className="h-4 w-4 text-green-500" />
-                                <span>Successfully updated tags</span>
+                                <span>{t('search.addTags.updatedDesc')}</span>
                             </div>
                         ),
                     });
@@ -96,8 +98,8 @@ export function EditTagsDialog({ open, onOpenChange, currentEnvelope }: Props) {
                 },
                 onError: (error: any) => {
                     toast({
-                        title: 'Failed to update tags',
-                        description: error?.message || 'Please try again',
+                        title: t('search.addTags.updateFailedTitle'),
+                        description: error?.message || t('search.addTags.tryAgain'),
                         variant: 'destructive',
                     });
                 },
@@ -115,14 +117,14 @@ export function EditTagsDialog({ open, onOpenChange, currentEnvelope }: Props) {
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <TagIcon className="h-5 w-5" />
-                        Edit Tags
+                        {t('search.addTags.title')}
                     </DialogTitle>
                 </DialogHeader>
 
                 <div className="space-y-5 py-4">
                     <div className="flex flex-wrap gap-2">
                         {selectedTags.length === 0 ? (
-                            <p className="text-sm text-muted-foreground">No tags yet</p>
+                            <p className="text-sm text-muted-foreground">{t('search.addTags.none')}</p>
                         ) : (
                             selectedTags.map(tag => (
                                 <Badge key={tag} variant="secondary" className="gap-1 pr-1 h-7">
@@ -141,7 +143,7 @@ export function EditTagsDialog({ open, onOpenChange, currentEnvelope }: Props) {
                         <div className="space-y-2">
                             <div className="relative">
                                 <CommandInput
-                                    placeholder="Search or create new tag..."
+                                    placeholder={t('search.addTags.searchPlaceholder')}
                                     value={inputValue}
                                     onValueChange={setInputValue}
                                     onFocus={() => setCommandOpen(true)}
@@ -167,10 +169,7 @@ export function EditTagsDialog({ open, onOpenChange, currentEnvelope }: Props) {
                             </div>
                             {inputValue.trim() && filteredSuggestions.length === 0 && (
                                 <div className="px-1 text-xs text-muted-foreground animate-in fade-in duration-200">
-                                    Press <kbd className="px-1.5 py-0.5 rounded bg-muted font-medium">Enter</kbd>
-                                    or click
-                                    <kbd className="px-1.5 py-0.5 rounded bg-muted font-medium">+</kbd>
-                                    to create tag "<span className="font-medium text-foreground">{inputValue}</span>"
+                                    {t('search.addTags.createHint', { tag: inputValue })}
                                 </div>
                             )}
                             {commandOpen && inputValue && filteredSuggestions.length > 0 && (
@@ -195,20 +194,20 @@ export function EditTagsDialog({ open, onOpenChange, currentEnvelope }: Props) {
 
                 <div className="flex justify-between items-center">
                     <p className="text-xs text-muted-foreground">
-                        {selectedTags.length} tag{selectedTags.length !== 1 ? 's' : ''} selected
+                        {t('search.addTags.selectedCount', { count: selectedTags.length })}
                     </p>
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={() => onOpenChange(false)}>
-                            Cancel
+                            {t('search.addTags.cancel')}
                         </Button>
                         <Button onClick={handleSave} disabled={isPending}>
                             {isPending ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Saving...
+                                    {t('search.addTags.saving')}
                                 </>
                             ) : (
-                                'Save'
+                                t('search.addTags.save')
                             )}
                         </Button>
                     </div>

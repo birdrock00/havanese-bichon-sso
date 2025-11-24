@@ -26,6 +26,7 @@ import {
 import { useMailboxContext } from '../context'
 import { MailMessageView } from './mail-message-view'
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden'
+import { useTranslation } from 'react-i18next'
 
 
 interface Props {
@@ -35,7 +36,7 @@ interface Props {
 
 export function MailDisplayDrawer({ open, onOpenChange }: Props) {
   const { currentEnvelope } = useMailboxContext();
-
+  const { t } = useTranslation()
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <VisuallyHidden asChild>
@@ -47,7 +48,7 @@ export function MailDisplayDrawer({ open, onOpenChange }: Props) {
             {currentEnvelope ? (
               <MailMessageView envelope={currentEnvelope} />
             ) : (
-              <div className="p-8 text-center text-muted-foreground">No message selected</div>
+              <div className="p-8 text-center text-muted-foreground">{t('mail.noMessageSelected')}</div>
             )}
           </div>
 

@@ -10,11 +10,11 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Affero General Public License for more details.
 //
 // You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 import { z } from 'zod'
@@ -51,6 +51,7 @@ import { ToastAction } from '@/components/ui/toast'
 import { AxiosError } from 'axios'
 import { VirtualizedSelect } from '@/components/virtualized-select'
 import { Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 const isValidIP = (ip: string) => {
   const ipv4Regex = /^(?:(?:\d{1,3}\.){3}\d{1,3})$/;
@@ -58,14 +59,31 @@ const isValidIP = (ip: string) => {
   return ipv4Regex.test(ip) || ipv6Regex.test(ip);
 };
 
-const rateLimitSchema = z.object({
-  quota: z.optional(z.number().int().positive({ message: "Quota must be a positive integer." })),
-  interval: z.optional(z.number().int().positive({ message: "Interval must be a positive integer." })),
+const RateLimitBaseSchema = z.object({
+  quota: z.optional(z.number()),
+  interval: z.optional(z.number()),
 });
 
-const accessControlSchema = z.object({
+const AccessControlBaseSchema = z.object({
   ip_whitelist: z.string().optional(),
-  rate_limit: rateLimitSchema.optional(),
+  rate_limit: z.optional(RateLimitBaseSchema),
+});
+
+const AccessTokenBaseSchema = z.object({
+  accounts: z.array(z.number()),
+  description: z.optional(z.string()),
+  acl: z.optional(AccessControlBaseSchema),
+});
+
+export type AccessTokenForm = z.infer<typeof AccessTokenBaseSchema>;
+
+const getRateLimitSchema = (t: (key: string) => string) => z.object({
+  quota: z.optional(z.number().int().positive({ message: t('accessTokens.quotaMustBeAPositiveInteger') })),
+  interval: z.optional(z.number().int().positive({ message: t('accessTokens.intervalMustBeAPositiveInteger') })),
+});
+
+const getAccessControlSchema = (t: (key: string) => string) => AccessControlBaseSchema.extend({
+  rate_limit: getRateLimitSchema(t).optional(),
 }).transform((data) => {
   if (data.ip_whitelist) {
     const ips = data.ip_whitelist
@@ -89,7 +107,7 @@ const accessControlSchema = z.object({
     return true;
   },
   {
-    message: 'Invalid IP addresses found. Please enter valid IPv4 or IPv6 addresses.',
+    message: t('accessTokens.invalidIpAddressesFound'),
     path: ['ip_whitelist'],
   }
 ).transform((data) => {
@@ -108,16 +126,14 @@ const accessControlSchema = z.object({
     return data;
   });
 
-const accessTokenFormSchema = z.object({
+const getAccessTokenFormSchema = (t: (key: string) => string) => AccessTokenBaseSchema.extend({
   accounts: z
     .array(z.number())
-    .min(1, { message: "At least one account is required." }),
+    .min(1, { message: t('accessTokens.atLeastOneAccountIsRequired') }),
   description: z
-    .optional(z.string().max(255, { message: "Description must not exceed 255 characters." })),
-  acl: z.optional(accessControlSchema),
+    .optional(z.string().max(255, { message: t('accessTokens.descriptionMustNotExceed255Characters') })),
+  acl: z.optional(getAccessControlSchema(t)),
 });
-
-export type AccessTokenForm = z.infer<typeof accessTokenFormSchema>;
 
 interface Props {
   currentRow?: AccessToken
@@ -134,14 +150,15 @@ const defaultValues = {
 
 
 export function TokensActionDialog({ currentRow, open, onOpenChange }: Props) {
+  const { t } = useTranslation()
   const isEdit = !!currentRow
   const queryClient = useQueryClient();
   const form = useForm<AccessTokenForm>({
-    resolver: zodResolver(accessTokenFormSchema),
+    resolver: zodResolver(getAccessTokenFormSchema(t)),
     defaultValues: isEdit
       ? {
         accounts: currentRow.accounts.map(value => value.id),
-        description: currentRow.description,
+        description: currentRow.description ?? undefined,
         acl: currentRow.acl
           ? {
             ip_whitelist: currentRow.acl.ip_whitelist
@@ -168,9 +185,9 @@ export function TokensActionDialog({ currentRow, open, onOpenChange }: Props) {
 
   function handleSuccess() {
     toast({
-      title: `Access token ${isEdit ? 'Updated' : 'Created'}`,
-      description: `Your access token has been successfully ${isEdit ? 'updated' : 'created'}.`,
-      action: <ToastAction altText="Close">Close</ToastAction>,
+      title: `${t('accessTokens.title')} ${isEdit ? t('accessTokens.updated') : t('accessTokens.created')}`,
+      description: t('accessTokens.yourAccessTokenHasBeenSuccessfully', { action: isEdit ? t('accessTokens.updated').toLowerCase() : t('accessTokens.created').toLowerCase() }),
+      action: <ToastAction altText={t('common.close')}>{t('common.close')}</ToastAction>,
     });
 
     queryClient.invalidateQueries({ queryKey: ['access-tokens'] });
@@ -181,13 +198,13 @@ export function TokensActionDialog({ currentRow, open, onOpenChange }: Props) {
   function handleError(error: AxiosError) {
     const errorMessage = (error.response?.data as { message?: string })?.message ||
       error.message ||
-      `${isEdit ? 'Update' : 'Creation'} failed, please try again later`;
+      t('accessTokens.updateOrCreationFailed', { action: isEdit ? t('accessTokens.updateFailed') : t('accessTokens.creationFailed') });
 
     toast({
       variant: "destructive",
-      title: `Access token ${isEdit ? 'Update' : 'Creation'} Failed`,
+      title: `${t('accessTokens.title')} ${isEdit ? t('accessTokens.updateFailed') : t('accessTokens.creationFailed')}`,
       description: errorMessage as string,
-      action: <ToastAction altText="Try again">Try again</ToastAction>,
+      action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
     });
     console.error(error);
   }
@@ -233,10 +250,10 @@ export function TokensActionDialog({ currentRow, open, onOpenChange }: Props) {
     >
       <DialogContent className='max-w-4xl'>
         <DialogHeader className='text-left mb-4'>
-          <DialogTitle>{isEdit ? 'Edit Token' : 'Add New'}</DialogTitle>
+          <DialogTitle>{isEdit ? t('accessTokens.editToken') : t('accessTokens.addNew')}</DialogTitle>
           <DialogDescription>
-            {isEdit ? 'Update the access token here. ' : 'Create new access token here. '}
-            Click save when you&apos;re done.
+            {isEdit ? t('accessTokens.updateTheAccessTokenHere') : t('accessTokens.createNewAccessTokenHere')}
+            {t('accounts.clickSaveWhenDone')}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className='h-[28rem] w-full pr-4 -mr-4 py-1'>
@@ -251,7 +268,7 @@ export function TokensActionDialog({ currentRow, open, onOpenChange }: Props) {
                 name='accounts'
                 render={({ field }) => (
                   <FormItem className='flex flex-col gap-y-1 space-y-0'>
-                    <FormLabel className='mb-1'>Accounts:</FormLabel>
+                    <FormLabel className='mb-1'>{t('accessTokens.accounts')}:</FormLabel>
                     <FormControl>
                       <VirtualizedSelect
                         multiple
@@ -262,13 +279,13 @@ export function TokensActionDialog({ currentRow, open, onOpenChange }: Props) {
                           const numberArray = options.map((v) => parseInt(v, 10));
                           return field.onChange(numberArray);
                         }}
-                        defaultValue={`${field.value}`}
-                        placeholder="Select accounts"
+                        value={field.value.map(String)}
+                        placeholder={t('accessTokens.selectAccounts')}
                       />
                     </FormControl>
                     <FormMessage />
                     <FormDescription>
-                      Select multiple accounts for the access token's authorization scope.
+                      {t('accessTokens.selectMultipleAccountsForTheAccessToken')}
                     </FormDescription>
                   </FormItem>
                 )}
@@ -278,16 +295,16 @@ export function TokensActionDialog({ currentRow, open, onOpenChange }: Props) {
                 name="acl.ip_whitelist"
                 render={({ field }) => (
                   <FormItem className="flex flex-col gap-y-1 space-y-0">
-                    <FormLabel className='mb-1'>IP Whitelist:</FormLabel>
+                    <FormLabel className='mb-1'>{t('settings.acl')}:</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Enter one IP address per line, e.g.:\n192.168.1.1\n192.168.1.2"
+                        placeholder={t('accessTokens.enterOneIpAddressPerLine')}
                         {...field}
                         className="max-h-[500px] min-h-[180px]"
                       />
                     </FormControl>
                     <FormDescription>
-                      A list of IP addresses allowed to access the resource. Enter one IP address per line. (Optional)
+                      {t('accessTokens.aListOfIpAddressesAllowed')}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -299,17 +316,17 @@ export function TokensActionDialog({ currentRow, open, onOpenChange }: Props) {
                   name="acl.rate_limit.quota"
                   render={({ field }) => (
                     <FormItem className="flex flex-col gap-y-1 space-y-0 w-1/2">
-                      <FormLabel className='mb-1'>Quota:</FormLabel>
+                      <FormLabel className='mb-1'>{t('accessTokens.quota')}:</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="Enter quota, e.g., 100"
+                          placeholder={t('accessTokens.enterQuota')}
                           {...field}
                           onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
                         />
                       </FormControl>
                       <FormDescription>
-                        The maximum number of requests allowed within the interval. (Optional)
+                        {t('accessTokens.theMaximumNumberOfRequestsAllowed')}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -320,17 +337,17 @@ export function TokensActionDialog({ currentRow, open, onOpenChange }: Props) {
                   name="acl.rate_limit.interval"
                   render={({ field }) => (
                     <FormItem className="flex flex-col gap-y-1 space-y-0 w-1/2">
-                      <FormLabel className='mb-1'>Interval (seconds):</FormLabel>
+                      <FormLabel className='mb-1'>{t('accessTokens.interval')}:</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
-                          placeholder="Enter interval in seconds, e.g., 60"
+                          placeholder={t('accessTokens.enterIntervalInSeconds')}
                           {...field}
                           onChange={(e) => field.onChange(parseInt(e.target.value, 10))}
                         />
                       </FormControl>
                       <FormDescription>
-                        The time window (in seconds) for the rate limit. (Optional)
+                        {t('accessTokens.theTimeWindowForTheRateLimit')}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -342,15 +359,15 @@ export function TokensActionDialog({ currentRow, open, onOpenChange }: Props) {
                 name='description'
                 render={({ field }) => (
                   <FormItem className='flex flex-col gap-y-1 space-y-0'>
-                    <FormLabel className='mb-1'>Description:</FormLabel>
+                    <FormLabel className='mb-1'>{t('settings.description')}:</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder='Describe the purpose of the access token'
+                        placeholder={t('accessTokens.describeThePurposeOfTheAccessToken')}
                         {...field}
                         className="max-h-[240px] min-h-[80px]"
                       />
                     </FormControl>
-                    <FormDescription>(Optional)</FormDescription>
+                    <FormDescription>{t('oauth2.optional')}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -372,11 +389,11 @@ export function TokensActionDialog({ currentRow, open, onOpenChange }: Props) {
               <span>
                 {isEdit
                   ? updateMutation.isPending
-                    ? "Updating..."
-                    : "Save changes"
+                    ? t('accessTokens.updating')
+                    : t('accessTokens.saveChanges')
                   : createMutation.isPending
-                    ? "Creating..."
-                    : "Save"}
+                    ? t('accessTokens.creating')
+                    : t('accessTokens.save')}
               </span>
             </span>
           </Button>

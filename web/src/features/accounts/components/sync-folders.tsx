@@ -39,6 +39,7 @@ import { update_account } from '@/api/account/api'
 import { ToastAction } from '@/components/ui/toast'
 import { AxiosError } from 'axios'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
     open: boolean
@@ -50,7 +51,7 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
     const [selectedFolders, setSelectedFolders] = useState<string[]>(currentRow.sync_folders || []);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const queryClient = useQueryClient();
-
+    const { t } = useTranslation()
     const { data: mailboxes, isLoading } = useQuery({
         queryKey: ['account-mailboxes', currentRow.id],
         queryFn: () => list_mailboxes(currentRow.id, true),
@@ -84,9 +85,9 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
 
         if (allMailSelected) {
             toast({
-                title: 'Heads Up: "All Mail" Folder Selected',
-                description: 'Selecting folders with the "All Mail" attribute will likely lead to duplicating messages already synced from folders like Inbox and Sent. This may consume significantly more storage space.',
-                action: <ToastAction altText="I Understand">OK</ToastAction>,
+                title: t('accounts.allMailFolderSelected'),
+                description: t('accounts.allMailFolderSelectedDesc'),
+                action: <ToastAction altText={t('common.ok')}>{t('common.ok')}</ToastAction>,
             });
         }
         setSelectedFolders(selected);
@@ -105,7 +106,7 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
         setSelectedFolders(validFolderNames);
         if (validFolderNames.length < mailboxes.length) {
             toast({
-                description: "Selected standard folders. 'All Mail' was skipped to avoid duplicates.",
+                description: t('accounts.allMailSkipped'),
             });
         }
     }, [mailboxes]);
@@ -123,9 +124,9 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
 
     function handleSuccess() {
         toast({
-            title: 'Account Sync Folders Updated',
-            description: 'Account has been successfully updated.',
-            action: <ToastAction altText="Close">Close</ToastAction>,
+            title: t('accounts.accountSyncFoldersUpdated'),
+            description: t('accounts.accountUpdatedDesc'),
+            action: <ToastAction altText={t('common.close')}>{t('common.close')}</ToastAction>,
         });
 
         queryClient.invalidateQueries({ queryKey: ['account-list'] });
@@ -136,13 +137,13 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
     function handleError(error: AxiosError) {
         const errorMessage = (error.response?.data as { message?: string })?.message ||
             error.message ||
-            'Update failed, please try again later';
+            t('accounts.updateFailed');
 
         toast({
             variant: "destructive",
-            title: 'Account Sync Folders Update Failed',
+            title: t('accounts.accountSyncFoldersUpdateFailed'),
             description: errorMessage as string,
-            action: <ToastAction altText="Try again">Try again</ToastAction>,
+            action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
         });
         setIsSubmitting(false);
         console.error(error);
@@ -151,8 +152,8 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
     const handleSubmit = async () => {
         if (selectedFolders.length === 0) {
             toast({
-                title: 'Error',
-                description: 'Please select at least one folder',
+                title: t('common.error'),
+                description: t('accounts.selectAtLeastOneFolder'),
                 variant: 'destructive',
             });
             return;
@@ -167,9 +168,9 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>Select Sync Folders</DialogTitle>
+                    <DialogTitle>{t('accounts.selectSyncFolders')}</DialogTitle>
                     <DialogDescription>
-                        Choose folders to sync for {currentRow.email}, Newly added folders will begin downloading during the next sync cycle.
+                        {t('accounts.chooseFoldersToSync', { "email": currentRow.email })}
                     </DialogDescription>
                 </DialogHeader>
 
@@ -184,7 +185,7 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
                                 className="h-8"
                             >
                                 <CheckSquare className="w-4 h-4 mr-2" />
-                                Select All
+                                {t('common.selectAll')}
                             </Button>
                             <Button
                                 variant="outline"
@@ -194,11 +195,11 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
                                 className="h-8"
                             >
                                 <Square className="w-4 h-4 mr-2" />
-                                Deselect All
+                                {t('common.deselectAll')}
                             </Button>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                            {selectedFolders.length} folder(s) selected
+                            {t('accounts.foldersSelected', { count: selectedFolders.length })}
                         </div>
                     </div>
                     <ScrollArea className="h-[30rem] w-full pr-4 -mr-4 py-1">

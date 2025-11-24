@@ -21,11 +21,13 @@ import { Row } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
 import { useAccountContext } from '../context'
 import { AccountModel } from '../data/schema'
+import { useTranslation } from 'react-i18next'
 
 interface DataTableRowActionsProps {
   row: Row<AccountModel>
 }
 export function OAuth2Action({ row }: DataTableRowActionsProps) {
+  const { t } = useTranslation()
   const { setOpen, setCurrentRow } = useAccountContext()
   const mailer = row.original
   const account_type = mailer.account_type;
@@ -52,5 +54,5 @@ export function OAuth2Action({ row }: DataTableRowActionsProps) {
     )
   }
 
-  return <span className="text-xs text-muted-foreground">Password</span>
+  return <Button variant={"ghost"} className="text-xs text-muted-foreground">{t('settings.password')}</Button>
 }

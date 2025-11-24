@@ -25,11 +25,11 @@ import { DataTableColumnHeader } from './data-table-column-header'
 import { DataTableRowActions } from './data-table-row-actions'
 import { format } from 'date-fns'
 
-export const columns: ColumnDef<Proxy>[] = [
+export const getColumns = (t: (key: string) => string): ColumnDef<Proxy>[] => [
   {
     accessorKey: 'id',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Id' />
+      <DataTableColumnHeader column={column} title={t('settings.id')} />
     ),
     cell: ({ row }) => (
       <LongText className='max-w-72'>{`${row.original.id}`}</LongText>
@@ -41,7 +41,7 @@ export const columns: ColumnDef<Proxy>[] = [
   {
     accessorKey: "url",
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Url' />
+      <DataTableColumnHeader column={column} title={t('settings.url')} />
     ),
     cell: ({ row }) => {
       return <LongText>{row.original.url}</LongText>
@@ -51,7 +51,7 @@ export const columns: ColumnDef<Proxy>[] = [
   {
     accessorKey: 'created_at',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Created At' />
+      <DataTableColumnHeader column={column} title={t('settings.createdAt')} />
     ),
     cell: ({ row }) => {
       const created_at = row.original.created_at;
@@ -63,7 +63,7 @@ export const columns: ColumnDef<Proxy>[] = [
   {
     accessorKey: 'updated_at',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Updated At' />
+      <DataTableColumnHeader column={column} title={t('settings.updatedAt')} />
     ),
     cell: ({ row }) => {
       const updated_at = row.original.updated_at;

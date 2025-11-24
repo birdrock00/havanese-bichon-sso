@@ -37,6 +37,7 @@ import { get_authorize_url } from '@/api/oauth2/api'
 import { toast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
 import { AxiosError } from 'axios'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   currentRow: OAuth2Entity
@@ -46,6 +47,7 @@ interface Props {
 
 
 export function AuthorizeDialog({ currentRow, open, onOpenChange }: Props) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [accountId, setAccountId] = useState<number | null>(null)
   const { accountsOptions, minimalList, isLoading } = useMinimalAccountList();
@@ -69,9 +71,9 @@ export function AuthorizeDialog({ currentRow, open, onOpenChange }: Props) {
 
     toast({
       variant: "destructive",
-      title: 'Get Authorize Url Failed',
+      title: t('oauth2.getAuthorizeUrlFailed'),
       description: errorMessage as string,
-      action: <ToastAction altText="Try again">Try again</ToastAction>,
+      action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
     });
     console.error(error);
   }
@@ -90,14 +92,14 @@ export function AuthorizeDialog({ currentRow, open, onOpenChange }: Props) {
     >
       <DialogContent className='sm:max-w-lg' autoFocus>
         <DialogHeader className='text-left'>
-          <DialogTitle>Authorize Email Account</DialogTitle>
+          <DialogTitle>{t('oauth2.authorizeEmailAccount')}</DialogTitle>
           <DialogDescription>
-            Authorize an email account to start the OAuth2 authorization process.
+            {t('oauth2.authorizeAnEmailAccountToStartTheOAuth2AuthorizationProcess')}
           </DialogDescription>
         </DialogHeader>
         <div className='flex flex-col space-y-4 h-24'>
           {isLoading && <div className="flex justify-center items-center h-full">
-            <div>Loading Accounts...</div>
+            <div>{t('oauth2.loadingAccounts')}</div>
           </div>}
           {!isLoading && minimalList && minimalList.length > 0 && (
             <div className="flex justify-start items-start h-full ml-4">
@@ -106,26 +108,26 @@ export function AuthorizeDialog({ currentRow, open, onOpenChange }: Props) {
                 className='w-full'
                 options={accountsOptions}
                 onSelectOption={(values) => setAccountId(parseInt(values[0], 10))}
-                placeholder="Select an account"
+                placeholder={t('oauth2.selectAnAccount')}
               />
             </div>
           )}
           {!isLoading && minimalList?.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full">
-              <p className="mb-4">No email accounts registered. Please create one.</p>
+              <p className="mb-4">{t('oauth2.noEmailAccountsRegistered')}</p>
               <Button onClick={() => {
                 navigate({ to: '/accounts' })
               }}>
-                Create Account
+                {t('oauth2.createAccount')}
               </Button>
             </div>
           )}
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant='outline' className="px-2 py-1 text-sm h-auto">Close</Button>
+            <Button variant='outline' className="px-2 py-1 text-sm h-auto">{t('common.close')}</Button>
           </DialogClose>
-          {!isLoading && minimalList && minimalList.length > 0 && <Button disabled={!accountId} onClick={doAuthorize}>Authorize</Button>}
+          {!isLoading && minimalList && minimalList.length > 0 && <Button disabled={!accountId} onClick={doAuthorize}>{t('oauth2.authorize')}</Button>}
         </DialogFooter>
       </DialogContent>
     </Dialog>

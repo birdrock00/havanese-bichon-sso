@@ -29,6 +29,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ToastAction } from '@/components/ui/toast'
 import { AxiosError } from 'axios'
 import { remove_account } from '@/api/account/api'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   open: boolean
@@ -37,14 +38,15 @@ interface Props {
 }
 
 export function AccountDeleteDialog({ open, onOpenChange, currentRow }: Props) {
+  const { t } = useTranslation()
   const [value, setValue] = useState('')
 
   const queryClient = useQueryClient();
   function handleSuccess() {
     toast({
-      title: 'Account Deleted',
-      description: 'Your account has been successfully deleted.',
-      action: <ToastAction altText="Close">Close</ToastAction>,
+      title: t('dialogs.accountDeleted'),
+      description: t('dialogs.accountDeletedDesc'),
+      action: <ToastAction altText={t('common.close')}>{t('common.close')}</ToastAction>,
     });
 
     queryClient.invalidateQueries({ queryKey: ['account-list'] });
@@ -54,13 +56,13 @@ export function AccountDeleteDialog({ open, onOpenChange, currentRow }: Props) {
   function handleError(error: AxiosError) {
     const errorMessage = error.response?.data ||
       error.message ||
-      `Delete failed, please try again later`;
+      t('dialogs.deleteFailed');
 
     toast({
       variant: "destructive",
-      title: `Account delete Failed`,
+      title: t('dialogs.accountDeleteFailed'),
       description: errorMessage as string,
-      action: <ToastAction altText="Try again">Try again</ToastAction>,
+      action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
     });
     console.error(error);
   }
@@ -89,29 +91,28 @@ export function AccountDeleteDialog({ open, onOpenChange, currentRow }: Props) {
             className='mr-1 inline-block stroke-destructive'
             size={18}
           />{' '}
-          Delete Account Permanently
+          {t('dialogs.deleteAccountPermanently')}
         </span>
       }
       desc={
         <div className='space-y-4'>
           <p className='mb-2'>
-            You are deleting <span className='font-bold'>{currentRow.email}</span>.
-            This will permanently remove:
+            {t('dialogs.youAreDeleting', { email: currentRow.email })}
           </p>
           <ul className="list-disc pl-6 space-y-1 text-sm text-muted-foreground">
-            <li>Account credentials and settings</li>
-            <li>Local cached metadata and sync status</li>
-            <li>IMAP synchronization data</li>
-            <li>OAuth tokens and API credentials</li>
+            <li>{t('dialogs.accountCredentials')}</li>
+            <li>{t('dialogs.localCachedMetadata')}</li>
+            <li>{t('dialogs.imapSyncData')}</li>
+            <li>{t('dialogs.oauthTokens')}</li>
           </ul>
 
           <div className="pt-2">
             <Label>
-              Type the account email to confirm:
+              {t('dialogs.typeEmailToConfirm')}
               <Input
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
-                placeholder={`Type "${currentRow.email}" to confirm`}
+                placeholder={t('dialogs.typeToConfirm', { email: currentRow.email })}
                 className="mt-2"
               />
             </Label>
@@ -119,15 +120,15 @@ export function AccountDeleteDialog({ open, onOpenChange, currentRow }: Props) {
 
           <Alert variant='destructive'>
             <IconAlertCircle className="h-4 w-4" />
-            <AlertTitle>This action cannot be undone!</AlertTitle>
+            <AlertTitle>{t('dialogs.cannotBeUndone')}</AlertTitle>
             <AlertDescription>
-              All related resources will be permanently erased.
+              {t('dialogs.allResourcesErased')}
             </AlertDescription>
           </Alert>
         </div>
       }
       confirmText={
-        deleteMutation.isPending ? 'Deleting...' : 'Permanently Delete Account'
+        deleteMutation.isPending ? t('dialogs.deleting') : t('dialogs.permanentlyDeleteAccount')
       }
       isLoading={deleteMutation.isPending}
       destructive

@@ -30,6 +30,7 @@ import {
     TooltipContent,
 } from '@/components/ui/tooltip'
 import { useSearchContext } from './context'
+import { useTranslation } from 'react-i18next'
 
 type MailBulkActionsProps = {
     children?: React.ReactNode
@@ -38,11 +39,10 @@ type MailBulkActionsProps = {
 export function MailBulkActions({ children }: MailBulkActionsProps) {
     const { selected, setSelected, setOpen, setToDelete } = useSearchContext()
     const toolbarRef = useRef<HTMLDivElement>(null)
+    const { t } = useTranslation()
 
     const selectedCount = Array.from(selected.values())
         .reduce((sum, set) => sum + set.size, 0)
-
-
 
     const handleClearSelection = () => {
         setSelected(new Map())
@@ -114,7 +114,9 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
             <div
                 ref={toolbarRef}
                 role="toolbar"
-                aria-label={`Bulk actions for ${selectedCount} selected email${selectedCount > 1 ? 's' : ''}`}
+                aria-label={t('search.bulkActions.ariaLabel', {
+                    count: selectedCount,
+                })}
                 tabIndex={-1}
                 onKeyDown={handleKeyDown}
                 className={cn(
@@ -130,6 +132,7 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
                         'flex items-center gap-x-2'
                     )}
                 >
+                    {/* Clear Selection */}
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
@@ -137,27 +140,32 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
                                 size="icon"
                                 onClick={handleClearSelection}
                                 className="size-6 rounded-full"
-                                aria-label="Clear selection"
+                                aria-label={t('search.bulkActions.clear')}
                             >
                                 <X className="h-3 w-3" />
-                                <span className="sr-only">Clear selection</span>
+                                <span className="sr-only">{t('search.bulkActions.clear')}</span>
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Clear selection (Escape)</TooltipContent>
+                        <TooltipContent>
+                            {t('search.bulkActions.clearWithKey', { key: 'Escape' })}
+                        </TooltipContent>
                     </Tooltip>
 
                     <Separator orientation="vertical" className="h-5" />
-                    <div className="flex items-center gap-x-1 text-sm" id="bulk-actions-desc">
+
+                    {/* Selected Count */}
+                    <div className="flex items-center gap-x-1 text-sm">
                         <Badge variant="default" className="min-w-8 rounded-lg">
                             {selectedCount}
                         </Badge>{' '}
                         <span className="hidden sm:inline">
-                            email{selectedCount > 1 ? 's' : ''}
-                        </span>{' '}
-                        selected
+                            {t('search.bulkActions.selected', { count: selectedCount })}
+                        </span>
                     </div>
 
                     <Separator orientation="vertical" className="h-5" />
+
+                    {/* Delete */}
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
@@ -167,14 +175,20 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
                                 className="gap-1"
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">Delete</span>
+                                <span className="hidden sm:inline">
+                                    {t('search.bulkActions.delete')}
+                                </span>
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>Delete selected emails</TooltipContent>
+                        <TooltipContent>
+                            {t('search.bulkActions.deleteDesc')}
+                        </TooltipContent>
                     </Tooltip>
+
                     {children}
                 </div>
             </div>
         </>
     )
 }
+

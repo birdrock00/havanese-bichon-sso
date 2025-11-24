@@ -44,6 +44,7 @@ import {
 import { AccessToken } from '../data/schema'
 import { DataTablePagination } from './data-table-pagination'
 import { DataTableToolbar } from './data-table-toolbar'
+import { useTranslation } from 'react-i18next'
 
 declare module '@tanstack/react-table' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -62,7 +63,7 @@ export function AccessTokensTable({ columns, data }: DataTableProps) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [sorting, setSorting] = useState<SortingState>([])
-
+  const { t } = useTranslation()
   const table = useReactTable({
     data,
     columns,
@@ -139,7 +140,7 @@ export function AccessTokensTable({ columns, data }: DataTableProps) {
                   colSpan={columns.length}
                   className='h-24 text-center'
                 >
-                  No results.
+                  {t('common.table.noResults')}
                 </TableCell>
               </TableRow>
             )}

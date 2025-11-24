@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useProxyContext } from '../context'
 import { Proxy } from '../data/schema'
+import { useTranslation } from 'react-i18next'
 
 interface DataTableRowActionsProps {
   row: Row<Proxy>
@@ -38,6 +39,7 @@ interface DataTableRowActionsProps {
 
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const { setOpen, setCurrentRow } = useProxyContext()
+  const { t } = useTranslation()
   return (
     <>
       <DropdownMenu modal={false}>
@@ -57,7 +59,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
               setOpen('edit')
             }}
           >
-            Edit
+            {t('table.edit')}
             <DropdownMenuShortcut>
               <IconEdit size={16} />
             </DropdownMenuShortcut>
@@ -70,7 +72,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             }}
             className='!text-red-500'
           >
-            Delete
+            {t('table.delete')}
             <DropdownMenuShortcut>
               <IconTrash size={16} />
             </DropdownMenuShortcut>

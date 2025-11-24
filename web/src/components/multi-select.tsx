@@ -45,6 +45,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import { useTranslation } from "react-i18next";
 
 /**
  * Variants for the multi-select component to handle different styles.
@@ -75,7 +76,7 @@ const multiSelectVariants = cva(
  */
 interface MultiSelectProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof multiSelectVariants> {
+  VariantProps<typeof multiSelectVariants> {
   /**
    * An array of option objects to be displayed in the multi-select component.
    * Each option object has a label, value, and an optional icon.
@@ -156,6 +157,7 @@ export const MultiSelect = React.forwardRef<
     },
     ref
   ) => {
+    const { t } = useTranslation()
     const [selectedValues, setSelectedValues] =
       React.useState<string[]>(defaultValue);
     const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
@@ -308,7 +310,7 @@ export const MultiSelect = React.forwardRef<
               onKeyDown={handleInputKeyDown}
             />
             <CommandList>
-              <CommandEmpty>No results found.</CommandEmpty>
+              <CommandEmpty>{t('common.table.noResults')}</CommandEmpty>
               <CommandGroup>
                 <CommandItem
                   key="all"

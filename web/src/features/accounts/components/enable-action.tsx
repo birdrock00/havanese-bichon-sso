@@ -27,12 +27,14 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { update_account } from '@/api/account/api'
 import { toast } from '@/hooks/use-toast'
 import { AxiosError } from 'axios'
+import { useTranslation } from 'react-i18next'
 
 interface DataTableRowActionsProps {
   row: Row<AccountModel>
 }
 
 export function EnableAction({ row }: DataTableRowActionsProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
@@ -42,9 +44,9 @@ export function EnableAction({ row }: DataTableRowActionsProps) {
     onSuccess: () => {
       setOpen(false);
       toast({
-        title: 'Account Updated',
-        description: `Account has been successfully ${row.original.enabled ? 'disabled' : 'enabled'}.`,
-        action: <ToastAction altText="Close">Close</ToastAction>,
+        title: t('accounts.accountUpdated'),
+        description: t('accounts.accountHasBeenSuccessfully', { action: row.original.enabled ? t('accounts.disabled').toLowerCase() : t('accounts.enabled').toLowerCase() }),
+        action: <ToastAction altText={t('common.close')}>{t('common.close')}</ToastAction>,
       })
       queryClient.invalidateQueries({ queryKey: ['account-list'] })
     },
@@ -56,9 +58,9 @@ export function EnableAction({ row }: DataTableRowActionsProps) {
 
       toast({
         variant: "destructive",
-        title: 'Update Failed',
+        title: t('accounts.accountUpdateFailed'),
         description: errorMessage,
-        action: <ToastAction altText="Try again">Try again</ToastAction>,
+        action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
       })
     }
   })
@@ -77,13 +79,13 @@ export function EnableAction({ row }: DataTableRowActionsProps) {
       <ConfirmDialog
         open={open}
         onOpenChange={setOpen}
-        title={`${row.original.enabled ? 'Disable' : 'Enable'} Account`}
+        title={row.original.enabled ? t('accounts.disableAccount') : t('accounts.enableAccount')}
         desc={
-          `Are you sure you want to ${row.original.enabled ? 'disable' : 'enable'} this account?` +
-          (row.original.enabled ? ' This will prevent the account from being used.' : '')
+          t('accounts.areYouSureYouWantTo', { action: row.original.enabled ? t('accounts.disable').toLowerCase() : t('accounts.enable').toLowerCase() }) +
+          (row.original.enabled ? ' ' + t('accounts.thisWillPreventTheAccountFromBeingUsed') : '')
         }
         destructive={row.original.enabled}
-        confirmText={row.original.enabled ? 'Disable' : 'Enable'}
+        confirmText={row.original.enabled ? t('accounts.disable') : t('accounts.enable')}
         isLoading={updateMutation.isPending}
         handleConfirm={handleConfirm}
       />

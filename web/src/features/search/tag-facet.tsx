@@ -25,6 +25,7 @@ import React from 'react';
 import { useAvailableTags } from '@/hooks/use-available-tags';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
+import { useTranslation } from 'react-i18next';
 
 interface EnvelopeTagsProps {
   selectedTags: string[];
@@ -32,6 +33,7 @@ interface EnvelopeTagsProps {
 }
 
 export function EnvelopeTags({ selectedTags, onTagToggle }: EnvelopeTagsProps) {
+  const { t } = useTranslation()
   const [open, setOpen] = React.useState(true);
 
   const {
@@ -67,7 +69,7 @@ export function EnvelopeTags({ selectedTags, onTagToggle }: EnvelopeTagsProps) {
       <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-medium hover:text-primary transition-colors">
         <div className="flex items-center gap-2">
           <Tag className="w-4 h-4" />
-          Tags
+          {t('mail.tags')}
           {selectedTags.length > 0 && (
             <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
               {selectedTags.length}
@@ -79,7 +81,7 @@ export function EnvelopeTags({ selectedTags, onTagToggle }: EnvelopeTagsProps) {
 
       <CollapsibleContent className="space-y-0">
         {sortedTags.length === 0 ? (
-          <p className="py-2 pl-2 text-sm text-muted-foreground">No tags yet</p>
+          <p className="py-2 pl-2 text-sm text-muted-foreground">{t('mail.noTagsYet')}</p>
         ) : (
           <ScrollArea className="h-[45rem] w-full pr-4 -mr-4">
             {sortedTags.map(({ tag: facet, count }) => {

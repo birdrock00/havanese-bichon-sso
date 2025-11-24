@@ -239,7 +239,7 @@ export function Mail({
                                     className='mb-6 opacity-20 saturate-0 transition-all duration-300 hover:opacity-100 hover:saturate-100'
                                     width={350}
                                     height={350}
-                                    alt='RustMailer Logo'
+                                    alt='Bichon Logo'
                                 />
                             </div>
                         </div>

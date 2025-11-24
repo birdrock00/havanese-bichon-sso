@@ -29,6 +29,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { delete_access_token } from '@/api/access-tokens/api'
 import { ToastAction } from '@/components/ui/toast'
 import { AxiosError } from 'axios'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   open: boolean
@@ -37,6 +38,7 @@ interface Props {
 }
 
 export function TokenDeleteDialog({ open, onOpenChange, currentRow }: Props) {
+  const { t } = useTranslation()
   const [value, setValue] = useState('')
   const queryClient = useQueryClient();
 
@@ -49,9 +51,9 @@ export function TokenDeleteDialog({ open, onOpenChange, currentRow }: Props) {
 
   function handleSuccess() {
     toast({
-      title: 'Access Token Deleted',
-      description: 'Your access token has been successfully deleted.',
-      action: <ToastAction altText="Close">Close</ToastAction>,
+      title: t('accessTokens.accessTokenDeleted'),
+      description: t('accessTokens.yourAccessTokenHasBeenSuccessfullyDeleted'),
+      action: <ToastAction altText={t('common.close')}>{t('common.close')}</ToastAction>,
     });
 
     queryClient.invalidateQueries({ queryKey: ['access-tokens'] });
@@ -61,13 +63,13 @@ export function TokenDeleteDialog({ open, onOpenChange, currentRow }: Props) {
   function handleError(error: AxiosError) {
     const errorMessage = (error.response?.data as { message?: string })?.message ||
       error.message ||
-      'Delete failed, please try again later';
+      t('dialogs.deleteFailed');
 
     toast({
       variant: "destructive",
-      title: `Access token delete Failed`,
+      title: t('accessTokens.accessTokenDeleteFailed'),
       description: errorMessage as string,
-      action: <ToastAction altText="Try again">Try again</ToastAction>,
+      action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
     });
     console.error(error);
   }
@@ -91,37 +93,37 @@ export function TokenDeleteDialog({ open, onOpenChange, currentRow }: Props) {
             className='mr-1 inline-block stroke-destructive'
             size={18}
           />{' '}
-          Delete Token
+          {t('accessTokens.deleteToken')}
         </span>
       }
       desc={
         <div className='space-y-4'>
           <p className='mb-2'>
-            Are you sure you want to delete{' '}
+            {t('dialogs.confirmDeleteDesc')}
             <span className='font-bold'>{currentRow.token}</span>?
             <br />
-            This action will permanently remove the token from the system. This cannot be undone.
+            {t('accessTokens.thisActionWillPermanentlyRemoveTheToken')}
           </p>
 
           <Label className='my-2'>
-            Token:
+            {t('settings.token')}:
             <Input
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder='Enter token to confirm deletion.'
+              placeholder={t('accessTokens.enterTokenToConfirmDeletion')}
               className="mt-2"
             />
           </Label>
 
           <Alert variant='destructive'>
-            <AlertTitle>Warning!</AlertTitle>
+            <AlertTitle>{t('oauth2.warning')}</AlertTitle>
             <AlertDescription>
-              Please be carefull, this operation can not be rolled back.
+              {t('oauth2.pleaseBeCareful')}
             </AlertDescription>
           </Alert>
         </div>
       }
-      confirmText='Delete'
+      confirmText={t('common.delete')}
       destructive
     />
   )

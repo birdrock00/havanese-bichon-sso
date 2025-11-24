@@ -21,6 +21,7 @@ import { useSearchContext } from './context'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { MailMessageView } from './mail-message-view'
+import { useTranslation } from 'react-i18next'
 
 
 interface Props {
@@ -29,6 +30,7 @@ interface Props {
 }
 
 export function MailDisplayDrawer({ open, onOpenChange }: Props) {
+  const { t } = useTranslation()
   const { currentEnvelope } = useSearchContext()
 
 
@@ -41,7 +43,7 @@ export function MailDisplayDrawer({ open, onOpenChange }: Props) {
         <DialogHeader className="p-4 pb-3 border-b shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
-              Email Viewer
+              {t('mail.emailViewer')}
             </DialogTitle>
           </div>
         </DialogHeader>
@@ -50,7 +52,7 @@ export function MailDisplayDrawer({ open, onOpenChange }: Props) {
             {currentEnvelope ? (
               <MailMessageView envelope={currentEnvelope} />
             ) : (
-              <div className="p-8 text-center text-muted-foreground">No message selected</div>
+              <div className="p-8 text-center text-muted-foreground">{t('mail.noMessageSelected')}</div>
             )}
           </div>
         </ScrollArea>

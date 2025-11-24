@@ -30,9 +30,11 @@ import { resetAccessToken } from '@/stores/authStore'
 import { toast } from '@/hooks/use-toast'
 import { ThemeProvider } from './context/theme-context'
 import './index.css'
+import './i18n'
 // Generated Routes
 import { routeTree } from './routeTree.gen'
 import { ToastAction } from './components/ui/toast'
+import i18n from './i18n'
 
 
 const handleAxiosError = (error: any) => {
@@ -42,9 +44,9 @@ const handleAxiosError = (error: any) => {
     case 401:
       toast({
         variant: 'destructive',
-        title: 'Session expired!',
-        description: 'Your session has ended due to inactivity. Please log in again to continue.',
-        action: <ToastAction altText="Close">Close</ToastAction>,
+        title: i18n.t('auth.sessionExpired'),
+        description: i18n.t('auth.sessionExpiredDesc'),
+        action: <ToastAction altText={i18n.t('common.close')}>{i18n.t('common.close')}</ToastAction>,
       });
       resetAccessToken();
       const currentPath = router.history.location.pathname;
@@ -59,23 +61,23 @@ const handleAxiosError = (error: any) => {
     case 500:
       toast({
         variant: 'destructive',
-        title: 'Internal Server Error!',
+        title: i18n.t('errors.internalServerError'),
       });
       router.navigate({ to: '/500' });
       break;
     case 304:
       toast({
         variant: 'destructive',
-        title: 'Content not modified!',
+        title: i18n.t('errors.contentNotModified'),
       });
       break;
     default:
       if (error.code === "ERR_NETWORK") {
         toast({
           variant: "destructive",
-          title: "Network Error",
-          description: "Unable to connect to the server. Please check your internet connection and try again.",
-          action: <ToastAction altText="Try again">Try again</ToastAction>,
+          title: i18n.t('errors.networkError'),
+          description: i18n.t('errors.networkErrorDesc'),
+          action: <ToastAction altText={i18n.t('common.tryAgain')}>{i18n.t('common.tryAgain')}</ToastAction>,
         });
       }
   }

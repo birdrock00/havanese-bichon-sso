@@ -34,6 +34,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2 } from 'lucide-react';
 import { AccountModel } from '../data/schema';
+import { useTranslation } from 'react-i18next';
 
 
 const accountSchema = () =>
@@ -77,6 +78,7 @@ const mapCurrentRowToFormValues = (currentRow: AccountModel): NoSyncAccount => {
 
 
 export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
+  const { t } = useTranslation()
   const isEdit = !!currentRow;
   const { toast } = useToast();
 
@@ -102,9 +104,9 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
 
   function handleSuccess() {
     toast({
-      title: `Account ${isEdit ? 'Updated' : 'Created'}`,
-      description: `Your account has been successfully ${isEdit ? 'updated' : 'created'}.`,
-      action: <ToastAction altText="Close">Close</ToastAction>,
+      title: isEdit ? t('accounts.accountUpdated') : t('accounts.accountCreated'),
+      description: isEdit ? t('accounts.accountUpdatedDesc') : t('accounts.accountCreatedDesc'),
+      action: <ToastAction altText={t('common.close')}>{t('common.close')}</ToastAction>,
     });
 
     queryClient.invalidateQueries({ queryKey: ['account-list'] });
@@ -120,9 +122,9 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
 
     toast({
       variant: "destructive",
-      title: `Account ${isEdit ? 'Update' : 'Creation'} Failed`,
+      title: isEdit ? t('accounts.accountUpdateFailed') : t('accounts.accountCreationFailed'),
       description: errorMessage as string,
-      action: <ToastAction altText="Try again">Try again</ToastAction>,
+      action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
     });
     console.error(error);
   }
@@ -156,10 +158,10 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
     >
       <DialogContent className='max-w-2xl'>
         <DialogHeader className='text-left mb-4'>
-          <DialogTitle>{isEdit ? "Update Account" : "Add Account"}</DialogTitle>
+          <DialogTitle>{isEdit ? t('accounts.updateAccount') : t('accounts.addAccount')}</DialogTitle>
           <DialogDescription>
-            {isEdit ? 'Update the email account here. ' : 'Add new email account here. '}
-            Click save when you're done.
+            {isEdit ? t('accounts.updateTheEmailAccountHere') : t('accounts.addNewEmailAccountHere')}
+            {t('accounts.clickSaveWhenDone')}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className='h-[23rem] w-full pr-4 -mr-4 py-1'>
@@ -175,14 +177,14 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center justify-between">
-                      Email Address:
+                      {t('accounts.emailAddress')}:
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g john.doe@gmail.com" {...field} />
+                      <Input placeholder={t('accounts.emailPlaceholder')} {...field} />
                     </FormControl>
                     <FormMessage />
                     <FormDescription>
-                      This account is used for identification purposes only and does not require syncing with an email server. It helps with importing email data.
+                      {t('accounts.thisAccountIsUsedForIdentificationPurposesOnly')}
                     </FormDescription>
                   </FormItem>
                 )}
@@ -193,12 +195,12 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center justify-between">
-                      Name:
+                      {t('accounts.name')}:
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g john.doe" {...field} />
+                      <Input placeholder={t('accounts.namePlaceholder')} {...field} />
                     </FormControl>
-                    <FormDescription>Optional</FormDescription>
+                    <FormDescription>{t('accounts.optional')}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -208,7 +210,7 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
                 name='enabled'
                 render={({ field }) => (
                   <FormItem className='flex flex-col items-start gap-y-1'>
-                    <FormLabel>Enabled:</FormLabel>
+                    <FormLabel>{t('accounts.enabled')}:</FormLabel>
                     <FormControl>
                       <Checkbox
                         checked={field.value}
@@ -216,7 +218,7 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
                       />
                     </FormControl>
                     <FormDescription>
-                      Determines whether this account is active. If disabled, the account will not be able to import data or perform queries.
+                      {t('accounts.determinesWhetherThisAccountIsActiveNoSync')}
                     </FormDescription>
                   </FormItem>
                 )}
@@ -234,19 +236,19 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
               updateMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  {t('oauth2.saving')}
                 </>
               ) : (
-                "Save changes"
+                t('accounts.saveChanges')
               )
             ) : (
               createMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
+                  {t('oauth2.creating')}
                 </>
               ) : (
-                "Create"
+                t('common.create')
               )
             )}
           </Button>

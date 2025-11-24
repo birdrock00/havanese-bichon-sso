@@ -19,6 +19,7 @@
 
 import { Table } from '@tanstack/react-table'
 import { Input } from '@/components/ui/input'
+import { useTranslation } from 'react-i18next'
 
 interface DataTableToolbarProps<TData> {
   table: Table<TData>
@@ -27,11 +28,12 @@ interface DataTableToolbarProps<TData> {
 export function DataTableToolbar<TData>({
   table,
 }: DataTableToolbarProps<TData>) {
+  const { t } = useTranslation()
   return (
     <div className='flex items-center justify-between'>
       <div className='flex flex-1 flex-col-reverse items-start gap-y-2 sm:flex-row sm:items-center sm:space-x-2'>
         <Input
-          placeholder='Filter oauth2...'
+          placeholder={t('settings.filterOauth2')}
           value={(table.getState().globalFilter as string) ?? ''}
           onChange={(event) => {
             table.setGlobalFilter(event.target.value);

@@ -26,6 +26,7 @@ import { useMailboxContext } from "../context"
 import { Checkbox } from "@/components/ui/checkbox"
 import { MailBulkActions } from "./bulk-actions"
 import { Badge } from "@/components/ui/badge"
+import { useTranslation } from 'react-i18next'
 
 interface MailListProps {
     items: EmailEnvelope[]
@@ -36,7 +37,7 @@ export function MailList({
     items,
     isLoading,
 }: MailListProps) {
-
+    const { t } = useTranslation()
     const { currentEnvelope, setCurrentEnvelope, setDeleteIds, setOpen, selected, setSelected } = useMailboxContext()
 
     const handleDelete = (envelope: EmailEnvelope) => {
@@ -108,8 +109,8 @@ export function MailList({
                     />
                     <span className="text-xs text-muted-foreground">
                         {selected.size > 0
-                            ? `${selected.size} selected`
-                            : "Select all"}
+                            ? `${selected.size} ${t('common.selected')}`
+                            : t('common.selectAll')}
                     </span>
                 </div>
             )}

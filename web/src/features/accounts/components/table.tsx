@@ -44,6 +44,7 @@ import {
 import { AccountModel } from '../data/schema'
 import { DataTablePagination } from './data-table-pagination'
 import { DataTableToolbar } from './data-table-toolbar'
+import { useTranslation } from 'react-i18next'
 
 declare module '@tanstack/react-table' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -59,6 +60,7 @@ interface DataTableProps {
 
 
 export function AccountTable({ columns, data }: DataTableProps) {
+  const { t } = useTranslation()
   const [rowSelection, setRowSelection] = useState({})
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -140,7 +142,7 @@ export function AccountTable({ columns, data }: DataTableProps) {
                   colSpan={columns.length}
                   className='h-24 text-center'
                 >
-                  No results.
+                  {t('common.table.noResults')}
                 </TableCell>
               </TableRow>
             )}

@@ -52,10 +52,20 @@ import { ToastAction } from '@/components/ui/toast'
 import { AxiosError } from 'axios'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import useProxyList from '@/hooks/use-proxy'
+import { useTranslation } from 'react-i18next'
+
+const getParamSchema = (t: (key: string) => string) => z.object({
+  key: z.string({ required_error: t('oauth2.keyIsRequired') }).min(1, t('oauth2.keyCannotBeEmpty')),
+  value: z.string({ required_error: t('oauth2.valueIsRequired') }).min(1, t('oauth2.valueCannotBeEmpty')),
+});
 
 const paramSchema = z.object({
   key: z.string({ required_error: 'Key is required' }).min(1, "Key cannot be empty"),
   value: z.string({ required_error: 'Value is required' }).min(1, "Value cannot be empty"),
+});
+
+const getScopeSchema = (t: (key: string) => string) => z.object({
+  value: z.string({ required_error: t('oauth2.valueIsRequired') }).min(1, t('oauth2.valueCannotBeEmpty')),
 });
 
 const scopeSchema = z.object({
@@ -88,6 +98,36 @@ function convertToScopeSchema(authorizeScopes: z.infer<typeof authorizescopeSche
     value: scope,
   }));
 }
+
+const getOAuth2Schema = (t: (key: string) => string) => z.object({
+  description: z.string().max(255, { message: t('oauth2.descriptionMustNotExceed255Characters') }).optional(),
+  client_id: z.string({
+    required_error: t('oauth2.clientIdIsRequired'),
+  }).min(1, { message: t('oauth2.clientIdCannotBeEmpty') }),
+  client_secret: z.string().optional(),
+  auth_url: z.string({
+    required_error: t('oauth2.authorizationUrlIsRequired'),
+  })
+    .min(1, { message: t('oauth2.authorizationUrlCannotBeEmpty') })
+    .url({ message: t('oauth2.invalidAuthorizationUrlFormat') }),
+
+  token_url: z.string({
+    required_error: t('oauth2.tokenUrlIsRequired'),
+  })
+    .min(1, { message: t('oauth2.tokenUrlCannotBeEmpty') })
+    .url({ message: t('oauth2.invalidTokenUrlFormat') }),
+
+  redirect_uri: z.string({
+    required_error: t('oauth2.redirectUriIsRequired'),
+  })
+    .min(1, { message: t('oauth2.redirectUriCannotBeEmpty') })
+    .url({ message: t('oauth2.invalidRedirectUriFormat') }),
+
+  scopes: z.array(getScopeSchema(t)).optional(),
+  extra_params: z.array(getParamSchema(t)).optional(),
+  enabled: z.boolean(),
+  use_proxy: z.number().optional(),
+});
 
 const oauth2Schema = z.object({
   description: z.string().max(255, { message: "Description must not exceed 255 characters." }).optional(),
@@ -143,9 +183,10 @@ const defaultValues = {
 
 
 export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
+  const { t } = useTranslation()
   const isEdit = !!currentRow
   const form = useForm<OAuth2Form>({
-    resolver: zodResolver(oauth2Schema),
+    resolver: zodResolver(getOAuth2Schema(t)),
     defaultValues: isEdit
       ? {
         description: currentRow.description ?? undefined,
@@ -191,9 +232,9 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
 
   function handleSuccess() {
     toast({
-      title: `OAuth2 ${isEdit ? 'Updated' : 'Created'}`,
-      description: `Your OAuth2 application has been successfully ${isEdit ? 'updated' : 'created'}.`,
-      action: <ToastAction altText="Close">Close</ToastAction>,
+      title: `OAuth2 ${isEdit ? t('oauth2.updated') : t('oauth2.created')}`,
+      description: t('oauth2.yourOAuth2ApplicationHasBeenSuccessfully', { action: isEdit ? t('oauth2.updated').toLowerCase() : t('oauth2.created').toLowerCase() }),
+      action: <ToastAction altText={t('common.close')}>{t('common.close')}</ToastAction>,
     });
 
     queryClient.invalidateQueries({ queryKey: ['oauth2-list'] });
@@ -203,13 +244,13 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
   function handleError(error: AxiosError) {
     const errorMessage = (error.response?.data as { message?: string })?.message ||
       error.message ||
-      `${isEdit ? 'Update' : 'Creation'} failed, please try again later`;
+      t('oauth2.updateOrCreationFailed', { action: isEdit ? t('oauth2.updateFailed') : t('oauth2.creationFailed') });
 
     toast({
       variant: "destructive",
-      title: `OAuth2 ${isEdit ? 'Update' : 'Creation'} Failed`,
+      title: `OAuth2 ${isEdit ? t('oauth2.updateFailed') : t('oauth2.creationFailed')}`,
       description: errorMessage as string,
-      action: <ToastAction altText="Try again">Try again</ToastAction>,
+      action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
     });
     console.error(error);
   }
@@ -219,14 +260,14 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
       if (!values.client_secret) {
         form.setError('client_secret', {
           type: 'manual',
-          message: 'Client Secret is required'
+          message: t('oauth2.clientSecretIsRequired')
         });
         return;
       }
       if (values.client_secret.length < 1) {
         form.setError('client_secret', {
           type: 'manual',
-          message: 'Client Secret cannot be empty'
+          message: t('oauth2.clientSecretCannotBeEmpty')
         });
         return;
       }
@@ -275,15 +316,15 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
     >
       <DialogContent className='w-full md:max-w-4xl'>
         <DialogHeader className='text-left mb-4'>
-          <DialogTitle>{isEdit ? 'Edit' : 'Add New'}</DialogTitle>
+          <DialogTitle>{isEdit ? t('oauth2.edit') : t('oauth2.addNew')}</DialogTitle>
           <DialogDescription>
-            {isEdit ? 'Update here. ' : 'Create new here. '}
-            Click save when you&apos;re done.
+            {isEdit ? t('oauth2.updateHere') : t('oauth2.createNewHere')}
+            {t('oauth2.clickSaveWhenDone')}
           </DialogDescription>
         </DialogHeader>
         <div className="flex items-center justify-start gap-2 mb-4">
           <span className="text-sm text-muted-foreground mr-2">
-            Quick presets:
+            {t('oauth2.quickPresets')}
           </span>
           <Button
             variant="secondary"
@@ -296,7 +337,7 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
               form.setValue("extra_params", [{ key: "access_type", value: "offline" }, { key: "prompt", value: "consent" }])
             }}
           >
-            Gmail
+            {t('oauth2.gmail')}
           </Button>
 
           <Button
@@ -310,7 +351,7 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
               form.setValue("extra_params", [{ key: "prompt", value: "consent" }])
             }}
           >
-            Outlook
+            {t('oauth2.outlook')}
           </Button>
         </div>
         <ScrollArea className='h-[28rem] w-full pr-4 -mr-4 py-1'>
@@ -332,12 +373,9 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                         onCheckedChange={field.onChange}
                       />
                     </FormControl>
-                    <FormLabel>Enabled</FormLabel>
+                    <FormLabel>{t('oauth2.enabled')}</FormLabel>
                     <FormDescription>
-                      When disabled:
-                      - New authorization flows will be rejected immediately
-                      - Existing access tokens and refresh tokens will be revoked within 1 minute
-                      - Users must re-authorize when re-enabled
+                      {t('oauth2.whenDisabled')}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -348,15 +386,15 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                 name='client_id'
                 render={({ field }) => (
                   <FormItem className='flex flex-col gap-y-1 space-y-0'>
-                    <FormLabel className='mb-1'>Client Id:</FormLabel>
+                    <FormLabel className='mb-1'>{t('oauth2.clientIdLabel')}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder='Enter your client ID'
+                        placeholder={t('oauth2.enterYourClientId')}
                         {...field}
                       />
                     </FormControl>
                     <FormDescription>
-                      The unique identifier for your application, provided by the OAuth provider.
+                      {t('oauth2.theUniqueIdentifierForYourApplication')}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -367,17 +405,17 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                 name='client_secret'
                 render={({ field }) => (
                   <FormItem className='flex flex-col gap-y-1 space-y-0'>
-                    <FormLabel className='mb-1'>Client Secret:</FormLabel>
+                    <FormLabel className='mb-1'>{t('oauth2.clientSecretLabel')}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder={isEdit ? 'Leave empty to keep existing secret' : 'Enter your client secret'}
+                        placeholder={isEdit ? t('oauth2.leaveEmptyToKeepExistingSecret') : t('oauth2.enterYourClientSecret')}
                         {...field}
                       />
                     </FormControl>
                     <FormDescription>
                       {isEdit
-                        ? 'Leave empty to keep the existing secret. Only enter a new value if you want to change it.'
-                        : 'A secret key provided by the OAuth provider to authenticate your application.'}
+                        ? t('oauth2.leaveEmptyToKeepTheExistingSecret')
+                        : t('oauth2.aSecretKeyProvidedByTheOAuthProvider')}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -388,15 +426,15 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                 name='auth_url'
                 render={({ field }) => (
                   <FormItem className='flex flex-col gap-y-1 space-y-0'>
-                    <FormLabel className='mb-1'>Auth Url:</FormLabel>
+                    <FormLabel className='mb-1'>{t('oauth2.authUrlLabel')}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder='Enter the authorization URL'
+                        placeholder={t('oauth2.enterTheAuthorizationUrl')}
                         {...field}
                       />
                     </FormControl>
                     <FormDescription>
-                      The URL where users will be redirected to authorize your application.
+                      {t('oauth2.theUrlWhereUsersWillBeRedirected')}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -407,15 +445,15 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                 name='token_url'
                 render={({ field }) => (
                   <FormItem className='flex flex-col gap-y-1 space-y-0'>
-                    <FormLabel className='mb-1'>Token Url:</FormLabel>
+                    <FormLabel className='mb-1'>{t('oauth2.tokenUrlLabel')}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder='Enter the token URL'
+                        placeholder={t('oauth2.enterTheTokenUrl')}
                         {...field}
                       />
                     </FormControl>
                     <FormDescription>
-                      The URL used to exchange the authorization code for an access token.
+                      {t('oauth2.theUrlUsedToExchange')}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -426,18 +464,15 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                 name='redirect_uri'
                 render={({ field }) => (
                   <FormItem className='flex flex-col gap-y-1 space-y-0'>
-                    <FormLabel className='mb-1'>Redirect Url:</FormLabel>
+                    <FormLabel className='mb-1'>{t('oauth2.redirectUrlLabel')}</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder='Enter your redirect URL'
+                        placeholder={t('oauth2.enterYourRedirectUrl')}
                         {...field}
                       />
                     </FormControl>
                     <FormDescription>
-                      The redirect URL after authorization. It must match the one registered with the OAuth provider.
-                      Use the format <code>http://[host]:[port]/oauth2/callback</code> (or <code>https://</code>),
-                      where <code>[host]</code> and <code>[port]</code> match your RustMailer deployment.
-                      The path <code>/oauth2/callback</code> is fixed.
+                      {t('oauth2.theRedirectUrlAfterAuthorization')}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -451,9 +486,9 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                       name={`scopes.${index}.value`}
                       render={({ field }) => (
                         <FormItem className="flex-1">
-                          <FormLabel className={cn(index !== 0 && "sr-only")}>Scope:</FormLabel>
+                          <FormLabel className={cn(index !== 0 && "sr-only")}>{t('oauth2.scope')}</FormLabel>
                           <FormDescription className={cn(index !== 0 && "sr-only")}>
-                            Enter the scope here.
+                            {t('oauth2.enterTheScopeHere')}
                           </FormDescription>
                           <FormControl>
                             <Input {...field} />
@@ -483,7 +518,7 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                   className="mt-2"
                   onClick={() => scopes_append({ value: "" })}
                 >
-                  <Plus className="mr-2 h-4 w-4" /> Add Scope
+                  <Plus className="mr-2 h-4 w-4" /> {t('oauth2.addScope')}
                 </Button>
               </div>
               <div>
@@ -495,9 +530,9 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                         name={`extra_params.${index}.key`}
                         render={({ field }) => (
                           <FormItem className="flex-1">
-                            <FormLabel className={cn(index !== 0 && "sr-only")}>Key:</FormLabel>
+                            <FormLabel className={cn(index !== 0 && "sr-only")}>{t('oauth2.key')}</FormLabel>
                             <FormDescription className={cn(index !== 0 && "sr-only")}>
-                              Enter the key here.
+                              {t('oauth2.enterTheKeyHere')}
                             </FormDescription>
                             <FormControl>
                               <Input {...field} />
@@ -511,9 +546,9 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                         name={`extra_params.${index}.value`}
                         render={({ field }) => (
                           <FormItem className="flex-1">
-                            <FormLabel className={cn(index !== 0 && "sr-only")}>Value:</FormLabel>
+                            <FormLabel className={cn(index !== 0 && "sr-only")}>{t('oauth2.value')}</FormLabel>
                             <FormDescription className={cn(index !== 0 && "sr-only")}>
-                              Enter the value here.
+                              {t('oauth2.enterTheValueHere')}
                             </FormDescription>
                             <FormControl>
                               <Input {...field} />
@@ -544,7 +579,7 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                   className="mt-2"
                   onClick={() => params_append({ key: "", value: "" })}
                 >
-                  <Plus className="mr-2 h-4 w-4" /> Add Extra Params
+                  <Plus className="mr-2 h-4 w-4" /> {t('oauth2.addExtraParams')}
                 </Button>
               </div>
               <FormField
@@ -552,7 +587,7 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                 name='use_proxy'
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center justify-between">Use Proxy (optional):</FormLabel>
+                    <FormLabel className="flex items-center justify-between">{t('oauth2.useProxyOptional')}</FormLabel>
                     <FormControl>
                       <Select
                         onValueChange={(val) => field.onChange(Number(val))}
@@ -560,7 +595,7 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a proxy" />
+                            <SelectValue placeholder={t('oauth2.selectAProxy')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -571,13 +606,13 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                               </SelectItem>
                             ))
                           ) : (
-                            <SelectItem disabled value="__none__">No proxy available</SelectItem>
+                            <SelectItem disabled value="__none__">{t('oauth2.noProxyAvailable')}</SelectItem>
                           )}
                         </SelectContent>
                       </Select>
                     </FormControl>
                     <FormDescription className='flex-1'>
-                      Use SOCKS5 proxy for OAuth requests when direct access is blocked.
+                      {t('oauth2.useSocks5ProxyForOAuthRequests')}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -588,15 +623,15 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                 name='description'
                 render={({ field }) => (
                   <FormItem className='flex flex-col gap-y-1 space-y-0'>
-                    <FormLabel className='mb-1'>Description:</FormLabel>
+                    <FormLabel className='mb-1'>{t('oauth2.descriptionLabel')}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder='Describe the purpose of the oauth2 application'
+                        placeholder={t('oauth2.describeThePurposeOfTheOauth2Application')}
                         {...field}
                         className="max-h-[240px] min-h-[80px]"
                       />
                     </FormControl>
-                    <FormDescription>(Optional)</FormDescription>
+                    <FormDescription>{t('oauth2.optional')}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -615,19 +650,19 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
               updateMutation.isPending ? (
                 <span className="flex items-center justify-center">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  {t('oauth2.saving')}
                 </span>
               ) : (
-                "Save changes"
+                t('oauth2.saveChanges')
               )
             ) : (
               createMutation.isPending ? (
                 <span className="flex items-center justify-center">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
+                  {t('oauth2.creating')}
                 </span>
               ) : (
-                "Save"
+                t('oauth2.save')
               )
             )}
           </Button>

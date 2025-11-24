@@ -25,9 +25,10 @@ import { Checkbox } from "@/components/ui/checkbox"   // shadcn Checkbox
 import { EmailEnvelope } from "@/api"
 import { useSearchContext } from "./context"
 import { MailBulkActions } from "./bulk-actions"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { useTranslation } from 'react-i18next'
 
 interface MailListProps {
     items: EmailEnvelope[]
@@ -40,6 +41,7 @@ export function MailList({
     isLoading,
     onEnvelopeChanged
 }: MailListProps) {
+    const { t } = useTranslation()
     const { setOpen, currentEnvelope, setCurrentEnvelope, selected, setSelected, setToDelete } = useSearchContext()
 
     const handleToggleAll = () => {
@@ -141,8 +143,8 @@ export function MailList({
                     />
                     <span className="text-xs text-muted-foreground">
                         {totalSelected > 0
-                            ? `${totalSelected} selected`
-                            : "Select all"}
+                            ? `${totalSelected} ${t('common.selected')}`
+                            : t('common.selectAll')}
                     </span>
                 </div>
             )}
@@ -227,14 +229,10 @@ export function MailList({
                                             onClick={(e) => e.stopPropagation()}
                                         >
                                             <MoreVertical className="h-3.5 w-3.5" />
-                                            <span className="sr-only">More actions</span>
                                         </Button>
                                     </DropdownMenuTrigger>
 
                                     <DropdownMenuContent align="end" className="w-48">
-                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                        <DropdownMenuSeparator />
-
                                         <DropdownMenuItem
                                             onClick={(e) => e.stopPropagation()}
                                             onSelect={(e) => {
@@ -244,7 +242,7 @@ export function MailList({
                                             }}
                                         >
                                             <TagIcon className="ml-2 h-4 w-4" />
-                                            Edit Tags
+                                            {t('search.editTag')}
                                         </DropdownMenuItem>
 
                                         <DropdownMenuItem
@@ -256,7 +254,7 @@ export function MailList({
                                             }}
                                         >
                                             <Trash2 className="ml-2 h-4 w-4" />
-                                            Delete
+                                            {t('common.delete')}
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>

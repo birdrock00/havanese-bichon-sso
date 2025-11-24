@@ -21,16 +21,18 @@ import { Card } from "@/components/ui/card";
 import { FixedHeader } from "./layout/fixed-header";
 import { Main } from "./layout/main";
 import Logo from '@/assets/logo.svg'
-
-const docsOptions = [
-  { name: "Swagger UI", path: "/api-docs/swagger" },
-  { name: "ReDoc", path: "/api-docs/redoc" },
-  { name: "OpenAPI Explorer", path: "/api-docs/explorer" },
-  { name: "Scalar", path: "/api-docs/scalar" },
-  { name: "Download Spec YAML", path: "/api-docs/spec.yaml" }
-];
+import { useTranslation } from 'react-i18next'
 
 export default function APIDocs() {
+  const { t } = useTranslation()
+  
+  const docsOptions = [
+    { name: t('apiDocs.swaggerUI'), path: "/api-docs/swagger" },
+    { name: t('apiDocs.reDoc'), path: "/api-docs/redoc" },
+    { name: t('apiDocs.openAPIExplorer'), path: "/api-docs/explorer" },
+    { name: t('apiDocs.scalar'), path: "/api-docs/scalar" },
+    { name: t('apiDocs.downloadSpecYAML'), path: "/api-docs/spec.yaml" }
+  ];
   const handleCardClick = (path: string) => {
     // Open in new tab
     window.open(path, '_blank', 'noopener,noreferrer');
@@ -43,9 +45,9 @@ export default function APIDocs() {
       <Main>
         <div className='mb-2 flex items-center justify-between space-y-2 flex-wrap gap-x-4'>
           <div>
-            <h2 className='text-2xl font-bold tracking-tight'>API Documentation</h2>
+            <h2 className='text-2xl font-bold tracking-tight'>{t('navigation.apiDocs')}</h2>
             <p className='text-muted-foreground'>
-              Choose your preferred API documentation type
+              {t('apiDocs.choosePreferredType')}
             </p>
           </div>
         </div>
@@ -62,7 +64,7 @@ export default function APIDocs() {
                     <img
                       src={Logo}
                       className="max-h-[66px] w-auto opacity-20 saturate-0 transition-all duration-300 hover:opacity-100 hover:saturate-100 object-contain"
-                      alt="RustMailer Logo"
+                      alt="Bichon Logo"
                     />
                     <h3 className="text-sm font-medium">{option.name}</h3>
                   </div>

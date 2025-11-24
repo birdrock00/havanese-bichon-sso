@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   open: boolean
@@ -32,6 +33,7 @@ interface Props {
 }
 
 export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
+  const { t } = useTranslation()
   return (
     <Dialog
       open={open}
@@ -46,7 +48,7 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
         <ScrollArea className="h-[35rem] w-full pr-4 -mr-4 py-1">
           <Tabs defaultValue="account" className="w-full">
             <TabsList className="grid w-full grid-cols-1">
-              <TabsTrigger value="account">Account Details</TabsTrigger>
+              <TabsTrigger value="account">{t('accounts.accountDetails')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="account">
@@ -56,44 +58,44 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                   <CardContent className="mt-4">
                     <div className="flex flex-col gap-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">ID:</span>
+                        <span className="text-muted-foreground">{t('accounts.id')}:</span>
                         <span>{currentRow.id}</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">Email:</span>
+                        <span className="text-muted-foreground">{t('accounts.email')}:</span>
                         <span>{currentRow.email}</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">Name:</span>
-                        <span>{currentRow.name ?? "n/a"}</span>
+                        <span className="text-muted-foreground">{t('accounts.name')}:</span>
+                        <span>{currentRow.name ?? t('accounts.notAvailable')}</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">Enabled:</span>
+                        <span className="text-muted-foreground">{t('accounts.enabled')}:</span>
                         <Checkbox checked={currentRow.enabled} disabled />
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">Incremental Sync Interval:</span>
-                        <span>every {currentRow.sync_interval_min} minutes</span>
+                        <span className="text-muted-foreground">{t('accounts.incrementalSyncInterval')}:</span>
+                        <span>{t('accounts.everyMinutes', { minutes: currentRow.sync_interval_min })}</span>
                       </div>
                       <div className="flex flex-col gap-2">
-                        <span className="text-muted-foreground">Capabilities:</span>
+                        <span className="text-muted-foreground">{t('accounts.capabilities')}:</span>
                         <code className="rounded-md bg-muted/50 px-2 py-1 text-sm border overflow-x-auto inline-block">
-                          {currentRow.capabilities ? currentRow.capabilities.join(", ") : "n/a"}
+                          {currentRow.capabilities ? currentRow.capabilities.join(", ") : t('accounts.notAvailable')}
                         </code>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">Date Selection:</span>
+                        <span className="text-muted-foreground">{t('accounts.dateSelection')}:</span>
                         <span>
                           {currentRow.date_since?.fixed
-                            ? currentRow.date_since.fixed
+                            ? t('accounts.since') + ' ' + currentRow.date_since.fixed
                             : currentRow.date_since?.relative
-                              ? `recent ${currentRow.date_since.relative.value} ${currentRow.date_since.relative.unit}`
-                              : "n/a"}
+                              ? t('accounts.recent') + ' ' + currentRow.date_since.relative.value + ' ' + currentRow.date_since.relative.unit
+                              : t('accounts.notAvailable')}
                         </span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">Folder Limit:</span>
-                        <span>{currentRow.folder_limit ? currentRow.folder_limit : "n/a"}</span>
+                        <span className="text-muted-foreground">{t('accounts.folderLimit')}:</span>
+                        <span>{currentRow.folder_limit ? currentRow.folder_limit : t('accounts.notAvailable')}</span>
                       </div>
                     </div>
                   </CardContent>
@@ -102,24 +104,24 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                 {/* Server Configuration Card */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Server Configuration (IMAP)</CardTitle>
+                    <CardTitle>{t('accounts.serverConfiguration')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-col gap-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">Host:</span>
+                        <span className="text-muted-foreground">{t('accounts.host')}:</span>
                         <span>{currentRow.imap?.host}</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">Port:</span>
+                        <span className="text-muted-foreground">{t('accounts.port')}:</span>
                         <span>{currentRow.imap?.port}</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">Encryption:</span>
+                        <span className="text-muted-foreground">{t('accounts.encryption')}:</span>
                         <span>{currentRow.imap?.encryption}</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">Auth:</span>
+                        <span className="text-muted-foreground">{t('accounts.auth')}:</span>
                         {currentRow.imap?.auth.auth_type === "OAuth2" ? (
                           <Badge variant="outline" className="bg-blue-100 text-blue-800">
                             OAuth2
@@ -131,7 +133,7 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">Use Proxy:</span>
+                        <span className="text-muted-foreground">{t('accounts.useProxyField')}:</span>
                         <span>{currentRow.imap?.use_proxy ? "true" : "false"}</span>
                       </div>
                     </div>
@@ -141,13 +143,13 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                 {/* Sync Folders Card */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Sync Folders</CardTitle>
+                    <CardTitle>{t('accounts.syncFoldersTitle')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {currentRow.sync_folders?.length ? (
                       <div className="space-y-2">
                         <div className="text-sm mt-2 text-muted-foreground">
-                          {currentRow.sync_folders.length} folder(s) configured for sync
+                          {t('accounts.foldersConfiguredForSync', { count: currentRow.sync_folders.length })}
                         </div>
                         <ScrollArea className="h-[300px] rounded-md border">
                           <div className="p-2">

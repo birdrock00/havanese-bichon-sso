@@ -51,7 +51,7 @@ export interface OAuth2Tokens {
     access_token: string;
     account_id: string;
     created_at: number;
-    oauth2_name: string;
+    oauth2_id: number;
     refresh_token: string;
     updated_at: number;
 }

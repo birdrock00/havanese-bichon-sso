@@ -36,8 +36,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Button } from '@/components/ui/button';
 import { EnvelopeTags } from './tag-facet';
 import { EditTagsDialog } from './add-tag-dialog';
+import { useTranslation } from 'react-i18next';
 
 export default function Search() {
+  const { t } = useTranslation()
   const [selectedEnvelope, setSelectedEnvelope] = React.useState<EmailEnvelope | undefined>(undefined);
   const [open, setOpen] = useDialogState<SearchDialogType>(null)
   const [toDelete, setToDelete] = React.useState<Map<number, Set<number>>>(new Map());
@@ -89,13 +91,13 @@ export default function Search() {
                 <SheetTrigger asChild>
                   <Button variant="outline" size="sm">
                     <Filter className="mr-2 h-4 w-4" />
-                    Tag Filter
+                    {t('search.tagFilter')}
                     {selectedTags.length > 0 && ` (${selectedTags.length})`}
                   </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="w-80">
                   <SheetHeader>
-                    <SheetTitle>Tag Filter</SheetTitle>
+                    <SheetTitle>{t('search.tagFilter')}</SheetTitle>
                   </SheetHeader>
                   <div className="mt-6">
                     <EnvelopeTags
@@ -119,14 +121,14 @@ export default function Search() {
               <div className="flex-1 min-w-0 space-y-4">
                 <Button size="sm" onClick={() => setOpen("search-form")}>
                   <SearchIcon className="mr-2 h-4 w-4" />
-                  Search
+                  {t('common.search')}
                 </Button>
                 {isLoading && (
                   <Card>
                     <CardContent className="py-12">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent"></div>
-                        <p className="text-sm">Searching, please wait…</p>
+                        <p className="text-sm">{t('search.searching')}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -136,11 +138,11 @@ export default function Search() {
                   <div className="bg-muted/50 border-2 border-dashed rounded-xl w-24 h-24 mx-auto flex items-center justify-center">
                     <SearchIcon className="w-10 h-10 text-muted-foreground" />
                   </div>
-                  <h3 className="text-lg font-medium">No emails found</h3>
+                  <h3 className="text-lg font-medium">{t('search.noEmailsFound')}</h3>
                   <p className="text-sm text-muted-foreground max-w-md mx-auto">
                     {Object.keys(filter).length === 0
-                      ? "Start by entering a keyword, sender, or using advanced filters."
-                      : "Try adjusting your search criteria or clearing filters."}
+                      ? t('search.startSearching')
+                      : t('search.adjustSearch')}
                   </p>
                 </div>}
                 {total > 0 && <ScrollArea className='h-[40rem] w-full pr-4 -mr-4 py-1'>

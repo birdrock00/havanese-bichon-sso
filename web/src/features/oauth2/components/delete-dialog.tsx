@@ -29,6 +29,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { delete_oauth2 } from '@/api/oauth2/api'
 import { ToastAction } from '@/components/ui/toast'
 import { AxiosError } from 'axios'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   open: boolean
@@ -37,14 +38,15 @@ interface Props {
 }
 
 export function TokenDeleteDialog({ open, onOpenChange, currentRow }: Props) {
+  const { t } = useTranslation()
   const [value, setValue] = useState(0)
   const queryClient = useQueryClient();
 
   function handleSuccess() {
     toast({
-      title: 'Delete Success',
-      description: `Your OAuth2 application has been successfully deleted.`,
-      action: <ToastAction altText="Close">Close</ToastAction>,
+      title: t('oauth2.deleteSuccess'),
+      description: t('oauth2.yourOAuth2ApplicationHasBeenSuccessfullyDeleted'),
+      action: <ToastAction altText={t('common.close')}>{t('common.close')}</ToastAction>,
     });
 
     queryClient.invalidateQueries({ queryKey: ['oauth2-list'] });
@@ -54,13 +56,13 @@ export function TokenDeleteDialog({ open, onOpenChange, currentRow }: Props) {
   function handleError(error: AxiosError) {
     const errorMessage = error.response?.data ||
       error.message ||
-      `Delete failed, please try again later`;
+      t('oauth2.deleteFailed');
 
     toast({
       variant: "destructive",
-      title: `OAuth2 delete Failed`,
+      title: t('oauth2.oauth2DeleteFailed'),
       description: errorMessage as string,
-      action: <ToastAction altText="Try again">Try again</ToastAction>,
+      action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
     });
     console.error(error);
   }
@@ -89,16 +91,16 @@ export function TokenDeleteDialog({ open, onOpenChange, currentRow }: Props) {
             className='mr-1 inline-block stroke-destructive'
             size={18}
           />{' '}
-          Delete Token
+          {t('oauth2.deleteToken')}
         </span>
       }
       desc={
         <div className='space-y-4'>
           <p className='mb-2'>
-            Are you sure you want to delete{' '}
+            {t('oauth2.areYouSureYouWantToDelete')}{' '}
             <span className='font-bold'>{currentRow.id}</span>?
             <br />
-            This action will permanently remove the oauth2 record from the system. This cannot be undone.
+            {t('oauth2.thisActionWillPermanentlyRemoveTheOauth2Record')}
           </p>
 
           <Label className='my-2'>
@@ -107,20 +109,20 @@ export function TokenDeleteDialog({ open, onOpenChange, currentRow }: Props) {
               type="number"
               value={value}
               onChange={(e) => setValue(parseInt(e.target.value, 10))}
-              placeholder='Enter id to confirm deletion.'
+              placeholder={t('oauth2.enterIdToConfirmDeletion')}
               className="mt-2"
             />
           </Label>
 
           <Alert variant='destructive'>
-            <AlertTitle>Warning!</AlertTitle>
+            <AlertTitle>{t('oauth2.warning')}</AlertTitle>
             <AlertDescription>
-              Please be carefull, this operation can not be rolled back.
+              {t('oauth2.pleaseBeCareful')}
             </AlertDescription>
           </Alert>
         </div>
       }
-      confirmText='Delete'
+      confirmText={t('common.delete')}
       destructive
     />
   )

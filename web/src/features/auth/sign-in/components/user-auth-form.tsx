@@ -40,25 +40,29 @@ import { AxiosError } from 'axios'
 import { ToastAction } from '@/components/ui/toast'
 import { useLocation, useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/button'
+import { useTranslation } from 'react-i18next'
+import i18n from '@/i18n'
 
 type UserAuthFormProps = HTMLAttributes<HTMLDivElement>
 
-const formSchema = z.object({
+const getFormSchema = (t: (key: string, options?: Record<string, any>) => string) => z.object({
   username: z
     .string(),
   password: z
     .string()
-    .min(1, { message: 'Please enter your password' })
-    .min(4, { message: 'Password must be at least 4 characters long' }),
+    .min(1, { message: t('validation.pleaseEnterPassword') })
+    .min(4, { message: t('validation.passwordMinLength', { min: 4 }) }),
 });
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
   const { search } = useLocation();
   const redirect = new URLSearchParams(search).get('redirect') || '/';
 
+  const formSchema = getFormSchema(t)
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -82,19 +86,20 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
         navigate({ to: redirect });
       },
       onError: (error) => {
+        const { t } = i18n
         if (error instanceof AxiosError && error.response && error.response.status === 401) {
           toast({
             variant: "destructive",
-            title: "Login Failed",
-            description: "Invalid password. Please try again.",
-            action: <ToastAction altText="Try again">Try again</ToastAction>,
+            title: t('auth.loginFailed'),
+            description: t('auth.invalidPassword'),
+            action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
           })
         } else {
           toast({
             variant: "destructive",
-            title: "Something went wrong",
+            title: t('auth.somethingWentWrong'),
             description: (error as Error).message,
-            action: <ToastAction altText="Try again">Try again</ToastAction>,
+            action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
           })
         }
         setIsLoading(false)
@@ -112,7 +117,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
               name='username'
               render={({ field }) => (
                 <FormItem className='space-y-1'>
-                  <FormLabel>Username</FormLabel>
+                  <FormLabel>{t('auth.username')}</FormLabel>
                   <FormControl>
                     <Input disabled {...field} value={"root"} />
                   </FormControl>
@@ -126,7 +131,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
               render={({ field }) => (
                 <FormItem className='space-y-1'>
                   <div className='flex items-center justify-between'>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>{t('auth.password')}</FormLabel>
                   </div>
                   <FormControl>
                     <PasswordInput placeholder='********' {...field} />
@@ -136,7 +141,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
               )}
             />
             <Button className='mt-2' loading={isLoading}>
-              Login
+              {t('auth.login')}
             </Button>
           </div>
         </form>

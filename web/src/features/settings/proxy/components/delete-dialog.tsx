@@ -29,6 +29,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ToastAction } from '@/components/ui/toast'
 import { AxiosError } from 'axios'
 import { delete_proxy } from '@/api/system/api'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   open: boolean
@@ -37,15 +38,16 @@ interface Props {
 }
 
 export function ProxyDeleteDialog({ open, onOpenChange, currentRow }: Props) {
+  const { t } = useTranslation()
   const [value, setValue] = useState(0)
   const queryClient = useQueryClient();
+
   function handleSuccess() {
     toast({
-      title: 'Delete Success',
-      description: `Proxy has been successfully deleted.`,
-      action: <ToastAction altText="Close">Close</ToastAction>,
+      title: t('proxyDelete.successTitle'),
+      description: t('proxyDelete.successDesc'),
+      action: <ToastAction altText={t('proxyDelete.close')}>{t('proxyDelete.close')}</ToastAction>,
     });
-
     queryClient.invalidateQueries({ queryKey: ['proxy-list'] });
     onOpenChange(false);
   }
@@ -53,13 +55,13 @@ export function ProxyDeleteDialog({ open, onOpenChange, currentRow }: Props) {
   function handleError(error: AxiosError) {
     const errorMessage = error.response?.data ||
       error.message ||
-      `Delete failed, please try again later`;
+      t('proxyDelete.failedDesc');
 
     toast({
       variant: "destructive",
-      title: `Proxy delete Failed`,
+      title: t('proxyDelete.failedTitle'),
       description: errorMessage as string,
-      action: <ToastAction altText="Try again">Try again</ToastAction>,
+      action: <ToastAction altText={t('proxyDelete.tryAgain')}>{t('proxyDelete.tryAgain')}</ToastAction>,
     });
     console.error(error);
   }
@@ -88,39 +90,39 @@ export function ProxyDeleteDialog({ open, onOpenChange, currentRow }: Props) {
             className='mr-1 inline-block stroke-destructive'
             size={18}
           />{' '}
-          Delete Proxy
+          {t('proxyDelete.title')}
         </span>
       }
       desc={
         <div className='space-y-4'>
           <p className='mb-2'>
-            Are you sure you want to delete{' '}
-            <span className='font-bold'>{`${currentRow.id}`}</span>?
+            {t('proxyDelete.confirmText')} <span className='font-bold'>{`${currentRow.id}`}</span>?
             <br />
-            This action will permanently remove the Proxy from the system. This cannot be undone.
+            {t('proxyDelete.permanent')}
           </p>
 
           <Label className='my-2'>
-            Proxy Id:
+            {t('proxyDelete.proxyIdLabel')}
             <Input
               type="number"
               value={`${value}`}
               onChange={(e) => setValue(parseInt(e.target.value, 10))}
-              placeholder='Enter Proxy Id to confirm deletion.'
+              placeholder={t('proxyDelete.proxyIdPlaceholder')}
               className="mt-2"
             />
           </Label>
 
           <Alert variant='destructive'>
-            <AlertTitle>Warning!</AlertTitle>
+            <AlertTitle>{t('proxyDelete.warningTitle', 'Warning!')}</AlertTitle>
             <AlertDescription>
-              Please be carefull, this operation can not be rolled back.
+              {t('proxyDelete.warningDesc')}
             </AlertDescription>
           </Alert>
         </div>
       }
-      confirmText='Delete'
+      confirmText={t('proxyDelete.deleteBtn')}
       destructive
     />
   )
 }
+

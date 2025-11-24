@@ -31,6 +31,7 @@ import AceEditor from '@/components/ace-editor'
 import { useTheme } from '@/context/theme-context'
 import { MailboxData } from '@/api/mailbox/api'
 import { useMailboxContext } from '../context'
+import { useTranslation } from 'react-i18next'
 
 
 interface Props {
@@ -59,6 +60,7 @@ function convertMailboxData(raw: MailboxData): any {
 export function MailboxDialog({ open, onOpenChange }: Props) {
   const { theme } = useTheme()
   const { currentMailbox } = useMailboxContext()
+  const { t } = useTranslation()
   return (
     <Dialog
       open={open}
@@ -81,7 +83,7 @@ export function MailboxDialog({ open, onOpenChange }: Props) {
         />
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant='outline' className="px-2 py-1 text-sm h-auto">Close</Button>
+            <Button variant='outline' className="px-2 py-1 text-sm h-auto">{t('common.close')}</Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>

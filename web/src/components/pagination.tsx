@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { useTranslation } from 'react-i18next'
 
 interface PaginationProps {
   totalItems: number
@@ -47,6 +48,7 @@ export function EnvelopeListPagination({
   setPageIndex,
   setPageSize,
 }: PaginationProps) {
+  const { t } = useTranslation()
   const pageCount = Math.ceil(totalItems / pageSize)
 
   const handlePageSizeChange = (value: string) => {
@@ -67,11 +69,11 @@ export function EnvelopeListPagination({
   return (
     <div className='flex items-center justify-between space-x-2 overflow-auto px-2'>
       <div className='hidden flex-1 text-sm text-muted-foreground sm:block'>
-        {totalItems} total items
+        {totalItems} {t("table.results")}
       </div>
       <div className='flex items-center sm:space-x-6 lg:space-x-4'>
         <div className='flex items-center space-x-2'>
-          <p className='hidden text-sm font-medium sm:block'>Rows per page</p>
+          <p className='hidden text-sm font-medium sm:block'>{t("table.rowsPerPage")}</p>
           <Select
             value={`${pageSize}`}
             onValueChange={handlePageSizeChange}
@@ -89,7 +91,7 @@ export function EnvelopeListPagination({
           </Select>
         </div>
         <div className='flex items-center justify-center text-sm font-medium'>
-          Page {pageIndex + 1} of {pageCount}
+           {t("table.page")} {pageIndex + 1} {t("table.of")} {pageCount}
         </div>
         <div className='flex items-center space-x-2'>
           <Button
@@ -98,7 +100,7 @@ export function EnvelopeListPagination({
             onClick={goToPreviousPage}
             disabled={pageIndex === 0}
           >
-            <span className='sr-only'>Go to previous page</span>
+            <span className='sr-only'>{t("table.prevPage")}</span>
             <ChevronLeftIcon className='h-4 w-4' />
           </Button>
           <Button
@@ -107,7 +109,7 @@ export function EnvelopeListPagination({
             onClick={goToNextPage}
             disabled={!hasNextPage()}
           >
-            <span className='sr-only'>Go to next page</span>
+            <span className='sr-only'>{t("table.nextPage")}</span>
             <ChevronRightIcon className='h-4 w-4' />
           </Button>
         </div>

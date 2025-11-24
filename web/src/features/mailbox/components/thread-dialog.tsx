@@ -16,11 +16,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import { useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ChevronDown, ChevronUp, Loader2, MessageSquareText } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import {
   Dialog,
@@ -41,6 +41,7 @@ interface MailThreadDialogProps {
 }
 
 export function MailThreadDialog({ open, onOpenChange }: MailThreadDialogProps) {
+  const { t } = useTranslation();
   const { selectedAccountId, currentEnvelope } = useMailboxContext();
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
@@ -88,24 +89,29 @@ export function MailThreadDialog({ open, onOpenChange }: MailThreadDialogProps) 
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
               <MessageSquareText className="w-5 h-5" />
-              <div className='text-sm'>Thread ({totalCount} {totalCount === 1 ? 'message' : 'messages'})</div>
+              <div className="text-sm">
+                {t('mailbox.thread.title', {
+                  count: totalCount,
+                  messageLabel: totalCount === 1 ? t('mailbox.thread.message') : t('mailbox.thread.messages')
+                })}
+              </div>
             </DialogTitle>
           </div>
         </DialogHeader>
 
-        {/* Body - Scrollable */}
+        {/* Body */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {isLoading && <ThreadSkeleton />}
 
           {isError && (
             <div className="text-center text-destructive text-sm">
-              Failed to load thread: {(error as Error)?.message}
+              {t('mailbox.thread.loadError')}: {(error as Error)?.message}
             </div>
           )}
 
           {!isLoading && allMessages.length === 0 && (
             <div className="text-center text-muted-foreground text-sm">
-              No messages in this thread.
+              {t('mailbox.thread.empty')}
             </div>
           )}
 
@@ -116,8 +122,8 @@ export function MailThreadDialog({ open, onOpenChange }: MailThreadDialogProps) 
               const preview = msg.text?.slice(0, 120) + (msg.text?.length > 120 ? '...' : '');
               const date = new Date(msg.internal_date);
               const formattedDate = isNaN(date.getTime())
-                ? 'Invalid Date'
-                : format(date, 'MMM d, yyyy h:mm a');
+                ? t('mailbox.thread.invalidDate')
+                : format(date, 'yyyy-MM-dd HH:mm:ss');
 
               return (
                 <Card
@@ -138,7 +144,7 @@ export function MailThreadDialog({ open, onOpenChange }: MailThreadDialogProps) 
                           </span>
                         </div>
                         <p className="font-medium mt-1 text-sm">
-                          {msg.subject || '(No subject)'}
+                          {msg.subject || t('mailbox.thread.noSubject')}
                         </p>
                         {!isExpanded && preview && (
                           <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
@@ -184,10 +190,10 @@ export function MailThreadDialog({ open, onOpenChange }: MailThreadDialogProps) 
                 {isFetchingNextPage ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Loading more...
+                    {t('mailbox.thread.loadingMore')}
                   </>
                 ) : (
-                  'Load more'
+                  t('mailbox.thread.loadMore')
                 )}
               </Button>
             </div>

@@ -21,7 +21,7 @@ import { useState } from 'react'
 import useDialogState from '@/hooks/use-dialog-state'
 import { Button } from '@/components/ui/button'
 import { ProxyActionDialog } from './components/action-dialog'
-import { columns } from './components/columns'
+import { getColumns } from './components/columns'
 import { ProxyDeleteDialog } from './components/delete-dialog'
 import { ProxyTable } from './components/table'
 import ProxyProvider, {
@@ -32,24 +32,27 @@ import { Proxy } from './data/schema'
 import { TableSkeleton } from '@/components/table-skeleton'
 import Logo from '@/assets/logo.svg'
 import useProxyList from '@/hooks/use-proxy'
+import { useTranslation } from 'react-i18next'
 
 export default function ProxyManagerPage() {
+  const { t } = useTranslation()
   // Dialog states
   const [currentRow, setCurrentRow] = useState<Proxy | null>(null)
   const [open, setOpen] = useDialogState<ProxyDialogType>(null)
 
   const { proxyList, isLoading } = useProxyList();
+  const columns = getColumns(t)
 
   return (
     <ProxyProvider value={{ open, setOpen, currentRow, setCurrentRow }}>
       <div>
         <div className='mb-2 flex items-center justify-between space-y-2 flex-wrap gap-x-4'>
           <div>
-            <h2 className='text-2xl font-bold tracking-tight'>Proxy Management</h2>
+            <h2 className='text-2xl font-bold tracking-tight'>{t('settings.proxy')}</h2>
           </div>
           <div className='flex gap-2'>
             <Button className='space-x-1' onClick={() => setOpen('add')}>
-              <span>Add</span> <Plus size={18} />
+              <span>{t('settings.add')}</span> <Plus size={18} />
             </Button>
           </div>
         </div>
@@ -62,14 +65,14 @@ export default function ProxyManagerPage() {
                 <img
                   src={Logo}
                   className="max-h-[100px] w-auto opacity-20 saturate-0 transition-all duration-300 hover:opacity-100 hover:saturate-100 object-contain"
-                  alt="RustMailer Logo"
+                  alt="Bichon Logo"
                 />
-                <h3 className="mt-4 text-lg font-semibold">No Proxy</h3>
+                <h3 className="mt-4 text-lg font-semibold">{t('settings.noProxies')}</h3>
                 <p className="mb-4 mt-2 text-sm text-muted-foreground">
-                  You haven't added any Proxy yet.
+                  {t('settings.noProxiesDesc')}
                 </p>
                 <Button onClick={() => setOpen('add')}>
-                  Add Proxy
+                  {t('settings.add')} {t('settings.proxy')}
                 </Button>
               </div>
             </div>

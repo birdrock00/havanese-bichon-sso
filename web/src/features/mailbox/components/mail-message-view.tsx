@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
-import { formatBytes } from '@/lib/utils';
+import { formatBytes, formatTimestamp } from '@/lib/utils';
 import { useMailboxContext } from '../context';
 import EmailIframe from '@/components/mail-iframe';
 import {
@@ -37,9 +37,12 @@ import {
 } from '@/api/mailbox/envelope/api';
 import { AxiosError } from 'axios';
 import { MailThreadDialog } from './thread-dialog';
+import { useTranslation } from 'react-i18next';
+import useMinimalAccountList from '@/hooks/use-minimal-account-list';
 
 interface MailMessageViewProps {
   envelope: {
+    account_id: number;
     id: number;
     from?: string;
     to?: string[];
@@ -54,6 +57,7 @@ interface MailMessageViewProps {
 }
 
 const Multilines: React.FC<{ title: string; lines: string[] }> = ({ title, lines }) => {
+  const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false);
   return (
     <div className="text-xs">
@@ -70,7 +74,7 @@ const Multilines: React.FC<{ title: string; lines: string[] }> = ({ title, lines
               className="text-blue-500 hover:underline text-xs"
               onClick={() => setExpanded(!expanded)}
             >
-              {expanded ? 'show less' : 'show more...'}
+              {expanded ? t('common.showLess') : t('common.showMore')}
             </button>
           )}
         </div>
@@ -85,6 +89,7 @@ export function MailMessageView({
   showAttachments = true,
   showHeader = true
 }: MailMessageViewProps) {
+  const { t } = useTranslation()
   const { selectedAccountId, setDeleteIds, setOpen } = useMailboxContext();
 
   const [content, setContent] = useState<string | null>(null);
@@ -93,7 +98,7 @@ export function MailMessageView({
   const [loading, setLoading] = useState(true);
   const [downloadingAttachmentFileName, setDownloadingAttachmentFileName] = useState<string | null>(null);
 
-
+  const { getEmailById } = useMinimalAccountList();
   const [threadOpen, setThreadOpen] = useState(false);
 
   const downloadAttachmentMutation = useMutation({
@@ -103,7 +108,7 @@ export function MailMessageView({
     onError: (error: any) => {
       setDownloadingAttachmentFileName(null);
       toast({
-        title: 'Failed to download file',
+        title: t('mail.failedToDownloadFile'),
         description: error.message,
         variant: 'destructive',
       });
@@ -121,7 +126,7 @@ export function MailMessageView({
     onError: (error: any) => {
       setLoading(false);
       toast({
-        title: 'Failed to load email message.',
+        title: t('mail.failedToLoadEmail'),
         description: error.message,
         variant: 'destructive',
       });
@@ -140,18 +145,18 @@ export function MailMessageView({
 
   const downloadEmlFile = async () => {
     try {
-      toast({ title: 'Download started', description: `"${envelope.id}" is being downloaded` });
+      toast({ title: t('mail.downloadStarted'), description: t('mail.isBeingDownloaded', { id: envelope.id }) });
       await download_message(selectedAccountId!, envelope.id);
-      toast({ title: 'Download complete', description: `"${envelope.id}" downloaded` });
+      toast({ title: t('mail.downloadComplete'), description: t('mail.downloaded', { id: envelope.id }) });
     } catch (error) {
-      let msg = 'Failed to download email';
+      let msg = t('mail.downloadFailed');
       if (error instanceof AxiosError) {
         msg = error.response?.data?.message || error.response?.data?.error || error.message;
         if (error.response?.status) msg = `${error.response.status}: ${msg}`;
       } else if (error instanceof Error) {
         msg = error.message;
       }
-      toast({ title: 'Download failed', description: msg, variant: 'destructive' });
+      toast({ title: t('mail.downloadFailed'), description: msg, variant: 'destructive' });
     }
   };
 
@@ -160,27 +165,31 @@ export function MailMessageView({
       {/* Header Info */}
       {showHeader && <div className="grid gap-1 text-xs">
         <div className="flex space-x-2">
-          <span className="font-medium text-gray-400">Id:</span>
+          <span className="font-medium text-gray-400">{t('mail.account')}:</span>
+          <span>{getEmailById(envelope.account_id)}</span>
+        </div>
+        <div className="flex space-x-2">
+          <span className="font-medium text-gray-400">{t('mail.id')}:</span>
           <span>{envelope.id}</span>
         </div>
         {envelope.from && (
           <div className="flex space-x-2">
-            <span className="font-medium text-gray-400">From:</span>
+            <span className="font-medium text-gray-400">{t('mail.from')}:</span>
             <span>{envelope.from}</span>
           </div>
         )}
-        {envelope.to && envelope.to.length > 0 && <Multilines title="To" lines={envelope.to} />}
-        {envelope.cc && envelope.cc.length > 0 && <Multilines title="Cc" lines={envelope.cc} />}
-        {envelope.bcc && envelope.bcc.length > 0 && <Multilines title="Bcc" lines={envelope.bcc} />}
+        {envelope.to && envelope.to.length > 0 && <Multilines title={t('mail.to')} lines={envelope.to} />}
+        {envelope.cc && envelope.cc.length > 0 && <Multilines title={t('mail.cc')} lines={envelope.cc} />}
+        {envelope.bcc && envelope.bcc.length > 0 && <Multilines title={t('mail.bcc')} lines={envelope.bcc} />}
         {envelope.subject && (
           <div className="flex space-x-2">
-            <span className="font-medium text-gray-400">Subject:</span>
+            <span className="font-medium text-gray-400">{t('mail.subject')}:</span>
             <span>{envelope.subject}</span>
           </div>
         )}
         {envelope.internal_date && (
           <div className="flex space-x-2">
-            <span className="font-medium text-gray-400">Date:</span>
+            <span className="font-medium text-gray-400">{t('mail.date')}:</span>
             <span>{formatTimestamp(envelope.internal_date)}</span>
           </div>
         )}
@@ -198,7 +207,7 @@ export function MailMessageView({
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Delete locally</TooltipContent>
+              <TooltipContent>{t('mail.delete')}</TooltipContent>
             </Tooltip>
             <Separator orientation="vertical" className="h-5" />
             <Tooltip>
@@ -207,7 +216,7 @@ export function MailMessageView({
                   <Download className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Download .eml file</TooltipContent>
+              <TooltipContent>{t('mail.download')}</TooltipContent>
             </Tooltip>
             <Separator orientation="vertical" className="h-5" />
             <Tooltip>
@@ -220,7 +229,7 @@ export function MailMessageView({
                   <MessageSquareMore className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>View full thread</TooltipContent>
+              <TooltipContent>{t('mail.viewThread')}</TooltipContent>
             </Tooltip>
           </div>
         </>
@@ -263,12 +272,12 @@ export function MailMessageView({
                 </div>
               ) : (
                 <span className="text-gray-500 text-xs italic">
-                  Only non-inline attachments are shown here.
+                  {t('mail.onlyNonInlineAttachments')}
                 </span>
               );
             })()
           ) : (
-            <span className="text-gray-500 text-xs">No attachments</span>
+            <span className="text-gray-500 text-xs">{t('mail.noAttachments')}</span>
           )}
         </div>
       )}
@@ -296,19 +305,4 @@ export function MailMessageView({
       <MailThreadDialog open={threadOpen} onOpenChange={setThreadOpen} />
     </div>
   );
-}
-
-function formatTimestamp(milliseconds: number): string {
-  const date = new Date(milliseconds);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  const timezoneOffset = date.getTimezoneOffset();
-  const offsetSign = timezoneOffset > 0 ? '-' : '+';
-  const offsetHours = String(Math.floor(Math.abs(timezoneOffset) / 60)).padStart(2, '0');
-  const offsetMinutes = String(Math.abs(timezoneOffset) % 60).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offsetSign}${offsetHours}:${offsetMinutes}`;
 }

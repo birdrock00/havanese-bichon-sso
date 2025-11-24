@@ -19,8 +19,10 @@
 
 import Logo from '@/assets/logo.svg'
 import { UserAuthForm } from './components/user-auth-form'
+import { useTranslation } from 'react-i18next'
 
 export default function SignIn() {
+  const { t } = useTranslation()
   return (
     <div className='container relative flex h-svh flex-col items-center justify-center'>
       <div className='p-8 flex flex-col items-center'>
@@ -32,7 +34,7 @@ export default function SignIn() {
           alt='Bichon Logo'
         />
         <h2 className='mb-4 text-lg font-medium text-muted-foreground'>
-          Welcome to Bichon
+          {t('auth.welcome')}
         </h2>
         <div className='mx-auto flex w-full flex-col justify-center space-y-2 sm:w-[350px]'>
           <UserAuthForm />

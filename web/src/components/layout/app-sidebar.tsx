@@ -26,10 +26,11 @@ import {
 } from '@/components/ui/sidebar'
 import { NavGroup } from '@/components/layout/nav-group'
 import Logo from '@/assets/logo.svg'
-import { sidebarData } from './data/sidebar-data'
+import { useSidebarData } from './data/sidebar-data'
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { open } = useSidebar();
+  const sidebarData = useSidebarData();
   return (
     <Sidebar collapsible='icon' variant='sidebar' {...props}>
       <SidebarHeader>

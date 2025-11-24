@@ -26,11 +26,11 @@ import { DataTableRowActions } from './data-table-row-actions'
 import { format } from 'date-fns'
 import { EnableAction } from './enable-action'
 
-export const columns: ColumnDef<OAuth2Entity>[] = [
+export const getColumns = (t: (key: string) => string): ColumnDef<OAuth2Entity>[] => [
   {
     accessorKey: 'id',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Id' />
+      <DataTableColumnHeader column={column} title={t('settings.id')} />
     ),
     cell: ({ row }) => {
       return <LongText className='max-w-[100px]'>{row.original.id}</LongText>
@@ -42,7 +42,7 @@ export const columns: ColumnDef<OAuth2Entity>[] = [
   {
     accessorKey: 'enabled',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Enabled' className='ml-4' />
+      <DataTableColumnHeader column={column} title={t('settings.enabled')} className='ml-4' />
     ),
     cell: EnableAction,
     meta: { className: 'w-8 text-center' },
@@ -50,7 +50,7 @@ export const columns: ColumnDef<OAuth2Entity>[] = [
   {
     accessorKey: 'use_proxy',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Use Proxy' className='ml-4' />
+      <DataTableColumnHeader column={column} title={t('settings.useProxy')} className='ml-4' />
     ),
     cell: ({ row }) => {
       const enabled = row.original.use_proxy;
@@ -65,7 +65,7 @@ export const columns: ColumnDef<OAuth2Entity>[] = [
   {
     accessorKey: 'auth_url',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Auth Url' />
+      <DataTableColumnHeader column={column} title={t('settings.authUrl')} />
     ),
     cell: ({ row }) => {
       return <LongText className='max-w-[100px]'>{row.original.auth_url}</LongText>
@@ -77,7 +77,7 @@ export const columns: ColumnDef<OAuth2Entity>[] = [
   {
     accessorKey: 'token_url',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Token Url' />
+      <DataTableColumnHeader column={column} title={t('settings.tokenUrl')} />
     ),
     cell: ({ row }) => {
       return <LongText className='max-w-[100px]'>{row.original.token_url}</LongText>
@@ -89,7 +89,7 @@ export const columns: ColumnDef<OAuth2Entity>[] = [
   {
     accessorKey: 'description',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Description' />
+      <DataTableColumnHeader column={column} title={t('settings.description')} />
     ),
     cell: ({ row }) => (
       <LongText className='max-w-[200px]'>{row.original.description}</LongText>
@@ -101,7 +101,7 @@ export const columns: ColumnDef<OAuth2Entity>[] = [
   {
     accessorKey: 'created_at',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Created At' />
+      <DataTableColumnHeader column={column} title={t('settings.createdAt')} />
     ),
     cell: ({ row }) => {
       const created_at = row.original.created_at;
@@ -114,7 +114,7 @@ export const columns: ColumnDef<OAuth2Entity>[] = [
   {
     accessorKey: 'updated_at',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Updated At' />
+      <DataTableColumnHeader column={column} title={t('settings.updatedAt')} />
     ),
     cell: ({ row }) => {
       const updated_at = row.original.updated_at;

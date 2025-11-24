@@ -29,19 +29,21 @@ import {
 
 import { Input } from "@/components/ui/input";
 import { Account } from "./action-dialog";
+import { useTranslation } from "react-i18next";
 
 interface StepProps {
     isEdit: boolean;
 }
 
 export default function Step1({ isEdit }: StepProps) {
+    const { t } = useTranslation()
     const { control } = useFormContext<Account>();
 
     return (
         <>
-            <h1 className="my-3 md:mt-8">Email Account Registration</h1>
+            <h1 className="my-3 md:mt-8">{t('accounts.emailAccountRegistration')}</h1>
             <p className="mb-5 md:mb-8">
-                Please provide your email address. In the next steps, you will configure the IMAP/SMTP details. Using this email address, we will attempt to automatically retrieve the SMTP/IMAP server addresses.
+                {t('accounts.emailAccountRegistrationDesc')}
             </p>
             <div className="space-y-8">
                 <FormField
@@ -50,15 +52,15 @@ export default function Step1({ isEdit }: StepProps) {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel className="flex items-center justify-between">
-                                Email Address:
+                                {t('accounts.emailAddress')}:
                             </FormLabel>
                             <FormControl>
-                                <Input placeholder="e.g john.doe@example.com" readOnly={isEdit} {...field} />
+                                <Input placeholder={t('accounts.emailPlaceholder')} readOnly={isEdit} {...field} />
                             </FormControl>
                             <FormMessage />
                             {isEdit && (
                                 <FormDescription>
-                                    The email account address cannot be modified when editing.
+                                    {t('accounts.emailCannotBeModified')}
                                 </FormDescription>
                             )}
                         </FormItem>
@@ -70,12 +72,12 @@ export default function Step1({ isEdit }: StepProps) {
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel className="flex items-center justify-between">
-                                Name:
+                                {t('accounts.name')}:
                             </FormLabel>
                             <FormControl>
-                                <Input placeholder="e.g john.doe" {...field} />
+                                <Input placeholder={t('accounts.namePlaceholder')} {...field} />
                             </FormControl>
-                            <FormDescription>Optional</FormDescription>
+                            <FormDescription>{t('accounts.optional')}</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}

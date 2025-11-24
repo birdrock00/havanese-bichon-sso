@@ -30,9 +30,11 @@ import { LogoutConfirmDialog } from '@/features/auth/sign-in/components/logout';
 import { resetAccessToken } from '@/stores/authStore';
 import { useNavigate } from '@tanstack/react-router';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export function ProfileDropdown() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
 
   const handleLogout = () => {
@@ -52,7 +54,7 @@ export function ProfileDropdown() {
         </DropdownMenuTrigger>
         <DropdownMenuContent className='w-56' align='end' forceMount>
           <DropdownMenuItem onClick={() => setIsLogoutDialogOpen(true)}>
-            Log out
+            {t('auth.logout')}
             <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuContent>

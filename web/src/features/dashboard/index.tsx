@@ -28,6 +28,7 @@ import { useQuery } from '@tanstack/react-query';
 import { get_dashboard_stats, TimeBucket } from '@/api/system/api';
 import { Main } from '@/components/layout/main';
 import { FixedHeader } from '@/components/layout/fixed-header';
+import { useTranslation } from 'react-i18next';
 
 interface DailyActivity {
   date: string;
@@ -93,17 +94,15 @@ export default function MailArchiveDashboard() {
     queryFn: get_dashboard_stats,
   });
 
-  // 计算附件比例
+  const { t } = useTranslation();  
   const totalAttachments = (stats?.with_attachment_count ?? 0) + (stats?.without_attachment_count ?? 0);
   const attachmentRatio = totalAttachments > 0 ? (stats?.with_attachment_count ?? 0) / totalAttachments : 0;
 
-  // 空状态判断
   const hasRecentActivity = stats?.recent_activity && stats.recent_activity.length > 0;
   const hasTopSenders = stats?.top_senders && stats.top_senders.length > 0;
   const hasTopEmails = stats?.top_largest_emails && stats.top_largest_emails.length > 0;
   const hasTopAccounts = stats?.top_accounts && stats.top_accounts.length > 0;
 
-  // 附件饼图数据（空时显示“无数据”）
   const attachmentData = totalAttachments > 0
     ? [
       { name: 'With Attachments', value: attachmentRatio, fill: COLORS[1] },
@@ -151,85 +150,82 @@ export default function MailArchiveDashboard() {
       <FixedHeader />
       <Main higher>
         <div className="flex-1 space-y-6 p-6 md:p-8">
-          {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+              <h2 className="text-3xl font-bold tracking-tight">{t('dashboard.title')}</h2>
             </div>
           </div>
 
-          {/* Core Metric Cards */}
+         
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Mail Accounts</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard.mailAccounts')}</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{formatNumber(stats!.account_count)}</div>
-                <p className="text-xs text-muted-foreground">Connected</p>
+                <p className="text-xs text-muted-foreground">{t('dashboard.connected')}</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Emails</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard.totalEmails')}</CardTitle>
                 <Mail className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{formatNumber(stats!.email_count)}</div>
-                <p className="text-xs text-muted-foreground">Synced locally</p>
+                <p className="text-xs text-muted-foreground">{t('dashboard.syncedLocally')}</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Email Size</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard.totalEmailSize')}</CardTitle>
                 <HardDrive className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{formatBytes(stats!.total_size_bytes)}</div>
-                <p className="text-xs text-muted-foreground">Logical volume</p>
+                <p className="text-xs text-muted-foreground">{t('dashboard.logicalVolume')}</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Local Data Files</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard.localDataFiles')}</CardTitle>
                 <Database className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{formatBytes(stats!.storage_usage_bytes)}</div>
-                <p className="text-xs text-muted-foreground">Actual disk usage</p>
+                <p className="text-xs text-muted-foreground">{t('dashboard.actualDiskUsage')}</p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Index Size</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('dashboard.indexSize')}</CardTitle>
                 <Database className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{formatBytes(stats!.index_usage_bytes)}</div>
-                <p className="text-xs text-muted-foreground">Tantivy index</p>
+                <p className="text-xs text-muted-foreground">{t('dashboard.tantivyIndex')}</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* Tabs */}
           <Tabs defaultValue="trend" className="space-y-4">
             <TabsList className="grid w-full grid-cols-3 lg:w-auto">
-              <TabsTrigger value="trend">30-Day Trend</TabsTrigger>
-              <TabsTrigger value="attachment">Attachments</TabsTrigger>
-              <TabsTrigger value="top">Top Lists</TabsTrigger>
+              <TabsTrigger value="trend">{t('dashboard.dayTrend')}</TabsTrigger>
+              <TabsTrigger value="attachment">{t('dashboard.attachments')}</TabsTrigger>
+              <TabsTrigger value="top">{t('dashboard.topLists')}</TabsTrigger>
             </TabsList>
 
-            {/* 30-Day Trend */}
             <TabsContent value="trend" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>New Emails</CardTitle>
-                  <CardDescription>Message distribution</CardDescription>
+                  <CardTitle>{t('dashboard.newEmails')}</CardTitle>
+                  <CardDescription>{t('dashboard.messageDistribution')}</CardDescription>
                 </CardHeader>
                 <CardContent className="h-80">
                   {hasRecentActivity ? (
@@ -250,7 +246,7 @@ export default function MailArchiveDashboard() {
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
-                    <EmptyChart title="No recent activity" />
+                    <EmptyChart title={t('dashboard.noRecentActivity')} />
                   )}
                 </CardContent>
               </Card>
@@ -260,11 +256,11 @@ export default function MailArchiveDashboard() {
             <TabsContent value="attachment" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Attachment Ratio</CardTitle>
+                  <CardTitle>{t('dashboard.attachmentRatio')}</CardTitle>
                   <CardDescription>
                     {totalAttachments > 0
-                      ? `${(attachmentRatio * 100).toFixed(1)}% of emails have attachments`
-                      : 'No emails synced yet'}
+                      ? t('dashboard.attachmentRatioDesc', { percent: (attachmentRatio * 100).toFixed(1) })
+                      : t('dashboard.noEmailsSynced')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex items-center justify-center h-80">
@@ -292,18 +288,18 @@ export default function MailArchiveDashboard() {
                         <div className="flex items-center gap-2">
                           <div className="h-3 w-3 rounded-full bg-green-500"></div>
                           <span className="text-sm">
-                            With Attachments ({(attachmentRatio * 100).toFixed(1)}%)
+                            {t('dashboard.withAttachments')} ({(attachmentRatio * 100).toFixed(1)}%)
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="h-3 w-3 rounded-full bg-gray-200"></div>
-                          <span className="text-sm">No Attachments</span>
+                          <span className="text-sm">{t('dashboard.noAttachments')}</span>
                         </div>
                       </>
                     ) : (
                       <div className="flex items-center gap-2">
                         <div className="h-3 w-3 rounded-full bg-gray-200"></div>
-                        <span className="text-sm">No Data</span>
+                        <span className="text-sm">{t('common.noData')}</span>
                       </div>
                     )}
                   </div>
@@ -311,23 +307,20 @@ export default function MailArchiveDashboard() {
               </Card>
             </TabsContent>
 
-            {/* Top Lists */}
             <TabsContent value="top" className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-
-                {/* Top 10 Senders */}
                 <Card className="md:col-span-1">
                   <CardHeader>
-                    <CardTitle>Top 10 Senders</CardTitle>
-                    <CardDescription>By message count</CardDescription>
+                    <CardTitle>{t('dashboard.top10Senders')}</CardTitle>
+                    <CardDescription>{t('dashboard.byMessageCount')}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {hasTopSenders ? (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Sender</TableHead>
-                            <TableHead className="text-right">Count</TableHead>
+                            <TableHead>{t('dashboard.sender')}</TableHead>
+                            <TableHead className="text-right">{t('dashboard.count')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -342,24 +335,22 @@ export default function MailArchiveDashboard() {
                         </TableBody>
                       </Table>
                     ) : (
-                      <EmptyTable title="No senders data" />
+                      <EmptyTable title={t('dashboard.noSendersData')} />
                     )}
                   </CardContent>
                 </Card>
-
-                {/* Top 10 Largest Emails */}
                 <Card className="md:col-span-1">
                   <CardHeader>
-                    <CardTitle>Top 10 Largest Emails</CardTitle>
-                    <CardDescription>By message size</CardDescription>
+                    <CardTitle>{t('dashboard.top10LargestEmails')}</CardTitle>
+                    <CardDescription>{t('dashboard.byMessageSize')}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {hasTopEmails ? (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Subject</TableHead>
-                            <TableHead className="text-right">Size</TableHead>
+                            <TableHead>{t('dashboard.subject')}</TableHead>
+                            <TableHead className="text-right">{t('dashboard.size')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -369,7 +360,7 @@ export default function MailArchiveDashboard() {
                                 className="max-w-[180px] truncate font-medium"
                                 title={m.subject}
                               >
-                                {m.subject || '(No Subject)'}
+                                {m.subject || t('dashboard.noSubject')}
                               </TableCell>
                               <TableCell className="text-right">{formatBytes(m.size_bytes)}</TableCell>
                             </TableRow>
@@ -377,24 +368,22 @@ export default function MailArchiveDashboard() {
                         </TableBody>
                       </Table>
                     ) : (
-                      <EmptyTable title="No large emails" />
+                      <EmptyTable title={t('dashboard.noLargeEmails')} />
                     )}
                   </CardContent>
                 </Card>
-
-                {/* Top 10 Accounts */}
                 <Card className="md:col-span-1">
                   <CardHeader>
-                    <CardTitle>Top 10 Accounts</CardTitle>
-                    <CardDescription>By message count</CardDescription>
+                    <CardTitle>{t('dashboard.top10Accounts')}</CardTitle>
+                    <CardDescription>{t('dashboard.byMessageCount')}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {hasTopAccounts ? (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Account</TableHead>
-                            <TableHead className="text-right">Emails</TableHead>
+                            <TableHead>{t('dashboard.account')}</TableHead>
+                            <TableHead className="text-right">{t('dashboard.emails')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -409,7 +398,7 @@ export default function MailArchiveDashboard() {
                         </TableBody>
                       </Table>
                     ) : (
-                      <EmptyTable title="No account data" />
+                      <EmptyTable title={t('dashboard.noAccountData')} />
                     )}
                   </CardContent>
                 </Card>

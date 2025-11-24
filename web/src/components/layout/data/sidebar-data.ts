@@ -25,68 +25,73 @@ import {
 } from '@tabler/icons-react'
 import { IdCard, Inbox, Mailbox, Search } from 'lucide-react'
 import { type SidebarData } from '../types'
+import { useTranslation } from 'react-i18next'
 
-export const sidebarData: SidebarData = {
-  navGroups: [
-    {
-      title: 'General',
-      items: [
-        {
-          title: 'Dashboard',
-          url: '/',
-          icon: IconLayoutDashboard,
-        }
-      ],
-    },
-    {
-      title: 'Accounts',
-      items: [
-        {
-          title: 'Accounts',
-          url: '/accounts',
-          icon: Inbox,
-        },
-        {
-          title: 'MailBox',
-          url: '/mailboxes',
-          icon: Mailbox,
-        },
-        {
-          title: 'Search',
-          url: '/search',
-          icon: Search,
-        }
-      ],
-    },
-    {
-      title: 'Auth',
-      items: [
-        {
-          title: 'OAuth2',
-          url: '/oauth2',
-          icon: IdCard,
-        },
-        {
-          title: 'Access Tokens',
-          url: '/access-tokens',
-          icon: IconLockAccess,
-        }
-      ]
-    },
-    {
-      title: 'Other',
-      items: [
-        {
-          title: 'Settings',
-          url: '/settings',
-          icon: IconSettings,
-        },
-        {
-          title: 'API Documentation',
-          url: '/api-docs',
-          icon: IconHelp,
-        },
-      ],
-    },
-  ],
+export function useSidebarData(): SidebarData {
+  const { t } = useTranslation()
+  
+  return {
+    navGroups: [
+      {
+        title: t('navigation.general'),
+        items: [
+          {
+            title: t('navigation.dashboard'),
+            url: '/',
+            icon: IconLayoutDashboard,
+          }
+        ],
+      },
+      {
+        title: t('navigation.accounts'),
+        items: [
+          {
+            title: t('navigation.accounts'),
+            url: '/accounts',
+            icon: Inbox,
+          },
+          {
+            title: t('navigation.mailbox'),
+            url: '/mailboxes',
+            icon: Mailbox,
+          },
+          {
+            title: t('common.search'),
+            url: '/search',
+            icon: Search,
+          }
+        ],
+      },
+      {
+        title: t('navigation.auth'),
+        items: [
+          {
+            title: t('navigation.oauth2'),
+            url: '/oauth2',
+            icon: IdCard,
+          },
+          {
+            title: t('navigation.accessTokens'),
+            url: '/access-tokens',
+            icon: IconLockAccess,
+          }
+        ]
+      },
+      {
+        title: t('navigation.other'),
+        items: [
+          {
+            title: t('navigation.settings'),
+            url: '/settings',
+            icon: IconSettings,
+          },
+          {
+            title: t('navigation.apiDocs'),
+            url: '/api-docs',
+            icon: IconHelp,
+          },
+        ],
+      },
+    ],
+  }
 }

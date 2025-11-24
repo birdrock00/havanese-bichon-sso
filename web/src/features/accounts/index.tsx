@@ -22,7 +22,7 @@ import useDialogState from '@/hooks/use-dialog-state'
 import { Button } from '@/components/ui/button'
 import { Main } from '@/components/layout/main'
 import { AccountActionDialog } from './components/action-dialog'
-import { columns } from './components/columns'
+import { useColumns } from './components/columns'
 import { AccountDeleteDialog } from './components/delete-dialog'
 import { AccountTable } from './components/table'
 import AccountProvider, {
@@ -41,8 +41,11 @@ import { FixedHeader } from '@/components/layout/fixed-header'
 import { SyncFoldersDialog } from './components/sync-folders'
 import { NoSyncAccountDialog } from './components/nosync-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { useTranslation } from 'react-i18next'
 
 export default function Accounts() {
+  const { t } = useTranslation()
+  const columns = useColumns()
   // Dialog states
   const [currentRow, setCurrentRow] = useState<AccountModel | null>(null)
   const [open, setOpen] = useDialogState<AccountDialogType>(null)
@@ -63,9 +66,9 @@ export default function Accounts() {
           {/* Header Section */}
           <div className='mb-2 flex items-center justify-between flex-wrap gap-x-4 gap-y-2'>
             <div>
-              <h2 className='text-2xl font-bold tracking-tight'>Email Accounts</h2>
+              <h2 className='text-2xl font-bold tracking-tight'>{t('accounts.title')}</h2>
               <p className='text-muted-foreground'>
-                Manage and configure your email accounts.
+                {t('accounts.description')}
               </p>
             </div>
             <div className="flex gap-2">
@@ -75,7 +78,7 @@ export default function Accounts() {
                   className="rounded-r-none border-r-0"
                 >
                   <Plus className="h-4 w-4" />
-                  Add IMAP
+                  {t('accounts.addImap')}
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -84,13 +87,13 @@ export default function Accounts() {
                       className="h-9 w-9 rounded-l-none border-l-0"
                     >
                       <MoreVertical className="h-4 w-4" />
-                      <span className="sr-only">More account types</span>
+                      <span className="sr-only">{t('accounts.moreAccountTypes')}</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => setOpen("add-nosync")}>
                       <Plus className="h-4 w-4" />
-                      Add NoSync
+                      {t('accounts.addNoSync')}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -110,15 +113,15 @@ export default function Accounts() {
                   <img
                     src={Logo}
                     className="max-h-[100px] w-auto opacity-20 saturate-0 transition-all duration-300 hover:opacity-100 hover:saturate-100 object-contain"
-                    alt="RustMailer Logo"
+                    alt="Bichon Logo"
                   />
-                  <h3 className="mt-4 text-lg font-semibold">No Account Configurations</h3>
+                  <h3 className="mt-4 text-lg font-semibold">{t('accounts.noAccountConfigurations')}</h3>
                   <p className="mb-4 mt-2 text-sm text-muted-foreground">
-                    You haven't added any Account configurations yet. Add one to start using Account features.
+                    {t('accounts.noAccountConfigurationsDesc')}
                   </p>
                   <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-4">
                     <Button variant="default" className="w-64" onClick={() => setOpen("add-imap")}>
-                      Add Configuration
+                      {t('accounts.addConfiguration')}
                     </Button>
                   </div>
                 </div>

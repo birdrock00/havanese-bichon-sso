@@ -23,16 +23,31 @@ import { Main } from '@/components/layout/main'
 import SidebarNav from './components/sidebar-nav'
 import { ShieldEllipsis, Waypoints } from 'lucide-react'
 import { FixedHeader } from '@/components/layout/fixed-header'
+import { useTranslation } from 'react-i18next'
 
 export default function Settings() {
+  const { t } = useTranslation()
+
+  const sidebarNavItems = [
+    {
+      title: t('settings.root', 'Root'),
+      icon: <ShieldEllipsis size={18} />,
+      href: '/settings/root',
+    },
+    {
+      title: t('settings.proxy', 'Proxy'),
+      icon: <Waypoints size={18} />,
+      href: '/settings/proxy',
+    }
+  ]
+
   return (
     <>
-      {/* ===== Top Heading ===== */}
       <FixedHeader />
 
       <Main fixed>
         <h1 className='text-2xl font-bold tracking-tight md:text-3xl'>
-          Settings
+          {t('settings.title', 'Settings')}
         </h1>
         <Separator className='my-4 lg:my-6' />
         <div className='flex flex-1 flex-col space-y-2 md:space-y-2 overflow-hidden lg:flex-row lg:space-x-12 lg:space-y-0'>
@@ -48,15 +63,4 @@ export default function Settings() {
   )
 }
 
-const sidebarNavItems = [
-  {
-    title: 'Root',
-    icon: <ShieldEllipsis size={18} />,
-    href: '/settings/root',
-  },
-  {
-    title: 'Proxy',
-    icon: <Waypoints size={18} />,
-    href: '/settings/proxy',
-  }
-]
+

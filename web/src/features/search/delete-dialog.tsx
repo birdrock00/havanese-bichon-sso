@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import { IconAlertTriangle } from '@tabler/icons-react'
 import { toast } from '@/hooks/use-toast'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -25,6 +24,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { delete_messages } from '@/api/mailbox/envelope/api'
 import { useSearchContext } from './context'
 import { mapToRecordOfArrays } from '@/lib/utils'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   open: boolean
@@ -32,37 +32,45 @@ interface Props {
 }
 
 export function EnvelopeDeleteDialog({ open, onOpenChange }: Props) {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
   const { toDelete, setToDelete, setSelected } = useSearchContext()
+  const { t } = useTranslation()
+
   const deleteMutation = useMutation({
-    mutationFn: ({ payload }: { payload: Record<string, number[]> }) => delete_messages(payload),
+    mutationFn: ({ payload }: { payload: Record<string, number[]> }) =>
+      delete_messages(payload),
     retry: false,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['search-messages'], exact: false });
-      queryClient.invalidateQueries({ queryKey: ['all-tags'] });
-      onOpenChange(false);
-      setToDelete(new Map());
-      setSelected(new Map());
+      queryClient.invalidateQueries({ queryKey: ['search-messages'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['all-tags'] })
+      onOpenChange(false)
+      setToDelete(new Map())
+      setSelected(new Map())
       toast({
-        title: 'Messages deleted successfully',
-        description: 'The messages have been deleted.',
-      });
+        title: t('search.delete.successTitle'),
+        description: t('search.delete.successDesc'),
+      })
     },
     onError: (error: any) => {
       toast({
-        title: 'Failed to delete messages',
+        title: t('search.delete.errorTitle'),
         description: `${error.message}`,
         variant: 'destructive',
-      });
+      })
     },
-  });
+  })
 
   const handleDelete = () => {
-    const payload = mapToRecordOfArrays(toDelete);
+    const payload = mapToRecordOfArrays(toDelete)
     deleteMutation.mutate({ payload })
   }
 
   const isLoading = deleteMutation.isPending
+
+  const emailCount = Array.from(toDelete.values()).reduce(
+    (sum, set) => sum + set.size,
+    0
+  )
 
   return (
     <ConfirmDialog
@@ -71,41 +79,37 @@ export function EnvelopeDeleteDialog({ open, onOpenChange }: Props) {
       handleConfirm={handleDelete}
       className="max-w-xl"
       isLoading={isLoading}
+      destructive
       title={
-        <span className='text-destructive'>
+        <span className="text-destructive">
           <IconAlertTriangle
-            className='mr-1 inline-block stroke-destructive'
+            className="mr-1 inline-block stroke-destructive"
             size={18}
           />{' '}
-          Delete Email
+          {t('search.delete.title')}
         </span>
       }
       desc={
-        <div className='space-y-4'>
-          <p className='mb-2'>
-            Are you sure you want to delete{' '}
-            <span className='font-bold'>
-              {(() => {
-                const emailCount = Array.from(toDelete.values())
-                  .reduce((sum, set) => sum + set.size, 0);
-                return emailCount > 1 ? `this ${emailCount} emails` : 'this email';
-              })()}
-            </span>{' '}
+        <div className="space-y-4">
+          <p className="mb-2">
+            {t('search.delete.confirmPrefix')}{' '}
+            <span className="font-bold">
+              {t('search.delete.countLabel', { count: emailCount })}
+            </span>
             ?
             <br />
-            This action will delete the selected email(s) from local database. the email(s) will be permanently deleted, and cannot be recovered.
+            {t('search.delete.confirmDetail')}
           </p>
 
-          <Alert variant='destructive'>
-            <AlertTitle>Warning!</AlertTitle>
+          <Alert variant="destructive">
+            <AlertTitle>{t('search.delete.warningTitle')}</AlertTitle>
             <AlertDescription>
-              Please be cautious before proceeding.
+              {t('search.delete.warningDesc')}
             </AlertDescription>
           </Alert>
         </div>
       }
-      confirmText='Delete'
-      destructive
+      confirmText={t('search.delete.confirmButton')}
     />
   )
 }

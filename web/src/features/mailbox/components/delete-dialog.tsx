@@ -16,24 +16,25 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-import { IconAlertTriangle } from '@tabler/icons-react'
-import { toast } from '@/hooks/use-toast'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { ConfirmDialog } from '@/components/confirm-dialog'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { delete_messages } from '@/api/mailbox/envelope/api'
-import { useMailboxContext } from '../context'
-import { mapToRecordOfArrays } from '@/lib/utils'
+import { IconAlertTriangle } from '@tabler/icons-react';
+import { toast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { ConfirmDialog } from '@/components/confirm-dialog';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { delete_messages } from '@/api/mailbox/envelope/api';
+import { useMailboxContext } from '../context';
+import { mapToRecordOfArrays } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function EnvelopeDeleteDialog({ open, onOpenChange }: Props) {
   const queryClient = useQueryClient();
-  const { selectedAccountId, deleteIds, setDeleteIds } = useMailboxContext()
+  const { selectedAccountId, deleteIds, setDeleteIds } = useMailboxContext();
+  const { t } = useTranslation();
 
   const deleteMutation = useMutation({
     mutationFn: ({ payload }: { payload: Record<string, number[]> }) => delete_messages(payload),
@@ -41,15 +42,15 @@ export function EnvelopeDeleteDialog({ open, onOpenChange }: Props) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['mailbox-list-messages'] });
       onOpenChange(false);
-      setDeleteIds(new Set())
+      setDeleteIds(new Set());
       toast({
-        title: 'Messages deleted successfully',
-        description: 'The messages have been deleted.',
+        title: t('mailbox.deleteDialog.successTitle'),
+        description: t('mailbox.deleteDialog.successDesc'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: 'Failed to delete messages',
+        title: t('mailbox.deleteDialog.errorTitle'),
         description: `${error.message}`,
         variant: 'destructive',
       });
@@ -61,11 +62,17 @@ export function EnvelopeDeleteDialog({ open, onOpenChange }: Props) {
       const body = new Map<number, Set<number>>();
       body.set(selectedAccountId, deleteIds);
       const payload = mapToRecordOfArrays(body);
-      deleteMutation.mutate({ payload })
+      deleteMutation.mutate({ payload });
     }
-  }
+  };
 
-  const isLoading = deleteMutation.isPending
+  const isLoading = deleteMutation.isPending;
+
+  const emailCount = deleteIds.size;
+  const countText =
+    emailCount > 1
+      ? t('mailbox.deleteDialog.descCountMultiple', { count: emailCount })
+      : t('mailbox.deleteDialog.descCountSingle');
 
   return (
     <ConfirmDialog
@@ -75,39 +82,28 @@ export function EnvelopeDeleteDialog({ open, onOpenChange }: Props) {
       className="max-w-xl"
       isLoading={isLoading}
       title={
-        <span className='text-destructive'>
+        <span className="text-destructive">
           <IconAlertTriangle
-            className='mr-1 inline-block stroke-destructive'
+            className="mr-1 inline-block stroke-destructive"
             size={18}
           />{' '}
-          Delete Email
+          {t('mailbox.deleteDialog.title')}
         </span>
       }
       desc={
-        <div className='space-y-4'>
-          <p className='mb-2'>
-            Are you sure you want to delete{' '}
-            <span className='font-bold'>
-              {(() => {
-                const emailCount = deleteIds.size;
-                return emailCount > 1 ? `this ${emailCount} emails` : 'this email';
-              })()}
-            </span>{' '}
-            ?
-            <br />
-            This action will delete the selected email(s) from local database. the email(s) will be permanently deleted, and cannot be recovered.
+        <div className="space-y-4">
+          <p className="mb-2">
+            {t('mailbox.deleteDialog.desc', { countText })}
           </p>
 
-          <Alert variant='destructive'>
-            <AlertTitle>Warning!</AlertTitle>
-            <AlertDescription>
-              Please be cautious before proceeding.
-            </AlertDescription>
+          <Alert variant="destructive">
+            <AlertTitle>{t('mailbox.deleteDialog.warningTitle')}</AlertTitle>
+            <AlertDescription>{t('mailbox.deleteDialog.warningDesc')}</AlertDescription>
           </Alert>
         </div>
       }
-      confirmText='Delete'
+      confirmText={t('mailbox.deleteDialog.confirm')}
       destructive
     />
-  )
+  );
 }

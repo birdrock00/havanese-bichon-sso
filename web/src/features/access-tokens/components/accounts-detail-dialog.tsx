@@ -29,7 +29,8 @@ import {
 import { AccessToken } from '../data/schema'
 import { Button } from '@/components/ui/button'
 import { AccountsDetailTable } from './accounts-detail-table'
-import { columns } from './accounts-detail-columns'
+import { getColumns } from './accounts-detail-columns'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   currentRow: AccessToken
@@ -38,6 +39,8 @@ interface Props {
 }
 
 export function AccountDetailDialog({ currentRow, open, onOpenChange }: Props) {
+  const { t } = useTranslation()
+  const columns = getColumns(t)
   return (
     <Dialog
       open={open}
@@ -47,9 +50,9 @@ export function AccountDetailDialog({ currentRow, open, onOpenChange }: Props) {
     >
       <DialogContent className='sm:max-w-4xl'>
         <DialogHeader className='text-left'>
-          <DialogTitle>Accounts</DialogTitle>
+          <DialogTitle>{t('settings.accounts')}</DialogTitle>
           <DialogDescription>
-            The list of accounts that can be queried using an access token.
+            {t('accessTokens.theListOfAccountsThatCanBeQueried')}
           </DialogDescription>
         </DialogHeader>
         <div className="h-[33rem] overflow-x-auto overflow-y-auto">
@@ -57,7 +60,7 @@ export function AccountDetailDialog({ currentRow, open, onOpenChange }: Props) {
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant='outline' className="px-2 py-1 text-sm h-auto">Close</Button>
+            <Button variant='outline' className="px-2 py-1 text-sm h-auto">{t('common.close')}</Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>

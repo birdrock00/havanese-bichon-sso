@@ -32,6 +32,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   currentRow: AccessToken
@@ -40,6 +41,7 @@ interface Props {
 }
 
 export function AclDetailDialog({ currentRow, open, onOpenChange }: Props) {
+  const { t } = useTranslation()
   return (
     <Dialog
       open={open}
@@ -49,9 +51,9 @@ export function AclDetailDialog({ currentRow, open, onOpenChange }: Props) {
     >
       <DialogContent className='sm:max-w-xl'>
         <DialogHeader className='text-left'>
-          <DialogTitle>Acl</DialogTitle>
+          <DialogTitle>{t('settings.acl')}</DialogTitle>
           <DialogDescription>
-            ACL rules for access tokens include IP whitelist verification and rate limit enforcement.
+            {t('accessTokens.aclRulesForAccessTokens')}
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className='h-[33rem] w-full pr-4 -mr-4 py-1'>

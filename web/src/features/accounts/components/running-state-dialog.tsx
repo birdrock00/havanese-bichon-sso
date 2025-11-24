@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import {
   Dialog,
   DialogClose,
@@ -34,6 +33,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { CheckCircle, Clock, Loader2, PlayCircle, FolderSync, FolderCheck } from 'lucide-react'
 import { FolderSyncProgress } from './folder-sync-progress'
+import { useTranslation } from 'react-i18next'
 
 interface Props {
   open: boolean
@@ -42,6 +42,7 @@ interface Props {
 }
 
 export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
+  const { t } = useTranslation()
   const { data: state, isLoading } = useQuery({
     queryKey: ['running-state', currentRow.id],
     queryFn: () => account_state(currentRow.id),
@@ -50,28 +51,27 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
     refetchInterval: 5000,
   })
 
-  // Helper function to calculate duration
   const calculateDuration = (start?: number, end?: number) => {
     if (!start) {
       return (
         <span className="text-yellow-600 flex items-center gap-1">
-          <Clock className="w-4 h-4" /> Not Started
+          <Clock className="w-4 h-4" /> {t('accounts.runningState.notStarted')}
         </span>
-      );
+      )
     }
     if (!end) {
       return (
         <span className="text-blue-600 flex items-center gap-1">
-          <PlayCircle className="w-4 h-4" /> In Progress
+          <PlayCircle className="w-4 h-4" /> {t('accounts.runningState.inProgress')}
         </span>
-      );
+      )
     }
     const duration = intervalToDuration({ start: new Date(start), end: new Date(end) })
     return (
       <span className="text-green-600 flex items-center gap-1">
         <CheckCircle className="w-4 h-4" /> {formatDuration(duration, { format: ['hours', 'minutes', 'seconds'] })}
       </span>
-    );
+    )
   }
 
   return (
@@ -105,22 +105,22 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
                       ) : (
                         <FolderSync className="w-5 h-5 text-blue-500" />
                       )}
-                      Initial Sync
+                      {t('accounts.runningState.initialSync')}
                     </h3>
                     {state.is_initial_sync_completed ? (
                       <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                        Completed
+                        {t('accounts.runningState.completed')}
                       </span>
                     ) : (
                       <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                        In Progress
+                        {t('accounts.runningState.inProgress')}
                       </span>
                     )}
                   </div>
                   <div className="grid grid-cols-3 gap-6 w-full">
                     {/* Start Time */}
                     <div className="flex flex-col text-sm">
-                      <span className="text-muted-foreground">Start Time:</span>
+                      <span className="text-muted-foreground">{t('accounts.runningState.startTime')}</span>
                       <span className="font-medium">
                         {state.initial_sync_start_time ? (
                           <span className="text-green-600">
@@ -132,13 +132,14 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
                               <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
                             </span>
-                            Not Started
+                            {t('accounts.runningState.notStarted')}
                           </span>
                         )}
                       </span>
                     </div>
+                    {/* End Time */}
                     <div className="flex flex-col text-sm">
-                      <span className="text-muted-foreground">End Time:</span>
+                      <span className="text-muted-foreground">{t('accounts.runningState.endTime')}</span>
                       <span className="font-medium">
                         {state.initial_sync_end_time ? (
                           <span className="text-green-600">
@@ -146,33 +147,25 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
                           </span>
                         ) : state.initial_sync_start_time ? (
                           <span className="flex items-center gap-1 text-blue-600">
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                            </span>
-                            In Progress
+                            {t('runningState.inProgress')}
                           </span>
                         ) : (
-                          <span className="text-yellow-600">Not Started</span>
+                          <span className="text-yellow-600">{t('accounts.runningState.notStarted')}</span>
                         )}
                       </span>
                     </div>
-
                     {/* Duration */}
                     <div className="flex flex-col text-sm">
-                      <span className="text-muted-foreground">Duration:</span>
+                      <span className="text-muted-foreground">{t('accounts.runningState.duration')}</span>
                       <span className="font-medium">
                         {(() => {
-                          if (!state.initial_sync_start_time)
-                            return <span className="text-yellow-600">Not Started</span>;
-                          if (!state.initial_sync_end_time)
-                            return <span className="text-blue-600 animate-pulse">Calculating...</span>;
-
-                          const diff = new Date(state.initial_sync_end_time).getTime() - new Date(state.initial_sync_start_time).getTime();
-                          const h = Math.floor(diff / 3600000);
-                          const m = Math.floor((diff % 3600000) / 60000);
-                          const s = Math.floor((diff % 60000) / 1000);
-                          return <span className="text-foreground">{h}h {m}m {s}s</span>;
+                          if (!state.initial_sync_start_time) return <span className="text-yellow-600">{t('accounts.runningState.notStarted')}</span>
+                          if (!state.initial_sync_end_time) return <span className="text-blue-600 animate-pulse">{t('accounts.runningState.calculating')}</span>
+                          const diff = new Date(state.initial_sync_end_time).getTime() - new Date(state.initial_sync_start_time).getTime()
+                          const h = Math.floor(diff / 3600000)
+                          const m = Math.floor((diff % 3600000) / 60000)
+                          const s = Math.floor((diff % 60000) / 1000)
+                          return <span className="text-foreground">{h}h {m}m {s}s</span>
                         })()}
                       </span>
                     </div>
@@ -182,11 +175,9 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
                 <div className="p-4 border rounded-lg bg-card">
                   {state && (
                     <div>
-                      <h3 className="text-base sm:text-lg font-semibold mb-3">Sync Progres</h3>
+                      <h3 className="text-base sm:text-lg font-semibold mb-3">{t('accounts.runningState.syncProgress')}</h3>
                       <ScrollArea className="h-70 sm:h-70 border rounded-md p-2">
-                        <div className='space-y-4'>
-                          <FolderSyncProgress progressMap={state.progress} />
-                        </div>
+                        <FolderSyncProgress progressMap={state.progress} />
                       </ScrollArea>
                     </div>
                   )}
@@ -194,51 +185,52 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
 
                 {/* Incremental Sync */}
                 <div className="p-4 border rounded-lg bg-card">
-                  <h3 className="text-base sm:text-lg font-semibold mb-3">Incremental Sync</h3>
+                  <h3 className="text-base sm:text-lg font-semibold mb-3">{t('accounts.runningState.incrementalSync')}</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Start Time:</span>
+                        <span className="text-muted-foreground">{t('accounts.runningState.startTime')}</span>
                         <span className="font-medium">
                           {state.last_incremental_sync_start ? (
                             formatDistanceToNow(new Date(state.last_incremental_sync_start), { addSuffix: true })
                           ) : (
-                            <span className="text-yellow-600">Not Started</span>
+                            <span className="text-yellow-600">{t('accounts.runningState.notStarted')}</span>
                           )}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">End Time:</span>
+                        <span className="text-muted-foreground">{t('accounts.runningState.endTime')}</span>
                         <span className="font-medium">
                           {state.last_incremental_sync_end ? (
                             formatDistanceToNow(new Date(state.last_incremental_sync_end), { addSuffix: true })
                           ) : state.last_incremental_sync_start ? (
-                            <span className="text-blue-600">In Progress</span>
+                            <span className="text-blue-600">{t('accounts.runningState.inProgress')}</span>
                           ) : (
-                            <span className="text-yellow-600">Not Started</span>
+                            <span className="text-yellow-600">{t('accounts.runningState.notStarted')}</span>
                           )}
                         </span>
                       </div>
                     </div>
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Duration:</span>
+                        <span className="text-muted-foreground">{t('accounts.runningState.duration')}</span>
                         <span className="font-medium">
                           {calculateDuration(state.last_incremental_sync_start, state.last_incremental_sync_end)}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Sync Interval:</span>
+                        <span className="text-muted-foreground">{t('accounts.runningState.syncInterval')}</span>
                         <span className="font-medium">
-                          Every {currentRow.sync_interval_min} minutes
+                          {t('accounts.runningState.everyMinutes', { minutes: currentRow.sync_interval_min })}
                         </span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
+
               <div className="p-4 border rounded-lg bg-card">
-                <h3 className="text-base sm:text-lg font-semibold mb-3">Error Logs</h3>
+                <h3 className="text-base sm:text-lg font-semibold mb-3">{t('accounts.runningState.errorLogs')}</h3>
                 <ScrollArea className="h-[20rem] sm:h-[32rem]">
                   <div className="space-y-3">
                     {state.errors.length ? (
@@ -259,7 +251,7 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
                         ))
                     ) : (
                       <div className="h-full flex justify-center items-center py-8">
-                        <p className="text-sm text-muted-foreground">No error logs available.</p>
+                        <p className="text-sm text-muted-foreground">{t('accounts.runningState.noErrorLogs')}</p>
                       </div>
                     )}
                   </div>
@@ -270,19 +262,15 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
 
           {!isLoading && !state && (
             <div className="h-full flex flex-col justify-center items-center py-8 text-center space-y-2">
-              <p className="text-sm text-muted-foreground">No active state available</p>
-              <p className="text-xs text-muted-foreground">
-                Account synchronization may not have started yet
-              </p>
+              <p className="text-sm text-muted-foreground">{t('accounts.runningState.noActiveState')}</p>
+              <p className="text-xs text-muted-foreground">{t('accounts.runningState.accountNotStarted')}</p>
             </div>
           )}
         </ScrollArea>
 
         <DialogFooter className="pt-4 px-4 sm:px-6 pb-4 border-t">
           <DialogClose asChild>
-            <Button variant="outline" className="w-full sm:w-auto">
-              Close
-            </Button>
+            <Button variant="outline" className="w-full sm:w-auto">{t('accounts.runningState.close')}</Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>

@@ -22,11 +22,11 @@ import LongText from '@/components/long-text'
 import { AccountInfo } from '../data/schema'
 import { DataTableColumnHeader } from './data-table-column-header'
 
-export const columns: ColumnDef<AccountInfo>[] = [
+export const getColumns = (t: (key: string) => string): ColumnDef<AccountInfo>[] => [
   {
     accessorKey: 'id',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Account_Id' />
+      <DataTableColumnHeader column={column} title={t('accessTokens.accountId')} />
     ),
     cell: ({ row }) => (
       <LongText className='max-w-80'>{row.original.id}</LongText>
@@ -38,7 +38,7 @@ export const columns: ColumnDef<AccountInfo>[] = [
   {
     accessorKey: 'email',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Email' />
+      <DataTableColumnHeader column={column} title={t('accounts.email')} />
     ),
     cell: ({ row }) => (
       <LongText className='max-w-80'>{row.getValue('email')}</LongText>

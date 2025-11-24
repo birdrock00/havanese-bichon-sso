@@ -27,11 +27,11 @@ import { format, formatDistanceToNow } from 'date-fns'
 import { AccountCellAction } from './account-action'
 import { AclCellAction } from './acl-action'
 
-export const columns: ColumnDef<AccessToken>[] = [
+export const getColumns = (t: (key: string) => string): ColumnDef<AccessToken>[] => [
   {
     accessorKey: 'token',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Token' />
+      <DataTableColumnHeader column={column} title={t('settings.token')} />
     ),
     cell: ({ row }) => {
       return <LongText className='w-40'>{row.original.token}</LongText>
@@ -43,7 +43,7 @@ export const columns: ColumnDef<AccessToken>[] = [
   {
     accessorKey: 'accounts',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Accounts' />
+      <DataTableColumnHeader column={column} title={t('settings.accounts')} />
     ),
     cell: AccountCellAction,
     meta: { className: 'w-10 text-center' },
@@ -60,7 +60,7 @@ export const columns: ColumnDef<AccessToken>[] = [
   {
     id: 'acl',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Acl' />
+      <DataTableColumnHeader column={column} title={t('settings.acl')} />
     ),
     cell: AclCellAction,
     meta: { className: 'w-8 text-center' },
@@ -69,7 +69,7 @@ export const columns: ColumnDef<AccessToken>[] = [
   {
     accessorKey: 'description',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Description' />
+      <DataTableColumnHeader column={column} title={t('settings.description')} />
     ),
     cell: ({ row }) => (
       <LongText className='max-w-80'>{row.original.description}</LongText>
@@ -81,7 +81,7 @@ export const columns: ColumnDef<AccessToken>[] = [
   {
     accessorKey: 'created_at',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Created At' />
+      <DataTableColumnHeader column={column} title={t('settings.createdAt')} />
     ),
     cell: ({ row }) => {
       const created_at = row.original.created_at;
@@ -94,7 +94,7 @@ export const columns: ColumnDef<AccessToken>[] = [
   {
     accessorKey: 'updated_at',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Updated At' />
+      <DataTableColumnHeader column={column} title={t('settings.updatedAt')} />
     ),
     cell: ({ row }) => {
       const updated_at = row.original.updated_at;
@@ -107,12 +107,12 @@ export const columns: ColumnDef<AccessToken>[] = [
   {
     accessorKey: 'last_access_at',
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title='Last Access' />
+      <DataTableColumnHeader column={column} title={t('settings.lastAccess')} />
     ),
     cell: ({ row }) => {
       const last_access_at = row.original.last_access_at;
       if (last_access_at === 0) {
-        return <LongText className='max-w-40'>Not used yet</LongText>;
+        return <LongText className='max-w-40'>{t('accessTokens.notUsedYet')}</LongText>;
       }
       const result = formatDistanceToNow(new Date(last_access_at), { addSuffix: true });
       return <LongText className='max-w-40'>{result}</LongText>;
