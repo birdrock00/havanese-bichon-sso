@@ -108,7 +108,7 @@ It’s not perfect, but I hope it brings you value.
 <img width="1915" height="903" alt="image" src="https://github.com/user-attachments/assets/242817d7-3e12-4cbb-afb0-c5ef7366178d" />
 <img width="1920" height="910" alt="image" src="https://github.com/user-attachments/assets/14561b74-ed53-4017-9c5b-a64920ec3526" />
 <img width="1913" height="909" alt="image" src="https://github.com/user-attachments/assets/6fd54cb0-c86f-4ceb-a955-c81107614fc4" />
-
+<img width="1916" height="814" alt="image" src="https://github.com/user-attachments/assets/6a079d98-ff6c-46f4-9ec6-e76d320bff5d" />
 ## 🚀 Quick Start
 
 ### Docker Deployment (Recommended)
