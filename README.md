@@ -362,3 +362,11 @@ This project is licensed under [AGPLv3](LICENSE).
 - [Issue Tracker](https://github.com/rustmailer/bichon/issues)
 - [Discord](https://discord.gg/evFnSpdpaE)
 
+
+## Get Involved
+
+If you enjoy using Bichon, you’re welcome to help spread the word 😄
+Feel free to share your experience on communities like Reddit’s r/selfhosted, r/opensource, or elsewhere—installation tips, challenges you ran into, or cool features you discovered.
+Completely voluntary—just sharing your experience helps more people discover Bichon!
+
+
