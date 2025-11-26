@@ -126,7 +126,8 @@
         "noRecentActivity": "Нет недавней активности",
         "noSendersData": "Нет данных об отправителях",
         "noLargeEmails": "Нет больших писем",
-        "noAccountData": "Нет данных об аккаунте"
+        "noAccountData": "Нет данных об аккаунте",
+        "systemVersion": "Версия системы"
     },
     "accounts": {
         "title": "Почтовые учетные записи",

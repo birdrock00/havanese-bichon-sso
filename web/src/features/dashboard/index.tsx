@@ -10,11 +10,11 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU Affero General Public License for more details.
 //
 // You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
-import { Mail, HardDrive, Database, Users, Inbox } from 'lucide-react';
+import { Mail, HardDrive, Database, Users, Inbox, Info } from 'lucide-react';
 import { formatBytes, formatNumber } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { get_dashboard_stats, TimeBucket } from '@/api/system/api';
@@ -94,7 +94,7 @@ export default function MailArchiveDashboard() {
     queryFn: get_dashboard_stats,
   });
 
-  const { t } = useTranslation();  
+  const { t } = useTranslation();
   const totalAttachments = (stats?.with_attachment_count ?? 0) + (stats?.without_attachment_count ?? 0);
   const attachmentRatio = totalAttachments > 0 ? (stats?.with_attachment_count ?? 0) / totalAttachments : 0;
 
@@ -123,8 +123,8 @@ export default function MailArchiveDashboard() {
           <Skeleton className="h-7 w-28 rounded-full" />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          {[...Array(5)].map((_, i) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+          {[...Array(6)].map((_, i) => (
             <MetricCardSkeleton key={i} />
           ))}
         </div>
@@ -156,8 +156,8 @@ export default function MailArchiveDashboard() {
             </div>
           </div>
 
-         
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{t('dashboard.mailAccounts')}</CardTitle>
@@ -210,6 +210,29 @@ export default function MailArchiveDashboard() {
               <CardContent>
                 <div className="text-2xl font-bold">{formatBytes(stats!.index_usage_bytes)}</div>
                 <p className="text-xs text-muted-foreground">{t('dashboard.tantivyIndex')}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{t('dashboard.systemVersion')}</CardTitle>
+                <Info className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className='text-2xl font-bold'>
+                  {stats!.system_version ? (
+                    <a
+                      href={`https://github.com/rustmailer/bichon/releases/tag/${stats!.system_version}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:underline"
+                    >
+                      {stats!.system_version}
+                    </a>
+                  ) : 'N/A'}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {stats!.commit_hash ?? 'N/A'}
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -405,6 +428,11 @@ export default function MailArchiveDashboard() {
               </div>
             </TabsContent>
           </Tabs>
+        </div>
+
+        {/* Footer / Copyright - New Addition */}
+        <div className="p-6 md:p-8 pt-0 text-center text-xs text-muted-foreground">
+          © 2025 <a href="https://rustmailer.com" target="_blank" rel="noopener noreferrer" className="hover:underline">rustmailer.com</a> - Bichon Email Archiving Project
         </div>
       </Main>
     </>

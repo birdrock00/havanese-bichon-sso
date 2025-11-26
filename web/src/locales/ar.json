@@ -126,7 +126,8 @@
         "noRecentActivity": "لا يوجد نشاط حديث",
         "noSendersData": "لا توجد بيانات للمرسلين",
         "noLargeEmails": "لا توجد رسائل بريد إلكتروني كبيرة",
-        "noAccountData": "لا توجد بيانات للحساب"
+        "noAccountData": "لا توجد بيانات للحساب",
+        "systemVersion": "إصدار النظام"
     },
     "accounts": {
         "title": "حسابات البريد الإلكتروني",

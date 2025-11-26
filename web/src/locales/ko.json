@@ -126,7 +126,8 @@
         "noRecentActivity": "최근 활동 없음",
         "noSendersData": "발신자 데이터 없음",
         "noLargeEmails": "크기가 큰 이메일 없음",
-        "noAccountData": "계정 데이터 없음"
+        "noAccountData": "계정 데이터 없음",
+        "systemVersion": "시스템 버전"
     },
     "accounts": {
         "title": "이메일 계정",

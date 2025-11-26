@@ -126,7 +126,8 @@
         "noRecentActivity": "Aucune activité récente",
         "noSendersData": "Aucune donnée d'expéditeurs",
         "noLargeEmails": "Aucun gros e-mail",
-        "noAccountData": "Aucune donnée de compte"
+        "noAccountData": "Aucune donnée de compte",
+        "systemVersion": "Version du système"
     },
     "accounts": {
         "title": "Comptes de Messagerie",

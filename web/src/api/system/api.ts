@@ -54,6 +54,8 @@ export interface DashboardStats {
     with_attachment_count: number;         // Emails with attachments
     without_attachment_count: number;      // Emails without attachments
     top_largest_emails: LargestEmail[];    // Top 10 largest emails
+    system_version: string, //The semantic version string of the currently running backend service
+    commit_hash: string //Git commit hash used to build this system version
 }
 
 export interface TimeBucket {

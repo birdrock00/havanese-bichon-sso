@@ -126,7 +126,8 @@
         "noRecentActivity": "Geen recente activiteit",
         "noSendersData": "Geen afzendersgegevens",
         "noLargeEmails": "Geen grote e-mails",
-        "noAccountData": "Geen accountgegevens"
+        "noAccountData": "Geen accountgegevens",
+        "systemVersion": "Systeemversie"
     },
     "accounts": {
         "title": "E-mailaccounts",

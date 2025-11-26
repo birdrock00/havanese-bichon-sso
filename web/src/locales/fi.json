@@ -126,7 +126,8 @@
         "noRecentActivity": "Ei viimeaikaisia tapahtumia",
         "noSendersData": "Ei lähettäjätietoja",
         "noLargeEmails": "Ei suuria sähköposteja",
-        "noAccountData": "Ei tilitietoja"
+        "noAccountData": "Ei tilitietoja",
+        "systemVersion": "Järjestelmäversio"
     },
     "accounts": {
         "title": "Sähköpostitilit",

@@ -126,7 +126,8 @@
     "noRecentActivity": "无最近活动",
     "noSendersData": "无发件人数据",
     "noLargeEmails": "无大邮件",
-    "noAccountData": "无账户数据"
+    "noAccountData": "无账户数据",
+    "systemVersion": "系统版本"
   },
   "accounts": {
     "title": "邮件账户",

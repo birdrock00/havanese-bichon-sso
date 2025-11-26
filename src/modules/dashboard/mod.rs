@@ -16,12 +16,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
 use tantivy::{schema::Value, TantivyDocument};
 
 use crate::{
+    bichon_version,
     modules::{
         account::migration::AccountModel,
         error::{code::ErrorCode, BichonResult},
@@ -45,6 +45,8 @@ pub struct DashboardStats {
     pub with_attachment_count: u64,            // Emails with attachments
     pub without_attachment_count: u64,         // Emails without attachments
     pub top_largest_emails: Vec<LargestEmail>, // Top 10 largest emails
+    pub system_version: String, // The semantic version string of the currently running backend service
+    pub commit_hash: String,    // Git commit hash used to build this system version
 }
 
 impl DashboardStats {
@@ -57,6 +59,8 @@ impl DashboardStats {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         stat.index_usage_bytes = get_total_size(&DATA_DIR_MANAGER.envelope_dir)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        stat.system_version = bichon_version!().to_string();
+        stat.commit_hash = env!("GIT_HASH").to_string();
         Ok(stat)
     }
 }

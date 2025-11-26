@@ -126,7 +126,8 @@
         "noRecentActivity": "Ingen nylig aktivitet",
         "noSendersData": "Ingen afsenderdata",
         "noLargeEmails": "Ingen store e-mails",
-        "noAccountData": "Ingen kontodata"
+        "noAccountData": "Ingen kontodata",
+        "systemVersion": "Systemversion"
     },
     "accounts": {
         "title": "E-mailkonti",

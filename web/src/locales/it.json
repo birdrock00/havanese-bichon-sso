@@ -126,7 +126,8 @@
         "noRecentActivity": "Nessuna attività recente",
         "noSendersData": "Nessun dato sui mittenti",
         "noLargeEmails": "Nessuna email di grandi dimensioni",
-        "noAccountData": "Nessun dato sull'account"
+        "noAccountData": "Nessun dato sull'account",
+        "systemVersion": "Versione del sistema"
     },
     "accounts": {
         "title": "Account Email",

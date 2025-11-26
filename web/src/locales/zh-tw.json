@@ -126,7 +126,8 @@
         "noRecentActivity": "無近期活動",
         "noSendersData": "無寄件人資料",
         "noLargeEmails": "無大容量郵件",
-        "noAccountData": "無帳號資料"
+        "noAccountData": "無帳號資料",
+        "systemVersion": "系統版本"
     },
     "accounts": {
         "title": "郵件帳號",

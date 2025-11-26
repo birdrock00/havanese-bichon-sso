@@ -126,7 +126,8 @@
         "noRecentActivity": "最近のアクティビティなし",
         "noSendersData": "送信者データなし",
         "noLargeEmails": "サイズの大きいメールなし",
-        "noAccountData": "アカウントデータなし"
+        "noAccountData": "アカウントデータなし",
+        "systemVersion": "システムバージョン"
     },
     "accounts": {
         "title": "メールアカウント",
