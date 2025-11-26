@@ -60,7 +60,7 @@ futures = "0.3.31"
 utf7-imap = "0.3.2"
 imap-proto = "0.16.6"
 mail-parser = { version = '0.11.1', features = ["serde"] }
-mail-send = "0.5.2"
+# mail-send = "0.5.2"
 tokio-rustls = { version = "0.26.4", default-features = false, features = [
     "ring",
     "tls12",

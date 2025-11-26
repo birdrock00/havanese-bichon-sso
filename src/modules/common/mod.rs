@@ -16,19 +16,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use super::error::code::ErrorCode;
 use super::error::BichonError;
 use mail_parser::{Addr as ImapAddr, Address as ImapAddress};
-use mail_send::mail_builder::headers::address::Address as SmtpAddress;
-use mail_send::mail_builder::headers::address::EmailAddress as SmtpEmailAddress;
 use poem::error::ResponseError;
 use poem::Body;
 use poem::{http::StatusCode, Error, Response};
 use poem_openapi::Object;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
 use std::ops::Deref;
 use tracing::error;
 
@@ -51,38 +46,6 @@ pub struct Addr {
     /// The optional email address (e.g., "john.doe@example.com").
     /// If `None`, the address is unavailable, though typically at least one of `name` or `address` is provided.
     pub address: Option<String>,
-}
-
-impl Addr {
-    pub fn parse(s: &str) -> Self {
-        let re = Regex::new(r#"(?:(?P<name>.*)\s*)?<(?P<email>[^<>]+)>"#).unwrap();
-        if let Some(caps) = re.captures(s) {
-            let name: Option<String> = caps.name("name").map(|m| m.as_str().trim().into());
-            let email: Option<String> = caps.name("email").map(|m| m.as_str().trim().into());
-            Addr {
-                name: if let Some(n) = name {
-                    if n.is_empty() {
-                        None
-                    } else {
-                        Some(n)
-                    }
-                } else {
-                    None
-                },
-                address: email,
-            }
-        } else {
-            let s_trimmed = s.trim();
-            Addr {
-                name: None,
-                address: if s_trimmed.is_empty() {
-                    None
-                } else {
-                    Some(s_trimmed.into())
-                },
-            }
-        }
-    }
 }
 
 impl std::fmt::Display for Addr {
@@ -126,50 +89,6 @@ impl<'x> From<&ImapAddress<'x>> for AddrVec {
                 .collect(),
         };
         AddrVec(vec)
-    }
-}
-
-impl<'x> From<SmtpEmailAddress<'x>> for Addr {
-    fn from(email: SmtpEmailAddress<'x>) -> Self {
-        Addr {
-            name: email.name.map(|n| n.into_owned()),
-            address: Some(email.email.into_owned()),
-        }
-    }
-}
-
-impl<'x> From<&SmtpAddress<'x>> for AddrVec {
-    fn from(address: &SmtpAddress<'x>) -> Self {
-        fn collect_addresses<'x>(address: &SmtpAddress<'x>, result: &mut Vec<Addr>) {
-            match address {
-                SmtpAddress::Address(email) => {
-                    let addr = Addr::from(email.clone());
-                    result.push(addr);
-                }
-                SmtpAddress::Group(group) => {
-                    for addr in &group.addresses {
-                        collect_addresses(addr, result);
-                    }
-                }
-                SmtpAddress::List(list) => {
-                    for addr in list {
-                        collect_addresses(addr, result);
-                    }
-                }
-            }
-        }
-        let mut addresses = Vec::new();
-        collect_addresses(address, &mut addresses);
-        AddrVec(addresses)
-    }
-}
-
-impl<'x> From<Addr> for SmtpAddress<'x> {
-    fn from(addr: Addr) -> Self {
-        SmtpAddress::Address(SmtpEmailAddress {
-            name: addr.name.map(Cow::Owned),
-            email: Cow::Owned(addr.address.unwrap_or_default()),
-        })
     }
 }
 
