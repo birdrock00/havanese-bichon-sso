@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use std::collections::BTreeSet;
 
 use crate::modules::account::entity::ImapConfig;
@@ -43,6 +42,8 @@ pub struct AccountCreateRequest {
     #[oai(validator(minimum(value = "10"), maximum(value = "480")))]
     pub sync_interval_min: Option<i64>,
     pub use_proxy: Option<u64>,
+    pub use_dangerous: bool,
+    pub pgp_key: Option<String>,
 }
 
 impl AccountCreateRequest {
@@ -132,6 +133,10 @@ pub struct AccountUpdateRequest {
     /// - If `None` or not provided, the client will connect directly to the API server.
     /// - If `Some(proxy_id)`, the client will use the pre-configured proxy with the given ID for API requests.
     pub use_proxy: Option<u64>,
+
+    pub use_dangerous: Option<bool>,
+
+    pub pgp_key: Option<String>,
 }
 
 impl AccountUpdateRequest {

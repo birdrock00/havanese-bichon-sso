@@ -298,7 +298,9 @@
         "enable": "Aktivera",
         "disable": "Inaktivera",
         "thisWillPreventTheAccountFromBeingUsed": "Det här kontot kommer inte längre att synkronisera data från IMAP-servern, men befintlig data kommer fortfarande att vara åtkomlig.",
-        "disabled": "Inaktiverad"
+        "disabled": "Inaktiverad",
+        "useDangerous": "Lita på vilken TLS‑certifikat som helst",
+        "useDangerousDescription": "Aktivera detta alternativ endast om IMAP‑servern använder ett offentligt eller självsignerat certifikat som inte är betrott av ditt system. Denna inställning kringgår standardverifiering av certifikat, vilket kan utsätta dig för man‑i‑mitten‑attacker — slå på endast om du förstår riskerna."
     },
     "mailbox": {
         "title": "Brevlåda",

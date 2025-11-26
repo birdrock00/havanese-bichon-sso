@@ -298,7 +298,9 @@
         "enable": "啟用",
         "disable": "停用",
         "thisWillPreventTheAccountFromBeingUsed": "該帳戶將不會繼續從 IMAP 伺服器同步資料，但已有資料仍然可以查詢。",
-        "disabled": "已停用"
+        "disabled": "已停用",
+        "useDangerous": "信任任意 TLS 憑證",
+        "useDangerousDescription": "僅當你連線的 IMAP 伺服器使用公開根憑證或自簽憑證，且系統無法驗證該憑證時才啟用此選項。本選項會略過標準憑證驗證流程，可能導致中間人攻擊等安全風險 — 請確認你了解並接受這些風險後再啟用。"
     },
     "mailbox": {
         "title": "信箱",

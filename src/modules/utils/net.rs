@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::modules::error::code::ErrorCode;
 use crate::modules::settings::proxy::Proxy;
 use crate::modules::utils::tls::establish_tls_stream;
@@ -56,17 +55,19 @@ pub(crate) async fn establish_tcp_connection_with_timeout(
     Ok(Box::pin(timeout_stream))
 }
 
-pub(crate) async fn establish_tls_connection(
+pub async fn establish_tls_connection(
     address: SocketAddr,
     server_hostname: &str,
     alpn_protocols: &[&str],
     use_proxy: Option<u64>,
+    dangerous: bool,
 ) -> BichonResult<impl SessionStream> {
     // Establish the TCP connection with timeout
     let tcp_stream = establish_tcp_connection_with_timeout(address, use_proxy).await?;
 
     // Wrap the TCP stream with TLS encryption
-    let tls_stream = establish_tls_stream(server_hostname, alpn_protocols, tcp_stream).await?;
+    let tls_stream =
+        establish_tls_stream(server_hostname, alpn_protocols, tcp_stream, dangerous).await?;
 
     // Return the TLS stream wrapped in a SessionStream
     Ok(tls_stream)

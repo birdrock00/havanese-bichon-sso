@@ -298,7 +298,9 @@
         "enable": "Ota käyttöön",
         "disable": "Poista käytöstä",
         "thisWillPreventTheAccountFromBeingUsed": "Tili ei enää synkronoi tietoja IMAP-palvelimelta, mutta olemassa olevat tiedot ovat edelleen käytettävissä.",
-        "disabled": "Poistettu käytöstä"
+        "disabled": "Poistettu käytöstä",
+        "useDangerous": "Luota mihin tahansa TLS-sertifikaattiin",
+        "useDangerousDescription": "Ota tämä vaihtoehto käyttöön vain, jos IMAP-palvelin käyttää julkista CA:ta tai itse allekirjoitettua sertifikaattia, jonka järjestelmä ei tunnista. Tämä ohittaa normaalin sertifikaattitarkistuksen, ja voi altistaa Man-in-the-Middle -hyökkäyksille. Käytä vain, jos ymmärrät riskin."
     },
     "mailbox": {
         "title": "Sähköposti",

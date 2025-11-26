@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::modules::account::dispatcher::STATUS_DISPATCHER;
 use crate::modules::account::entity::AuthType;
 use crate::modules::account::migration::{AccountModel, AccountType};
@@ -51,7 +50,14 @@ impl ImapConnectionManager {
     async fn create_client(&self, account: &AccountModel) -> BichonResult<Client> {
         assert_eq!(account.account_type, AccountType::IMAP);
         let imap = account.imap.as_ref().unwrap();
-        Client::connection(&imap.host, &imap.encryption, imap.port, imap.use_proxy).await
+        Client::connection(
+            &imap.host,
+            &imap.encryption,
+            imap.port,
+            imap.use_proxy,
+            account.use_dangerous,
+        )
+        .await
     }
 
     async fn authenticate(

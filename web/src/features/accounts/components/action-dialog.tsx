@@ -99,6 +99,7 @@ export type Account = {
     use_proxy?: number;
   };
   enabled: boolean;
+  use_dangerous: boolean;
   date_since?: {
     fixed?: string;
     relative?: {
@@ -116,6 +117,7 @@ const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
     email: z.string({ required_error: t('validation.emailRequired') }).email({ message: t('validation.invalidEmail') }),
     imap: getImapConfigSchema(isEdit, t),
     enabled: z.boolean(),
+    use_dangerous: z.boolean(),
     date_since: getDateSelectionSchema(t).optional(),
     folder_limit: z
       .number({ invalid_type_error: t('validation.folderLimitMustBeNumber') })
@@ -137,7 +139,7 @@ export type Steps = [
 
 const getSteps = (t: (key: string) => string): Steps => [
   { id: "step-1", name: t('accounts.steps.emailAddress'), fields: ["email"] },
-  { id: "step-2", name: t('accounts.steps.imap'), fields: ["imap"] },
+  { id: "step-2", name: t('accounts.steps.imap'), fields: ["imap", "use_dangerous"] },
   { id: "step-3", name: t('accounts.steps.syncPreferences'), fields: ["enabled", "date_since", "folder_limit", "sync_interval_min"] },
   { id: "step-4", name: t('accounts.steps.summary'), fields: [] },
 ];
@@ -164,6 +166,7 @@ const defaultValues: Account = {
     use_proxy: undefined
   },
   enabled: true,
+  use_dangerous: false,
   date_since: undefined,
   folder_limit: undefined,
   sync_interval_min: 10,
@@ -189,6 +192,7 @@ const mapCurrentRowToFormValues = (currentRow: AccountModel): Account => {
     email: currentRow.email,
     imap,
     enabled: currentRow.enabled,
+    use_dangerous: currentRow.use_dangerous,
     date_since: currentRow.date_since ?? undefined,
     folder_limit: currentRow.folder_limit ?? undefined,
     sync_interval_min: currentRow.sync_interval_min ?? 10,
@@ -266,6 +270,7 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
           },
         },
         enabled: data.enabled,
+        use_dangerous: data.use_dangerous,
         date_since: data.date_since,
         folder_limit: data.folder_limit,
         sync_interval_min: data.sync_interval_min,

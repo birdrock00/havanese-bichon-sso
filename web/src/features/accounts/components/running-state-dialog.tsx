@@ -147,7 +147,7 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
                           </span>
                         ) : state.initial_sync_start_time ? (
                           <span className="flex items-center gap-1 text-blue-600">
-                            {t('runningState.inProgress')}
+                            {t('accounts.runningState.inProgress')}
                           </span>
                         ) : (
                           <span className="text-yellow-600">{t('accounts.runningState.notStarted')}</span>

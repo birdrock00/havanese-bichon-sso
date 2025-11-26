@@ -55,7 +55,7 @@ use crate::modules::rest::response::DataPage;
 use crate::modules::token::AccessToken;
 use crate::raise_error;
 
-pub type AccountModel = AccountV1;
+pub type AccountModel = AccountV2;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Enum)]
 pub enum AccountType {
@@ -86,8 +86,38 @@ pub struct AccountV1 {
     pub updated_at: i64,
     pub use_proxy: Option<u64>,
 }
-
 impl AccountV1 {
+    fn pk(&self) -> String {
+        format!("{}_{}", self.created_at, self.id)
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
+#[native_model(id = 4, version = 2, from = AccountV1)]
+#[native_db(primary_key(pk -> String))]
+pub struct AccountV2 {
+    #[secondary_key(unique)]
+    pub id: u64,
+    pub imap: Option<ImapConfig>,
+    pub enabled: bool,
+    #[oai(validator(custom = "crate::modules::common::validator::EmailValidator"))]
+    pub email: String,
+    pub name: Option<String>,
+    pub capabilities: Option<Vec<String>>,
+    pub date_since: Option<DateSince>,
+    pub folder_limit: Option<u32>,
+    pub sync_folders: Option<Vec<String>>,
+    pub account_type: AccountType,
+    pub sync_interval_min: Option<i64>,
+    pub known_folders: Option<BTreeSet<String>>,
+    pub created_at: i64,
+    pub updated_at: i64,
+    pub use_proxy: Option<u64>,
+    pub use_dangerous: bool,
+    pub pgp_key: Option<String>,
+}
+
+impl AccountV2 {
     fn pk(&self) -> String {
         format!("{}_{}", self.created_at, self.id)
     }
@@ -109,12 +139,14 @@ impl AccountV1 {
             updated_at: utc_now!(),
             use_proxy: request.use_proxy,
             folder_limit: request.folder_limit,
+            use_dangerous: request.use_dangerous,
+            pgp_key: request.pgp_key,
         })
     }
 
     pub async fn check_account_exists(account_id: u64) -> BichonResult<AccountModel> {
         let account =
-            secondary_find_impl::<AccountModel>(DB_MANAGER.meta_db(), AccountV1Key::id, account_id)
+            secondary_find_impl::<AccountModel>(DB_MANAGER.meta_db(), AccountV2Key::id, account_id)
                 .await?
                 .ok_or_else(|| {
                     raise_error!(
@@ -144,7 +176,7 @@ impl AccountV1 {
     }
 
     pub async fn find(account_id: u64) -> BichonResult<Option<AccountModel>> {
-        secondary_find_impl::<AccountModel>(DB_MANAGER.meta_db(), AccountV1Key::id, account_id)
+        secondary_find_impl::<AccountModel>(DB_MANAGER.meta_db(), AccountV2Key::id, account_id)
             .await
     }
 
@@ -198,7 +230,7 @@ impl AccountV1 {
 
     async fn delete_account(account_id: u64) -> BichonResult<()> {
         delete_impl(DB_MANAGER.meta_db(), move|rw|{
-            rw.get().secondary::<AccountModel>(AccountV1Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+            rw.get().secondary::<AccountModel>(AccountV2Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
             .ok_or_else(||raise_error!(format!("The account entity with id={account_id} that you want to delete was not found."), ErrorCode::ResourceNotFound))
         }).await
     }
@@ -228,7 +260,7 @@ impl AccountV1 {
         sync_folders: Vec<String>,
     ) -> BichonResult<()> {
         update_impl(DB_MANAGER.meta_db(), move |rw| {
-            rw.get().secondary::<AccountModel>(AccountV1Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+            rw.get().secondary::<AccountModel>(AccountV2Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
             .ok_or_else(|| raise_error!(format!("When trying to update account sync_folders, the corresponding record was not found. account_id={}", account_id), ErrorCode::ResourceNotFound))
         }, |current|{
             let mut updated = current.clone();
@@ -243,7 +275,7 @@ impl AccountV1 {
         known_folders: BTreeSet<String>,
     ) -> BichonResult<()> {
         update_impl(DB_MANAGER.meta_db(), move |rw| {
-            rw.get().secondary::<AccountModel>(AccountV1Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+            rw.get().secondary::<AccountModel>(AccountV2Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
             .ok_or_else(|| raise_error!(format!("When trying to update account known_folders, the corresponding record was not found. account_id={}", account_id), ErrorCode::ResourceNotFound))
         }, |current|{
             let mut updated = current.clone();
@@ -258,7 +290,7 @@ impl AccountV1 {
         capabilities: Vec<String>,
     ) -> BichonResult<()> {
         update_impl(DB_MANAGER.meta_db(), move |rw| {
-            rw.get().secondary::<AccountModel>(AccountV1Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+            rw.get().secondary::<AccountModel>(AccountV2Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
             .ok_or_else(|| raise_error!(format!("When trying to update account capabilities, the corresponding record was not found. account_id={}", account_id), ErrorCode::ResourceNotFound))
         }, |current|{
             let mut updated = current.clone();
@@ -287,7 +319,7 @@ impl AccountV1 {
     }
 
     pub async fn count() -> BichonResult<usize> {
-        count_by_unique_secondary_key_impl::<AccountModel>(DB_MANAGER.meta_db(), AccountV1Key::id)
+        count_by_unique_secondary_key_impl::<AccountModel>(DB_MANAGER.meta_db(), AccountV2Key::id)
             .await
     }
 
@@ -355,7 +387,62 @@ impl AccountV1 {
         if let Some(enabled) = request.enabled {
             new.enabled = enabled;
         }
+
+        if let Some(use_dangerous) = request.use_dangerous {
+            new.use_dangerous = use_dangerous;
+        }
+
+        if let Some(pgp_key) = request.pgp_key {
+            new.pgp_key = Some(pgp_key);
+        }
+
         new.updated_at = utc_now!();
         Ok(new)
+    }
+}
+
+impl From<AccountV1> for AccountV2 {
+    fn from(value: AccountV1) -> Self {
+        Self {
+            id: value.id,
+            imap: value.imap,
+            enabled: value.enabled,
+            email: value.email,
+            name: value.name,
+            capabilities: value.capabilities,
+            date_since: value.date_since,
+            folder_limit: value.folder_limit,
+            sync_folders: value.sync_folders,
+            account_type: value.account_type,
+            sync_interval_min: value.sync_interval_min,
+            known_folders: value.known_folders,
+            created_at: value.created_at,
+            updated_at: value.updated_at,
+            use_proxy: value.use_proxy,
+            use_dangerous: false,
+            pgp_key: None,
+        }
+    }
+}
+
+impl From<AccountV2> for AccountV1 {
+    fn from(value: AccountV2) -> Self {
+        Self {
+            id: value.id,
+            imap: value.imap,
+            enabled: value.enabled,
+            email: value.email,
+            name: value.name,
+            capabilities: value.capabilities,
+            date_since: value.date_since,
+            folder_limit: value.folder_limit,
+            sync_folders: value.sync_folders,
+            account_type: value.account_type,
+            sync_interval_min: value.sync_interval_min,
+            known_folders: value.known_folders,
+            created_at: value.created_at,
+            updated_at: value.updated_at,
+            use_proxy: value.use_proxy,
+        }
     }
 }

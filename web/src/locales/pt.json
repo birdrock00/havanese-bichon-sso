@@ -298,7 +298,9 @@
         "enable": "Ativar",
         "disable": "Desativar",
         "thisWillPreventTheAccountFromBeingUsed": "Esta conta não sincronizará mais dados do servidor IMAP, mas os dados existentes ainda estarão acessíveis.",
-        "disabled": "Desativado"
+        "disabled": "Desativado",
+        "useDangerous": "Confiar em qualquer certificado TLS",
+        "useDangerousDescription": "Ative esta opção apenas se estiver a conectar a um servidor IMAP que use um certificado público ou autoassinado que o seu sistema possa não reconhecer. Esta opção ignora a verificação normal de certificados e pode expor a ligação a ataques man‑in‑the‑middle — ative apenas se compreender os riscos."
     },
     "mailbox": {
         "title": "Caixa de Entrada",

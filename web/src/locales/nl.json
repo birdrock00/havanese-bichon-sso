@@ -298,7 +298,9 @@
         "enable": "Inschakelen",
         "disable": "Uitschakelen",
         "thisWillPreventTheAccountFromBeingUsed": "Dit account zal geen gegevens meer synchroniseren van de IMAP-server, maar bestaande gegevens blijven toegankelijk.",
-        "disabled": "Uitgeschakeld"
+        "disabled": "Uitgeschakeld",
+        "useDangerous": "Vertrouw elk TLS‑certificaat",
+        "useDangerousDescription": "Schakel deze optie alleen in als je verbinding maakt met een IMAP‑server die een openbaar CA‑ of een self‑signed certificaat gebruikt dat door je systeem mogelijk niet wordt vertrouwd. Deze instelling omzeilt standaard certificaatverificatie en kan je blootstellen aan man‑in‑the‑middle‑aanvallen — activeer alleen als je de risico’s begrijpt."
     },
     "mailbox": {
         "title": "Postvak In",

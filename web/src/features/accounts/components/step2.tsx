@@ -38,6 +38,7 @@ import { Account } from "./action-dialog";
 import { PasswordInput } from "@/components/password-input";
 import useProxyList from "@/hooks/use-proxy";
 import { useTranslation } from "react-i18next";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface StepProps {
     isEdit: boolean;
@@ -107,6 +108,23 @@ export default function Step2({ isEdit }: StepProps) {
                                 {t('accounts.chooseEncryptionMethod')}
                             </FormDescription>
                             <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={control}
+                    name="use_dangerous"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-col items-start gap-y-1">
+                            <FormLabel>{t('accounts.useDangerous')}:</FormLabel>
+                            <FormControl>
+                                <Checkbox
+                                    className="mt-2"
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                            <FormDescription>{t('accounts.useDangerousDescription')}</FormDescription>
                         </FormItem>
                     )}
                 />

@@ -298,7 +298,9 @@
         "enable": "有効化",
         "disable": "無効化",
         "thisWillPreventTheAccountFromBeingUsed": "このアカウントはIMAPサーバーからのデータ同期を行わなくなりますが、既存のデータは引き続き参照可能です。",
-        "disabled": "無効"
+        "disabled": "無効",
+        "useDangerous": "任意の TLS 証明書を信頼する",
+        "useDangerousDescription": "このオプションを有効にすると、公開 CA または自己署名証明書を使用している IMAP サーバーに対して、システムが証明書を認識していない場合でも接続できます。ただし、標準の証明書検証をバイパスするため、中間者攻撃 (MITM) のリスクがあり — リスクを理解した上でのみ有効にしてください。"
     },
     "mailbox": {
         "title": "メールボックス",

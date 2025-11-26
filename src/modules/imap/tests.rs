@@ -16,19 +16,21 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use mail_parser::MessageParser;
 
-use crate::{base64_encode_url_safe, modules::{account::entity::Encryption, imap::client::Client}};
+use crate::{
+    base64_encode_url_safe,
+    modules::{account::entity::Encryption, imap::client::Client},
+};
 
 #[tokio::test]
 async fn testxx() {
     rustls::crypto::CryptoProvider::install_default(rustls::crypto::ring::default_provider())
         .unwrap();
-    let client = Client::connection("imap.zoho.com".into(), &Encryption::Ssl, 993, None)
+    let client = Client::connection("imap.zoho.com".into(), &Encryption::Ssl, 993, None, false)
         .await
         .unwrap();
-    let mut session = client.login("pollybase@zohomail.com", "xxx").await.unwrap();
+    let mut session = client.login("xx@zohomail.com", "xxx").await.unwrap();
     session.select("INBOX").await.unwrap();
     let result = session.uid_search("LARGER 1024").await.unwrap();
     println!("{:#?}", result);

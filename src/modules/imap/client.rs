@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::modules::account::entity::Encryption;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::error::BichonResult;
@@ -100,15 +99,17 @@ impl Client {
         encryption: &Encryption,
         port: u16,
         use_proxy: Option<u64>,
+        dangerous: bool,
     ) -> BichonResult<Self> {
         let resolved_addr = Self::resolve_to_socket_addr(domain, port)?;
         debug!("Attempting IMAP connection to {domain} ({resolved_addr}).");
         match encryption {
             Encryption::Ssl => {
-                Self::establish_secure_connection(resolved_addr, domain, use_proxy).await
+                Self::establish_secure_connection(resolved_addr, domain, use_proxy, dangerous).await
             }
             Encryption::StartTls => {
-                Self::establish_starttls_connection(resolved_addr, domain, use_proxy).await
+                Self::establish_starttls_connection(resolved_addr, domain, use_proxy, dangerous)
+                    .await
             }
             Encryption::None => Self::establish_insecure_connection(resolved_addr, use_proxy).await,
         }
@@ -118,11 +119,17 @@ impl Client {
         address: SocketAddr,
         server_hostname: &str,
         use_proxy: Option<u64>,
+        dangerous: bool,
     ) -> BichonResult<Self> {
         // Establish the TLS connection with the specified parameters
-        let tls_stream =
-            establish_tls_connection(address, server_hostname, alpn(address.port()), use_proxy)
-                .await?;
+        let tls_stream = establish_tls_connection(
+            address,
+            server_hostname,
+            alpn(address.port()),
+            use_proxy,
+            dangerous,
+        )
+        .await?;
         let stats_stream = StatsWrapper::new(tls_stream);
         // Wrap the TLS stream in a buffered writer for efficient IO
         let buffered_stream = BufWriter::new(stats_stream);
@@ -180,6 +187,7 @@ impl Client {
         address: SocketAddr,
         server_hostname: &str,
         use_proxy: Option<u64>,
+        dangerous: bool,
     ) -> BichonResult<Self> {
         // Establish the initial TCP connection
         let tcp_stream = establish_tcp_connection_with_timeout(address, use_proxy).await?;
@@ -217,7 +225,7 @@ impl Client {
         let buffered_tcp_stream = client.into_inner();
         let tcp_stream = buffered_tcp_stream.into_inner();
         // Wrap the TCP stream in TLS encryption
-        let tls_stream = establish_tls_stream(server_hostname, &[], tcp_stream).await?;
+        let tls_stream = establish_tls_stream(server_hostname, &[], tcp_stream, dangerous).await?;
         // Wrap the TLS stream in a buffered writer
         let buffered_stream = BufWriter::new(tls_stream);
         // Create a SessionStream trait object for further communication

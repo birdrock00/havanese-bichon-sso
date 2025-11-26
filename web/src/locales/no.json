@@ -298,7 +298,9 @@
         "enable": "Aktiver",
         "disable": "Deaktiver",
         "thisWillPreventTheAccountFromBeingUsed": "Denne kontoen vil ikke lenger synkronisere data fra IMAP-serveren, men eksisterende data vil fortsatt være tilgjengelige.",
-        "disabled": "Deaktivert"
+        "disabled": "Deaktivert",
+        "useDangerous": "Stol på hvilken som helst TLS‑sertifikat",
+        "useDangerousDescription": "Aktiver dette alternativet kun hvis IMAP‑serveren bruker et offentlig CA‑sertifikat eller et selvsignert sertifikat som systemet ditt ikke gjenkjenner. Innstillingen hopper over vanlig sertifikatvalidering, noe som kan utsette deg for man‑in‑the‑middle‑angrep – bruk kun hvis du forstår risikoen."
     },
     "mailbox": {
         "title": "Postkasse",

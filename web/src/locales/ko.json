@@ -298,7 +298,9 @@
         "enable": "활성화",
         "disable": "비활성화",
         "thisWillPreventTheAccountFromBeingUsed": "이 계정은 더 이상 IMAP 서버에서 데이터를 동기화하지 않지만, 기존 데이터는 계속 조회할 수 있습니다.",
-        "disabled": "비활성화"
+        "disabled": "비활성화",
+        "useDangerous": "모든 TLS 인증서를 신뢰",
+        "useDangerousDescription": "공개 CA 인증서 또는 자체 서명 인증서를 사용하는 IMAP 서버에 연결할 때, 시스템에서 인증서를 신뢰하지 않아도 이 옵션을 켜면 무시할 수 있습니다. 하지만 표준 인증서 검증을 무시하기 때문에 중간자 공격에 노출될 수 있습니다 — 위험을 이해한 경우에만 사용하세요"
     },
     "mailbox": {
         "title": "받은 편지함",

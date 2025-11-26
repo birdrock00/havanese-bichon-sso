@@ -298,7 +298,9 @@
         "enable": "Attiva",
         "disable": "Disattiva",
         "thisWillPreventTheAccountFromBeingUsed": "Questo account non sincronizzerà più i dati dal server IMAP, ma i dati esistenti resteranno accessibili.",
-        "disabled": "Disabilitato"
+        "disabled": "Disabilitato",
+        "useDangerous": "Accetta qualsiasi certificato TLS",
+        "useDangerousDescription": "Abilita questa opzione solo se ti connetti a un server IMAP che utilizza un certificato pubblico o auto‑firmato che il tuo sistema potrebbe non riconoscere. Questa impostazione salta la verifica standard del certificato e può esporre la connessione ad attacchi “man‑in‑the‑middle” — attivala solo se comprendi i rischi."
     },
     "mailbox": {
         "title": "Posta in arrivo",

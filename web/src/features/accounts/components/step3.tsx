@@ -93,7 +93,6 @@ export default function Step3() {
                     </FormItem>
                 )}
             />
-
             <FormLabel className="flex items-center justify-between">{t('accounts.dateSince')}:</FormLabel>
             <RadioGroup
                 defaultValue={rangeType}

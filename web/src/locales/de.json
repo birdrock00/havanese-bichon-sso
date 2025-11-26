@@ -298,7 +298,9 @@
         "enable": "Aktivieren",
         "disable": "Deaktivieren",
         "thisWillPreventTheAccountFromBeingUsed": "Dieses Konto synchronisiert keine Daten mehr vom IMAP-Server, aber vorhandene Daten bleiben weiterhin zugänglich.",
-        "disabled": "Deaktiviert"
+        "disabled": "Deaktiviert",
+        "useDangerous": "Jedem TLS‑Zertifikat vertrauen",
+        "useDangerousDescription": "Aktivieren Sie diese Option nur, wenn Sie sich mit einem IMAP‑Server verbinden, der ein öffentliches CA‑Zertifikat oder ein selbstsigniertes Zertifikat verwendet, das Ihr System möglicherweise nicht erkennt. Diese Einstellung umgeht die Standard‑Zertifikatsprüfung und kann Sie für Man‑in‑the‑Middle‑Angriffe anfällig machen – aktivieren Sie nur, wenn Sie die Risiken verstehen."
     },
     "mailbox": {
         "title": "Postfach",

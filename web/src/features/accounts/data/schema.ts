@@ -60,4 +60,5 @@ export interface AccountModel {
   created_at: number;
   updated_at: number;
   use_proxy?: number
+  use_dangerous: boolean
 }

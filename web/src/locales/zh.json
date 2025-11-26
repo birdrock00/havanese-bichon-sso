@@ -298,7 +298,9 @@
     "enable": "启用",
     "disable": "禁用",
     "thisWillPreventTheAccountFromBeingUsed": "该账户将不会继续从 IMAP 服务器同步数据，但已有数据仍然可以查询。",
-    "disabled": "已禁用"
+    "disabled": "已禁用",
+    "useDangerous": "信任任意 TLS 证书",
+    "useDangerousDescription": "如果你连接的 IMAP 服务器使用公开 CA 或者自签证书，而系统不认可该证书时，启用此选项可绕过标准证书校验。但请注意，这样可能使你的连接容易受到中间人攻击 —— 仅当你完全理解风险时才启用。"
   },
   "mailbox": {
     "title": "邮箱",

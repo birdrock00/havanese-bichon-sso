@@ -298,7 +298,9 @@
     "enable": "Enable",
     "disable": "Disable",
     "thisWillPreventTheAccountFromBeingUsed": "This account will no longer sync data from the IMAP server, but existing data will still be accessible.",
-    "disabled": "Disabled"
+    "disabled": "Disabled",
+    "useDangerous": "Trust Any TLS Certificate",
+    "useDangerousDescription": "Enable this option only if you are connecting to an IMAP server with a public or self-signed certificate that may not be recognized by your system. Using this setting bypasses standard certificate validation, which can expose you to man-in-the-middle attacks. Only enable if you understand the risks."
   },
   "mailbox": {
     "title": "Mailbox",

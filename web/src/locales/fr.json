@@ -298,7 +298,9 @@
         "enable": "Activer",
         "disable": "Désactiver",
         "thisWillPreventTheAccountFromBeingUsed": "Ce compte ne synchronisera plus les données depuis le serveur IMAP, mais les données existantes resteront accessibles.",
-        "disabled": "Désactivé"
+        "disabled": "Désactivé",
+        "useDangerous": "Faire confiance à n’importe quel certificat TLS",
+        "useDangerousDescription": "Activez cette option seulement si vous vous connectez à un serveur IMAP utilisant un certificat public ou auto‑signé que votre système pourrait ne pas reconnaître. Cette option contourne la vérification standard des certificats, ce qui peut vous exposer à des attaques de type homme‑du‑milieu — n’activez que si vous comprenez les risques."
     },
     "mailbox": {
         "title": "Boîte aux lettres",

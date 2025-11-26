@@ -16,8 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-use crate::modules::account::migration::AccountV1;
+use crate::modules::account::migration::{AccountV1, AccountV2};
 use crate::modules::autoconfig::CachedMailSettings;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::error::BichonResult;
@@ -63,6 +62,7 @@ impl ModelsAdapter {
         self.register_model::<SystemSetting>();
         self.register_model::<CachedMailSettings>();
         self.register_model::<AccountV1>();
+        self.register_model::<AccountV2>();
         self.register_model::<OAuth2>();
         self.register_model::<OAuth2PendingEntity>();
         self.register_model::<OAuth2AccessToken>();

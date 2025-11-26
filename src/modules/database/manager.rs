@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
+use crate::modules::account::migration::AccountModel;
 use crate::modules::cache::imap::MAILBOX_MODELS;
 use crate::modules::error::{code::ErrorCode, BichonError};
 use crate::modules::settings::cli::SETTINGS;
@@ -70,6 +70,8 @@ impl DatabaseManager {
 
         let rw = database
             .rw_transaction()
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        rw.migrate::<AccountModel>()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         rw.commit()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
