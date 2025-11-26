@@ -31,9 +31,24 @@
 </p>
 </div>
 
-Bichon is a minimal, high-performance, standalone Rust email archiver with a built-in WebUI.
-Its name is inspired by the puppy my daughter adopted last month.
-It runs as a single binary, requires no external dependencies, and provides fast, efficient email archiving, management, and search.
+Bichon is an open-source email archiving system that **synchronizes emails from IMAP servers**, **indexes them for full-text search**, and provides a **REST API** for programmatic access.
+**Unlike email clients**, Bichon is designed for **archiving and searching** rather than sending/receiving emails. It runs as a **standalone server application** that continuously synchronizes configured email accounts and maintains a **searchable local archive**.
+Built in Rust, it requires no external dependencies and provides fast, efficient email archiving, management, and search through a built-in WebUI. Its name is inspired by the puppy my daughter adopted last month.
+
+## Key Differences from Email Clients
+
+### Core Comparison
+
+| Feature | Email Clients | Bichon |
+|---------|---------------|--------|
+| **Primary Purpose** | Send/receive emails, real-time communication | Archive, search, manage historical emails |
+| **Sending Capability** | ✅ Supports sending emails | ❌ No email sending support |
+| **Runtime Mode** | Desktop/mobile applications | Server-side application |
+| **Data Storage** | Local cache + server | Local archive store |
+| **Search Capability** | Basic search | Full-text indexing, advanced search |
+| **API Interface** | Typically not provided | Complete REST API |
+| **Multi-account Management** | Limited | Supports unified search across accounts |
+
 
 ## 🚀 Features
 
