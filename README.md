@@ -313,7 +313,7 @@ To build or contribute to Bichon, the following environment is recommended:
 ```bash
 git clone https://github.com/rustmailer/bichon.git
 cd bichon
-````
+```
 
 #### 2. Build the WebUI
 
@@ -368,7 +368,9 @@ This project is licensed under [AGPLv3](LICENSE).
 Contributions of all kinds are welcome!
 Whether you’d like to submit code, report a bug, or share practical suggestions that can help improve the project, your input is highly appreciated.
 Feel free to open an Issue or a Pull Request anytime. You can also reach out on Discord if you’d like to discuss ideas or improvements.
-
+<a href="https://discord.gg/evFnSpdpaE">
+    <img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?logo=discord&logoColor=white" alt="Discord">
+</a>
 
 ## 💖 Support & Promotion
 
@@ -377,3 +379,4 @@ Financial support is optional but deeply appreciated — it helps me dedicate mo
 
 You can also support the project by sharing it with others, writing about your experience, or recommending it within relevant communities. Every bit of visibility helps more people benefit from the tool!
 
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20the%20Project-FFDD00?logo=buy-me-a-coffee)](https://buymeacoffee.com/rustmailer)
