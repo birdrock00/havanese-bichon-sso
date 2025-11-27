@@ -251,7 +251,7 @@
         "updateTheEmailAccountHere": "تحديث حساب البريد الإلكتروني هنا. ",
         "addNewEmailAccountHere": "إضافة حساب بريد إلكتروني جديد هنا. ",
         "thisAccountIsUsedForIdentificationPurposesOnly": "يستخدم هذا الحساب لأغراض التعريف فقط ولا يتطلب المزامنة مع خادم بريد إلكتروني. إنه يساعد في استيراد بيانات البريد الإلكتروني.",
-        "determinesWhetherThisAccountIsActiveNoSync": "يحدد ما إذا كان هذا الحساب نشطًا. إذا تم تعطيله، فلن يتمكن الحساب من استيراد البيانات أو إجراء استعلامات.",
+        "determinesWhetherThisAccountIsActiveNoSync": "يحدد ما إذا كان هذا الحساب نشطًا. إذا تم تعطيله، فلن يكون قادرًا على استيراد البيانات.",
         "folderSync": {
             "noData": "لا توجد بيانات",
             "noFolders": "لا توجد مجلدات للمزامنة",

@@ -251,7 +251,7 @@
     "updateTheEmailAccountHere": "在此更新邮件账户。",
     "addNewEmailAccountHere": "在此添加新邮件账户。",
     "thisAccountIsUsedForIdentificationPurposesOnly": "此账户仅用于识别目的，不需要与邮件服务器同步。它有助于导入邮件数据。",
-    "determinesWhetherThisAccountIsActiveNoSync": "确定此账户是否处于活动状态。如果禁用，账户将无法导入数据或执行查询。",
+    "determinesWhetherThisAccountIsActiveNoSync": "用于判断账户是否处于启用状态。如果被禁用，将无法导入数据。",
     "folderSync": {
       "noData": "无数据",
       "noFolders": "没有需要同步的文件夹",

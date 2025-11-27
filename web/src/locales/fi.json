@@ -251,7 +251,7 @@
         "updateTheEmailAccountHere": "Päivitä sähköpostitili täällä. ",
         "addNewEmailAccountHere": "Lisää uusi sähköpostitili täällä. ",
         "thisAccountIsUsedForIdentificationPurposesOnly": "Tätä tiliä käytetään vain tunnistamistarkoituksiin, eikä se vaadi synkronointia sähköpostipalvelimen kanssa. Auttaa sähköpostidatan tuomisessa.",
-        "determinesWhetherThisAccountIsActiveNoSync": "Määrittää, onko tämä tili aktiivinen. Jos poistettu käytöstä, tili ei voi tuoda tietoja tai suorittaa kyselyjä.",
+        "determinesWhetherThisAccountIsActiveNoSync": "Määrittää, onko tämä tili aktiivinen. Jos se on poistettu käytöstä, tietoja ei voi tuoda.",
         "folderSync": {
             "noData": "Ei tietoja",
             "noFolders": "Ei synkronoitavia kansioita",

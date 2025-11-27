@@ -251,7 +251,7 @@
     "updateTheEmailAccountHere": "Update the email account here. ",
     "addNewEmailAccountHere": "Add new email account here. ",
     "thisAccountIsUsedForIdentificationPurposesOnly": "This account is used for identification purposes only and does not require syncing with an email server. It helps with importing email data.",
-    "determinesWhetherThisAccountIsActiveNoSync": "Determines whether this account is active. If disabled, the account will not be able to import data or perform queries.",
+    "determinesWhetherThisAccountIsActiveNoSync": "Determines whether this account is active. If disabled, the account will not be able to import data.",
     "folderSync": {
       "noData": "No Data",
       "noFolders": "No folders to sync",

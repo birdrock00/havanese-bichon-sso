@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
+use crate::modules::account::migration::AccountType;
 use crate::modules::context::Initialize;
 use crate::modules::error::code::ErrorCode;
 use crate::raise_error;
@@ -33,8 +33,7 @@ use dashmap::DashMap;
 use std::sync::{Arc, LazyLock};
 use tracing::info;
 
-pub static MAIL_CONTEXT: LazyLock<EmailClientExecutors> =
-    LazyLock::new(EmailClientExecutors::new);
+pub static MAIL_CONTEXT: LazyLock<EmailClientExecutors> = LazyLock::new(EmailClientExecutors::new);
 
 pub struct EmailClientExecutors {
     start_at: i64,
@@ -88,15 +87,17 @@ impl EmailClientExecutors {
 
     pub async fn start_account_syncers(&self) -> BichonResult<()> {
         let accounts = AccountModel::list_all().await?;
-        let active_accounts: Vec<AccountModel> =
-            accounts.into_iter().filter(|a| a.enabled).collect();
+        let active_accounts: Vec<AccountModel> = accounts
+            .into_iter()
+            .filter(|a| a.enabled && matches!(a.account_type, AccountType::IMAP))
+            .collect();
 
         if active_accounts.is_empty() {
             info!("No active accounts found for account initialization.");
             return Ok(());
         }
         info!(
-            "System has {} active accounts to initialize.",
+            "System has {} active IMAP accounts to initialize.",
             active_accounts.len()
         );
         for account in active_accounts {

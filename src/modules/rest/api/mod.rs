@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use access_token::AccessTokenApi;
 use account::AccountApi;
 use auto_config::AutoConfigApi;
@@ -26,11 +25,12 @@ use oauth2::OAuth2Api;
 use poem_openapi::{OpenApiService, Tags};
 use system::SystemApi;
 
-use crate::bichon_version;
+use crate::{bichon_version, modules::rest::api::import::ImportApi};
 
 pub mod access_token;
 pub mod account;
 pub mod auto_config;
+pub mod import;
 pub mod mailbox;
 pub mod message;
 pub mod oauth2;
@@ -45,6 +45,7 @@ pub enum ApiTags {
     OAuth2,
     Message,
     System,
+    Import,
 }
 
 type RustMailOpenApi = (
@@ -55,6 +56,7 @@ type RustMailOpenApi = (
     MailBoxApi,
     OAuth2Api,
     MessageApi,
+    ImportApi,
 );
 
 pub fn create_openapi_service() -> OpenApiService<RustMailOpenApi, ()> {
@@ -67,6 +69,7 @@ pub fn create_openapi_service() -> OpenApiService<RustMailOpenApi, ()> {
             MailBoxApi,
             OAuth2Api,
             MessageApi,
+            ImportApi,
         ),
         "BichonApi",
         bichon_version!(),

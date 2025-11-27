@@ -251,7 +251,7 @@
         "updateTheEmailAccountHere": "여기에서 이메일 계정을 업데이트하십시오.",
         "addNewEmailAccountHere": "여기에서 새 이메일 계정을 추가하십시오.",
         "thisAccountIsUsedForIdentificationPurposesOnly": "이 계정은 식별 목적으로만 사용되며 이메일 서버와의 동기화가 필요하지 않습니다. 이메일 데이터 가져오기에 도움이 됩니다.",
-        "determinesWhetherThisAccountIsActiveNoSync": "이 계정이 활성화되었는지 여부를 결정합니다. 비활성화된 경우 데이터 가져오기 또는 쿼리 실행이 불가능합니다.",
+        "determinesWhetherThisAccountIsActiveNoSync": "이 계정이 활성화되어 있는지 결정합니다. 비활성화되면 데이터를 가져올 수 없습니다.",
         "folderSync": {
             "noData": "데이터 없음",
             "noFolders": "동기화할 폴더가 없습니다",

@@ -33,7 +33,7 @@ export function OAuth2Action({ row }: DataTableRowActionsProps) {
   const account_type = mailer.account_type;
 
   if (account_type === "NoSync") {
-    return <span className="text-xs text-muted-foreground">n/a</span>
+    return <Button variant={"ghost"} className="text-xs text-muted-foreground">n/a</Button>
   }
 
   const isOAuth2 = mailer.imap?.auth.auth_type === "OAuth2"

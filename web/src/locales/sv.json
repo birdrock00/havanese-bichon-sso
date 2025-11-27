@@ -251,7 +251,7 @@
         "updateTheEmailAccountHere": "Uppdatera e-postkontot här. ",
         "addNewEmailAccountHere": "Lägg till nytt e-postkonto här. ",
         "thisAccountIsUsedForIdentificationPurposesOnly": "Detta konto används endast för identifieringssyften och kräver inte synkronisering med en e-postserver. Det hjälper till med import av e-postdata.",
-        "determinesWhetherThisAccountIsActiveNoSync": "Avgör om detta konto är aktivt. Om inaktiverat kommer kontot inte kunna importera data eller utföra sökningar.",
+        "determinesWhetherThisAccountIsActiveNoSync": "Avgör om kontot är aktivt. Om det är inaktiverat kan ingen data importeras.",
         "folderSync": {
             "noData": "Inga data",
             "noFolders": "Inga mappar att synkronisera",

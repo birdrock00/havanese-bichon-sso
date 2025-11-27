@@ -251,7 +251,7 @@
         "updateTheEmailAccountHere": "Обновите почтовый аккаунт здесь. ",
         "addNewEmailAccountHere": "Добавьте новый почтовый аккаунт здесь. ",
         "thisAccountIsUsedForIdentificationPurposesOnly": "Этот аккаунт используется только для идентификации и не требует синхронизации с почтовым сервером. Он помогает при импорте почтовых данных.",
-        "determinesWhetherThisAccountIsActiveNoSync": "Определяет, активен ли этот аккаунт. Если отключено, аккаунт не сможет импортировать данные или выполнять запросы.",
+        "determinesWhetherThisAccountIsActiveNoSync": "Определяет, активна ли учетная запись. Если она отключена, импорт данных будет невозможен.",
         "folderSync": {
             "noData": "Нет данных",
             "noFolders": "Нет папок для синхронизации",

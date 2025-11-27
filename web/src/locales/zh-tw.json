@@ -251,7 +251,7 @@
         "updateTheEmailAccountHere": "在此更新電子郵件帳號。",
         "addNewEmailAccountHere": "在此新增電子郵件帳號。",
         "thisAccountIsUsedForIdentificationPurposesOnly": "此帳號僅用於識別目的，不需要與郵件伺服器同步。有助於匯入郵件資料。",
-        "determinesWhetherThisAccountIsActiveNoSync": "決定此帳號是否為啟用狀態。如果停用，則無法匯入資料或執行查詢。",
+        "determinesWhetherThisAccountIsActiveNoSync": "用來判斷帳戶是否啟用。若停用，將無法匯入資料。",
         "folderSync": {
             "noData": "無資料",
             "noFolders": "沒有可同步的資料夾",

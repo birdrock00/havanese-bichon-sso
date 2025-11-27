@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::modules::common::AddrVec;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::error::BichonResult;
@@ -33,12 +32,12 @@ pub fn extract_envelope(fetch: &Fetch, account_id: u64, mailbox_id: u64) -> Bich
         .map(|d| d.timestamp_millis())
         .unwrap_or(0);
     let uid = fetch.uid.unwrap_or(0);
-    let size = fetch.size.unwrap_or(0);
 
     let body = fetch
         .body()
         .ok_or_else(|| raise_error!("No body available".into(), ErrorCode::InternalError))?;
 
+    let size = fetch.size.unwrap_or(body.len() as u32);
     let message = MessageParser::new().parse(body).ok_or_else(|| {
         raise_error!(
             "Email header parse result is not available".into(),
@@ -110,6 +109,92 @@ pub fn extract_envelope(fetch: &Fetch, account_id: u64, mailbox_id: u64) -> Bich
         bcc: bcc.unwrap_or_default(),
         date,
         internal_date,
+        size,
+        thread_id,
+        attachments,
+        tags: None,
+    };
+    Ok(envelope)
+}
+
+pub fn extract_envelope_from_eml(
+    body: &[u8],
+    account_id: u64,
+    mailbox_id: u64,
+) -> BichonResult<Envelope> {
+    let uid = 0;
+    let size = body.len() as u32;
+    let message = MessageParser::new().parse(body).ok_or_else(|| {
+        raise_error!(
+            "Email header parse result is not available".into(),
+            ErrorCode::InternalError
+        )
+    })?;
+
+    let text = if let Some(text) = message.body_text(0).map(|cow| cow.into_owned()) {
+        text
+    } else if let Some(html) = message.body_html(0).map(|cow| cow.into_owned()) {
+        from_read(html.as_bytes(), 0)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+    } else {
+        String::new()
+    };
+
+    let message_id = message
+        .message_id()
+        .map(String::from)
+        .unwrap_or(generate_message_id());
+    let in_reply_to = message.in_reply_to().as_text().map(String::from);
+    let references = extract_references(&message);
+    let thread_id = compute_thread_id(in_reply_to, references, &message_id);
+    let subject = message.subject().map(String::from).unwrap_or("".into());
+    let date = message.date().map(|d| d.to_timestamp() * 1000).unwrap_or(0);
+    let bcc: Option<Vec<String>> = message.bcc().map(|addr| {
+        AddrVec::from(addr)
+            .0
+            .into_iter()
+            .filter_map(|a| a.address)
+            .collect()
+    });
+    let cc: Option<Vec<String>> = message.cc().map(|addr| {
+        AddrVec::from(addr)
+            .0
+            .into_iter()
+            .filter_map(|a| a.address)
+            .collect()
+    });
+    let to: Option<Vec<String>> = message.to().map(|addr| {
+        AddrVec::from(addr)
+            .0
+            .into_iter()
+            .filter_map(|a| a.address)
+            .collect()
+    });
+    let from = message
+        .from()
+        .and_then(|addr| AddrVec::from(addr).0.into_iter().next())
+        .and_then(|add| add.address)
+        .unwrap_or_else(|| "unknown".to_string());
+
+    let attachments: Vec<String> = message
+        .attachments()
+        .filter_map(|att| att.attachment_name())
+        .map(|name| name.to_string())
+        .collect();
+    let envelope = Envelope {
+        id: create_hash(account_id, &message_id),
+        message_id,
+        account_id,
+        mailbox_id,
+        uid,
+        subject,
+        text,
+        from,
+        to: to.unwrap_or_default(),
+        cc: cc.unwrap_or_default(),
+        bcc: bcc.unwrap_or_default(),
+        date,
+        internal_date: date,
         size,
         thread_id,
         attachments,

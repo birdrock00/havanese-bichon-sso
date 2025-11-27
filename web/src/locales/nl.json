@@ -251,7 +251,7 @@
         "updateTheEmailAccountHere": "Werk het e-mailaccount hier bij. ",
         "addNewEmailAccountHere": "Voeg hier een nieuw e-mailaccount toe. ",
         "thisAccountIsUsedForIdentificationPurposesOnly": "Dit account wordt alleen gebruikt voor identificatiedoeleinden en vereist geen synchronisatie met een e-mailserver. Het helpt bij het importeren van e-mailgegevens.",
-        "determinesWhetherThisAccountIsActiveNoSync": "Bepaalt of dit account actief is. Indien uitgeschakeld, kan het account geen gegevens importeren of zoekopdrachten uitvoeren.",
+        "determinesWhetherThisAccountIsActiveNoSync": "Bepaalt of dit account actief is. Als het is uitgeschakeld, kan er geen data worden geïmporteerd.",
         "folderSync": {
             "noData": "Geen Gegevens",
             "noFolders": "Geen mappen om te synchroniseren",

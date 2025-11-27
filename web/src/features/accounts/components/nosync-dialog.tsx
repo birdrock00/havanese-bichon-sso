@@ -37,10 +37,10 @@ import { AccountModel } from '../data/schema';
 import { useTranslation } from 'react-i18next';
 
 
-const accountSchema = () =>
+const accountSchema = (t: (key: string) => string) =>
   z.object({
     name: z.string().optional(),
-    email: z.string({ required_error: 'Email is required' }).email({ message: 'Invalid email address' }),
+    email: z.string({ required_error: t('validation.emailRequired') }).email({ message: t('validation.invalidEmail') }),
     enabled: z.boolean()
   });
 
@@ -85,7 +85,7 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
   const form = useForm<NoSyncAccount>({
     mode: "all",
     defaultValues: isEdit ? mapCurrentRowToFormValues(currentRow) : defaultValues,
-    resolver: zodResolver(accountSchema()),
+    resolver: zodResolver(accountSchema(t)),
   });
 
   const queryClient = useQueryClient();
@@ -118,7 +118,7 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
     const errorMessage =
       (error.response?.data as { message?: string })?.message ||
       error.message ||
-      `${isEdit ? 'Update' : 'Creation'} failed, please try again later`;
+      (isEdit ? t('accounts.updateFailed') : t('accounts.creationFailed'));
 
     toast({
       variant: "destructive",
@@ -134,7 +134,8 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
       const commonData = {
         email: data.email,
         name: data.name,
-        enabled: data.enabled
+        enabled: data.enabled,
+        use_dangerous: false
       };
       if (isEdit) {
         updateMutation.mutate(commonData);

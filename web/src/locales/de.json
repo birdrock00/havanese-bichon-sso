@@ -251,7 +251,7 @@
         "updateTheEmailAccountHere": "Aktualisieren Sie das E-Mail-Konto hier. ",
         "addNewEmailAccountHere": "Fügen Sie hier ein neues E-Mail-Konto hinzu. ",
         "thisAccountIsUsedForIdentificationPurposesOnly": "Dieses Konto dient nur zur Identifizierung und erfordert keine Synchronisierung mit dem Mailserver. Es hilft beim Import von E-Mail-Daten.",
-        "determinesWhetherThisAccountIsActiveNoSync": "Bestimmt, ob dieses Konto aktiv ist. Wenn es deaktiviert ist, kann das Konto keine Daten importieren oder Abfragen ausführen.",
+        "determinesWhetherThisAccountIsActiveNoSync": "Legt fest, ob dieses Konto aktiv ist. Wenn es deaktiviert ist, können keine Daten importiert werden.",
         "folderSync": {
             "noData": "Keine Daten",
             "noFolders": "Keine Ordner zum Synchronisieren",

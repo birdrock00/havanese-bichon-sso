@@ -251,7 +251,7 @@
         "updateTheEmailAccountHere": "Oppdater e-postkontoen her. ",
         "addNewEmailAccountHere": "Legg til ny e-postkonto her. ",
         "thisAccountIsUsedForIdentificationPurposesOnly": "Denne kontoen brukes kun for identifikasjonsformål og krever ikke synkronisering med en e-postserver. Den hjelper med import av e-postdata.",
-        "determinesWhetherThisAccountIsActiveNoSync": "Bestemmer om denne kontoen er aktiv. Hvis deaktivert, vil ikke kontoen kunne importere data eller utføre spørringer.",
+        "determinesWhetherThisAccountIsActiveNoSync": "Bestemmer om denne kontoen er aktiv. Hvis den er deaktivert, kan data ikke importeres.",
         "folderSync": {
             "noData": "Ingen data",
             "noFolders": "Ingen mapper å synkronisere",

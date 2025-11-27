@@ -251,7 +251,7 @@
         "updateTheEmailAccountHere": "こちらでメールアカウントを更新してください。",
         "addNewEmailAccountHere": "こちらで新しいメールアカウントを追加してください。",
         "thisAccountIsUsedForIdentificationPurposesOnly": "このアカウントは識別目的でのみ使用され、メールサーバーとの同期は必要ありません。メールデータのインポートに役立ちます。",
-        "determinesWhetherThisAccountIsActiveNoSync": "このアカウントが有効かどうかを決定します。無効の場合、データのインポートやクエリの実行はできません。",
+        "determinesWhetherThisAccountIsActiveNoSync": "このアカウントが有効かどうかを判定します。無効の場合、データをインポートできません。",
         "folderSync": {
             "noData": "データなし",
             "noFolders": "同期するフォルダーがありません",
