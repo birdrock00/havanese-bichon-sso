@@ -299,10 +299,14 @@ You can change the password via the WebUI:
   - Used exclusively for lightweight configuration and account metadata.
 - **Email Protocols**: IMAP (Supports standard Password & OAuth2)
 
-
 ## 🤝 Contributing
 
-Issues and Pull Requests are welcome!
+Contributions of all kinds are welcome!
+Whether you’d like to submit code, report a bug, or share practical suggestions that can help improve the project, your input is highly appreciated.
+Feel free to open an Issue or a Pull Request anytime. You can also reach out on Discord if you’d like to discuss ideas or improvements.
+<a href="https://discord.gg/evFnSpdpaE">
+    <img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?logo=discord&logoColor=white" alt="Discord">
+</a>
 
 ## 🧑‍💻 Developer Guide
 
@@ -368,15 +372,6 @@ This project is licensed under [AGPLv3](LICENSE).
 - [Issue Tracker](https://github.com/rustmailer/bichon/issues)
 - [Discord](https://discord.gg/evFnSpdpaE)
 
-
-## 🤝 Contributing
-
-Contributions of all kinds are welcome!
-Whether you’d like to submit code, report a bug, or share practical suggestions that can help improve the project, your input is highly appreciated.
-Feel free to open an Issue or a Pull Request anytime. You can also reach out on Discord if you’d like to discuss ideas or improvements.
-<a href="https://discord.gg/evFnSpdpaE">
-    <img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?logo=discord&logoColor=white" alt="Discord">
-</a>
 
 ## 💖 Support & Promotion
 
