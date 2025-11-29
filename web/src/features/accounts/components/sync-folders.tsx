@@ -26,18 +26,18 @@ import {
     DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Loader2, CheckSquare, Square } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AccountModel } from '../data/schema'
 import { toast } from '@/hooks/use-toast'
-import { list_mailboxes } from '@/api/mailbox/api'
+import { list_mailboxes, MailboxData } from '@/api/mailbox/api'
 import { buildTree } from '@/lib/build-tree'
 import { TreeDataItem, TreeView } from '@/components/tree-view'
 import { Skeleton } from '@/components/ui/skeleton'
 import { update_account } from '@/api/account/api'
 import { ToastAction } from '@/components/ui/toast'
-import { AxiosError } from 'axios'
+import axios, { AxiosError } from 'axios'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useTranslation } from 'react-i18next'
 
@@ -50,13 +50,48 @@ interface Props {
 export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
     const [selectedFolders, setSelectedFolders] = useState<string[]>(currentRow.sync_folders || []);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const [mailboxes, setMailboxes] = useState<MailboxData[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | undefined>(undefined);
     const queryClient = useQueryClient();
     const { t } = useTranslation()
-    const { data: mailboxes, isLoading } = useQuery({
-        queryKey: ['account-mailboxes', currentRow.id],
-        queryFn: () => list_mailboxes(currentRow.id, true),
-        enabled: open,
-    });
+
+
+    useEffect(() => {
+        if (!open) return;
+        let cancelled = false;
+        const fetchMailboxes = async () => {
+            setIsLoading(true);
+            try {
+                const data = await list_mailboxes(currentRow.id, true);
+                if (!cancelled) {
+                    setMailboxes(data);
+                    setError(undefined);
+                }
+            } catch (err: any) {
+                if (axios.isAxiosError(err)) {
+                    const resData = err.response?.data;
+                    if (resData) {
+                        setError(`Error ${resData.code || ''}: ${resData.message || ''}`);
+                    } else {
+                        setError(err.message);
+                    }
+                } else {
+                    console.error('Other error:', err);
+                }
+                if (!cancelled) {
+                    setMailboxes([]);
+                }
+            } finally {
+                if (!cancelled) setIsLoading(false);
+            }
+        };
+        fetchMailboxes();
+        return () => {
+            cancelled = true;
+        };
+    }, [currentRow, open]);
 
     // Convert mailbox names to IDs for initial selection
     const initialSelectedItemIds = useMemo(() => {
@@ -228,6 +263,11 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
                                 onSelectItemsChange={handleSelectItems}
                             />
                         )}
+                        {error && (
+                            <div className="mt-auto p-2 text-red-600 text-sm font-medium">
+                                {error}
+                            </div>
+                        )}
                     </ScrollArea>
                 </div>
 
@@ -237,14 +277,14 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
                         onClick={() => onOpenChange(false)}
                         disabled={isSubmitting}
                     >
-                        Cancel
+                        {t('common.cancel')}
                     </Button>
                     <Button
                         onClick={handleSubmit}
-                        disabled={isSubmitting || isLoading}
+                        disabled={isSubmitting || isLoading || !!error}
                     >
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Save Changes
+                        {t('common.save')}
                     </Button>
                 </DialogFooter>
             </DialogContent>

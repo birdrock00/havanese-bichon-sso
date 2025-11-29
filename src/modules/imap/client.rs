@@ -144,7 +144,7 @@ impl Client {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
             .ok_or_else(|| {
                 raise_error!(
-                    "failed to read greeting".into(),
+                    "Failed to read IMAP greeting — this usually indicates an incorrect encryption setting (SSL vs. STARTTLS). Your current setting is SSL.".into(),
                     ErrorCode::ImapCommandFailed
                 )
             })?;
@@ -205,7 +205,7 @@ impl Client {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
             .ok_or_else(|| {
                 raise_error!(
-                    "failed to read greeting".into(),
+                    "Failed to read IMAP greeting — this usually indicates an incorrect encryption setting (SSL vs. STARTTLS). Your current setting is STARTTLS.".into(),
                     ErrorCode::ImapCommandFailed
                 )
             })?;
