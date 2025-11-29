@@ -32,14 +32,113 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AccountModel } from '../data/schema'
 import { toast } from '@/hooks/use-toast'
 import { list_mailboxes, MailboxData } from '@/api/mailbox/api'
-import { buildTree } from '@/lib/build-tree'
-import { TreeDataItem, TreeView } from '@/components/tree-view'
+import { buildTree, ExtendedTreeItemProps } from '@/lib/build-tree'
 import { Skeleton } from '@/components/ui/skeleton'
 import { update_account } from '@/api/account/api'
 import { ToastAction } from '@/components/ui/toast'
 import axios, { AxiosError } from 'axios'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useTranslation } from 'react-i18next'
+import { RichTreeView } from '@mui/x-tree-view/RichTreeView';
+import { useTheme } from '@/context/theme-context'
+import React from 'react'
+import Collapse from '@mui/material/Collapse';
+import { styled } from '@mui/material/styles';
+import { TreeItemCheckbox, TreeItemContent, TreeItemIconContainer, TreeItemLabel, TreeItemRoot } from '@mui/x-tree-view/TreeItem'
+import { TreeItemDragAndDropOverlay, TreeItemIcon, TreeItemProvider, TreeViewBaseItem, TreeViewSelectionPropagation, useTreeItem, useTreeItemModel, UseTreeItemParameters } from '@mui/x-tree-view'
+import { animated, useSpring } from '@react-spring/web';
+import { TransitionProps } from '@mui/material/transitions'
+
+
+function getParentIds(tree: TreeViewBaseItem[]): string[] {
+    const result: string[] = [];
+
+    function traverse(nodes: TreeViewBaseItem[]) {
+        for (const node of nodes) {
+            if (node.children && node.children.length > 0) {
+                result.push(node.id);
+                traverse(node.children);
+            }
+        }
+    }
+
+    traverse(tree);
+    return result;
+}
+
+
+interface CustomLabelProps {
+    exists?: number;
+    attributes?: { attr: string; extension: string | null }[],
+    children: React.ReactNode;
+    icon?: React.ElementType;
+    expandable?: boolean;
+}
+
+function CustomLabel({
+    expandable,
+    exists,
+    attributes,
+    children,
+    ...other
+}: CustomLabelProps) {
+    return (
+        <TreeItemLabel
+            {...other}
+            sx={{
+                display: 'flex',
+                alignItems: 'center',
+            }}
+        >
+            <span className="font-medium text-sm text-inherit">
+                {children}
+            </span>
+            <div className="flex gap-2 ml-auto mr-3 opacity-70 text-xs">
+                {attributes?.map((attr) => {
+                    const text =
+                        attr.attr === 'Extension'
+                            ? attr.extension
+                            : attr.attr;
+
+                    return (
+                        <span key={attr.attr} className="text-inherit">
+                            {text}
+                        </span>
+                    );
+                })}
+            </div>
+            {exists !== undefined && (
+                <span
+                    className="text-sm opacity-60 min-w-[40px] text-right text-inherit"
+                >
+                    {exists}
+                </span>
+            )}
+        </TreeItemLabel>
+    );
+}
+
+const CustomCollapse = styled(Collapse)({
+    padding: 0,
+});
+
+const AnimatedCollapse = animated(CustomCollapse);
+
+function TransitionComponent(props: TransitionProps) {
+    const style = useSpring({
+        to: {
+            opacity: props.in ? 1 : 0,
+            transform: `translate3d(0,${props.in ? 0 : 20}px,0)`,
+        },
+    });
+
+    return <AnimatedCollapse style={style} {...props} />;
+}
+
+interface CustomTreeItemProps
+    extends Omit<UseTreeItemParameters, 'rootRef'>,
+    Omit<React.HTMLAttributes<HTMLLIElement>, 'onFocus'> { }
+
 
 interface Props {
     open: boolean
@@ -48,15 +147,24 @@ interface Props {
 }
 
 export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
-    const [selectedFolders, setSelectedFolders] = useState<string[]>(currentRow.sync_folders || []);
+    const [selectedItems, setSelectedItems] = React.useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const [allIds, setAllIds] = useState<string[]>([]);
+    const [expandedItems, setExpandedItems] = useState<string[]>([]);
+    const [itemsWithChildren, setItemsWithChildren] = useState<string[]>([]);
     const [mailboxes, setMailboxes] = useState<MailboxData[]>([]);
+    const [selectionPropagation, setSelectionPropagation] =
+        React.useState<TreeViewSelectionPropagation>({
+            parents: false,
+            descendants: true,
+        });
+    const [treeData, setTreeData] = useState<TreeViewBaseItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | undefined>(undefined);
     const queryClient = useQueryClient();
     const { t } = useTranslation()
-
+    const { theme } = useTheme()
 
     useEffect(() => {
         if (!open) return;
@@ -67,6 +175,18 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
                 const data = await list_mailboxes(currentRow.id, true);
                 if (!cancelled) {
                     setMailboxes(data);
+                    const allIds = data.map(mailbox => String(mailbox.id));
+                    setAllIds(allIds);
+
+                    const tree = buildTree(data);
+                    setTreeData(tree);
+                    const itemsWithChildren = getParentIds(tree);
+                    setItemsWithChildren(itemsWithChildren);
+                    setExpandedItems(itemsWithChildren);
+                    const sync_folders = data
+                        .filter(mailbox => currentRow.sync_folders.includes(mailbox.name))
+                        .map(mailbox => mailbox.id.toString());
+                    setSelectedItems(sync_folders);
                     setError(undefined);
                 }
             } catch (err: any) {
@@ -77,11 +197,6 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
                     } else {
                         setError(err.message);
                     }
-                } else {
-                    console.error('Other error:', err);
-                }
-                if (!cancelled) {
-                    setMailboxes([]);
                 }
             } finally {
                 if (!cancelled) setIsLoading(false);
@@ -93,61 +208,90 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
         };
     }, [currentRow, open]);
 
-    // Convert mailbox names to IDs for initial selection
-    const initialSelectedItemIds = useMemo(() => {
-        if (!mailboxes) return [];
-        return mailboxes
-            .filter(mailbox => selectedFolders.includes(mailbox.name))
-            .map(mailbox => mailbox.id.toString());
-    }, [mailboxes, selectedFolders]);
 
-    const treeData = useMemo(() => {
-        if (!mailboxes) return [];
-        return buildTree(mailboxes, undefined, true, true);
-    }, [mailboxes]);
 
-    const handleSelectItems = useCallback((selectedItems: TreeDataItem[]) => {
-        const allMailboxes = mailboxes || [];
-        const selected = selectedItems
-            .map(item => mailboxes?.find(m => m.id === parseInt(item.id, 10))?.name)
-            .filter(Boolean) as string[];
+    const handleExpandedItemsChange = (
+        _event: React.SyntheticEvent | null,
+        itemIds: string[],
+    ) => {
+        setExpandedItems(itemIds);
+    };
 
-        const allMailSelected = selected.some(selectedName => {
-            const mailbox = allMailboxes.find(m => m.name === selectedName);
-            if (!mailbox) return false;
-            return mailbox.attributes.some(a => a.attr === 'All');
+    const handleExpandClick = () => {
+        setExpandedItems((oldExpanded) =>
+            oldExpanded.length === 0 ? itemsWithChildren : [],
+        );
+    };
+
+    const CustomTreeItem = useMemo(() => {
+        return React.forwardRef(function CustomTreeItem(
+            props: CustomTreeItemProps,
+            ref: React.Ref<HTMLLIElement>,
+        ) {
+            const { id, itemId, label, disabled, children, ...other } = props;
+
+            const {
+                getContextProviderProps,
+                getRootProps,
+                getContentProps,
+                getIconContainerProps,
+                getCheckboxProps,
+                getLabelProps,
+                getGroupTransitionProps,
+                getDragAndDropOverlayProps,
+                status,
+            } = useTreeItem({ id, itemId, children, label, disabled, rootRef: ref });
+
+            const item = useTreeItemModel<ExtendedTreeItemProps>(itemId)!;
+
+            return (
+                <TreeItemProvider {...getContextProviderProps()}>
+                    <TreeItemRoot {...getRootProps(other)}>
+                        <TreeItemContent {...getContentProps()}>
+                            <TreeItemIconContainer {...getIconContainerProps()}>
+                                <TreeItemIcon status={status} />
+                            </TreeItemIconContainer>
+                            <TreeItemCheckbox {...getCheckboxProps()} />
+                            <CustomLabel
+                                {...getLabelProps({
+                                    exists: item.exists,
+                                    attributes: item.attributes,
+                                    expandable: status.expandable && status.expanded,
+                                })}
+                            />
+                            <TreeItemDragAndDropOverlay {...getDragAndDropOverlayProps()} />
+                        </TreeItemContent>
+                        {children && <TransitionComponent {...getGroupTransitionProps()} />}
+                    </TreeItemRoot>
+                </TreeItemProvider>
+            );
         });
+    }, [theme]);
 
-        if (allMailSelected) {
+
+
+    const handleSelectAll = useCallback(() => {
+        const selectedSet = new Set(allIds);
+
+        const selectedAllMailbox = mailboxes.find((mb) =>
+            selectedSet.has(String(mb.id)) &&
+            mb.attributes?.some(a => a.attr === 'All')
+        );
+
+        if (selectedAllMailbox) {
             toast({
                 title: t('accounts.allMailFolderSelected'),
                 description: t('accounts.allMailFolderSelectedDesc'),
                 action: <ToastAction altText={t('common.ok')}>{t('common.ok')}</ToastAction>,
             });
         }
-        setSelectedFolders(selected);
-    }, [mailboxes]);
 
 
-    const handleSelectAll = useCallback(() => {
-        if (!mailboxes) return;
-        const validFolderNames = mailboxes
-            .filter(mailbox => {
-                const isAllMail = mailbox.attributes.some(a => a.attr === 'All');
-                if (isAllMail) return false;
-                return true;
-            })
-            .map(m => m.name);
-        setSelectedFolders(validFolderNames);
-        if (validFolderNames.length < mailboxes.length) {
-            toast({
-                description: t('accounts.allMailSkipped'),
-            });
-        }
-    }, [mailboxes]);
+        setSelectedItems(allIds);
+    }, [allIds]);
 
     const handleDeselectAll = useCallback(() => {
-        setSelectedFolders([]);
+        setSelectedItems([]);
     }, []);
 
 
@@ -184,8 +328,30 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
         console.error(error);
     }
 
+    const handleSelectedItemsChange = (
+        _event: React.SyntheticEvent | null,
+        newSelectedItems: string[],
+    ) => {
+        const selectedSet = new Set(newSelectedItems);
+
+        const selectedAllMailbox = mailboxes.find((mb) =>
+            selectedSet.has(String(mb.id)) &&
+            mb.attributes?.some(a => a.attr === 'All')
+        );
+
+        if (selectedAllMailbox) {
+            toast({
+                title: t('accounts.allMailFolderSelected'),
+                description: t('accounts.allMailFolderSelectedDesc'),
+                action: <ToastAction altText={t('common.ok')}>{t('common.ok')}</ToastAction>,
+            });
+        }
+
+        setSelectedItems(newSelectedItems);
+    };
+
     const handleSubmit = async () => {
-        if (selectedFolders.length === 0) {
+        if (selectedItems.length === 0) {
             toast({
                 title: t('common.error'),
                 description: t('accounts.selectAtLeastOneFolder'),
@@ -194,14 +360,23 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
             return;
         }
         setIsSubmitting(true);
+
+        const selectedNames: string[] = [];
+        const idSet = new Set(selectedItems);
+        for (const mailbox of mailboxes) {
+            if (idSet.has(String(mailbox.id))) {
+                selectedNames.push(mailbox.name);
+            }
+        }
+
         updateMutation.mutate({
-            sync_folders: selectedFolders,
+            sync_folders: selectedNames,
         });
     };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-3xl">
                 <DialogHeader>
                     <DialogTitle>{t('accounts.selectSyncFolders')}</DialogTitle>
                     <DialogDescription>
@@ -210,13 +385,13 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
                 </DialogHeader>
 
                 <div className="space-y-4">
-                    <div className="flex items-center justify-between pt-2">
-                        <div className="flex gap-2">
+                    <div className="flex flex-col pt-2 gap-2">
+                        <div className="flex gap-2 flex-wrap">
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={handleSelectAll}
-                                disabled={isLoading || !mailboxes || mailboxes.length === 0}
+                                disabled={isLoading || !allIds || allIds.length === 0}
                                 className="h-8"
                             >
                                 <CheckSquare className="w-4 h-4 mr-2" />
@@ -226,23 +401,62 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
                                 variant="outline"
                                 size="sm"
                                 onClick={handleDeselectAll}
-                                disabled={isLoading || selectedFolders.length === 0}
+                                disabled={isLoading || allIds.length === 0}
                                 className="h-8"
                             >
                                 <Square className="w-4 h-4 mr-2" />
                                 {t('common.deselectAll')}
                             </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                    setSelectionPropagation(prev => ({
+                                        ...prev,
+                                        descendants: !prev.descendants,
+                                    }))
+                                }
+                                disabled={isLoading}
+                                className="h-8"
+                            >
+                                {selectionPropagation.descendants ? <CheckSquare className="w-4 h-4 mr-2" /> : <Square className="w-4 h-4 mr-2" />}
+                                {t('accounts.folderSync.autoSelectDescendants')}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                    setSelectionPropagation(prev => ({
+                                        ...prev,
+                                        parents: !prev.parents,
+                                    }))
+                                }
+                                disabled={isLoading}
+                                className="h-8"
+                            >
+                                {selectionPropagation.parents ? <CheckSquare className="w-4 h-4 mr-2" /> : <Square className="w-4 h-4 mr-2" />}
+                                {t('accounts.folderSync.autoSelectParents')}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleExpandClick}
+                                disabled={isLoading}>
+                                {expandedItems.length === 0 ? t('accounts.folderSync.expandAll') : t('accounts.folderSync.collapseAll')}
+                            </Button>
                         </div>
+
                         <div className="text-sm text-muted-foreground">
-                            {t('accounts.foldersSelected', { count: selectedFolders.length })}
+                            {t('accounts.foldersSelected', { count: selectedItems.length })}
                         </div>
                     </div>
-                    <ScrollArea className="h-[30rem] w-full pr-4 -mr-4 py-1">
+
+                    <ScrollArea className="h-[35rem] w-full pr-4 -mr-4 py-1">
                         {isLoading && (
                             <div className="p-8 space-y-8">
                                 <div className="flex flex-col items-center gap-3 text-muted-foreground">
                                     <Loader2 className="h-6 w-6 animate-spin" />
-                                    <span className="text-sm font-medium">Loading mailbox folders…</span>
+                                    <span className="text-sm font-medium">{t('accounts.folderSync.loadingMailboxFolders')}</span>
                                 </div>
 
                                 <div className="space-y-2">
@@ -253,14 +467,16 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
                             </div>
                         )}
                         {!isLoading && (
-                            <TreeView
-                                key={selectedFolders.length > 0 ? `tree-${selectedFolders.length}-${selectedFolders[0]}` : 'tree-empty'}
-                                data={treeData}
-                                multiple
-                                expandAll
-                                clickRowToSelect={false}
-                                initialSelectedItemIds={initialSelectedItemIds}
-                                onSelectItemsChange={handleSelectItems}
+                            <RichTreeView
+                                multiSelect
+                                checkboxSelection
+                                items={treeData}
+                                expandedItems={expandedItems}
+                                onExpandedItemsChange={handleExpandedItemsChange}
+                                selectionPropagation={selectionPropagation}
+                                selectedItems={selectedItems}
+                                onSelectedItemsChange={handleSelectedItemsChange}
+                                slots={{ item: CustomTreeItem }}
                             />
                         )}
                         {error && (

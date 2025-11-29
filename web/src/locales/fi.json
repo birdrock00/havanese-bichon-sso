@@ -255,7 +255,12 @@
         "folderSync": {
             "noData": "Ei tietoja",
             "noFolders": "Ei synkronoitavia kansioita",
-            "batches": "erät"
+            "batches": "erät",
+            "autoSelectDescendants": "Valitse alisolmut automaattisesti",
+            "autoSelectParents": "Valitse yläsolmut automaattisesti",
+            "expandAll": "Laajenna kaikki",
+            "collapseAll": "Kutista kaikki",
+            "loadingMailboxFolders": "Ladataan postilaatikon kansioita…"
         },
         "viewDetails": "katso tiedot",
         "runningState": {

@@ -255,7 +255,12 @@
         "folderSync": {
             "noData": "لا توجد بيانات",
             "noFolders": "لا توجد مجلدات للمزامنة",
-            "batches": "دفعات"
+            "batches": "دفعات",
+            "autoSelectDescendants": "تحديد العناصر الفرعية تلقائيًا",
+            "autoSelectParents": "تحديد العناصر الأصلية تلقائيًا",
+            "expandAll": "توسيع الكل",
+            "collapseAll": "طي الكل",
+            "loadingMailboxFolders": "جارٍ تحميل مجلدات البريد…"
         },
         "viewDetails": "عرض التفاصيل",
         "runningState": {

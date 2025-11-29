@@ -27,11 +27,9 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { AccountSwitcher } from "./account-switcher"
-import { TreeView } from "@/components/tree-view"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { list_mailboxes, MailboxData } from "@/api/mailbox/api"
 import { useQuery } from "@tanstack/react-query"
-import { buildTree } from "../../../lib/build-tree"
 import { Skeleton } from "@/components/ui/skeleton"
 import MailboxProvider, { MailboxDialogType } from "../context"
 import useDialogState from "@/hooks/use-dialog-state"
@@ -44,6 +42,14 @@ import { EnvelopeDeleteDialog } from "./delete-dialog"
 import Logo from '@/assets/logo.svg'
 import { EmailEnvelope } from "@/api"
 import { EnvelopeListPagination } from "@/components/pagination"
+import { RichTreeView, TreeItemCheckbox, TreeItemContent, TreeItemDragAndDropOverlay, TreeItemIcon, TreeItemIconContainer, TreeItemLabel, TreeItemProvider, TreeItemRoot, useTreeItem, useTreeItemModel, UseTreeItemParameters } from "@mui/x-tree-view"
+import { buildTree, ExtendedTreeItemProps } from "@/lib/build-tree"
+import { useTheme } from "@/context/theme-context"
+import { styled } from "@mui/material/styles"
+import { animated, useSpring } from "@react-spring/web"
+import { TransitionProps } from "@mui/material/transitions"
+import Collapse from "@mui/material/Collapse"
+import { FolderIcon } from "lucide-react"
 
 
 interface MailProps {
@@ -73,6 +79,83 @@ const useListMessages = ({ accountId, mailboxId, page, page_size }: ListMessages
 };
 
 
+
+
+interface CustomLabelProps {
+    exists?: number;
+    attributes?: { attr: string; extension: string | null }[],
+    children: React.ReactNode;
+    icon?: React.ElementType;
+    expandable?: boolean;
+}
+
+function CustomLabel({
+    expandable,
+    exists,
+    attributes,
+    children,
+    ...other
+}: CustomLabelProps) {
+    return (
+        <TreeItemLabel
+            {...other}
+            sx={{
+                display: 'flex',
+                alignItems: 'center',
+            }}
+        >
+            <FolderIcon className="mr-2"/>
+            <span className="font-medium text-sm text-inherit">
+                {children}
+            </span>
+            {/* <div className="flex gap-2 ml-auto mr-3 opacity-70 text-xs">
+                {attributes?.map((attr) => {
+                    const text =
+                        attr.attr === 'Extension'
+                            ? attr.extension
+                            : attr.attr;
+
+                    return (
+                        <span key={attr.attr} className="text-inherit">
+                            {text}
+                        </span>
+                    );
+                })}
+            </div>
+            {exists !== undefined && (
+                <span
+                    className="text-sm opacity-60 min-w-[40px] text-right text-inherit"
+                >
+                    {exists}
+                </span>
+            )} */}
+        </TreeItemLabel>
+    );
+}
+
+const CustomCollapse = styled(Collapse)({
+    padding: 0,
+});
+
+const AnimatedCollapse = animated(CustomCollapse);
+
+function TransitionComponent(props: TransitionProps) {
+    const style = useSpring({
+        to: {
+            opacity: props.in ? 1 : 0,
+            transform: `translate3d(0,${props.in ? 0 : 20}px,0)`,
+        },
+    });
+
+    return <AnimatedCollapse style={style} {...props} />;
+}
+
+interface CustomTreeItemProps
+    extends Omit<UseTreeItemParameters, 'rootRef'>,
+    Omit<React.HTMLAttributes<HTMLLIElement>, 'onFocus'> { }
+
+
+
 export function Mail({
     defaultLayout = [20, 80],
     defaultCollapsed = false,
@@ -88,12 +171,16 @@ export function Mail({
     const [pageSize, setPageSize] = React.useState(30);
     const [deleteIds, setDeleteIds] = React.useState<Set<number>>(() => new Set());
     const [selected, setSelected] = React.useState<Set<number>>(() => new Set());
+    const { theme } = useTheme()
 
     const { data: mailboxes, isLoading: isMailboxesLoading } = useQuery({
         queryKey: ['account-mailboxes', `${selectedAccountId}`],
         queryFn: () => list_mailboxes(selectedAccountId!, false),
         enabled: !!selectedAccountId,
     })
+
+
+    const tree = buildTree(mailboxes ?? []);
 
     const { data: envelopes, isLoading: isMessagesLoading, isError, error } = useListMessages({
         accountId: selectedAccountId,
@@ -125,6 +212,65 @@ export function Mail({
             });
         }
     }, [isError, error]);
+
+    const handleItemSelectionToggle = (
+        _event: React.SyntheticEvent | null,
+        itemId: string,
+        isSelected: boolean,
+    ) => {
+        if (isSelected) {
+            setSelectedMailbox(mailboxes?.find(m => String(m.id) === itemId))
+            setPage(0);
+        }
+    };
+
+    const CustomTreeItem = React.useMemo(() => {
+        return React.forwardRef(function CustomTreeItem(
+            props: CustomTreeItemProps,
+            ref: React.Ref<HTMLLIElement>,
+        ) {
+            const { id, itemId, label, disabled, children, ...other } = props;
+
+            const {
+                getContextProviderProps,
+                getRootProps,
+                getContentProps,
+                getIconContainerProps,
+                getCheckboxProps,
+                getLabelProps,
+                getGroupTransitionProps,
+                getDragAndDropOverlayProps,
+                status,
+            } = useTreeItem({ id, itemId, children, label, disabled, rootRef: ref });
+
+            const item = useTreeItemModel<ExtendedTreeItemProps>(itemId)!;
+
+            return (
+                <TreeItemProvider {...getContextProviderProps()}>
+                    <TreeItemRoot {...getRootProps(other)}>
+                        <TreeItemContent {...getContentProps()}>
+                            <TreeItemIconContainer {...getIconContainerProps()}>
+                                <TreeItemIcon status={status} />
+                            </TreeItemIconContainer>
+                            <TreeItemCheckbox {...getCheckboxProps()} />
+                            <CustomLabel
+                                {...getLabelProps({
+                                    exists: item.exists,
+                                    attributes: item.attributes,
+                                    expandable: status.expandable && status.expanded,
+                                })}
+                            />
+                            <TreeItemDragAndDropOverlay {...getDragAndDropOverlayProps()} />
+                        </TreeItemContent>
+                        {children && <TransitionComponent {...getGroupTransitionProps()} />}
+                    </TreeItemRoot>
+                </TreeItemProvider>
+            );
+        });
+    }, [theme]);
+
+
+
 
     return (
         <MailboxProvider value={{ open, setOpen, currentMailbox: selectedMailbox, selectedAccountId, setCurrentMailbox: setSelectedMailbox, currentEnvelope: selectedEvelope, setCurrentEnvelope: setSelectedEvelope, deleteIds, setDeleteIds, selected, setSelected }}>
@@ -184,17 +330,23 @@ export function Mail({
                                     ))}
                                 </div>
                             ) : (
-                                <TreeView
-                                    data={buildTree(mailboxes ?? [])}
-                                    clickRowToSelect={true}
-                                    onSelectChange={(item) => {
-                                        if (item) {
-                                            setSelectedMailbox(mailboxes?.find(m => m.id === parseInt(item.id, 10)))
-                                            setPage(0);
-                                        } else {
-                                            setSelectedMailbox(undefined)
-                                        }
-                                    }}
+                                // <TreeView
+                                //     data={buildTree(mailboxes ?? [])}
+                                //     clickRowToSelect={true}
+                                //     onSelectChange={(item) => {
+                                //         if (item) {
+                                //             setSelectedMailbox(mailboxes?.find(m => m.id === parseInt(item.id, 10)))
+                                //             setPage(0);
+                                //         } else {
+                                //             setSelectedMailbox(undefined)
+                                //         }
+                                //     }}
+                                // />
+                                <RichTreeView
+                                    //checkboxSelection
+                                    items={tree}
+                                    onItemSelectionToggle={handleItemSelectionToggle}
+                                    slots={{ item: CustomTreeItem }}
                                 />
                             )}
                         </ScrollArea>

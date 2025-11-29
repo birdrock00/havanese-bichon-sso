@@ -60,7 +60,6 @@ export function MailList({
         }
     }
 
-
     const hasSelected = (mailId: number) => {
         return selected.has(mailId);
     }
@@ -77,15 +76,14 @@ export function MailList({
         });
     }
 
-
     if (isLoading) {
         return (
             <div className="divide-y divide-border">
                 {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-3 px-3 py-2.5">
-                        <Skeleton className="h-4 w-4 rounded-full" />
-                        <Skeleton className="h-4 flex-1 max-w-xs" />
-                        <Skeleton className="h-3 w-16 ml-auto" />
+                    <div key={i} className="flex items-center gap-2 px-2 py-1.5">
+                        <Skeleton className="h-3 w-3 rounded-full" />
+                        <Skeleton className="h-3 flex-1 max-w-xs" />
+                        <Skeleton className="h-2.5 w-12 ml-auto" />
                     </div>
                 ))}
             </div>
@@ -95,7 +93,7 @@ export function MailList({
     return (
         <div className="divide-y divide-border">
             {items.length > 0 && (
-                <div className="flex items-center gap-3 px-3 py-2 bg-muted/30">
+                <div className="flex items-center gap-2 px-2 py-1 bg-muted/30">
                     <Checkbox
                         checked={
                             selected.size === items.length && items.length > 0
@@ -123,7 +121,7 @@ export function MailList({
                     <div
                         key={index}
                         className={cn(
-                            "group flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors",
+                            "group flex items-center gap-2 px-2 py-1.5 cursor-pointer transition-colors",
                             "hover:bg-accent/50",
                             isSelected && "bg-accent"
                         )}
@@ -140,12 +138,11 @@ export function MailList({
                             onClick={(e) => e.stopPropagation()}
                             className="h-4 w-4 shrink-0"
                         />
-                        <MailIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <MailIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-12 gap-1 sm:gap-0">
-
                             {/* LEFT AREA: From + Subject + Tags */}
-                            <div className="col-span-1 sm:col-span-8 flex flex-col min-w-0">
-                                <div className="flex items-center gap-2 min-w-0">
+                            <div className="col-span-1 sm:col-span-8 flex flex-col min-w-0 gap-1">
+                                <div className="flex items-center gap-1 min-w-0">
                                     <p className="text-sm font-medium truncate">{item.from}</p>
                                     <h3 className="text-sm text-muted-foreground truncate hidden sm:block">
                                         {item.subject}
@@ -156,7 +153,7 @@ export function MailList({
                                 </h3>
 
                                 {/* TAGS BELOW SUBJECT */}
-                                <div className="flex flex-wrap gap-1 mt-0.5">
+                                <div className="flex flex-wrap gap-1 mt-0.25">
                                     {item.tags?.map((tag, i) => (
                                         <Badge
                                             key={i}
@@ -169,10 +166,10 @@ export function MailList({
                             </div>
 
                             {/* RIGHT AREA – actions & meta */}
-                            <div className="col-span-1 sm:col-span-4 flex items-center justify-end gap-2 text-xs text-muted-foreground">
+                            <div className="col-span-1 sm:col-span-4 flex items-center justify-end gap-1 text-xs text-muted-foreground">
                                 {hasAttachments && (
                                     <div className="flex items-center gap-1">
-                                        <Paperclip className="h-3.5 w-3.5" />
+                                        <Paperclip className="h-3 w-3" />
                                         <span>{item.attachments?.length}</span>
                                     </div>
                                 )}
@@ -190,7 +187,7 @@ export function MailList({
                                     }}
                                     className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-all"
                                 >
-                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <Trash2 className="h-3 w-3" />
                                 </button>
                             </div>
                         </div>

@@ -255,7 +255,12 @@
     "folderSync": {
       "noData": "No Data",
       "noFolders": "No folders to sync",
-      "batches": "batches"
+      "batches": "batches",
+      "autoSelectDescendants": "Auto select descendants",
+      "autoSelectParents": "Auto select parents",
+      "expandAll": "Expand all",
+      "collapseAll": "Collapse all",
+      "loadingMailboxFolders": "Loading mailbox folders…"
     },
     "viewDetails": "view details",
     "runningState": {

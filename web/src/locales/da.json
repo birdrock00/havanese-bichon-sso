@@ -255,7 +255,12 @@
         "folderSync": {
             "noData": "Ingen data",
             "noFolders": "Ingen mapper at synkronisere",
-            "batches": "batcher"
+            "batches": "batcher",
+            "autoSelectDescendants": "Vælg efterkommere automatisk",
+            "autoSelectParents": "Vælg forældre automatisk",
+            "expandAll": "Udvid alle",
+            "collapseAll": "Skjul alle",
+            "loadingMailboxFolders": "Indlæser postkassemapper…"
         },
         "viewDetails": "vis detaljer",
         "runningState": {

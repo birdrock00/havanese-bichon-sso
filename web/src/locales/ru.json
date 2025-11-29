@@ -255,7 +255,12 @@
         "folderSync": {
             "noData": "Нет данных",
             "noFolders": "Нет папок для синхронизации",
-            "batches": "пакетов"
+            "batches": "пакетов",
+            "autoSelectDescendants": "Автоматически выбирать дочерние элементы",
+            "autoSelectParents": "Автоматически выбирать родительские элементы",
+            "expandAll": "Развернуть все",
+            "collapseAll": "Свернуть все",
+            "loadingMailboxFolders": "Загрузка папок почтового ящика…"
         },
         "viewDetails": "смотреть детали",
         "runningState": {

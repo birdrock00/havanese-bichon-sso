@@ -82,7 +82,7 @@ export function EnvelopeListPagination({
               <SelectValue placeholder={pageSize} />
             </SelectTrigger>
             <SelectContent side='top'>
-              {[10, 20, 30, 40, 50].map((size) => (
+              {[10, 20, 30, 40, 50, 100].map((size) => (
                 <SelectItem key={size} value={`${size}`}>
                   {size}
                 </SelectItem>
@@ -91,7 +91,7 @@ export function EnvelopeListPagination({
           </Select>
         </div>
         <div className='flex items-center justify-center text-sm font-medium'>
-           {t("table.page")} {pageIndex + 1} {t("table.of")} {pageCount}
+          {t("table.page")} {pageIndex + 1} {t("table.of")} {pageCount}
         </div>
         <div className='flex items-center space-x-2'>
           <Button

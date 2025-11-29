@@ -255,7 +255,12 @@
     "folderSync": {
       "noData": "无数据",
       "noFolders": "没有需要同步的文件夹",
-      "batches": "批次"
+      "batches": "批次",
+      "autoSelectDescendants": "自动选择子项",
+      "autoSelectParents": "自动选择父项",
+      "expandAll": "全部展开",
+      "collapseAll": "全部收起",
+      "loadingMailboxFolders": "正在加载邮箱文件夹…"
     },
     "viewDetails": "查看详情",
     "runningState": {

@@ -255,7 +255,12 @@
         "folderSync": {
             "noData": "Geen Gegevens",
             "noFolders": "Geen mappen om te synchroniseren",
-            "batches": "batches"
+            "batches": "batches",
+            "autoSelectDescendants": "Automatisch onderliggende items selecteren",
+            "autoSelectParents": "Automatisch bovenliggende items selecteren",
+            "expandAll": "Alles uitklappen",
+            "collapseAll": "Alles inklappen",
+            "loadingMailboxFolders": "Postvakken laden…"
         },
         "viewDetails": "details bekijken",
         "runningState": {

@@ -18,100 +18,90 @@
 
 
 import { MailboxData } from "@/api/mailbox/api";
-import { TreeDataItem } from "@/components/tree-view";
-import { Badge } from '@/components/ui/badge'
-import { FolderClosed, FolderOpen } from "lucide-react";
-import React from 'react';
+import { TreeViewBaseItem } from '@mui/x-tree-view/models';
 
-type BadgeContentFunction = (item: MailboxData) => React.ReactNode;
 
-export const buildTree = (data: MailboxData[], badgeContent?: BadgeContentFunction, showAttributes?: boolean, showExists?: boolean): TreeDataItem[] => {
-    const root: TreeDataItem = {
-        id: 'root',
-        name: 'Root',
-        icon: FolderClosed,
-        openIcon: FolderOpen,
-        children: [], // Ensure children is initialized as an array
-    };
+export type ExtendedTreeItemProps = {
+    exists?: number;
+    attributes?: { attr: string; extension: string | null }[],
+    id: string;
+    label: string;
+};
 
-    const nodeMap: { [key: string]: TreeDataItem } = {};
-    data.sort((a, b) => a.name.localeCompare(b.name));
-    data.forEach((item) => {
-        const { id, name, delimiter, exists, attributes } = item;
-        const badge = showExists ? (badgeContent ? badgeContent(item) : React.createElement(Badge, {
-            className: 'text-[12px]',
-            variant: 'secondary',
-        }, exists)) : null;
 
-        const attributesNode = showAttributes
-            ? attributes.map((item, index) =>
-                React.createElement(
-                    Badge,
-                    {
-                        key: index,
-                        className: 'text-[12px] mr-1 last:mr-0',
-                        variant: 'secondary',
-                    },
-                    item.attr === 'Extension' ? item.extension || '' : item.attr
-                )
-            )
-            : null;
-        // const badge = badgeContent || React.createElement(Badge, {
-        //     className: 'text-xs',
-        // }, exists);
-        // If there is no delimiter, add the item directly as a child of the root
-        if (!delimiter) {
-            root.children!.push({
-                id: id.toString(),
-                name,
-                icon: FolderClosed,
-                openIcon: FolderOpen,
-                badge,
-                attributes: showAttributes ? attributesNode : null,
-                children: undefined, // Leaf node, so children is undefined
-            });
-            return;
+export function buildTree(items: MailboxData[]): TreeViewBaseItem<ExtendedTreeItemProps>[] {
+    const nodeByName = new Map<string, TreeViewBaseItem<ExtendedTreeItemProps>>();
+
+    for (const mb of items) {
+        if (!mb.name) continue;
+
+        const delimiter = mb.delimiter ?? '/';
+        const parts = mb.name.split(delimiter);
+
+        let currentFullName = '';
+
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            currentFullName = currentFullName ? `${currentFullName}${delimiter}${part}` : part;
+
+            if (!nodeByName.has(currentFullName)) {
+                nodeByName.set(currentFullName, {
+                    id: currentFullName,
+                    label: part,
+                    exists: mb.exists,
+                    attributes: mb.attributes,
+                    children: [],
+                });
+            }
+
+            if (i === parts.length - 1) {
+                const node = nodeByName.get(currentFullName)!;
+                node.id = String(mb.id);
+            }
+        }
+    }
+
+    const roots: TreeViewBaseItem<ExtendedTreeItemProps>[] = [];
+    for (const [fullName, node] of nodeByName.entries()) {
+        const delim = mbDelimiterOrDefault(fullName, items);
+        const lastDelimIndex = fullName.lastIndexOf(delim);
+
+        if (lastDelimIndex === -1) {
+            roots.push(node);
+            continue;
         }
 
-        // Split the name into parts based on the delimiter
-        const parts = name.split(delimiter); // dir/sub1/sub2
-        let currentParent = root;
+        const parentFullName = fullName.substring(0, lastDelimIndex);
+        const parentNode = nodeByName.get(parentFullName);
 
-        // Traverse or create nodes for each part of the path
-        parts.forEach((part, index) => {
-            const path = parts.slice(0, index + 1).join(delimiter);
-
-            // If the node already exists, set it as the current parent
-            if (nodeMap[path]) {
-                currentParent = nodeMap[path];
-            } else {
-                // Determine if this is a leaf node (last part of the path)
-                const isLeaf = index === parts.length - 1;
-
-                // Create a new node
-                const newNode: TreeDataItem = {
-                    id: isLeaf ? id.toString() : path, // Use item.id for leaf nodes, path for non-leaf nodes
-                    name: part,
-                    icon: FolderClosed,
-                    openIcon: FolderOpen,
-                    badge,
-                    attributes: showAttributes ? attributesNode : null,
-                    children: isLeaf ? undefined : [], // Ensure children is initialized as an array for non-leaf nodes
-                };
-
-                // Ensure currentParent.children is initialized as an array
-                if (!currentParent.children) {
-                    currentParent.children = [];
-                }
-
-                // Add the new node to the current parent's children
-                currentParent.children.push(newNode);
-                currentParent = newNode; // Update the current parent to the new node
-                nodeMap[path] = newNode; // Store the node in the map for quick lookup
+        if (parentNode) {
+            parentNode.children = parentNode.children ?? [];
+            if (!parentNode.children.includes(node)) {
+                parentNode.children.push(node);
             }
-        });
-    });
+        } else {
+            roots.push(node);
+        }
+    }
 
-    // Return the children of the root as the final tree structure
-    return root.children!;
-};
+    const sortNodes = (nodes: TreeViewBaseItem[]) => {
+        nodes.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+        for (const n of nodes) {
+            if (n.children && n.children.length) sortNodes(n.children);
+        }
+    };
+
+    const uniqueRoots = Array.from(new Set(roots));
+    sortNodes(uniqueRoots);
+    return uniqueRoots;
+}
+
+function mbDelimiterOrDefault(fullName: string, items: MailboxData[]): string {
+    const mb = items.find(it => it.name === fullName || fullName.startsWith(it.name + (it.delimiter ?? '/')));
+    if (mb?.delimiter) return mb.delimiter;
+
+    const withDelim = items.find(it => it.delimiter);
+    if (withDelim?.delimiter) return withDelim.delimiter;
+
+    return '.';
+}

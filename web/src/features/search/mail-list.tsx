@@ -21,7 +21,7 @@ import { cn, formatBytes } from "@/lib/utils"
 import { formatDistanceToNow } from "date-fns"
 import { MailIcon, MoreVertical, Paperclip, TagIcon, Trash2 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Checkbox } from "@/components/ui/checkbox"   // shadcn Checkbox
+import { Checkbox } from "@/components/ui/checkbox"
 import { EmailEnvelope } from "@/api"
 import { useSearchContext } from "./context"
 import { MailBulkActions } from "./bulk-actions"
@@ -62,6 +62,7 @@ export function MailList({
             });
         }
     }
+
     const toggleToDelete = (accountId: number, mailId: number) => {
         setToDelete(prev => {
             const next = new Map(prev);
@@ -115,11 +116,11 @@ export function MailList({
         return (
             <div className="divide-y divide-border">
                 {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3">
-                        <Skeleton className="h-4 w-4" />
-                        <Skeleton className="h-4 w-4 rounded-full" />
-                        <Skeleton className="h-4 flex-1" />
-                        <Skeleton className="h-3 w-20" />
+                    <div key={i} className="flex items-center gap-2 px-2 py-1.5">
+                        <Skeleton className="h-3 w-3" />
+                        <Skeleton className="h-3 w-3 rounded-full" />
+                        <Skeleton className="h-3 flex-1" />
+                        <Skeleton className="h-2.5 w-16" />
                     </div>
                 ))}
             </div>
@@ -129,7 +130,7 @@ export function MailList({
     return (
         <div className="divide-y divide-border">
             {items.length > 0 && (
-                <div className="flex items-center gap-3 px-3 py-2 bg-muted/30">
+                <div className="flex items-center gap-2 px-2 py-1 bg-muted/30">
                     <Checkbox
                         checked={
                             totalSelected === items.length && items.length > 0
@@ -158,7 +159,7 @@ export function MailList({
                     <div
                         key={index}
                         className={cn(
-                            "flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors",
+                            "flex items-center gap-2 px-2 py-1.5 cursor-pointer transition-colors",
                             "hover:bg-accent/50",
                             isSelectedRow && "bg-accent"
                         )}
@@ -175,41 +176,35 @@ export function MailList({
                             className="h-4 w-4 shrink-0"
                         />
 
-                        <MailIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <MailIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-12 gap-1 sm:gap-0">
 
                             {/* LEFT AREA: From + Subject + Tags */}
-                            <div className="col-span-1 sm:col-span-8 flex flex-col min-w-0">
-
-                                {/* from + subject (large screen side by side, small screen subject hidden) */}
-                                <div className="flex items-center gap-2 min-w-0">
+                            <div className="col-span-1 sm:col-span-8 flex flex-col min-w-0 gap-0.5">
+                                <div className="flex items-center gap-1 min-w-0">
                                     <p className="text-sm font-medium truncate">{item.from}</p>
-
-                                    {/* subject on large screens */}
                                     <h3 className="text-sm text-muted-foreground truncate hidden sm:block">
                                         {item.subject}
                                     </h3>
                                 </div>
 
-                                {/* subject on small screens */}
                                 <h3 className="text-sm text-muted-foreground truncate sm:hidden">
                                     {item.subject}
                                 </h3>
 
-                                {/* TAGS (always below on small screen, inline on large screen) */}
-                                <div className="flex flex-wrap gap-1 mt-0.5">
-                                    {item.tags?.map((tag, index) => (
-                                        <Badge className="px-1 py-0.5 text-[10px] h-auto leading-none" key={index}>{tag}</Badge>
+                                <div className="flex flex-wrap gap-1 mt-0.25">
+                                    {item.tags?.map((tag, i) => (
+                                        <Badge className="px-1 py-0.5 text-[10px] h-auto leading-none" key={i}>{tag}</Badge>
                                     ))}
                                 </div>
                             </div>
 
                             {/* RIGHT AREA – actions & meta */}
-                            <div className="col-span-1 sm:col-span-4 flex items-center justify-end gap-2 text-xs text-muted-foreground">
+                            <div className="col-span-1 sm:col-span-4 flex items-center justify-end gap-1 text-xs text-muted-foreground">
 
                                 {hasAttachments && (
                                     <div className="flex items-center gap-1">
-                                        <Paperclip className="h-3.5 w-3.5" />
+                                        <Paperclip className="h-3 w-3" />
                                         <span>{item.attachments?.length}</span>
                                     </div>
                                 )}
@@ -225,14 +220,14 @@ export function MailList({
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-7 w-7 p-0 hover:bg-muted rounded-md"
+                                            className="h-6 w-6 p-0 hover:bg-muted rounded-md"
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <MoreVertical className="h-3.5 w-3.5" />
+                                            <MoreVertical className="h-3 w-3" />
                                         </Button>
                                     </DropdownMenuTrigger>
 
-                                    <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuContent align="end" className="w-44">
                                         <DropdownMenuItem
                                             onClick={(e) => e.stopPropagation()}
                                             onSelect={(e) => {
@@ -241,7 +236,7 @@ export function MailList({
                                                 setOpen("edit-tags");
                                             }}
                                         >
-                                            <TagIcon className="ml-2 h-4 w-4" />
+                                            <TagIcon className="ml-2 h-3.5 w-3.5" />
                                             {t('search.editTag')}
                                         </DropdownMenuItem>
 
@@ -253,7 +248,7 @@ export function MailList({
                                                 handleDelete(item);
                                             }}
                                         >
-                                            <Trash2 className="ml-2 h-4 w-4" />
+                                            <Trash2 className="ml-2 h-3.5 w-3.5" />
                                             {t('common.delete')}
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
@@ -263,9 +258,7 @@ export function MailList({
                     </div>
                 )
             })}
-            {totalSelected > 0 && (
-                <MailBulkActions />
-            )}
+            {totalSelected > 0 && <MailBulkActions />}
         </div>
     )
 }

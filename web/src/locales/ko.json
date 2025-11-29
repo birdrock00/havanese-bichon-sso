@@ -255,7 +255,12 @@
         "folderSync": {
             "noData": "데이터 없음",
             "noFolders": "동기화할 폴더가 없습니다",
-            "batches": "배치"
+            "batches": "배치",
+            "autoSelectDescendants": "하위 항목 자동 선택",
+            "autoSelectParents": "상위 항목 자동 선택",
+            "expandAll": "모두 펼치기",
+            "collapseAll": "모두 접기",
+            "loadingMailboxFolders": "메일 폴더 로딩 중…"
         },
         "viewDetails": "세부 정보 보기",
         "runningState": {

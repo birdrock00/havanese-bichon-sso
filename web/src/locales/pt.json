@@ -255,7 +255,12 @@
         "folderSync": {
             "noData": "Sem Dados",
             "noFolders": "Nenhuma pasta para sincronizar",
-            "batches": "Lotes"
+            "batches": "Lotes",
+            "autoSelectDescendants": "Selecionar automaticamente os descendentes",
+            "autoSelectParents": "Selecionar automaticamente os pais",
+            "expandAll": "Expandir tudo",
+            "collapseAll": "Recolher tudo",
+            "loadingMailboxFolders": "Carregando pastas da caixa de correio…"
         },
         "viewDetails": "Ver Detalhes",
         "runningState": {

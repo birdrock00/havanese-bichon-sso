@@ -255,7 +255,12 @@
         "folderSync": {
             "noData": "データなし",
             "noFolders": "同期するフォルダーがありません",
-            "batches": "バッチ"
+            "batches": "バッチ",
+            "autoSelectDescendants": "子項目を自動選択",
+            "autoSelectParents": "親項目を自動選択",
+            "expandAll": "すべて展開",
+            "collapseAll": "すべて折りたたむ",
+            "loadingMailboxFolders": "メールボックスフォルダーを読み込み中…"
         },
         "viewDetails": "詳細を見る",
         "runningState": {

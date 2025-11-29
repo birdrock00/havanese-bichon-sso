@@ -255,7 +255,12 @@
         "folderSync": {
             "noData": "無資料",
             "noFolders": "沒有可同步的資料夾",
-            "batches": "批次"
+            "batches": "批次",
+            "autoSelectDescendants": "自動選取子項",
+            "autoSelectParents": "自動選取父項",
+            "expandAll": "全部展開",
+            "collapseAll": "全部收合",
+            "loadingMailboxFolders": "正在載入郵件資料夾…"
         },
         "viewDetails": "檢視詳細資訊",
         "runningState": {

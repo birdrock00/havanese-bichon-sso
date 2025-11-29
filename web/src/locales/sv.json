@@ -255,7 +255,12 @@
         "folderSync": {
             "noData": "Inga data",
             "noFolders": "Inga mappar att synkronisera",
-            "batches": "satser"
+            "batches": "satser",
+            "autoSelectDescendants": "Välj underordnade automatiskt",
+            "autoSelectParents": "Välj överordnade automatiskt",
+            "expandAll": "Expandera alla",
+            "collapseAll": "Komprimera alla",
+            "loadingMailboxFolders": "Laddar brevlådemappar…"
         },
         "viewDetails": "visa detaljer",
         "runningState": {
