@@ -163,6 +163,7 @@
         "emailPlaceholder": "f.eks. ola.nordmann@eksempel.no",
         "namePlaceholder": "f.eks. ola.nordmann",
         "optional": "Valgfritt",
+        "nameDescription": "IMAP-tilkoblingsbrukernavn. La dette feltet stå tomt hvis du bruker hele e-postadressen din som tilkoblingsbrukernavn.",
         "emailCannotBeModified": "E-postadressen til kontoen kan ikke endres under redigering.",
         "addAccount": "Legg til konto",
         "updateAccount": "Oppdater konto",

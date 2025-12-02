@@ -163,6 +163,7 @@
     "emailPlaceholder": "例如：john.doe@example.com",
     "namePlaceholder": "例如：john.doe",
     "optional": "可选",
+    "nameDescription": "IMAP 连接用户名。如果您使用完整的电子邮件地址作为连接用户名，请将此字段留空。",
     "emailCannotBeModified": "编辑时无法修改邮箱账户地址。",
     "addAccount": "添加账户",
     "updateAccount": "更新账户",

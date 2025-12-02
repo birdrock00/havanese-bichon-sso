@@ -163,6 +163,7 @@
         "emailPlaceholder": "f.eks. hans.hansen@eksempel.dk",
         "namePlaceholder": "f.eks. Hans Hansen",
         "optional": "Valgfri",
+        "nameDescription": "IMAP-forbindelsesbrugernavn. Lad dette felt være tomt, hvis du bruger din fulde e-mailadresse som forbindelsesbrugernavn.",
         "emailCannotBeModified": "Kontoens e-mailadresse kan ikke ændres under redigering.",
         "addAccount": "Tilføj konto",
         "updateAccount": "Opdater konto",

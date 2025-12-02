@@ -163,6 +163,7 @@
         "emailPlaceholder": "例: john.doe@example.com",
         "namePlaceholder": "例: john.doe",
         "optional": "オプション",
+        "nameDescription": "IMAP接続のユーザー名。接続ユーザー名として完全なメールアドレスを使用する場合は、このフィールドを空欄にしてください。",
         "emailCannotBeModified": "編集時にはメールアカウントアドレスは変更できません。",
         "addAccount": "アカウントを追加",
         "updateAccount": "アカウントを更新",

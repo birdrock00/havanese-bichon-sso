@@ -67,6 +67,7 @@ impl ImapConnectionManager {
     ) -> BichonResult<Session<Box<dyn SessionStream>>> {
         assert_eq!(account.account_type, AccountType::IMAP);
         let imap = account.imap.as_ref().unwrap();
+        let username = account.name.clone().unwrap_or(account.email.clone());
         match &imap.auth.auth_type {
             AuthType::Password => {
                 let password = &imap.auth.password.clone().ok_or_else(|| {
@@ -77,7 +78,7 @@ impl ImapConnectionManager {
                 })?;
 
                 let password = decrypt!(&password)?;
-                client.login(&account.email, &password).await
+                client.login(&username, &password).await
             }
             AuthType::OAuth2 => {
                 let record = OAuth2AccessToken::get(self.account_id).await?;
@@ -89,7 +90,7 @@ impl ImapConnectionManager {
                     )
                 })?;
                 client
-                    .authenticate(OAuth2::new(account.email.clone(), access_token))
+                    .authenticate(OAuth2::new(username, access_token))
                     .await
             }
         }

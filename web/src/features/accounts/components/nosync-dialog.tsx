@@ -190,7 +190,7 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
                   </FormItem>
                 )}
               />
-              <FormField
+              {/* <FormField
                 control={form.control}
                 name="name"
                 render={({ field }) => (
@@ -205,7 +205,7 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
                     <FormMessage />
                   </FormItem>
                 )}
-              />
+              /> */}
               <FormField
                 control={form.control}
                 name='enabled'

@@ -163,6 +163,7 @@
         "emailPlaceholder": "bv. john.doe@voorbeeld.com",
         "namePlaceholder": "bv. john.doe",
         "optional": "Optioneel",
+        "nameDescription": "IMAP-verbindingsgebruikersnaam. Laat dit veld leeg als u uw volledige e-mailadres als verbindingsgebruikersnaam gebruikt.",
         "emailCannotBeModified": "Het e-mailadres van het account kan niet worden gewijzigd tijdens het bewerken.",
         "addAccount": "Account Toevoegen",
         "updateAccount": "Account Bijwerken",

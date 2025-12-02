@@ -163,6 +163,7 @@
         "emailPlaceholder": "es. john.doe@esempio.com",
         "namePlaceholder": "es. john.doe",
         "optional": "Opzionale",
+        "nameDescription": "Nome utente di connessione IMAP. Lasciare vuoto questo campo se si utilizza l'indirizzo email completo come nome utente di connessione.",
         "emailCannotBeModified": "L'indirizzo email dell'account non può essere modificato durante la modifica.",
         "addAccount": "Aggiungi Account",
         "updateAccount": "Aggiorna Account",

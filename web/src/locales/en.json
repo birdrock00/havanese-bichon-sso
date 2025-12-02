@@ -163,6 +163,7 @@
     "emailPlaceholder": "e.g john.doe@example.com",
     "namePlaceholder": "e.g john.doe",
     "optional": "Optional",
+    "nameDescription": "IMAP Connection Username. Leave this field blank if you use your full email address as the connection username.",
     "emailCannotBeModified": "The email account address cannot be modified when editing.",
     "addAccount": "Add Account",
     "updateAccount": "Update Account",

@@ -77,7 +77,7 @@ export default function Step1({ isEdit }: StepProps) {
                             <FormControl>
                                 <Input placeholder={t('accounts.namePlaceholder')} {...field} />
                             </FormControl>
-                            <FormDescription>{t('accounts.optional')}</FormDescription>
+                            <FormDescription>{t('accounts.nameDescription')}</FormDescription>
                             <FormMessage />
                         </FormItem>
                     )}

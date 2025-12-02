@@ -163,6 +163,7 @@
         "emailPlaceholder": "t.ex. sven.svensson@exempel.se",
         "namePlaceholder": "t.ex. sven.svensson",
         "optional": "Valfritt",
+        "nameDescription": "IMAP-anslutningsanvändarnamn. Lämna detta fält tomt om du använder din fullständiga e-postadress som anslutningsanvändarnamn.",
         "emailCannotBeModified": "Kontots e-postadress kan inte ändras vid redigering.",
         "addAccount": "Lägg till konto",
         "updateAccount": "Uppdatera konto",

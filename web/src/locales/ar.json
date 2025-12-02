@@ -163,6 +163,7 @@
         "emailPlaceholder": "مثال: john.doe@example.com",
         "namePlaceholder": "مثال: john.doe",
         "optional": "اختياري",
+        "nameDescription": "اسم مستخدم اتصال IMAP. اترك هذا الحقل فارغًا إذا كنت تستخدم عنوان بريدك الإلكتروني الكامل كاسم مستخدم للاتصال.",
         "emailCannotBeModified": "لا يمكن تعديل عنوان حساب البريد الإلكتروني أثناء التحرير.",
         "addAccount": "إضافة حساب",
         "updateAccount": "تحديث الحساب",

@@ -163,6 +163,7 @@
         "emailPlaceholder": "esim. matti.meikäläinen@esimerkki.fi",
         "namePlaceholder": "esim. matti.meikäläinen",
         "optional": "Valinnainen",
+        "nameDescription": "IMAP-yhteyden käyttäjänimi. Jätä tämä kenttä tyhjäksi, jos käytät koko sähköpostiosoitettasi yhteyden käyttäjänimenä.",
         "emailCannotBeModified": "Tilin sähköpostiosoitetta ei voi muokata muokkauksen aikana.",
         "addAccount": "Lisää tili",
         "updateAccount": "Päivitä tili",

@@ -163,6 +163,7 @@
         "emailPlaceholder": "예: john.doe@example.com",
         "namePlaceholder": "예: john.doe",
         "optional": "선택 사항",
+        "nameDescription": "IMAP 연결 사용자 이름. 전체 이메일 주소를 연결 사용자 이름으로 사용하는 경우, 이 필드를 비워 두십시오.",
         "emailCannotBeModified": "편집 시 계정 이메일 주소는 수정할 수 없습니다.",
         "addAccount": "계정 추가",
         "updateAccount": "계정 업데이트",

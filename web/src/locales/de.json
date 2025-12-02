@@ -163,6 +163,7 @@
         "emailPlaceholder": "z.B. max.mustermann@beispiel.de",
         "namePlaceholder": "z.B. Max Mustermann",
         "optional": "Optional",
+        "nameDescription": "IMAP-Verbindungsbenutzername. Lassen Sie dieses Feld leer, wenn Sie Ihre vollständige E-Mail-Adresse als Verbindungsbenutzernamen verwenden.",
         "emailCannotBeModified": "Die E-Mail-Adresse des Kontos kann während der Bearbeitung nicht geändert werden.",
         "addAccount": "Konto hinzufügen",
         "updateAccount": "Konto aktualisieren",
