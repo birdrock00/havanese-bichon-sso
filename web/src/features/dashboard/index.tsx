@@ -35,17 +35,30 @@ interface DailyActivity {
   count: number;
 }
 
-function convertRecentActivity(timeBuckets: TimeBucket[]): DailyActivity[] {
+function convertRecentActivity(timeBuckets: TimeBucket[], locale: string): DailyActivity[] {
+  const dateFormatter = new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    day: 'numeric',
+  });
+
   return timeBuckets.map(bucket => {
     const date = new Date(bucket.timestamp_ms);
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const dd = String(date.getDate()).padStart(2, '0');
     return {
-      date: `${mm}-${dd}`,
+      date: dateFormatter.format(date),
       count: bucket.count,
+      timestamp_ms: bucket.timestamp_ms,
     };
   });
 }
+
+const formatTooltipDate = (timestamp_ms: number, locale: string): string => {
+  const date = new Date(timestamp_ms);
+  return new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  }).format(date);
+};
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
@@ -94,7 +107,10 @@ export default function MailArchiveDashboard() {
     queryFn: get_dashboard_stats,
   });
 
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+
+  const currentLocale = i18n.resolvedLanguage || i18n.language || navigator.language;
+
   const totalAttachments = (stats?.with_attachment_count ?? 0) + (stats?.without_attachment_count ?? 0);
   const attachmentRatio = totalAttachments > 0 ? (stats?.with_attachment_count ?? 0) / totalAttachments : 0;
 
@@ -253,12 +269,25 @@ export default function MailArchiveDashboard() {
                 <CardContent className="h-80">
                   {hasRecentActivity ? (
                     <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={convertRecentActivity(stats!.recent_activity)} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <BarChart data={convertRecentActivity(stats!.recent_activity, currentLocale)} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                        <XAxis dataKey="date" tick={{ fontSize: 12 }} interval="preserveStart" tickCount={10} />
                         <YAxis tick={{ fontSize: 12 }} />
                         <Tooltip
                           formatter={(v) => formatNumber(v as number)}
+                          content={({ payload }) => {
+                            if (payload && payload.length) {
+                              const dataPoint = payload[0].payload;
+                              const fullDate = formatTooltipDate(dataPoint.timestamp_ms, currentLocale);
+                              return (
+                                <div className="p-2 border rounded-lg shadow-md bg-white dark:bg-gray-800">
+                                  <p className="font-semibold text-sm mb-1">{fullDate}</p>
+                                  <p className="text-xs">{t('dashboard.emails')}: {formatNumber(dataPoint.count)}</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
                           contentStyle={{
                             backgroundColor: 'hsl(var(--background))',
                             border: '1px solid hsl(var(--border))',
