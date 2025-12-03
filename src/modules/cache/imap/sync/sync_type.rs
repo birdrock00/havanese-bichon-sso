@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::{
     modules::{
         account::{migration::AccountModel, state::AccountRunningState},
@@ -51,10 +50,7 @@ pub async fn determine_sync_type(account: &AccountModel) -> BichonResult<SyncTyp
                 SyncType::SkipSync
             }
         }
-        None => {
-            AccountRunningState::add(account.id).await?;
-            SyncType::InitialSync
-        }
+        None => SyncType::InitialSync,
     })
 }
 

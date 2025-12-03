@@ -69,7 +69,7 @@ impl AccountRunningState {
             errors: vec![],
             is_initial_sync_completed: false,
             progress: None,
-            initial_sync_start_time: None,
+            initial_sync_start_time: Some(utc_now!()),
             initial_sync_end_time: None,
             initial_sync_failed_time: None,
         };
@@ -125,14 +125,14 @@ impl AccountRunningState {
         .await
     }
 
-    pub async fn set_initial_sync_start(account_id: u64) -> BichonResult<()> {
-        Self::update_account_running_state(account_id, move |current| {
-            let mut updated = current.clone();
-            updated.initial_sync_start_time = Some(utc_now!());
-            Ok(updated)
-        })
-        .await
-    }
+    // pub async fn set_initial_sync_start(account_id: u64) -> BichonResult<()> {
+    //     Self::update_account_running_state(account_id, move |current| {
+    //         let mut updated = current.clone();
+    //         updated.initial_sync_start_time = Some(utc_now!());
+    //         Ok(updated)
+    //     })
+    //     .await
+    // }
 
     pub async fn set_initial_sync_completed(account_id: u64) -> BichonResult<()> {
         Self::update_account_running_state(account_id, move |current| {

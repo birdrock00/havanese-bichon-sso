@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::{
     modules::{
         account::{
@@ -46,13 +45,13 @@ pub async fn execute_imap_sync(account: &AccountModel) -> BichonResult<()> {
     let start_time = Instant::now();
     let account_id = account.id;
     let sync_type = determine_sync_type(account).await?;
-
     if matches!(sync_type, SyncType::SkipSync) {
         return Ok(());
     }
     let remote_mailboxes = get_sync_folders(account).await?;
     if matches!(sync_type, SyncType::InitialSync) {
-        AccountRunningState::set_initial_sync_start(account_id).await?;
+        AccountRunningState::add(account.id).await?;
+        // AccountRunningState::set_initial_sync_start(account_id).await?;
         let result = match &account.date_since {
             Some(date_since) => {
                 rebuild_cache_since_date(account, &remote_mailboxes, date_since).await
