@@ -349,7 +349,11 @@ impl AccountV2 {
         }
 
         if let Some(name) = &request.name {
-            new.name = Some(name.clone());
+            if name.trim().is_empty() {
+                new.name = None;
+            } else {
+                new.name = Some(name.clone());
+            }
         }
 
         if matches!(old.account_type, AccountType::IMAP) {

@@ -138,7 +138,7 @@
         "noAccountConfigurations": "Geen Accountconfiguraties",
         "noAccountConfigurationsDesc": "U heeft nog geen Accountconfiguraties toegevoegd. Voeg er een toe om de Accountfuncties te gebruiken.",
         "addConfiguration": "Configuratie Toevoegen",
-        "name": "Naam",
+        "name": "Inlognaam",
         "email": "E-mail",
         "status": "Status",
         "type": "Type",

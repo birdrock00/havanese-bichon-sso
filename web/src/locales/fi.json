@@ -138,7 +138,7 @@
         "noAccountConfigurations": "Ei tilimäärityksiä",
         "noAccountConfigurationsDesc": "Et ole vielä lisännyt tilimäärityksiä. Lisää yksi aloittaaksesi tilitoimintojen käytön.",
         "addConfiguration": "Lisää määritys",
-        "name": "Nimi",
+        "name": "Kirjautumisnimi",
         "email": "Sähköposti",
         "status": "Tila",
         "type": "Tyyppi",

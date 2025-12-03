@@ -138,7 +138,7 @@
         "noAccountConfigurations": "沒有帳號設定",
         "noAccountConfigurationsDesc": "您尚未新增任何帳號設定。請新增設定以使用功能。",
         "addConfiguration": "新增設定",
-        "name": "名稱",
+        "name": "登入名稱",
         "email": "電子郵件",
         "status": "狀態",
         "type": "類型",

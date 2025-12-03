@@ -138,7 +138,7 @@
         "noAccountConfigurations": "لا توجد تكوينات للحساب",
         "noAccountConfigurationsDesc": "لم تقم بإضافة أي تكوينات للحساب بعد. أضف واحدة لبدء استخدام ميزات الحساب.",
         "addConfiguration": "إضافة تكوين",
-        "name": "الاسم",
+        "name": "اسم الدخول",
         "email": "البريد الإلكتروني",
         "status": "الحالة",
         "type": "النوع",

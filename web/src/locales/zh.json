@@ -138,7 +138,7 @@
     "noAccountConfigurations": "无账户配置",
     "noAccountConfigurationsDesc": "您尚未添加任何账户配置。添加一个以开始使用账户功能。",
     "addConfiguration": "添加配置",
-    "name": "名称",
+    "name": "登录名",
     "email": "邮箱",
     "status": "状态",
     "type": "类型",

@@ -138,7 +138,7 @@
         "noAccountConfigurations": "계정 구성 없음",
         "noAccountConfigurationsDesc": "아직 계정 구성을 추가하지 않았습니다. 기능을 사용하려면 추가하십시오.",
         "addConfiguration": "구성 추가",
-        "name": "이름",
+        "name": "로그인 이름",
         "email": "이메일",
         "status": "상태",
         "type": "유형",

@@ -138,7 +138,7 @@
         "noAccountConfigurations": "Inga kontokonfigurationer",
         "noAccountConfigurationsDesc": "Du har inte lagt till några kontokonfigurationer ännu. Lägg till en för att börja använda kontofunktioner.",
         "addConfiguration": "Lägg till konfiguration",
-        "name": "Namn",
+        "name": "Inloggningsnamn",
         "email": "E-post",
         "status": "Status",
         "type": "Typ",

@@ -138,7 +138,7 @@
         "noAccountConfigurations": "Keine Kontokonfigurationen",
         "noAccountConfigurationsDesc": "Sie haben noch keine Kontokonfigurationen hinzugefügt. Fügen Sie eine hinzu, um mit der Nutzung der Kontofunktionen zu beginnen.",
         "addConfiguration": "Konfiguration hinzufügen",
-        "name": "Name",
+        "name": "Anmeldename",
         "email": "E-Mail",
         "status": "Status",
         "type": "Typ",

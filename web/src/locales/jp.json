@@ -138,7 +138,7 @@
         "noAccountConfigurations": "アカウント設定がありません",
         "noAccountConfigurationsDesc": "まだアカウント設定を追加していません。機能を利用するには設定を追加してください。",
         "addConfiguration": "設定を追加",
-        "name": "名前",
+        "name": "ログイン名",
         "email": "メールアドレス",
         "status": "ステータス",
         "type": "タイプ",
