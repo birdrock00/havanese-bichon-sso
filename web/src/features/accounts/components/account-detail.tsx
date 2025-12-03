@@ -121,6 +121,10 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                         <span>{currentRow.imap?.encryption}</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-muted-foreground">{t('accounts.useDangerous')}:</span>
+                        <span>{`${currentRow.use_dangerous}`}</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
                         <span className="text-muted-foreground">{t('accounts.auth')}:</span>
                         {currentRow.imap?.auth.auth_type === "OAuth2" ? (
                           <Badge variant="outline" className="bg-blue-100 text-blue-800">

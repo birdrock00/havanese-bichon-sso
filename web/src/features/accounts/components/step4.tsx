@@ -59,6 +59,10 @@ export default function Step4() {
                                         <td className="px-6 py-2 whitespace-nowrap text-sm">{summaryData.imap.encryption}</td>
                                     </tr>
                                     <tr>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">{t('accounts.useDangerous')}:</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm">{`${summaryData.use_dangerous}`}</td>
+                                    </tr>
+                                    <tr>
                                         <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">{t('accounts.authType')}:</td>
                                         <td className="px-6 py-2 whitespace-nowrap text-sm">{summaryData.imap.auth.auth_type}</td>
                                     </tr>
