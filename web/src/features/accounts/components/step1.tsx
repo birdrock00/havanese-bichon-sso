@@ -66,22 +66,6 @@ export default function Step1({ isEdit }: StepProps) {
                         </FormItem>
                     )}
                 />
-                <FormField
-                    control={control}
-                    name="name"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel className="flex items-center justify-between">
-                                {t('accounts.name')}:
-                            </FormLabel>
-                            <FormControl>
-                                <Input placeholder={t('accounts.namePlaceholder')} {...field} />
-                            </FormControl>
-                            <FormDescription>{t('accounts.nameDescription')}</FormDescription>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
             </div>
         </>
     );

@@ -139,7 +139,7 @@ export type Steps = [
 
 const getSteps = (t: (key: string) => string): Steps => [
   { id: "step-1", name: t('accounts.steps.emailAddress'), fields: ["email"] },
-  { id: "step-2", name: t('accounts.steps.imap'), fields: ["imap", "use_dangerous"] },
+  { id: "step-2", name: t('accounts.steps.imap'), fields: ["imap", "use_dangerous", "name"] },
   { id: "step-3", name: t('accounts.steps.syncPreferences'), fields: ["enabled", "date_since", "folder_limit", "sync_interval_min"] },
   { id: "step-4", name: t('accounts.steps.summary'), fields: [] },
 ];
