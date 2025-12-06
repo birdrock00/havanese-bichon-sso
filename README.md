@@ -151,41 +151,83 @@ docker run -d \
   rustmailer/bichon:latest
 ```
 
+## CORS Configuration (Important for Browser Access)
 
-* **Accessing Bichon from a browser:**
-  You need to add the exact address you use in your browser to `BICHON_CORS_ORIGINS`.
+Starting from **v0.1.4**, Bichon changes how `BICHON_CORS_ORIGINS` works:
 
-  * If you access via **IP**, add `IP:port`, e.g.:
+### **🔄 New Behavior in v0.1.4**
 
-    ```
-    http://192.168.1.16:15630
-    ```
-  * If you access via **hostname**, add `hostname:port`, e.g.:
+* If **`BICHON_CORS_ORIGINS` is not set**, Bichon now **allows all origins**.
+  This makes local testing and simple deployments much easier.
+* If you **do set** `BICHON_CORS_ORIGINS`, then **you must explicitly list each allowed origin**.
+* `*` is **not supported** and will **not work** — you must provide exact URLs.
 
-    ```
-    http://myserver.local:15630
-    ```
-  * If you access via **domain name**, add the domain, e.g.:
+#### How CORS Matching Works
 
-    ```
-    http://mydomain.com
-    ```
-  * **If Bichon is running on port 80**, you **do not need to include the port**.
-  * If you want to access Bichon in **multiple ways**, include all of them separated by commas.
+When a browser accesses Bichon, it will send an `Origin` header.
 
-Example Docker run:
+* **Incoming Origin** = the exact address the browser is using
+* **Configured origins** = the list you passed to `BICHON_CORS_ORIGINS`
 
-```bash
-docker run -d \
-  --name bichon \
-  -p 15630:15630 \
-  -v $(pwd)/bichon-data:/data \
-  -e BICHON_LOG_LEVEL=info \
-  -e BICHON_ROOT_DIR=/data \
-  -e BICHON_CORS_ORIGINS="http://192.168.1.16:15630,http://myserver.local:15630,http://mydomain.com" \
-  rustmailer/bichon:latest
+If Configured origins does not contain the Incoming Origin exactly as a full string match, the browser request will be rejected.
+
+Example debug log:
+
 ```
-> **Tip:** Do not add a trailing `/`. Using `*` allows all addresses, but is **not recommended** for security.
+2025-12-06T23:56:30.422+08:00 DEBUG bichon::modules::rest: CORS: Incoming Origin = "http://localhost:15630"
+2025-12-06T23:56:30.422+08:00 DEBUG bichon::modules::rest: CORS: Configured origins = ["http://192.168.3.2:15630"]
+```
+
+In this example:
+
+* Browser is using `http://localhost:15630`
+* But the configured origin is `http://192.168.3.2:15630`
+
+→ **CORS will fail**, and you can immediately see why.
+
+#### When Should You Configure CORS?
+
+It is strongly recommended to configure CORS in production environments to ensure that only trusted browser origins can access Bichon.
+If you want to access Bichon from a browser:
+
+* Add the exact **IP** with port
+* Or the exact **hostname** with port
+* Or the **domain** (port optional if it's 80)
+
+Examples:
+
+```
+http://192.168.1.16:15630
+http://myserver.local:15630
+http://mydomain.com
+```
+
+If you access Bichon in **multiple different ways**, list all of them:
+
+```
+-e BICHON_CORS_ORIGINS="http://192.168.1.16:15630,http://myserver.local:15630,http://mydomain.com"
+```
+
+> **Do not add a trailing slash**
+> (`http://192.168.1.16:15630/` will not match)
+>
+> **Do not use `*`**, it is not supported.
+
+#### How to Enable Debug Logs (Highly Recommended for CORS Issues)
+
+Set environment variable:
+
+```
+BICHON_LOG_LEVEL=debug
+```
+
+Or via command-line:
+
+```
+--bichon-log-level debug
+```
+
+Default is `info`, so CORS logs will not appear unless debug logging is enabled.
 
 ### Binary Deployment
 
