@@ -22,7 +22,7 @@
     <img src="https://img.shields.io/badge/license-AGPLv3-blue.svg" alt="License">
   </a>
   <a href="https://deepwiki.com/rustmailer/bichon"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
-  <a href="https://discord.gg/evFnSpdpaE">
+  <a href="https://discord.gg/Bq4M2cDmF4">
     <img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?logo=discord&logoColor=white" alt="Discord">
   </a>
   <a href="https://x.com/rustmailer">
@@ -304,7 +304,7 @@ You can change the password via the WebUI:
 Contributions of all kinds are welcome!
 Whether you’d like to submit code, report a bug, or share practical suggestions that can help improve the project, your input is highly appreciated.
 Feel free to open an Issue or a Pull Request anytime. You can also reach out on Discord if you’d like to discuss ideas or improvements.
-<a href="https://discord.gg/evFnSpdpaE">
+<a href="https://discord.gg/Bq4M2cDmF4">
     <img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?logo=discord&logoColor=white" alt="Discord">
 </a>
 
@@ -370,7 +370,7 @@ This project is licensed under [AGPLv3](LICENSE).
 
 - [Docker Hub](https://hub.docker.com/r/rustmailer/bichon)
 - [Issue Tracker](https://github.com/rustmailer/bichon/issues)
-- [Discord](https://discord.gg/evFnSpdpaE)
+- [Discord](https://discord.gg/Bq4M2cDmF4)
 
 
 ## 💖 Support & Promotion
