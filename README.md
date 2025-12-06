@@ -293,7 +293,7 @@ You can change the password via the WebUI:
 
 please see the FAQ in the project Wiki:
 
-👉 [https://github.com/your-repo/wiki/FAQ](https://github.com/rustmailer/bichon/wiki/FAQ-(Frequently-Asked-Questions))
+👉 [https://github.com/rustmailer/bichon/wiki/FAQ](https://github.com/rustmailer/bichon/wiki/FAQ-(Frequently-Asked-Questions))
 
 
 ## 🛠️ Tech Stack
