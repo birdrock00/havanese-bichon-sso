@@ -289,6 +289,13 @@ You can change the password via the WebUI:
 > Under construction. Documentation will be available soon.
 [Bichon Wiki](https://github.com/rustmailer/bichon/wiki).
 
+## FAQ
+
+please see the FAQ in the project Wiki:
+
+👉 [https://github.com/your-repo/wiki/FAQ](https://github.com/rustmailer/bichon/wiki/FAQ-(Frequently-Asked-Questions))
+
+
 ## 🛠️ Tech Stack
 
 - **Backend**: Rust + Poem
