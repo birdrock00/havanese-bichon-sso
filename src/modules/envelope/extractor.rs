@@ -134,7 +134,9 @@ pub fn extract_envelope_from_eml(
     let text = if let Some(text) = message.body_text(0).map(|cow| cow.into_owned()) {
         text
     } else if let Some(html) = message.body_html(0).map(|cow| cow.into_owned()) {
-        from_read(html.as_bytes(), 0)
+        html2text::config::plain()
+            .allow_width_overflow()
+            .string_from_read(html.as_bytes(), 100)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
     } else {
         String::new()
@@ -227,5 +229,54 @@ fn extract_references(message: &Message<'_>) -> Option<Vec<String>> {
             Some(vec.iter().map(|cow| cow.to_string()).collect())
         }
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use html2text::config;
+
+    #[test]
+    fn test_various_html_with_overflow_enabled() {
+        let cases = [
+            ("<p>Hello World</p>", "Simple paragraph"),
+            ("<h1>Title</h1><p>Content</p>", "Heading + paragraph"),
+            ("<ul><li>Item1</li><li>Item2</li></ul>", "Unordered list"),
+            (
+                "<strong>Bold</strong> and <em>italic</em>",
+                "Inline formatting",
+            ),
+            (
+                "<div><span>Nested</span> elements</div>",
+                "Nested inline elements inside block",
+            ),
+            (
+                "<table><tr><td>A</td><td>B</td></tr></table>",
+                "Simple table",
+            ),
+            (
+                "<pre>  preformatted text\n  line2</pre>",
+                "Preformatted block",
+            ),
+            ("😃 emoji test", "Wide emoji"),
+            ("<a href=\"#\">link</a>", "Anchor tag"),
+            (
+                "<blockquote><p>Quoted text</p></blockquote>",
+                "Blockquote with paragraph",
+            ),
+        ];
+
+        for (html, desc) in cases {
+            let result = config::plain()
+                .allow_width_overflow()
+                .string_from_read(html.as_bytes(), 100);
+
+            match result {
+                Ok(output) => {
+                    println!("✓ Rendered ({}) =>\n{}", desc, output);
+                }
+                Err(e) => panic!("Unexpected error for {}: {:?}", desc, e),
+            }
+        }
     }
 }
