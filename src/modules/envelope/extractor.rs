@@ -23,7 +23,6 @@ use crate::modules::utils::create_hash;
 use crate::{calculate_hash, raise_error, utc_now};
 use crate::{id, modules::indexer::envelope::Envelope};
 use async_imap::types::Fetch;
-use html2text::from_read;
 use mail_parser::{Message, MessageParser, MimeHeaders};
 
 pub fn extract_envelope(fetch: &Fetch, account_id: u64, mailbox_id: u64) -> BichonResult<Envelope> {
@@ -48,7 +47,9 @@ pub fn extract_envelope(fetch: &Fetch, account_id: u64, mailbox_id: u64) -> Bich
     let text = if let Some(text) = message.body_text(0).map(|cow| cow.into_owned()) {
         text
     } else if let Some(html) = message.body_html(0).map(|cow| cow.into_owned()) {
-        from_read(html.as_bytes(), 0)
+        html2text::config::plain()
+            .allow_width_overflow()
+            .string_from_read(html.as_bytes(), 100)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
     } else {
         String::new()
