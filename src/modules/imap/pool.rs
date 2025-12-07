@@ -49,7 +49,7 @@ pub async fn build_imap_pool(account_id: u64) -> BichonResult<Pool<ImapConnectio
     let manager = ImapConnectionManager::new(account_id);
     let pool = Pool::builder()
         .connection_timeout(Duration::from_secs(30))
-        .idle_timeout(Duration::from_secs(120))
+        //.idle_timeout(Duration::from_secs(120))
         .retry_connection(true)
         .max_size(10)
         .test_on_check_out(true)

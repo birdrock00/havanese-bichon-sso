@@ -63,7 +63,7 @@ impl EmailClientExecutors {
         }
 
         let pool = build_imap_pool(account_id).await?;
-        let new_executor = Arc::new(ImapExecutor::new(pool));
+        let new_executor = Arc::new(ImapExecutor::new(account_id, pool));
 
         match self.imap.try_entry(account_id) {
             Some(dashmap::mapref::entry::Entry::Occupied(entry)) => Ok(entry.get().clone()),

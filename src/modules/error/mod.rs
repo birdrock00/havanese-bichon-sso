@@ -16,15 +16,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-use std::{fmt::Formatter, u32};
-
-use crate::raise_error;
-use bb8::RunError;
 use code::ErrorCode;
 use poem::http::StatusCode;
 use poem_openapi::{payload::Json, ApiResponse, Object};
 use snafu::{Location, Snafu};
+use std::{fmt::Formatter, u32};
 
 pub mod code;
 pub mod handler;
@@ -43,17 +39,6 @@ pub enum BichonError {
 
 pub type BichonResult<T, E = BichonError> = std::result::Result<T, E>;
 
-impl From<RunError<BichonError>> for BichonError {
-    fn from(e: RunError<BichonError>) -> Self {
-        match e {
-            RunError::User(e) => e,
-            RunError::TimedOut => raise_error!(
-                "Timed out while attempting to acquire a connection from the pool".into(),
-                ErrorCode::ConnectionPoolTimeout
-            ),
-        }
-    }
-}
 #[derive(Debug, Clone, Object)]
 pub struct ApiError {
     pub message: String,

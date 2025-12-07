@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::modules::account::state::AccountRunningState;
 use crate::modules::cache::imap::mailbox::MailBox;
 use crate::modules::cache::imap::sync::flow::{generate_uid_sequence_hashset, BATCH_SIZE};
@@ -27,7 +26,7 @@ use crate::modules::indexer::schema::SchemaTools;
 use crate::modules::{error::BichonResult, imap::manager::ImapConnectionManager};
 use crate::raise_error;
 use async_imap::types::{Mailbox, Name};
-use bb8::Pool;
+use bb8::{Pool, RunError};
 use futures::TryStreamExt;
 use std::collections::HashSet;
 use tantivy::doc;
@@ -36,16 +35,17 @@ use tracing::info;
 const BODY_FETCH_COMMAND: &str = "(UID INTERNALDATE RFC822.SIZE BODY.PEEK[])";
 
 pub struct ImapExecutor {
+    account_id: u64,
     pool: Pool<ImapConnectionManager>,
 }
 
 impl ImapExecutor {
-    pub fn new(pool: Pool<ImapConnectionManager>) -> Self {
-        Self { pool }
+    pub fn new(account_id: u64, pool: Pool<ImapConnectionManager>) -> Self {
+        Self { account_id, pool }
     }
 
     pub async fn list_all_mailboxes(&self) -> BichonResult<Vec<Name>> {
-        let mut session = self.pool.get().await?;
+        let mut session = self.get_connection().await?;
         let list = session
             .list(Some(""), Some("*"))
             .await
@@ -58,7 +58,7 @@ impl ImapExecutor {
     }
 
     pub async fn examine_mailbox(&self, mailbox_name: &str) -> BichonResult<Mailbox> {
-        let mut session = self.pool.get().await?;
+        let mut session = self.get_connection().await?;
         session
             .examine(mailbox_name)
             .await
@@ -66,7 +66,7 @@ impl ImapExecutor {
     }
 
     pub async fn uid_search(&self, mailbox_name: &str, query: &str) -> BichonResult<HashSet<u32>> {
-        let mut session = self.pool.get().await?;
+        let mut session = self.get_connection().await?;
         session
             .examine(mailbox_name)
             .await
@@ -142,7 +142,7 @@ impl ImapExecutor {
         assert!(page > 0, "Page number must be greater than 0");
         assert!(page_size > 0, "Page size must be greater than 0");
 
-        let mut session = self.pool.get().await?;
+        let mut session = self.get_connection().await?;
         let total = session
             .examine(encoded_mailbox_name)
             .await
@@ -211,7 +211,7 @@ impl ImapExecutor {
         uid_set: &str,
         encoded_mailbox_name: &str,
     ) -> BichonResult<()> {
-        let mut session = self.pool.get().await?;
+        let mut session = self.get_connection().await?;
         session
             .examine(encoded_mailbox_name)
             .await
@@ -237,5 +237,42 @@ impl ImapExecutor {
             EML_INDEX_MANAGER.add_document( envelope.id, doc!(fields.f_id => envelope.id, fields.f_account_id => account_id, fields.f_mailbox_id => mailbox_id, fields.f_eml => body)).await;
         }
         Ok(())
+    }
+
+    async fn get_connection(
+        &self,
+    ) -> BichonResult<bb8::PooledConnection<'_, ImapConnectionManager>> {
+        match self.pool.get().await {
+            Ok(connection) => Ok(connection),
+            Err(e) => match e {
+                RunError::User(e) => Err(e),
+                RunError::TimedOut => {
+                    let state = self.pool.state();
+                    tracing::warn!(
+                        "{}: connections={}, idle={}, \
+                        get_started={}, get_direct={}, get_waited={}, get_timed_out={}, \
+                        wait_time_ms={}, created={}, closed_broken={}, closed_invalid={}, \
+                        closed_lifetime={}, closed_idle={}",
+                        self.account_id,
+                        state.connections,
+                        state.idle_connections,
+                        state.statistics.get_started,
+                        state.statistics.get_direct,
+                        state.statistics.get_waited,
+                        state.statistics.get_timed_out,
+                        state.statistics.get_wait_time.as_millis(),
+                        state.statistics.connections_created,
+                        state.statistics.connections_closed_broken,
+                        state.statistics.connections_closed_invalid,
+                        state.statistics.connections_closed_max_lifetime,
+                        state.statistics.connections_closed_idle_timeout,
+                    );
+                    return Err(raise_error!(
+                        "Timed out while attempting to acquire a connection from the pool".into(),
+                        ErrorCode::ConnectionPoolTimeout
+                    ));
+                }
+            },
+        }
     }
 }

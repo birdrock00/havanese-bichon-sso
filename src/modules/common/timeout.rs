@@ -25,7 +25,7 @@ use crate::modules::error::code::ErrorCode;
 
 use super::create_api_error_response;
 
-pub const TIMEOUT_HEADER: &str = "X-RustMailer-Timeout-Seconds";
+pub const TIMEOUT_HEADER: &str = "X-Bichon-Timeout-Seconds";
 
 pub struct Timeout;
 
@@ -63,7 +63,7 @@ impl<E: Endpoint> Endpoint for TimeoutEndpoint<E> {
                 error!("Request timed out after {} seconds", seconds);
                 Err(create_api_error_response(
                     &format!(
-                        "Request timed out after {} seconds (timeout set via X-RustMailer-Timeout-Seconds header, max allowed: 600 seconds)",
+                        "Request timed out after {} seconds (timeout set via X-Bichon-Timeout-Seconds header, max allowed: 600 seconds)",
                         seconds
                     ),
                     ErrorCode::RequestTimeout,
