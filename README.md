@@ -371,6 +371,22 @@ please see the FAQ in the project Wiki:
 👉 [https://github.com/rustmailer/bichon/wiki/FAQ](https://github.com/rustmailer/bichon/wiki/FAQ-(Frequently-Asked-Questions))
 
 
+## 💡 User Case Showcase
+
+We have collected a real-world case study from a user processing email data, which demonstrates Bichon's performance and storage efficiency in a live environment.
+This case involves ingesting and indexing data from **126 email accounts**. The total original data volume was **229 GB**, comprising **460,000 emails**.
+
+### 📊 Performance Data Overview
+
+<img width="945" height="582" alt="image" src="https://github.com/user-attachments/assets/934ed6dd-c1da-4483-84fa-6d5b1bf6ca72" />
+
+A special thank you to **[@rallisf1](https://github.com/rallisf1)** for sharing this usage scenario and the detailed data.
+
+#### 🤝 Open Invitation
+
+This data is provided solely as a **reference** for real-world usage. We encourage more users to share their Bichon usage screenshots and metrics (e.g., ingestion volume, compression ratio, search speed, etc.) to help the community conduct a more comprehensive assessment of Bichon's suitability and performance.
+
+
 ## 🛠️ Tech Stack
 
 - **Backend**: Rust + Poem
