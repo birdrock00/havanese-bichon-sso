@@ -62,7 +62,7 @@ export default function Accounts() {
       <FixedHeader />
 
       <Main>
-        <div className="mx-auto w-full max-w-7xl px-4">
+        <div className="mx-auto w-full max-w-[88rem] px-4">
           {/* Header Section */}
           <div className='mb-2 flex items-center justify-between flex-wrap gap-x-4 gap-y-2'>
             <div>

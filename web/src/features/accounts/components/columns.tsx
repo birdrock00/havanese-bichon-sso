@@ -31,113 +31,113 @@ import { useTranslation } from 'react-i18next'
 
 export function useColumns(): ColumnDef<AccountModel>[] {
   const { t } = useTranslation()
-  
+
   return [
-  {
-    accessorKey: "id",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t('accounts.id')} />
-    ),
-    cell: ({ row }) => {
-      return <LongText>{row.original.id}</LongText>
+    {
+      accessorKey: "id",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('accounts.id')} />
+      ),
+      cell: ({ row }) => {
+        return <LongText>{row.original.id}</LongText>
+      },
+      enableSorting: false,
+      enableHiding: false,
     },
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
-    accessorKey: "email",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t('accounts.email')} />
-    ),
-    cell: ({ row }) => {
-      return <LongText>{row.original.email}</LongText>
+    {
+      accessorKey: "email",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('accounts.email')} />
+      ),
+      cell: ({ row }) => {
+        return <LongText>{row.original.email}</LongText>
+      },
+      enableHiding: false,
     },
-    enableHiding: false,
-  },
-  {
-    accessorKey: "enabled",
-    header: ({ column }) => (
-      <DataTableColumnHeader className="ml-4" column={column} title={t('accounts.enabled')} />
-    ),
-    cell: EnableAction,
-    meta: { className: 'w-8 text-center' },
-    enableHiding: false,
-  },
-  {
-    id: 'auth_type',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t('accounts.auth')} />
-    ),
-    cell: OAuth2Action,
-    meta: { className: 'w-8' },
-    enableHiding: false,
-    enableSorting: false
-  },
-  {
-    id: 'account_type',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t('accounts.type')} />
-    ),
-    cell: ({ row }) => {
-      return <LongText>{row.original.account_type}</LongText>
+    {
+      accessorKey: "enabled",
+      header: ({ column }) => (
+        <DataTableColumnHeader className="text-center" column={column} title={t('accounts.enabled')} />
+      ),
+      cell: EnableAction,
+      meta: { className: 'w-18 text-center' },
+      enableHiding: false,
     },
-    meta: { className: 'w-8' },
-    enableHiding: false,
-    enableSorting: false
-  },
-  {
-    accessorKey: "sync_interval_sec",
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t('accounts.incSync')} />
-    ),
-    cell: ({ row }) => {
-      let account_type = row.original.account_type;
-      if (account_type === "NoSync") {
-        return <LongText className='max-w-12'>n/a</LongText>
-      }
-      return <LongText className='max-w-12'>{row.original.sync_interval_min} minutes</LongText>
+    {
+      id: 'auth_type',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('accounts.auth')} />
+      ),
+      cell: OAuth2Action,
+      meta: { className: 'w-18 text-center' },
+      enableHiding: false,
+      enableSorting: false
     },
-    meta: { className: 'w-12 text-center' },
-    enableHiding: false,
-  },
-  {
-    id: 'running_state',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t('accounts.state')} />
-    ),
-    cell: RunningStateCellAction,
-    meta: { className: 'w-36' },
-    enableHiding: false,
-  },
-  {
-    accessorKey: 'created_at',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t('accounts.createdAt')} />
-    ),
-    cell: ({ row }) => {
-      const created_at = row.original.created_at;
-      const date = format(new Date(created_at), 'yyyy-MM-dd HH:mm:ss');
-      return <LongText className='max-w-36'>{date}</LongText>;
+    {
+      id: 'account_type',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('accounts.type')} />
+      ),
+      cell: ({ row }) => {
+        return <LongText>{row.original.account_type}</LongText>
+      },
+      meta: { className: 'w-18' },
+      enableHiding: false,
+      enableSorting: false
     },
-    meta: { className: 'w-36' },
-    enableHiding: false,
-  },
-  {
-    accessorKey: 'updated_at',
-    header: ({ column }) => (
-      <DataTableColumnHeader column={column} title={t('accounts.updatedAt')} />
-    ),
-    cell: ({ row }) => {
-      const updated_at = row.original.updated_at;
-      const date = format(new Date(updated_at), 'yyyy-MM-dd HH:mm:ss');
-      return <LongText className='max-w-36'>{date}</LongText>;
+    {
+      accessorKey: "sync_interval_sec",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('accounts.incSync')} />
+      ),
+      cell: ({ row }) => {
+        let account_type = row.original.account_type;
+        if (account_type === "NoSync") {
+          return <LongText>n/a</LongText>
+        }
+        return <LongText>{row.original.sync_interval_min} min</LongText>
+      },
+      //meta: { className: 'w-18 text-center' },
+      enableHiding: false,
     },
-    meta: { className: 'w-36' },
-    enableHiding: false,
-  },
-  {
-    id: 'actions',
-    cell: DataTableRowActions,
-  },
+    {
+      id: 'running_state',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('accounts.state')} />
+      ),
+      cell: RunningStateCellAction,
+      meta: { className: 'w-36' },
+      enableHiding: false,
+    },
+    {
+      accessorKey: 'created_at',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('accounts.createdAt')} />
+      ),
+      cell: ({ row }) => {
+        const created_at = row.original.created_at;
+        const date = format(new Date(created_at), 'yyyy-MM-dd HH:mm:ss');
+        return <LongText className='max-w-36'>{date}</LongText>;
+      },
+      meta: { className: 'w-36' },
+      enableHiding: false,
+    },
+    {
+      accessorKey: 'updated_at',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('accounts.updatedAt')} />
+      ),
+      cell: ({ row }) => {
+        const updated_at = row.original.updated_at;
+        const date = format(new Date(updated_at), 'yyyy-MM-dd HH:mm:ss');
+        return <LongText className='max-w-36'>{date}</LongText>;
+      },
+      meta: { className: 'w-36' },
+      enableHiding: false,
+    },
+    {
+      id: 'actions',
+      cell: DataTableRowActions,
+    },
   ]
 }
