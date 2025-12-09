@@ -39,6 +39,7 @@ const LANGUAGES = [
   { code: 'ko', label: '한국어' },
   { code: 'nl', label: 'Nederlands' },
   { code: 'no', label: 'Norsk' },
+  { code: 'pl', label: 'Polski' },
   { code: 'pt', label: 'Português' },
   { code: 'ru', label: 'Русский' },
   { code: 'sv', label: 'Svenska' },
