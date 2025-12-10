@@ -33,6 +33,7 @@ import jp from './locales/jp.json'
 import ko from './locales/ko.json'
 import nl from './locales/nl.json'
 import pt from './locales/pt.json'
+import pl from './locales/pl.json'
 import ru from './locales/ru.json'
 import da from './locales/da.json'
 import sv from './locales/sv.json'
@@ -66,6 +67,7 @@ i18n
       ko: { translation: ko },
       nl: { translation: nl },
       no: { translation: no },
+      pl: { translation: pl },
       pt: { translation: pt },
       ru: { translation: ru },
       sv: { translation: sv },
