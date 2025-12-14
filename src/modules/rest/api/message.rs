@@ -32,9 +32,8 @@ use crate::modules::rest::response::DataPage;
 use crate::modules::rest::ApiResult;
 use crate::modules::rest::ErrorCode;
 use crate::raise_error;
-use poem::web::Path;
 use poem::Body;
-use poem_openapi::param::Query;
+use poem_openapi::param::{Path, Query};
 use poem_openapi::payload::{Attachment, AttachmentType, Json};
 use poem_openapi::OpenApi;
 use std::collections::HashMap;
@@ -134,7 +133,9 @@ impl MessageApi {
     )]
     async fn fetch_message_content(
         &self,
+        /// The ID of the account.
         account_id: Path<u64>,
+        /// The ID of the message to fetch.
         message_id: Query<u64>,
         context: ClientContext,
     ) -> ApiResult<Json<FullMessageContent>> {
@@ -151,7 +152,9 @@ impl MessageApi {
     )]
     async fn download_message(
         &self,
+        /// The ID of the account.
         account_id: Path<u64>,
+        /// The ID of the message to download.
         message_id: Query<u64>,
         context: ClientContext,
     ) -> ApiResult<Attachment<Body>> {
@@ -175,8 +178,11 @@ impl MessageApi {
     )]
     async fn download_attachment(
         &self,
+        /// The ID of the account.
         account_id: Path<u64>,
+        /// The ID of the message containing the attachment.
         message_id: Query<u64>,
+        /// The filename of the attachment to download.
         name: Query<String>,
         context: ClientContext,
     ) -> ApiResult<Attachment<Body>> {
