@@ -135,12 +135,12 @@ impl MessageApi {
     async fn fetch_message_content(
         &self,
         account_id: Path<u64>,
-        id: Query<u64>,
+        message_id: Query<u64>,
         context: ClientContext,
     ) -> ApiResult<Json<FullMessageContent>> {
         let account_id = account_id.0;
         context.require_account_access(account_id)?;
-        Ok(Json(retrieve_email_content(account_id, id.0).await?))
+        Ok(Json(retrieve_email_content(account_id, message_id.0).await?))
     }
 
     /// Fetches the full content of a specific email for the given account.
@@ -152,18 +152,18 @@ impl MessageApi {
     async fn download_message(
         &self,
         account_id: Path<u64>,
-        id: Query<u64>,
+        message_id: Query<u64>,
         context: ClientContext,
     ) -> ApiResult<Attachment<Body>> {
         let account_id = account_id.0;
         AccountModel::check_account_exists(account_id).await?;
         context.require_account_access(account_id)?;
-        let id = id.0;
-        let reader = EML_INDEX_MANAGER.get_reader(account_id, id).await?;
+        let message_id = message_id.0;
+        let reader = EML_INDEX_MANAGER.get_reader(account_id, message_id).await?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
             .attachment_type(AttachmentType::Attachment)
-            .filename(format!("{id}.eml"));
+            .filename(format!("{message_id}.eml"));
         Ok(attachment)
     }
 
@@ -176,17 +176,17 @@ impl MessageApi {
     async fn download_attachment(
         &self,
         account_id: Path<u64>,
-        id: Query<u64>,
+        message_id: Query<u64>,
         name: Query<String>,
         context: ClientContext,
     ) -> ApiResult<Attachment<Body>> {
         let account_id = account_id.0;
         AccountModel::check_account_exists(account_id).await?;
         context.require_account_access(account_id)?;
-        let email_id = id.0;
+        let message_id = message_id.0;
         let name = name.0.trim();
         let reader = EML_INDEX_MANAGER
-            .get_attachment(account_id, email_id, name)
+            .get_attachment(account_id, message_id, name)
             .await?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
