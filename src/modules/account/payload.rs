@@ -37,7 +37,7 @@ pub struct AccountCreateRequest {
     pub account_type: AccountType,
     #[oai(validator(minimum(value = "100")))]
     pub folder_limit: Option<u32>,
-    #[oai(validator(minimum(value = "10"), maximum(value = "480")))]
+    #[oai(validator(minimum(value = "10")))]
     pub sync_interval_min: Option<i64>,
     #[oai(validator(minimum(value = "30"), maximum(value = "200")))]
     pub sync_batch_size: Option<u32>,
@@ -143,7 +143,7 @@ pub struct AccountUpdateRequest {
     /// Modified folders will be automatically synced on the next update.
     pub sync_folders: Option<Vec<String>>,
     /// Incremental sync interval (seconds)
-    #[oai(validator(minimum(value = "10"), maximum(value = "480")))]
+    #[oai(validator(minimum(value = "10")))]
     pub sync_interval_min: Option<i64>,
     #[oai(validator(minimum(value = "30"), maximum(value = "200")))]
     pub sync_batch_size: Option<u32>,
