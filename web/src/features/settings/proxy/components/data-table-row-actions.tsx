@@ -30,8 +30,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useProxyContext } from '../context'
-import { Proxy } from '../data/schema'
 import { useTranslation } from 'react-i18next'
+import { Proxy } from '@/api/system/api'
+
 
 interface DataTableRowActionsProps {
   row: Row<Proxy>

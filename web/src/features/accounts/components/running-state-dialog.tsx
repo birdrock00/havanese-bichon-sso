@@ -52,6 +52,7 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
     retry: 0,
     refetchOnWindowFocus: false,
     refetchInterval: 5000,
+    enabled: open && !!currentRow.id && currentRow.account_type != "NoSync",
   })
 
   const calculateDuration = (start?: number, end?: number) => {

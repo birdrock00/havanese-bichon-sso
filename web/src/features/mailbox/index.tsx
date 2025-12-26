@@ -34,7 +34,7 @@ export default function Mailboxes() {
         <>
             {/* ===== Top Heading ===== */}
             <FixedHeader />
-            <Main higher>
+            <Main>
                 <Mail
                     defaultLayout={defaultLayout}
                     defaultCollapsed={defaultCollapsed}

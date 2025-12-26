@@ -16,35 +16,56 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import { LoginResult } from "@/api/users/api";
 
-const ACCESS_TOKEN_KEY = 'f4d3e92d7b1241a8a0b2e7cdb5c5d19d';
 
-export const setAccessToken = (token: string) => {
-  const data = {
-    accessToken: token,
-    expiresAt: Date.now() + 5 * 24 * 60 * 60 * 1000, // 5 days in milliseconds
-  };
-  sessionStorage.setItem(ACCESS_TOKEN_KEY, JSON.stringify(data));
-};
+const WEBUITOKEN = 'f4d3e92d7b1241a8a0b3e7cdb5c5d19d';
 
-export const getAccessToken = (): string => {
-  const item = sessionStorage.getItem(ACCESS_TOKEN_KEY);
-  if (item) {
-    try {
-      const data = JSON.parse(item);
-      if (Date.now() < data.expiresAt) {
-        return data.accessToken;
-      } else {
-        resetAccessToken(); // Clear the expired token
-      }
-    } catch (error) {
-      console.error('Error parsing access token:', error);
-      resetAccessToken(); // Clear invalid data
-    }
+export interface StoredToken {
+  accessToken: string;
+}
+
+export const setToken = (result: LoginResult) => {
+  if (!result.success || !result.access_token) {
+    console.error("Invalid login result");
+    return;
   }
-  return '';
+
+  const data: StoredToken = {
+    accessToken: result.access_token,
+  };
+
+  localStorage.setItem(WEBUITOKEN, JSON.stringify(data));
 };
 
-export const resetAccessToken = () => {
-  sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+
+export const updateToken = (newToken: string) => {
+  const item = localStorage.getItem(WEBUITOKEN);
+  if (!item) return;
+
+  try {
+    const data: StoredToken = JSON.parse(item);
+    data.accessToken = newToken;
+    localStorage.setItem(WEBUITOKEN, JSON.stringify(data));
+  } catch (error) {
+    console.error("Error updating access token:", error);
+    resetToken();
+  }
+};
+
+export const getToken = (): StoredToken | null => {
+  const item = localStorage.getItem(WEBUITOKEN);
+  if (!item) return null;
+
+  try {
+    return JSON.parse(item) as StoredToken;
+  } catch (error) {
+    console.error("Error parsing access token:", error);
+    resetToken();
+    return null;
+  }
+};
+
+export const resetToken = () => {
+  localStorage.removeItem(WEBUITOKEN);
 };

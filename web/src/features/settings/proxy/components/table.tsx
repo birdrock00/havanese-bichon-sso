@@ -41,10 +41,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Proxy } from '../data/schema'
 import { DataTablePagination } from './data-table-pagination'
 import { DataTableToolbar } from './data-table-toolbar'
 import { useTranslation } from 'react-i18next'
+import { Proxy } from '@/api/system/api'
+
 
 declare module '@tanstack/react-table' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars

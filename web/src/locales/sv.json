@@ -3,6 +3,7 @@
         "submit": "Skicka",
         "cancel": "Avbryt",
         "save": "Spara",
+        "save_changes": "Spara ändringar",
         "delete": "Ta bort",
         "edit": "Redigera",
         "search": "Sök",
@@ -17,30 +18,36 @@
         "ok": "OK",
         "loading": "Laddar...",
         "empty": "Tom",
-        "noData": "Inga data",
+        "noData": "Ingen data",
         "table": {
-            "noResults": "Inga resultat hittades"
+            "noResults": "Inga resultat."
         },
-        "failed": "misslyckades",
+        "failed": "Misslyckades",
         "notFound": "Hittades inte",
         "back": "Tillbaka",
         "goBack": "Gå tillbaka",
-        "backToHome": "Tillbaka till startsidan",
+        "backToHome": "Tillbaka till start",
         "tryAgain": "Försök igen",
         "more": "Mer",
         "actions": "Åtgärder",
-        "filter": "Filter",
+        "filter": "Filtrera",
         "reset": "Återställ",
         "clear": "Rensa",
         "error": "Fel",
-        "apply": "Verkställ",
+        "apply": "Använd",
         "select": "Välj",
         "selectAll": "Välj alla",
         "deselectAll": "Avmarkera alla",
         "all": "Alla",
         "none": "Ingen",
-        "showLess": "visa mindre",
-        "showMore": "visa mer..."
+        "showLess": "Visa mindre",
+        "showMore": "Visa mer...",
+        "project_description": "Bichon är ett open-source-projekt.",
+        "view_on_github_button": "Visa på GitHub",
+        "op_failed": "Åtgärden misslyckades",
+        "na": "Saknas",
+        "retry": "Försök igen",
+        "deleting": "Tar bort..."
     },
     "navigation": {
         "home": "Hem",
@@ -53,7 +60,8 @@
         "apiDocs": "API-dokumentation",
         "general": "Allmänt",
         "auth": "Autentisering",
-        "other": "Övrigt"
+        "other": "Övrigt",
+        "users": "Systemanvändare"
     },
     "auth": {
         "welcome": "Välkommen till Bichon",
@@ -130,6 +138,30 @@
         "systemVersion": "Systemversion"
     },
     "accounts": {
+        "access_control": {
+            "title": "Tilldelning av kontotillgång",
+            "description": "Tilldela roller och auktoriserade användare till {{email}}",
+            "role_label": "Tillgångsroll",
+            "role_placeholder": "Välj en roll",
+            "role_loading": "Lassar roller...",
+            "user_label": "Välj auktoriserade användare",
+            "user_search_placeholder": "Sök efter användarnamn eller e-post...",
+            "user_empty": "Inga användare hittades",
+            "user_selected_count": "Valda: {{count}} användare",
+            "buttons": {
+                "cancel": "Avbryt",
+                "save": "Spara tilldelning"
+            },
+            "validation": {
+                "user_required": "Välj minst en användare",
+                "role_required": "Välj en roll att tilldela"
+            },
+            "toast": {
+                "success_title": "Tilldelning lyckades",
+                "success_desc": "Behörigheter har tilldelats {{email}}",
+                "failed_title": "Tilldelning misslyckades"
+            }
+        },
         "title": "E-postkonton",
         "description": "Hantera och konfigurera dina e-postkonton.",
         "addImap": "Lägg till IMAP",
@@ -423,6 +455,25 @@
             "noSubject": "(Inget ämne)",
             "loadingMore": "Laddar...",
             "loadMore": "Ladda mer"
+        },
+        "bulkActions": {
+            "ariaLabel": "{{count}} meddelanden valda. Verktygsfält",
+            "delete": "Ta bort",
+            "deleteDesc": "Ta bort valda meddelanden",
+            "selected": "{{count}} valda",
+            "clear": "Rensa val"
+        },
+        "delete": {
+            "title": "Ta bort meddelanden",
+            "confirmPrefix": "Är du säker på att du vill ta bort",
+            "countLabel": "{{count}} meddelanden?",
+            "confirmDetail": "Denna åtgärd kan inte ångras.",
+            "confirmButton": "Ta bort",
+            "warningTitle": "Varning",
+            "warningDesc": "Meddelanden raderas permanent.",
+            "successTitle": "Borttagna",
+            "successDesc": "Meddelandena har tagits bort.",
+            "errorTitle": "Borttagning misslyckades"
         }
     },
     "mail": {
@@ -705,7 +756,60 @@
         "pleaseUseAnIpAddressForBetterReliability": "Vänligen använd en IP-adress (t.ex. 127.0.0.1) istället för ett värdnamn eller domän för bättre tillförlitlighet.",
         "adding": "Lägger till...",
         "yourProxyHasBeenSuccessfully": "Din proxy har {{action}}.",
-        "proxyUpdateOrAddFailed": "{{action}} misslyckades, försök igen senare"
+        "proxyUpdateOrAddFailed": "{{action}} misslyckades, försök igen senare",
+        "sidebar": {
+            "profile": "Profil",
+            "apiTokens": "API-tokens",
+            "proxy": "Nätverksproxy",
+            "configurations": "Systemkonfigurationer"
+        },
+        "profile": {
+            "loadError": "Det gick inte att läsa in användarinformation.",
+            "uploadTitle": "Ladda upp avatar",
+            "maxSize": "Upp till {{size}}",
+            "avatarAlt": "Avatar",
+            "removeAvatar": "Ta bort avatar",
+            "uploadError": "Fel vid filuppladdning",
+            "field": {
+                "username": "Användarnamn",
+                "email": "E-post",
+                "password": "Lösenord"
+            },
+            "placeholder": {
+                "password_keep": "Lämna tomt för att behålla nuvarande lösenord"
+            },
+            "button": {
+                "update_profile": "Uppdatera profil",
+                "permissions": "Behörigheter",
+                "view_global_permissions": "Visa globala behörigheter"
+            },
+            "section": {
+                "roles": "Roller",
+                "accounts": "{{count}} länkade konton"
+            },
+            "account": {
+                "id": "Konto-ID: {{id}}"
+            },
+            "toast": {
+                "updated": "Profilen har uppdaterats",
+                "update_failed": "Misslyckades med att uppdatera profilen"
+            },
+            "validation": {
+                "username": {
+                    "required": "Användarnamn krävs",
+                    "min": "Användarnamnet måste vara minst 5 tecken",
+                    "max": "Användarnamnet får vara högst 32 tecken"
+                },
+                "email": {
+                    "required": "E-post krävs",
+                    "invalid": "Ange en giltig e-postadress"
+                },
+                "password": {
+                    "min": "Lösenordet måste vara minst 8 tecken",
+                    "max": "Lösenordet får vara högst 32 tecken"
+                }
+            }
+        }
     },
     "apiDocs": {
         "choosePreferredType": "Välj föredragen typ av API-dokumentation",
@@ -765,7 +869,8 @@
         "folderLimitMustBeNumber": "Mappgräns måste vara ett tal",
         "folderLimitMustBeAtLeast100": "Mappgräns måste vara minst 100",
         "incrementalSyncMustBeNumber": "Intervall för inkrementell synkronisering måste vara ett tal",
-        "incrementalSyncMustBeAtLeast10": "Intervall för inkrementell synkronisering måste vara minst 10 minuter"
+        "incrementalSyncMustBeAtLeast10": "Intervall för inkrementell synkronisering måste vara minst 10 minuter",
+        "pleaseEnterUsernameOrEmail": "Vänligen ange ditt användarnamn eller din e-postadress"
     },
     "table": {
         "noResults": "Inga resultat hittades",
@@ -780,7 +885,17 @@
         "desc": "Fallande",
         "hide": "Dölj",
         "edit": "Redigera",
-        "delete": "Ta bort"
+        "delete": "Ta bort",
+        "pagination": {
+            "selected": "{{selected}} av {{total}} rader valda.",
+            "fixed_page_size": "{{size}} rader per sida.",
+            "rows_per_page": "Rader per sida",
+            "page_info": "Sida {{page}} av {{total}}",
+            "first": "Första sidan",
+            "previous": "Föregående sida",
+            "next": "Nästa sida",
+            "last": "Sista sidan"
+        }
     },
     "proxyDelete": {
         "title": "Ta bort Proxy",
@@ -797,5 +912,463 @@
         "warningTitle": "Varning!",
         "warningDesc": "Vänligen var försiktig, denna åtgärd kan inte ångras.",
         "deleteBtn": "Ta bort"
+    },
+    "systemConfig": {
+        "pageTitle": "Systemkonfigurationer",
+        "pageDescription": "Dessa parametrar initieras via CLI-flaggor eller miljövariabler. De är skrivskyddade.",
+        "status": {
+            "enabled": "Aktiverad",
+            "disabled": "Inaktiverad",
+            "configured": "Konfigurerad",
+            "missing": "Saknas",
+            "auto": "Auto",
+            "notSet": "Ej inställd"
+        },
+        "sections": {
+            "network": {
+                "title": "Nätverk",
+                "desc": "HTTP och offentlig åtkomst"
+            },
+            "cors": {
+                "title": "CORS",
+                "desc": "Åtkomstregler för cross-origin"
+            },
+            "logging": {
+                "title": "Loggning",
+                "desc": "Loggutmatning"
+            },
+            "storage": {
+                "title": "Lagring & Cache",
+                "desc": "Databasvägar och gränser"
+            },
+            "security": {
+                "title": "Säkerhet",
+                "desc": "Autentisering & kryptering"
+            },
+            "performance": {
+                "title": "Prestanda",
+                "desc": "Samtidighet & komprimering"
+            }
+        }
+    },
+    "apiTokens": {
+        "page": {
+            "loadError": "Misslyckades med att ladda API-tokens.",
+            "emptyTitle": "Inga API-tokens",
+            "emptyDescription": "Du har inte skapat några API-tokens än. Klicka nedan för att skapa en.",
+            "addBtn": "Lägg till token"
+        },
+        "list": {
+            "unnamedToken": "Namnlös token",
+            "statusActive": "Aktiv",
+            "statusExpired": "Utgången",
+            "neverExpires": "Går aldrig ut",
+            "expiresOnShort": "Går ut {{date}}",
+            "tokenLabel": "Token",
+            "createdLabel": "Skapad",
+            "lastUsedLabel": "Senast använd",
+            "expiresOnLabel": "Går ut den",
+            "neverUsed": "Aldrig",
+            "neverLabel": "Aldrig",
+            "deleteBtn": "Ta bort token"
+        },
+        "dialog": {
+            "createTitle": "Skapa åtkomsttoken",
+            "editTitle": "Redigera åtkomsttoken",
+            "description": "Klicka på spara när du är klar.",
+            "save": "Spara",
+            "saveChanges": "Spara ändringar"
+        },
+        "deleteDialog": {
+            "title": "Ta bort åtkomsttoken?",
+            "description": "Denna åtgärd kan inte ångras. Applikationer som använder denna token kommer omedelbart att förlora åtkomst.",
+            "cancel": "Avbryt",
+            "confirm": "Ta bort",
+            "deleting": "Tar bort..."
+        },
+        "form": {
+            "nameLabel": "Namn",
+            "namePlaceholder": "Ge denna token ett kort namn",
+            "nameDescription": "Valfritt · Max 32 tecken",
+            "expirationLabel": "Giltighetstid",
+            "expirationPlaceholder": "Välj utgångstid",
+            "expirationDescription": "Tokens går ut automatiskt efter den valda tiden.",
+            "never": "Aldrig",
+            "1day": "1 dag",
+            "7days": "7 dagar",
+            "30days": "30 dagar",
+            "errorMax": "Max 32 tecken",
+            "errorNumber": "Måste vara ett nummer",
+            "errorInt": "Måste vara ett heltal",
+            "errorPositive": "Måste vara större än 0"
+        },
+        "notifications": {
+            "createSuccess": "Åtkomsttoken skapad",
+            "createSuccessDesc": "Åtkomsttoken har skapats framgångsrikt.",
+            "updateSuccess": "Åtkomsttoken uppdaterad",
+            "updateSuccessDesc": "Åtkomsttoken har uppdaterats framgångsrikt.",
+            "createFailed": "Kunde inte skapa",
+            "updateFailed": "Kunde inte uppdatera",
+            "deleteSuccess": "Token borttagen",
+            "deleteFailed": "Kunde inte ta bort token",
+            "copied": "Kopierad till urklipp",
+            "genericError": "Åtgärden misslyckades. Försök igen.",
+            "close": "Stäng",
+            "tryAgain": "Försök igen"
+        }
+    },
+    "permission": {
+        "scope": {
+            "global": "Global",
+            "account": "Konto #{{id}}"
+        },
+        "dialog": {
+            "global_title": "Globala behörigheter",
+            "account_title": "Kontobehörigheter",
+            "global_description": "Systemomfattande behörigheter som tilldelats denna användare.",
+            "account_description": "Behörigheter som är begränsade till det valda kontot."
+        },
+        "category": {
+            "system_identity": "System och identitet",
+            "global_data": "Globala data (Administratör)",
+            "account": "Kontobehörigheter"
+        },
+        "system": {
+            "access": "Grundläggande systemåtkomst",
+            "root": "Fullständig systemkontroll"
+        },
+        "user": {
+            "manage": "Hantera alla användare",
+            "view": "Visa grundläggande användarnamn"
+        },
+        "token": {
+            "manage": "Hantera åtkomsttoken"
+        },
+        "account": {
+            "create": "Skapa e-postkonton",
+            "manage": "Hantera tilldelade konton",
+            "manage_all": "Hantera alla kontoinställningar",
+            "read_details": "Visa kontodetaljer"
+        },
+        "data": {
+            "read": "Läsa tilldelad e-postdata",
+            "read_all": "Läsa all e-postdata",
+            "manage": "Hantera tilldelad e-postmetadata",
+            "manage_all": "Hantera all e-postmetadata",
+            "raw_download": "Ladda ner tilldelade råa e-postmeddelanden",
+            "raw_download_all": "Ladda ner alla råa e-postmeddelanden",
+            "delete": "Ta bort tilldelade e-postmeddelanden",
+            "delete_all": "Ta bort e-postmeddelanden från alla konton",
+            "export_batch": "Batch-exportera tilldelad data",
+            "export_batch_all": "Batch-exportera all data",
+            "import_batch": "Batch-importera e-postdata"
+        }
+    },
+    "users": {
+        "columns": {
+            "id": "ID",
+            "avatar": "Avatar",
+            "username": "Användarnamn",
+            "email": "E-postadress",
+            "roles": "Roller och behörigheter",
+            "created_at": "Skapad",
+            "updated_at": "Uppdaterad",
+            "actions": "Åtgärder"
+        },
+        "buttons": {
+            "add": "Lägg till användare",
+            "add_new": "Lägg till ny användare"
+        },
+        "empty": {
+            "title": "Inga användare hittades",
+            "description": "Klicka på knappen nedan för att lägga till din första användare."
+        },
+        "nav": {
+            "users": "Användare",
+            "roles": "Roller",
+            "api_tokens": "API-nycklar"
+        },
+        "api_tokens": {
+            "empty": {
+                "title": "Inga API-nycklar hittades",
+                "description": "Inga API-tokens har genererats i systemet än."
+            },
+            "button": {
+                "generate": "Skapa ny nyckel"
+            },
+            "toolbar": {
+                "search_placeholder": "Sök efter namn, ägare eller nyckel..."
+            },
+            "table": {
+                "name": "Namn",
+                "type": "Typ",
+                "last_used": "Senast använd",
+                "expires_at": "Går ut den",
+                "owner": "Ägare",
+                "created": "Skapad",
+                "api_key": "API-nyckel",
+                "web_ui": "Webbgränssnitt",
+                "never": "Aldrig",
+                "permanent": "Permanent",
+                "expired": "Gått ut",
+                "unnamed": "Namnlös nyckel"
+            },
+            "unnamed": "Namnlös nyckel",
+            "delete": {
+                "title": "Ta bort API-nyckel",
+                "desc": "Du håller på att permanent ta bort denna API-nyckel",
+                "prefix": "Prefix för nyckel",
+                "irreversible": "Denna åtgärd kan inte ångras. Applikationer som använder denna nyckel kommer omedelbart att förlora åtkomst.",
+                "confirm_label": "Skriv {{word}} nedan för att bekräfta:",
+                "confirm_placeholder": "Skriv \"{{word}}\" för att bekräfta",
+                "warning_title": "Varning",
+                "warning_desc": "Skript eller tjänster som använder denna nyckel kommer att sluta fungera. Se till att du har uppdaterat dina system.",
+                "confirm_button": "Ta bort nyckel",
+                "deleting": "Tar bort..."
+            },
+            "toast": {
+                "deleted_title": "API-nyckel borttagen",
+                "deleted_desc": "Nyckeln \"{{name}}\" har tagits bort.",
+                "delete_failed_title": "Borttagning misslyckades",
+                "delete_failed": "Kunde inte ta bort nyckeln, försök igen."
+            }
+        },
+        "tokens": {
+            "schema": {
+                "name_max": "Max 32 tecken",
+                "expire_number": "Måste vara ett nummer",
+                "expire_int": "Måste vara ett heltal",
+                "expire_positive": "Måste vara större än 0"
+            },
+            "toast": {
+                "update_success_title": "Åtkomstnyckel uppdaterad",
+                "update_success_desc": "Åtkomstnyckeln har uppdaterats.",
+                "create_success_title": "Åtkomstnyckel skapad",
+                "create_success_desc": "Åtkomstnyckeln har skapats.",
+                "update_failed_title": "Uppdatering misslyckades",
+                "create_failed_title": "Skapande misslyckades"
+            },
+            "error": {
+                "fallback": "Åtgärden misslyckades, försök igen senare."
+            },
+            "dialog": {
+                "edit_title": "Redigera åtkomstnyckel",
+                "create_title": "Skapa åtkomstnyckel",
+                "description": "Klicka på spara när du är klar."
+            },
+            "fields": {
+                "name_label": "Namn",
+                "name_placeholder": "Ge nyckeln ett kort namn",
+                "name_hint": "Valfritt · Max 32 tecken",
+                "expire_label": "Utgångsdatum",
+                "expire_placeholder": "Välj utgångsdatum",
+                "expire_hint": "Nyckeln går ut automatiskt efter den valda tiden."
+            },
+            "expire_options": {
+                "never": "Går aldrig ut",
+                "1_day": "1 dag",
+                "7_days": "7 dagar",
+                "30_days": "30 dagar"
+            }
+        },
+        "tokens_action": {
+            "dialog": {
+                "title": "API-nycklar",
+                "description": "Hantera API-nycklar för denna användare."
+            },
+            "empty": {
+                "title": "Inga API-nycklar",
+                "description": "Användaren har inga API-nycklar för tillfället."
+            },
+            "buttons": {
+                "add": "Lägg till nyckel"
+            },
+            "list": {
+                "unnamed_token": "Namnlös nyckel",
+                "status_expired": "Gått ut",
+                "status_active": "Aktiv",
+                "expires_on_brief": "Går ut {{date}}",
+                "never_expires": "Går aldrig ut",
+                "label_token": "Nyckel",
+                "label_created": "Skapad",
+                "label_last_used": "Senast använd",
+                "label_expires_at": "Går ut den",
+                "never": "Aldrig",
+                "button_delete": "Ta bort nyckel"
+            },
+            "delete_dialog": {
+                "title": "Ta bort åtkomstnyckel?",
+                "description": "Denna åtgärd kan inte ångras."
+            }
+        },
+        "actions": {
+            "schema": {
+                "account_required": "Välj ett konto",
+                "role_required": "Välj en roll",
+                "username_required": "Användarnamn krävs",
+                "username_min": "Användarnamnet måste vara minst 5 tecken",
+                "username_max": "Användarnamnet får inte överstiga 32 tecken",
+                "email_required": "E-postadress krävs",
+                "email_invalid": "Ange en giltig e-postadress",
+                "global_role_required": "Tilldela minst en global roll till användaren",
+                "description_max": "Beskrivningen får vara max 256 tecken",
+                "ip_invalid": "Ogiltig IP-adress upptäckt",
+                "password_required": "Lösenord krävs",
+                "password_min": "Lösenordet måste vara minst 8 tecken",
+                "password_max": "Lösenordet får vara max 32 tecken"
+            },
+            "toast": {
+                "updated": "Användaren uppdaterad",
+                "created": "Användaren skapad"
+            },
+            "dialog": {
+                "edit_title": "Redigera användare: {{name}}",
+                "create_title": "Skapa ny användare",
+                "subtitle": "Konfigurera identitet, åtkomstnivåer och säkerhet."
+            },
+            "tabs": {
+                "general": "Allmänt",
+                "permissions": "Kontobehörigheter",
+                "security": "Säkerhet och ACL"
+            },
+            "sections": {
+                "basic": "Basidentitet",
+                "global": "Globala behörigheter",
+                "mail_access": "E-poståtkomst",
+                "mail_access_subtitle": "Definiera vilka e-postkonton användaren kan hantera.",
+                "policy": "Policyinställningar"
+            },
+            "fields": {
+                "username": "Användarnamn",
+                "username_hint": "Unikt ID för inloggning.",
+                "email": "E-postadress",
+                "email_hint": "Primär kontakt och aviseringar.",
+                "password": "Lösenord",
+                "password_placeholder_create": "Minst 8 tecken",
+                "password_placeholder_edit": "Lämna tomt för att behålla nuvarande",
+                "password_hint_create": "Säkert lösenord för nyskapad användare.",
+                "password_hint_edit": "Ange endast nytt lösenord om du vill byta.",
+                "global_roles_hint": "Tilldela systembehörigheter.",
+                "description": "Beskrivning (valfritt)",
+                "description_placeholder": "Lägg till anteckningar...",
+                "description_hint": "Interna anteckningar (max 256 tecken).",
+                "select_account": "Välj konto",
+                "assign_role": "Tilldela roll",
+                "ip_whitelist": "Vitlista IP",
+                "ip_whitelist_hint": "Begränsa inloggning till dessa IP-adresser (en per rad).",
+                "rate_quota": "Hastighetsbegränsning",
+                "burst_interval": "Burst-intervall (sek)"
+            },
+            "buttons": {
+                "add_account": "Lägg till konto",
+                "update": "Uppdatera användare",
+                "create": "Skapa användare"
+            },
+            "states": {
+                "full_access": "Full åtkomst",
+                "full_access_desc": "Systemadministratörer har automatiskt åtkomst till alla konton.",
+                "no_accounts": "Inga specifika konton tilldelade.",
+                "security_disabled": "Säkerhetspolicyer är inaktiverade."
+            },
+            "api_tokens": "API-nycklar",
+            "placeholder": {
+                "filter": "Sök användare..."
+            },
+            "delete": {
+                "title": "Ta bort användare",
+                "confirm_msg": "Du håller på att permanent ta bort användaren {{name}} (ID: {{id}}).",
+                "irreversible": "Denna åtgärd kan inte ångras.",
+                "input_label": "Skriv användar-ID nedan för att bekräfta:",
+                "placeholder": "Skriv \"{{id}}\" för att bekräfta",
+                "alert_title": "Varning: Permanent åtgärd.",
+                "alert_desc": "Användaren och all tillhörande data kommer att raderas.",
+                "button_confirm": "Ta bort användare",
+                "button_deleting": "Tar bort...",
+                "toast": {
+                    "success_title": "Användare borttagen",
+                    "success_desc": "Användaren \"{{name}}\" har tagits bort.",
+                    "failed_title": "Borttagning misslyckades",
+                    "failed_fallback": "Kunde inte ta bort användaren."
+                }
+            }
+        }
+    },
+    "roles": {
+        "title": {
+            "create": "Skapa ny roll",
+            "edit": "Redigera roll: {{name}}"
+        },
+        "description_hint": "Definiera åtkomstomfång och behörigheter.",
+        "form": {
+            "name_label": "Rollnamn",
+            "type_label": "Rolltyp",
+            "desc_label": "Beskrivning",
+            "matrix_label": "{{type}} Behörighetsmatris",
+            "builtin_badge": "Inbyggd roll",
+            "builtin_desc": "Denna roll är fördefinierad och skrivskyddad."
+        },
+        "types": {
+            "Global": "Global",
+            "Account": "Konto"
+        },
+        "categories": {
+            "identity": "Identitet och hantering",
+            "global_data": "Global dataåtkomst",
+            "account_resource": "Kontoresursåtkomst"
+        },
+        "actions": {
+            "cancel": "Avbryt",
+            "submit_create": "Skapa roll",
+            "submit_update": "Uppdatera roll",
+            "success_create": "Roll skapad",
+            "success_update": "Roll uppdaterad",
+            "failed": "Åtgärden misslyckades",
+            "close": "Stäng",
+            "retry": "Försök igen",
+            "add": "Lägg till roll"
+        },
+        "validation": {
+            "name_required": "Rollnamn krävs",
+            "perm_required": "Välj minst en behörighet"
+        },
+        "columns": {
+            "id": "ID",
+            "name": "Namn",
+            "role_type": "Rolltyp",
+            "permissions": "Behörigheter",
+            "created_at": "Skapad",
+            "updated_at": "Uppdaterad"
+        },
+        "placeholder": {
+            "filter": "Sök roller..."
+        },
+        "delete": {
+            "dialog_title": "Ta bort roll",
+            "warning_text": "Du håller på att permanent ta bort rollen {{name}} (ID: {{id}}).",
+            "irreversible": "Denna åtgärd kan inte ångras.",
+            "confirm_label": "Skriv roll-ID för att bekräfta:",
+            "placeholder": "Skriv \"{{id}}\"",
+            "alert_title": "Varning: Permanent åtgärd.",
+            "alert_desc": "Att ta bort denna roll tar bort den från alla tilldelade användare.",
+            "confirm_btn": "Ta bort roll",
+            "deleting": "Tar bort...",
+            "success_title": "Roll borttagen",
+            "success_desc": "Rollen \"{{name}}\" har tagits bort.",
+            "error_title": "Borttagning misslyckades",
+            "error_fallback": "Kunde inte ta bort rollen."
+        },
+        "details": {
+            "title": "Rollbehörigheter: {{name}}",
+            "unknown": "Okänd roll",
+            "role_badge": "{{type}} Roll",
+            "desc_global": "Global hantering och systemåtkomst.",
+            "desc_account": "Åtkomst till enskilda konton.",
+            "close_btn": "Stäng detaljer",
+            "view_permissions": "Visa behörigheter"
+        },
+        "empty": {
+            "title": "Inga roller hittades",
+            "desc": "Du har inte skapat några anpassade roller än."
+        }
     }
 }

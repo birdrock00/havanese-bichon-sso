@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use poem::http::StatusCode;
 use poem_openapi::Enum;
 
@@ -34,12 +33,14 @@ pub enum ErrorCode {
     // Authentication and authorization errors (20000–20999)
     PermissionDenied = 20000,
     AccountDisabled = 20010,
+    Forbidden = 20020,
     OAuth2ItemDisabled = 20050,
     MissingRefreshToken = 20060,
 
     // Resource errors (30000–30999)
     ResourceNotFound = 30000,
     TooManyRequest = 30020,
+    AlreadyExists = 30030,
 
     // Network connection errors (40000–40999)
     NetworkError = 40000,
@@ -64,11 +65,14 @@ impl ErrorCode {
             | ErrorCode::MissingConfiguration
             | ErrorCode::Incompatible => StatusCode::BAD_REQUEST,
             ErrorCode::PermissionDenied => StatusCode::UNAUTHORIZED,
-            ErrorCode::AccountDisabled | ErrorCode::OAuth2ItemDisabled => StatusCode::FORBIDDEN,
+            ErrorCode::AccountDisabled | ErrorCode::OAuth2ItemDisabled | ErrorCode::Forbidden => {
+                StatusCode::FORBIDDEN
+            }
             ErrorCode::ResourceNotFound => StatusCode::NOT_FOUND,
             ErrorCode::RequestTimeout => StatusCode::REQUEST_TIMEOUT,
             ErrorCode::PayloadTooLarge => StatusCode::PAYLOAD_TOO_LARGE,
             ErrorCode::TooManyRequest => StatusCode::TOO_MANY_REQUESTS,
+            ErrorCode::AlreadyExists => StatusCode::CONFLICT,
             ErrorCode::InternalError
             | ErrorCode::AutoconfigFetchFailed
             | ErrorCode::ImapCommandFailed

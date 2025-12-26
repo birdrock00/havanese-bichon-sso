@@ -144,6 +144,15 @@ pub struct Settings {
     )]
     pub bichon_encrypt_password_file: Option<String>,
 
+    /// WebUI token expiration time in seconds (default: 7 days)
+    #[clap(
+        long,
+        default_value = "168",
+        env,
+        help = "Set the WebUI token expiration time in hours"
+    )]
+    pub bichon_webui_token_expiration_hours: u32,
+
     #[clap(
         long,
         env,
@@ -179,19 +188,6 @@ pub struct Settings {
         help = "Set the cache size for envelope database in bytes"
     )]
     pub bichon_envelope_cache_size: Option<usize>,
-
-    /// Enables or disables the access token mechanism for HTTP endpoints.
-    ///
-    /// When set to `true`, HTTP requests will be subject to access token validation.
-    /// If the `Authorization` header is missing or the token is invalid, the service will return a 401 Unauthorized response.
-    /// When set to `false`, access token validation will be skipped.
-    #[clap(
-        long,
-        default_value = "false",
-        env,
-        help = "Enables or disables the access token mechanism for HTTP endpoints."
-    )]
-    pub bichon_enable_access_token: bool,
 
     /// Enables or disables HTTPS for REST API endpoints.
     ///

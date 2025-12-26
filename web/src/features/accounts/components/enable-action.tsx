@@ -28,6 +28,7 @@ import { update_account } from '@/api/account/api'
 import { toast } from '@/hooks/use-toast'
 import { AxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'
+import { useCurrentUser } from '@/hooks/use-current-user'
 
 interface DataTableRowActionsProps {
   row: Row<AccountModel>
@@ -37,7 +38,10 @@ export function EnableAction({ row }: DataTableRowActionsProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const { require_any_permission } = useCurrentUser()
 
+
+  const hasPermission = require_any_permission(['system:root', 'account:manage'], row.original.id);
   const updateMutation = useMutation({
     mutationFn: (enabled: boolean) =>
       update_account(row.original.id, { enabled }),
@@ -74,7 +78,7 @@ export function EnableAction({ row }: DataTableRowActionsProps) {
       <Switch
         checked={row.original.enabled}
         onCheckedChange={() => setOpen(true)}
-        disabled={updateMutation.isPending}
+        disabled={!hasPermission || updateMutation.isPending}
       />
       <ConfirmDialog
         open={open}

@@ -16,14 +16,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::collections::BTreeSet;
-
 use crate::modules::account::entity::ImapConfig;
 use crate::modules::account::migration::{AccountModel, AccountType};
 use crate::modules::account::since::DateSince;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::error::BichonResult;
-use crate::modules::token::AccountInfo;
 use crate::{raise_error, validate_email};
 use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
@@ -47,7 +44,7 @@ pub struct AccountCreateRequest {
 }
 
 impl AccountCreateRequest {
-    pub fn create_entity(self) -> BichonResult<AccountModel> {
+    pub fn create_entity(self, user_id: u64) -> BichonResult<AccountModel> {
         if let Some(date_since) = self.date_since.as_ref() {
             date_since.validate()?;
         }
@@ -71,7 +68,7 @@ impl AccountCreateRequest {
             }
             AccountType::NoSync => {}
         }
-        Ok(AccountModel::new(self)?)
+        Ok(AccountModel::new(user_id, self)?)
     }
 
     fn validate_request(imap: &ImapConfig, email: &str) -> BichonResult<()> {
@@ -167,11 +164,11 @@ pub struct MinimalAccount {
 
 pub fn filter_accessible_accounts<'a>(
     all_accounts: &'a [MinimalAccount],
-    allowed: &BTreeSet<AccountInfo>,
+    allowed: &Vec<u64>,
 ) -> Vec<MinimalAccount> {
     all_accounts
         .iter()
-        .filter(|acct| allowed.iter().any(|a| a.id == acct.id))
+        .filter(|acct| allowed.contains(&acct.id))
         .cloned()
         .collect()
 }

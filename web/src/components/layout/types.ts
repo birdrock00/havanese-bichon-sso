@@ -23,6 +23,7 @@ interface BaseNavItem {
   title: string
   badge?: string
   icon?: React.ElementType
+  visible?: boolean
 }
 
 type NavLink = BaseNavItem & {
@@ -31,7 +32,7 @@ type NavLink = BaseNavItem & {
 }
 
 type NavCollapsible = BaseNavItem & {
-  items: (BaseNavItem & { url: LinkProps['to'] })[]
+  items: (BaseNavItem & { url: LinkProps['to']; visible?: boolean })[]
   url?: never
 }
 

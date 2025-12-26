@@ -58,6 +58,7 @@
     "i18next": "^25.6.3",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.468.0",
+    "radix-ui": "^1.4.3",
     "react": "^18.3.1",
     "react-ace": "^13.0.0",
     "react-day-picker": "8.10.1",

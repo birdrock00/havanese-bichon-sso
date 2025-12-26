@@ -103,3 +103,8 @@ export const autoconfig = async (email: string) => {
     const response = await axiosInstance.get<AutoConfigResult>(`/api/v1/autoconfig/${email}`);
     return response.data;
 };
+
+export const access_assign = async (data: Record<string, any>) => {
+    const response = await axiosInstance.post("/api/v1/accounts/access/assignments", data);
+    return response.data;
+};

@@ -18,7 +18,6 @@
 
 
 import axiosInstance from "@/api/axiosInstance";
-import { Proxy } from "@/features/settings/proxy/data/schema";
 
 export interface Release {
     tag_name: string;
@@ -73,6 +72,34 @@ export interface LargestEmail {
     size_bytes: number;     // Email size in bytes
 }
 
+export interface Proxy {
+    id: number;
+    url: string;
+    created_at: number;
+    updated_at: number;
+}
+
+export type ServerConfigurations = {
+    bichon_log_level: string
+    bichon_http_port: number
+    bichon_bind_ip?: string | null
+    bichon_public_url: string
+    bichon_cors_origins?: string[] | null
+    bichon_cors_max_age: number
+    bichon_ansi_logs: boolean
+    bichon_log_to_file: boolean
+    bichon_json_logs: boolean
+    bichon_max_server_log_files: number
+    bichon_encrypt_password_set: boolean
+    bichon_webui_token_expiration_hours: number
+    bichon_root_dir: string
+    bichon_metadata_cache_size?: number | null
+    bichon_envelope_cache_size?: number | null
+    bichon_enable_rest_https: boolean
+    bichon_http_compression_enabled: boolean
+    bichon_sync_concurrency?: number | null
+}
+
 export const get_dashboard_stats = async () => {
     const response = await axiosInstance.get<DashboardStats>(`/api/v1/dashboard-stats`);
     return response.data;
@@ -103,5 +130,11 @@ export const add_proxy = async (url: string) => {
             "Content-Type": "text/plain",
         },
     });
+    return response.data;
+};
+
+
+export const get_system_configurations = async () => {
+    const response = await axiosInstance.get<ServerConfigurations>(`/api/v1/system-configurations`);
     return response.data;
 };

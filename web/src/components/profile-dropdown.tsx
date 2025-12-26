@@ -22,48 +22,74 @@ import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuShortcut,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { LogoutConfirmDialog } from '@/features/auth/sign-in/components/logout';
-import { resetAccessToken } from '@/stores/authStore';
-import { useNavigate } from '@tanstack/react-router';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+
+import { useCurrentUser } from '@/hooks/use-current-user';
+import useDialogState from '@/hooks/use-dialog-state';
+
+import { useMemo } from 'react';
+// import { useTranslation } from 'react-i18next';
+import { SignOutDialog } from './sign-out-dialog';
+import { Link } from '@tanstack/react-router';
 
 export function ProfileDropdown() {
-  const navigate = useNavigate()
-  const { t } = useTranslation()
-  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
+  const [open, setOpen] = useDialogState()
+  // const { t } = useTranslation()
 
-  const handleLogout = () => {
-    resetAccessToken()
-    navigate({ to: '/sign-in' })
-  }
+  const { data: user } = useCurrentUser()
 
+  const avatarSrc = useMemo(() => {
+    const base64 = user?.avatar;
+    if (!base64 || base64.length === 0) return null;
+    return `data:image/png;base64,${base64}`;
+  }, [user]);
+
+  const fallbackName = user?.username ? user.username.charAt(0).toUpperCase() : 'U';
   return (
     <>
       <DropdownMenu modal={false}>
         <DropdownMenuTrigger asChild>
-          <Button variant='ghost' className='relative h-8 w-8 rounded-full'>
-            <Avatar className='h-8 w-8'>
-              <AvatarFallback className='text-xs'>root</AvatarFallback>
+          <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+            <Avatar className="h-8 w-8">
+              {avatarSrc ? (
+                <img src={avatarSrc} alt="Avatar" className="h-full w-full object-cover" />
+              ) : (
+                <AvatarFallback className="text-xs">{fallbackName}</AvatarFallback>
+              )}
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className='w-56' align='end' forceMount>
-          <DropdownMenuItem onClick={() => setIsLogoutDialogOpen(true)}>
-            {t('auth.logout')}
-            <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
+          <DropdownMenuLabel className='font-normal'>
+            <div className='flex flex-col gap-1.5'>
+              <p className='text-sm leading-none font-medium'>{user?.username}</p>
+              <p className='text-muted-foreground text-xs leading-none'>
+                {user?.email}
+              </p>
+            </div>
+          </DropdownMenuLabel>
+
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem asChild>
+              <Link to='/settings/profile'>Profile</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to='/settings'>Settings</Link>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setOpen(true)}>
+            Sign out
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <LogoutConfirmDialog
-        open={isLogoutDialogOpen}
-        onOpenChange={setIsLogoutDialogOpen}
-        handleConfirm={handleLogout}
-      />
+      <SignOutDialog open={!!open} onOpenChange={setOpen} />
     </>
   )
 }

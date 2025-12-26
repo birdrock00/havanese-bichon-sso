@@ -16,9 +16,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use std::{fs, io, path::PathBuf};
 
+use crate::modules::error::BichonResult;
+use base64::engine::general_purpose::STANDARD;
 use base64::{engine::general_purpose, Engine};
 use rand::{rng, Rng};
 
@@ -309,4 +310,27 @@ pub fn get_total_size(path: &PathBuf) -> io::Result<u64> {
     }
 
     Ok(total_size)
+}
+
+const MAX_AVATAR_BYTES: usize = 128 * 1024;
+
+pub fn decode_avatar_bytes(base64_str: &str) -> BichonResult<Vec<u8>> {
+    let bytes = STANDARD.decode(base64_str).map_err(|e| {
+        raise_error!(
+            format!("Invalid avatar base64 encoding: {}", e),
+            ErrorCode::InvalidParameter
+        )
+    })?;
+
+    if bytes.len() > MAX_AVATAR_BYTES {
+        return Err(raise_error!(
+            format!(
+                "Avatar image exceeds maximum size ({} KB).",
+                MAX_AVATAR_BYTES / 1024
+            ),
+            ErrorCode::InvalidParameter
+        ));
+    }
+
+    Ok(bytes)
 }

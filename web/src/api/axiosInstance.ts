@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import { getAccessToken } from "@/stores/authStore";
+import { getToken } from "@/stores/authStore";
 import axios from "axios";
 
 // Create an Axios instance
@@ -36,9 +36,9 @@ const axiosInstance = axios.create({
 // Add a request interceptor to include the access token in headers
 axiosInstance.interceptors.request.use(
   (config) => {
-    const accessToken = getAccessToken(); // Retrieve access token from localStorage
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
+    const stored = getToken(); // Retrieve access token from localStorage
+    if (stored) {
+      config.headers.Authorization = `Bearer ${stored.accessToken}`;
     }
     return config;
   },

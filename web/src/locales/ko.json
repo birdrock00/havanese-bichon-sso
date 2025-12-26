@@ -3,6 +3,7 @@
         "submit": "제출",
         "cancel": "취소",
         "save": "저장",
+        "save_changes": "변경사항 저장",
         "delete": "삭제",
         "edit": "편집",
         "search": "검색",
@@ -19,7 +20,7 @@
         "empty": "비어 있음",
         "noData": "데이터 없음",
         "table": {
-            "noResults": "검색 결과 없음"
+            "noResults": "결과가 없습니다."
         },
         "failed": "실패",
         "notFound": "찾을 수 없음",
@@ -35,12 +36,18 @@
         "error": "오류",
         "apply": "적용",
         "select": "선택",
-        "selectAll": "모두 선택",
-        "deselectAll": "모두 선택 해제",
+        "selectAll": "전체 선택",
+        "deselectAll": "전체 선택 해제",
         "all": "전체",
         "none": "없음",
-        "showLess": "간단히 보기",
-        "showMore": "더 보기..."
+        "showLess": "간략히 보기",
+        "showMore": "더 보기...",
+        "project_description": "Bichon은 오픈 소스 프로젝트입니다.",
+        "view_on_github_button": "GitHub에서 보기",
+        "op_failed": "작업 실패",
+        "na": "해당 없음",
+        "retry": "재시도",
+        "deleting": "삭제 중..."
     },
     "navigation": {
         "home": "홈",
@@ -53,7 +60,8 @@
         "apiDocs": "API 문서",
         "general": "일반",
         "auth": "인증",
-        "other": "기타"
+        "other": "기타",
+        "users": "시스템 사용자"
     },
     "auth": {
         "welcome": "Bichon에 오신 것을 환영합니다",
@@ -130,6 +138,30 @@
         "systemVersion": "시스템 버전"
     },
     "accounts": {
+        "access_control": {
+            "title": "계정 액세스 할당",
+            "description": "{{email}}에 역할 및 권한 사용자를 할당합니다",
+            "role_label": "액세스 역할",
+            "role_placeholder": "역할 선택",
+            "role_loading": "역할 로드 중...",
+            "user_label": "권한 사용자 선택",
+            "user_search_placeholder": "사용자 이름 또는 이메일로 검색...",
+            "user_empty": "사용자를 찾을 수 없음",
+            "user_selected_count": "선택됨: {{count}}명",
+            "buttons": {
+                "cancel": "취소",
+                "save": "할당 저장"
+            },
+            "validation": {
+                "user_required": "최소 한 명의 사용자를 선택하세요",
+                "role_required": "할당할 역할을 선택하세요"
+            },
+            "toast": {
+                "success_title": "할당 성공",
+                "success_desc": "{{email}}에 권한이 성공적으로 할당되었습니다",
+                "failed_title": "할당 실패"
+            }
+        },
         "title": "이메일 계정",
         "description": "이메일 계정을 관리하고 구성합니다.",
         "addImap": "IMAP 계정 추가",
@@ -423,6 +455,25 @@
             "noSubject": "(제목 없음)",
             "loadingMore": "로드 중...",
             "loadMore": "더 로드"
+        },
+        "bulkActions": {
+            "ariaLabel": "{{count}}개의 메시지가 선택되었습니다. 일괄 작업 도구 모음",
+            "delete": "삭제",
+            "deleteDesc": "선택한 메시지 삭제",
+            "selected": "{{count}}개 선택됨",
+            "clear": "선택 해제"
+        },
+        "delete": {
+            "title": "메시지 삭제",
+            "confirmPrefix": "정말로",
+            "countLabel": "{{count}}개의 메시지를 삭제하시겠습니까?",
+            "confirmDetail": "이 작업은 취소할 수 없습니다.",
+            "confirmButton": "삭제",
+            "warningTitle": "경고",
+            "warningDesc": "삭제된 메시지는 영구적으로 제거되며 복구할 수 없습니다.",
+            "successTitle": "메시지 삭제 완료",
+            "successDesc": "선택한 메시지가 성공적으로 삭제되었습니다.",
+            "errorTitle": "삭제 실패"
         }
     },
     "mail": {
@@ -705,7 +756,60 @@
         "pleaseUseAnIpAddressForBetterReliability": "더 나은 안정성을 위해 호스트 이름이나 도메인 대신 IP 주소(예: 127.0.0.1)를 사용하십시오.",
         "adding": "추가 중...",
         "yourProxyHasBeenSuccessfully": "프록시가 성공적으로 {{action}}되었습니다.",
-        "proxyUpdateOrAddFailed": "{{action}}에 실패했습니다. 나중에 다시 시도하십시오"
+        "proxyUpdateOrAddFailed": "{{action}}에 실패했습니다. 나중에 다시 시도하십시오",
+        "sidebar": {
+            "profile": "프로필",
+            "apiTokens": "API 토큰",
+            "proxy": "네트워크 프록시",
+            "configurations": "시스템 설정"
+        },
+        "profile": {
+            "loadError": "사용자 정보를 불러오는 데 실패했습니다.",
+            "uploadTitle": "아바타 업로드",
+            "maxSize": "최대 {{size}}",
+            "avatarAlt": "아바타",
+            "removeAvatar": "아바타 삭제",
+            "uploadError": "파일 업로드 오류",
+            "field": {
+                "username": "사용자 이름",
+                "email": "이메일",
+                "password": "비밀번호"
+            },
+            "placeholder": {
+                "password_keep": "비워두면 현재 비밀번호가 유지됩니다"
+            },
+            "button": {
+                "update_profile": "프로필 업데이트",
+                "permissions": "권한",
+                "view_global_permissions": "전역 권한 보기"
+            },
+            "section": {
+                "roles": "역할",
+                "accounts": "연결된 계정 {{count}}개"
+            },
+            "account": {
+                "id": "계정 ID: {{id}}"
+            },
+            "toast": {
+                "updated": "프로필이 성공적으로 업데이트되었습니다",
+                "update_failed": "프로필 업데이트에 실패했습니다"
+            },
+            "validation": {
+                "username": {
+                    "required": "사용자 이름은 필수입니다",
+                    "min": "사용자 이름은 최소 5자 이상이어야 합니다",
+                    "max": "사용자 이름은 최대 32자까지 가능합니다"
+                },
+                "email": {
+                    "required": "이메일은 필수입니다",
+                    "invalid": "유효한 이메일 주소를 입력하세요"
+                },
+                "password": {
+                    "min": "비밀번호는 최소 8자 이상이어야 합니다",
+                    "max": "비밀번호는 최대 32자까지 가능합니다"
+                }
+            }
+        }
     },
     "apiDocs": {
         "choosePreferredType": "선호하는 API 문서 유형을 선택하십시오",
@@ -765,7 +869,8 @@
         "folderLimitMustBeNumber": "폴더 제한은 숫자여야 합니다",
         "folderLimitMustBeAtLeast100": "폴더 제한은 최소 100 이상이어야 합니다",
         "incrementalSyncMustBeNumber": "증분 동기화 간격은 숫자여야 합니다",
-        "incrementalSyncMustBeAtLeast10": "증분 동기화 간격은 최소 10분 이상이어야 합니다"
+        "incrementalSyncMustBeAtLeast10": "증분 동기화 간격은 최소 10분 이상이어야 합니다",
+        "pleaseEnterUsernameOrEmail": "사용자 이름 또는 이메일을 입력하세요"
     },
     "table": {
         "noResults": "검색 결과 없음",
@@ -780,7 +885,17 @@
         "desc": "내림차순",
         "hide": "숨기기",
         "edit": "편집",
-        "delete": "삭제"
+        "delete": "삭제",
+        "pagination": {
+            "selected": "{{selected}} / {{total}} 행 선택됨.",
+            "fixed_page_size": "페이지당 {{size}} 행.",
+            "rows_per_page": "페이지당 행 수",
+            "page_info": "{{page}} / {{total}} 페이지",
+            "first": "첫 페이지로 이동",
+            "previous": "이전 페이지",
+            "next": "다음 페이지",
+            "last": "마지막 페이지로 이동"
+        }
     },
     "proxyDelete": {
         "title": "프록시 삭제",
@@ -797,5 +912,463 @@
         "warningTitle": "경고!",
         "warningDesc": "주의하십시오. 이 작업은 되돌릴 수 없습니다.",
         "deleteBtn": "삭제"
+    },
+    "systemConfig": {
+        "pageTitle": "시스템 레벨 구성",
+        "pageDescription": "이 매개변수는 CLI 플래그 또는 환경 변수를 통해 초기화됩니다. 환경의 일관성을 위해 현재 읽기 전용입니다.",
+        "status": {
+            "enabled": "활성화됨",
+            "disabled": "비활성화됨",
+            "configured": "구성됨",
+            "missing": "누락됨",
+            "auto": "자동",
+            "notSet": "설정되지 않음"
+        },
+        "sections": {
+            "network": {
+                "title": "네트워크",
+                "desc": "HTTP 및 공용 액세스"
+            },
+            "cors": {
+                "title": "CORS",
+                "desc": "교차 출처 액세스 규칙"
+            },
+            "logging": {
+                "title": "로깅",
+                "desc": "로그 출력 동작"
+            },
+            "storage": {
+                "title": "스토리지 및 캐시",
+                "desc": "데이터베이스 경로 및 제한"
+            },
+            "security": {
+                "title": "보안",
+                "desc": "인증 및 암호화"
+            },
+            "performance": {
+                "title": "성능",
+                "desc": "동시성 및 압축"
+            }
+        }
+    },
+    "apiTokens": {
+        "page": {
+            "loadError": "API 토큰을 불러오지 못했습니다.",
+            "emptyTitle": "API 토큰 없음",
+            "emptyDescription": "아직 생성된 API 토큰이 없습니다. 아래 버튼을 클릭하여 토큰을 생성하세요.",
+            "addBtn": "토큰 추가"
+        },
+        "list": {
+            "unnamedToken": "이름 없는 토큰",
+            "statusActive": "활성",
+            "statusExpired": "만료됨",
+            "neverExpires": "만료 없음",
+            "expiresOnShort": "만료일: {{date}}",
+            "tokenLabel": "토큰",
+            "createdLabel": "생성일",
+            "lastUsedLabel": "마지막 사용",
+            "expiresOnLabel": "만료일",
+            "neverUsed": "사용 안 함",
+            "neverLabel": "없음",
+            "deleteBtn": "토큰 삭제"
+        },
+        "dialog": {
+            "createTitle": "액세스 토큰 생성",
+            "editTitle": "액세스 토큰 편집",
+            "description": "완료되면 저장을 클릭하세요.",
+            "save": "저장",
+            "saveChanges": "변경 사항 저장"
+        },
+        "deleteDialog": {
+            "title": "액세스 토큰을 삭제하시겠습니까?",
+            "description": "이 작업은 되돌릴 수 없습니다. 이 토큰을 사용하는 모든 애플리케이션의 접근 권한이 즉시 취소됩니다.",
+            "cancel": "취소",
+            "confirm": "삭제",
+            "deleting": "삭제 중..."
+        },
+        "form": {
+            "nameLabel": "이름",
+            "namePlaceholder": "토큰의 짧은 이름을 입력하세요",
+            "nameDescription": "선택 사항 · 최대 32자",
+            "expirationLabel": "만료",
+            "expirationPlaceholder": "만료 선택",
+            "expirationDescription": "토큰은 선택한 시간 이후에 자동으로 만료됩니다.",
+            "never": "영구",
+            "1day": "1일",
+            "7days": "7일",
+            "30days": "30일",
+            "errorMax": "최대 32자",
+            "errorNumber": "숫자여야 합니다",
+            "errorInt": "정수여야 합니다",
+            "errorPositive": "0보다 커야 합니다"
+        },
+        "notifications": {
+            "createSuccess": "액세스 토큰 생성됨",
+            "createSuccessDesc": "액세스 토큰이 성공적으로 생성되었습니다.",
+            "updateSuccess": "액세스 토큰 업데이트됨",
+            "updateSuccessDesc": "액세스 토큰이 성공적으로 업데이트되었습니다.",
+            "createFailed": "생성 실패",
+            "updateFailed": "업데이트 실패",
+            "deleteSuccess": "토큰 삭제됨",
+            "deleteFailed": "토큰 삭제 실패",
+            "copied": "클립보드에 복사됨",
+            "genericError": "작업 실패. 다시 시도하세요.",
+            "close": "닫기",
+            "tryAgain": "다시 시도"
+        }
+    },
+    "permission": {
+        "scope": {
+            "global": "전역",
+            "account": "계정 #{{id}}"
+        },
+        "dialog": {
+            "global_title": "전역 권한",
+            "account_title": "계정 권한",
+            "global_description": "이 사용자에게 부여된 시스템 전체 권한입니다.",
+            "account_description": "선택한 계정에만 적용되는 권한입니다."
+        },
+        "category": {
+            "system_identity": "시스템 및 인증",
+            "global_data": "전역 데이터 (관리자)",
+            "account": "계정 권한"
+        },
+        "system": {
+            "access": "기본 시스템 접근",
+            "root": "시스템 전체 제어"
+        },
+        "user": {
+            "manage": "모든 사용자 관리",
+            "view": "기본 사용자 이름 보기"
+        },
+        "token": {
+            "manage": "접근 토큰 관리"
+        },
+        "account": {
+            "create": "이메일 계정 생성",
+            "manage": "할당된 계정 관리",
+            "manage_all": "모든 계정 설정 관리",
+            "read_details": "계정 상세 정보 조회"
+        },
+        "data": {
+            "read": "할당된 이메일 데이터 읽기",
+            "read_all": "모든 이메일 데이터 읽기",
+            "manage": "할당된 이메일 메타데이터 관리",
+            "manage_all": "모든 이메일 메타데이터 관리",
+            "raw_download": "할당된 원본 이메일 다운로드",
+            "raw_download_all": "모든 원본 이메일 다운로드",
+            "delete": "할당된 이메일 삭제",
+            "delete_all": "모든 계정의 이메일 삭제",
+            "export_batch": "할당 데이터 일괄 내보내기",
+            "export_batch_all": "모든 데이터 일괄 내보내기",
+            "import_batch": "이메일 데이터 일괄 가져오기"
+        }
+    },
+    "users": {
+        "columns": {
+            "id": "ID",
+            "avatar": "아바타",
+            "username": "사용자 이름",
+            "email": "이메일 주소",
+            "roles": "역할 및 권한",
+            "created_at": "생성일",
+            "updated_at": "수정일",
+            "actions": "작업"
+        },
+        "buttons": {
+            "add": "사용자 추가",
+            "add_new": "새 사용자 추가"
+        },
+        "empty": {
+            "title": "사용자를 찾을 수 없음",
+            "description": "아래 버튼을 클릭하여 첫 번째 사용자를 추가하세요."
+        },
+        "nav": {
+            "users": "사용자",
+            "roles": "역할",
+            "api_tokens": "API 토큰"
+        },
+        "api_tokens": {
+            "empty": {
+                "title": "API 토큰을 찾을 수 없음",
+                "description": "시스템에 생성된 API 토큰이 아직 없습니다。"
+            },
+            "button": {
+                "generate": "새 토큰 생성"
+            },
+            "toolbar": {
+                "search_placeholder": "이름, 소유자 또는 토큰으로 검색..."
+            },
+            "table": {
+                "name": "이름",
+                "type": "유형",
+                "last_used": "마지막 사용",
+                "expires_at": "만료일",
+                "owner": "소유자",
+                "created": "생성일",
+                "api_key": "API 키",
+                "web_ui": "웹 UI",
+                "never": "없음",
+                "permanent": "영구",
+                "expired": "만료됨",
+                "unnamed": "이름 없는 토큰"
+            },
+            "unnamed": "이름 없는 토큰",
+            "delete": {
+                "title": "API 토큰 삭제",
+                "desc": "이 API 토큰을 영구적으로 삭제하려고 합니다.",
+                "prefix": "토큰 접두사",
+                "irreversible": "이 작업은 되돌릴 수 없습니다. 이 토큰을 사용하는 모든 애플리케이션은 즉시 액세스 권한을 잃게 됩니다.",
+                "confirm_label": "확인하려면 아래에 {{word}}를 입력하세요:",
+                "confirm_placeholder": "확인을 위해 \"{{word}}\" 입력",
+                "warning_title": "경고",
+                "warning_desc": "이 토큰을 사용하는 스크립트, 서비스 또는 통합이 실패합니다. 진행하기 전에 시스템을 업데이트했는지 확인하세요.",
+                "confirm_button": "토큰 삭제",
+                "deleting": "삭제 중..."
+            },
+            "toast": {
+                "deleted_title": "API 토큰 삭제됨",
+                "deleted_desc": "\"{{name}}\" 토큰이 성공적으로 제거되었습니다.",
+                "delete_failed_title": "삭제 실패",
+                "delete_failed": "토큰 삭제에 실패했습니다. 다시 시도해 주세요."
+            }
+        },
+        "tokens": {
+            "schema": {
+                "name_max": "최대 32자",
+                "expire_number": "숫자여야 합니다",
+                "expire_int": "정수여야 합니다",
+                "expire_positive": "0보다 커야 합니다"
+            },
+            "toast": {
+                "update_success_title": "액세스 토큰 업데이트됨",
+                "update_success_desc": "액세스 토큰이 성공적으로 업데이트되었습니다.",
+                "create_success_title": "액세스 토큰 생성됨",
+                "create_success_desc": "액세스 토큰이 성공적으로 생성되었습니다.",
+                "update_failed_title": "업데이트 실패",
+                "create_failed_title": "생성 실패"
+            },
+            "error": {
+                "fallback": "작업에 실패했습니다. 나중에 다시 시도해 주세요."
+            },
+            "dialog": {
+                "edit_title": "액세스 토큰 편집",
+                "create_title": "액세스 토큰 생성",
+                "description": "완료되면 저장을 클릭하세요."
+            },
+            "fields": {
+                "name_label": "이름",
+                "name_placeholder": "이 토큰에 대한 짧은 이름을 지정하세요",
+                "name_hint": "선택 사항 · 최대 32자",
+                "expire_label": "만료",
+                "expire_placeholder": "만료일 선택",
+                "expire_hint": "토큰은 선택한 시간 이후에 자동으로 만료됩니다."
+            },
+            "expire_options": {
+                "never": "만료되지 않음",
+                "1_day": "1일",
+                "7_days": "7일",
+                "30_days": "30일"
+            }
+        },
+        "tokens_action": {
+            "dialog": {
+                "title": "API 토큰",
+                "description": "이 사용자의 API 토큰을 관리합니다."
+            },
+            "empty": {
+                "title": "API 토큰 없음",
+                "description": "이 사용자에게는 현재 API 토큰이 없습니다."
+            },
+            "buttons": {
+                "add": "토큰 추가"
+            },
+            "list": {
+                "unnamed_token": "이름 없는 토큰",
+                "status_expired": "만료됨",
+                "status_active": "활성",
+                "expires_on_brief": "{{date}}에 만료",
+                "never_expires": "만료되지 않음",
+                "label_token": "토큰",
+                "label_created": "생성일",
+                "label_last_used": "마지막 사용",
+                "label_expires_at": "만료일",
+                "never": "없음",
+                "button_delete": "토큰 삭제"
+            },
+            "delete_dialog": {
+                "title": "액세스 토큰을 삭제하시겠습니까?",
+                "description": "이 작업은 되돌릴 수 없습니다."
+            }
+        },
+        "actions": {
+            "schema": {
+                "account_required": "계정을 선택하세요",
+                "role_required": "역할을 선택하세요",
+                "username_required": "사용자 이름은 필수입니다",
+                "username_min": "사용자 이름은 5자 이상이어야 합니다",
+                "username_max": "사용자 이름은 32자를 초과할 수 없습니다",
+                "email_required": "이메일 주소는 필수입니다",
+                "email_invalid": "유효한 이메일 주소를 입력하세요",
+                "global_role_required": "최소 하나 이상의 글로벌 역할을 할당하세요",
+                "description_max": "설명은 256자를 초과할 수 없습니다",
+                "ip_invalid": "유효하지 않은 IP 주소가 감지되었습니다",
+                "password_required": "비밀번호는 필수입니다",
+                "password_min": "비밀번호는 8자 이상이어야 합니다",
+                "password_max": "비밀번호는 32자를 초과할 수 없습니다"
+            },
+            "toast": {
+                "updated": "사용자 업데이트됨",
+                "created": "사용자 생성됨"
+            },
+            "dialog": {
+                "edit_title": "사용자 편집: {{name}}",
+                "create_title": "새 사용자 생성",
+                "subtitle": "ID, 액세스 수준 및 보안 정책을 구성합니다."
+            },
+            "tabs": {
+                "general": "기본 정보",
+                "permissions": "계정 권한",
+                "security": "보안 및 ACL"
+            },
+            "sections": {
+                "basic": "기본 설정",
+                "global": "글로벌 권한",
+                "mail_access": "메일 액세스 제어",
+                "mail_access_subtitle": "이 사용자가 관리할 수 있는 메일 계정을 정의합니다.",
+                "policy": "정책 토글"
+            },
+            "fields": {
+                "username": "사용자 이름",
+                "username_hint": "시스템 로그인을 위한 고유 식별자.",
+                "email": "이메일 주소",
+                "email_hint": "기본 연락처 및 알림 주소.",
+                "password": "비밀번호",
+                "password_placeholder_create": "최소 8자",
+                "password_placeholder_edit": "현재 비밀번호를 유지하려면 비워 두세요",
+                "password_hint_create": "초기 사용자 설정을 위한 안전한 비밀번호.",
+                "password_hint_edit": "비밀번호를 변경하려는 경우에만 입력하세요.",
+                "global_roles_hint": "높은 수준의 시스템 권한을 할당합니다.",
+                "description": "설명 (선택 사항)",
+                "description_placeholder": "사용자에 대한 메모 추가...",
+                "description_hint": "내부용 참고 사항 (최대 256자).",
+                "select_account": "계정 선택",
+                "assign_role": "역할 할당",
+                "ip_whitelist": "IP 화이트리스트",
+                "ip_whitelist_hint": "로그인을 제한할 IP 주소 (한 줄에 하나).",
+                "rate_quota": "속도 제한",
+                "burst_interval": "버스트 간격 (초)"
+            },
+            "buttons": {
+                "add_account": "계정 추가",
+                "update": "사용자 업데이트",
+                "create": "사용자 생성"
+            },
+            "states": {
+                "full_access": "전체 액세스 모드",
+                "full_access_desc": "시스템 관리자 역할이 있는 사용자는 수동 할당 없이 모든 계정에 액세스할 수 있습니다.",
+                "no_accounts": "할당된 특정 계정이 없습니다.",
+                "security_disabled": "현재 고급 보안 정책이 비활성화되어 있습니다."
+            },
+            "api_tokens": "API 토큰",
+            "placeholder": {
+                "filter": "사용자 검색..."
+            },
+            "delete": {
+                "title": "사용자 삭제",
+                "confirm_msg": "사용자 {{name}} (ID: {{id}})을 영구적으로 삭제하려고 합니다.",
+                "irreversible": "이 작업은 되돌릴 수 없습니다.",
+                "input_label": "확인하려면 아래에 사용자 ID를 입력하세요:",
+                "placeholder": "확인을 위해 \"{{id}}\" 입력",
+                "alert_title": "경고: 영구적인 작업입니다.",
+                "alert_desc": "삭제하면 사용자와 모든 관련 데이터가 즉시 삭제됩니다.",
+                "button_confirm": "사용자 삭제",
+                "button_deleting": "삭제 중...",
+                "toast": {
+                    "success_title": "사용자 삭제됨",
+                    "success_desc": "사용자 \"{{name}}\"이 성공적으로 제거되었습니다.",
+                    "failed_title": "삭제 실패",
+                    "failed_fallback": "사용자 삭제에 실패했습니다."
+                }
+            }
+        }
+    },
+    "roles": {
+        "title": {
+            "create": "새 역할 생성",
+            "edit": "역할 편집: {{name}}"
+        },
+        "description_hint": "액세스 범위 및 기능 권한을 정의합니다.",
+        "form": {
+            "name_label": "역할 이름",
+            "type_label": "역할 유형",
+            "desc_label": "설명",
+            "matrix_label": "{{type}} 권한 매트릭",
+            "builtin_badge": "내장 역할",
+            "builtin_desc": "이 역할은 시스템에 의해 사전 정의되었으며 읽기 전용입니다."
+        },
+        "types": {
+            "Global": "글로벌",
+            "Account": "계정"
+        },
+        "categories": {
+            "identity": "ID 및 관리",
+            "global_data": "글로벌 데이터 액세스",
+            "account_resource": "계정 리소스 액세스"
+        },
+        "actions": {
+            "cancel": "취소",
+            "submit_create": "역할 생성",
+            "submit_update": "역할 업데이트",
+            "success_create": "역할이 생성되었습니다",
+            "success_update": "역할이 업데이트되었습니다",
+            "failed": "작업 실패",
+            "close": "닫기",
+            "retry": "재시도",
+            "add": "역할 추가"
+        },
+        "validation": {
+            "name_required": "역할 이름은 필수입니다",
+            "perm_required": "최소 하나 이상의 권한을 선택하세요"
+        },
+        "columns": {
+            "id": "ID",
+            "name": "이름",
+            "role_type": "역할 유형",
+            "permissions": "권한",
+            "created_at": "생성일",
+            "updated_at": "수정일"
+        },
+        "placeholder": {
+            "filter": "역할 검색..."
+        },
+        "delete": {
+            "dialog_title": "역할 삭제",
+            "warning_text": "역할 {{name}} (ID: {{id}})을 영구적으로 삭제하려고 합니다.",
+            "irreversible": "이 작업은 되돌릴 수 없습니다.",
+            "confirm_label": "확인하려면 역할 ID를 입력하세요:",
+            "placeholder": "\"{{id}}\" 입력",
+            "alert_title": "경고: 영구적인 작업입니다.",
+            "alert_desc": "이 역할을 삭제하면 할당된 모든 사용자에게서 제거됩니다.",
+            "confirm_btn": "역할 삭제",
+            "deleting": "삭제 중...",
+            "success_title": "역할 삭제됨",
+            "success_desc": "역할 \"{{name}}\"이 성공적으로 제거되었습니다.",
+            "error_title": "삭제 실패",
+            "error_fallback": "역할을 삭제할 수 없습니다."
+        },
+        "details": {
+            "title": "역할 권한: {{name}}",
+            "unknown": "알 수 없는 역할",
+            "role_badge": "{{type}} 역할",
+            "desc_global": "글로벌 관리 및 시스템 수준의 액세스 권한.",
+            "desc_account": "단일 계정에 대한 액세스 및 데이터 작업 권한.",
+            "close_btn": "상세 보기 닫기",
+            "view_permissions": "권한 상세 정보"
+        },
+        "empty": {
+            "title": "역할을 찾을 수 없음",
+            "desc": "사용자 정의 역할이 아직 생성되지 않았습니다."
+        }
     }
 }

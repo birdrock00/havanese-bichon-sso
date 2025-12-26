@@ -3,6 +3,7 @@
         "submit": "Indsend",
         "cancel": "Annuller",
         "save": "Gem",
+        "save_changes": "Gem ændringer",
         "delete": "Slet",
         "edit": "Rediger",
         "search": "Søg",
@@ -19,13 +20,13 @@
         "empty": "Tom",
         "noData": "Ingen data",
         "table": {
-            "noResults": "Ingen resultater fundet"
+            "noResults": "Ingen resultater."
         },
-        "failed": "mislykkedes",
+        "failed": "Mislykkedes",
         "notFound": "Ikke fundet",
         "back": "Tilbage",
         "goBack": "Gå tilbage",
-        "backToHome": "Tilbage til forsiden",
+        "backToHome": "Tilbage til start",
         "tryAgain": "Prøv igen",
         "more": "Mere",
         "actions": "Handlinger",
@@ -39,8 +40,14 @@
         "deselectAll": "Fravælg alle",
         "all": "Alle",
         "none": "Ingen",
-        "showLess": "vis mindre",
-        "showMore": "vis mere..."
+        "showLess": "Vis mindre",
+        "showMore": "Vis mere...",
+        "project_description": "Bichon er et open-source projekt.",
+        "view_on_github_button": "Vis på GitHub",
+        "op_failed": "Handlingen mislykkedes",
+        "na": "N/A",
+        "retry": "Prøv igen",
+        "deleting": "Sletter..."
     },
     "navigation": {
         "home": "Hjem",
@@ -53,7 +60,8 @@
         "apiDocs": "API-dokumentation",
         "general": "Generelt",
         "auth": "Godkendelse",
-        "other": "Andet"
+        "other": "Andet",
+        "users": "Systembrugere"
     },
     "auth": {
         "welcome": "Velkommen til Bichon",
@@ -130,6 +138,30 @@
         "systemVersion": "Systemversion"
     },
     "accounts": {
+        "access_control": {
+            "title": "Tildeling af kontoadgang",
+            "description": "Tildel roller og autoriserede brugere til {{email}}",
+            "role_label": "Adgangsrolle",
+            "role_placeholder": "Vælg en rolle",
+            "role_loading": "Indlæser roller...",
+            "user_label": "Vælg autoriserede brugere",
+            "user_search_placeholder": "Søg efter brugernavn eller e-mail...",
+            "user_empty": "Ingen brugere fundet",
+            "user_selected_count": "Valgt: {{count}} bruger(e)",
+            "buttons": {
+                "cancel": "Annuller",
+                "save": "Gem tildeling"
+            },
+            "validation": {
+                "user_required": "Vælg mindst én bruger",
+                "role_required": "Vælg en rolle at tildele"
+            },
+            "toast": {
+                "success_title": "Tildeling fuldført",
+                "success_desc": "Tilladelser er blevet tildelt {{email}}",
+                "failed_title": "Tildeling mislykkedes"
+            }
+        },
         "title": "E-mailkonti",
         "description": "Administrer og konfigurer dine e-mailkonti.",
         "addImap": "Tilføj IMAP",
@@ -423,6 +455,25 @@
             "noSubject": "(Intet emne)",
             "loadingMore": "Indlæser...",
             "loadMore": "Indlæs mere"
+        },
+        "bulkActions": {
+            "ariaLabel": "{{count}} meddelelser valgt. Værktøjslinje",
+            "delete": "Slet",
+            "deleteDesc": "Slet valgte meddelelser",
+            "selected": "{{count}} valgt",
+            "clear": "Ryd valg"
+        },
+        "delete": {
+            "title": "Slet meddelelser",
+            "confirmPrefix": "Er du sikker på, at du vil slette",
+            "countLabel": "{{count}} meddelelse(r)?",
+            "confirmDetail": "Denne handling kan ikke fortrydes.",
+            "confirmButton": "Slet",
+            "warningTitle": "Advarsel",
+            "warningDesc": "Slettede meddelelser kan ikke gendannes.",
+            "successTitle": "Slettet",
+            "successDesc": "Meddelelserne er blevet slettet.",
+            "errorTitle": "Sletning mislykkedes"
         }
     },
     "mail": {
@@ -705,7 +756,60 @@
         "pleaseUseAnIpAddressForBetterReliability": "Brug venligst en IP-adresse (f.eks. 127.0.0.1) i stedet for et værtsnavn eller domæne for bedre pålidelighed.",
         "adding": "Tilføjer...",
         "yourProxyHasBeenSuccessfully": "Din proxy er blevet {{action}}.",
-        "proxyUpdateOrAddFailed": "{{action}} mislykkedes, prøv venligst igen senere"
+        "proxyUpdateOrAddFailed": "{{action}} mislykkedes, prøv venligst igen senere",
+        "sidebar": {
+            "profile": "Profil",
+            "apiTokens": "API-tokens",
+            "proxy": "Netværksproxy",
+            "configurations": "Systemkonfigurationer"
+        },
+        "profile": {
+            "loadError": "Kunne ikke indlæse brugeroplysninger.",
+            "uploadTitle": "Upload avatar",
+            "maxSize": "Op til {{size}}",
+            "avatarAlt": "Avatar",
+            "removeAvatar": "Fjern avatar",
+            "uploadError": "Fejl ved filupload",
+            "field": {
+                "username": "Brugernavn",
+                "email": "E-mail",
+                "password": "Adgangskode"
+            },
+            "placeholder": {
+                "password_keep": "Lad feltet være tomt for at beholde nuværende adgangskode"
+            },
+            "button": {
+                "update_profile": "Opdater profil",
+                "permissions": "Tilladelser",
+                "view_global_permissions": "Se globale tilladelser"
+            },
+            "section": {
+                "roles": "Roller",
+                "accounts": "{{count}} tilknyttede konti"
+            },
+            "account": {
+                "id": "Konto-ID: {{id}}"
+            },
+            "toast": {
+                "updated": "Profilen blev opdateret",
+                "update_failed": "Kunne ikke opdatere profilen"
+            },
+            "validation": {
+                "username": {
+                    "required": "Brugernavn er påkrævet",
+                    "min": "Brugernavnet skal være mindst 5 tegn",
+                    "max": "Brugernavnet må højst være 32 tegn"
+                },
+                "email": {
+                    "required": "E-mail er påkrævet",
+                    "invalid": "Indtast en gyldig e-mailadresse"
+                },
+                "password": {
+                    "min": "Adgangskoden skal være mindst 8 tegn",
+                    "max": "Adgangskoden må højst være 32 tegn"
+                }
+            }
+        }
     },
     "apiDocs": {
         "choosePreferredType": "Vælg foretrukken type API-dokumentation",
@@ -765,7 +869,8 @@
         "folderLimitMustBeNumber": "Mappegrænse skal være et tal",
         "folderLimitMustBeAtLeast100": "Mappegrænse skal være mindst 100",
         "incrementalSyncMustBeNumber": "Inkrementelt synkroniseringsinterval skal være et tal",
-        "incrementalSyncMustBeAtLeast10": "Inkrementelt synkroniseringsinterval skal være mindst 10 minutter"
+        "incrementalSyncMustBeAtLeast10": "Inkrementelt synkroniseringsinterval skal være mindst 10 minutter",
+        "pleaseEnterUsernameOrEmail": "Indtast dit brugernavn eller din e-mailadresse"
     },
     "table": {
         "noResults": "Ingen resultater fundet",
@@ -780,7 +885,17 @@
         "desc": "Faldende",
         "hide": "Skjul",
         "edit": "Rediger",
-        "delete": "Slet"
+        "delete": "Slet",
+        "pagination": {
+            "selected": "{{selected}} af {{total}} række(r) valgt.",
+            "fixed_page_size": "{{size}} rækker pr. side.",
+            "rows_per_page": "Rækker pr. side",
+            "page_info": "Side {{page}} af {{total}}",
+            "first": "Gå til første side",
+            "previous": "Forrige side",
+            "next": "Næste side",
+            "last": "Gå til sidste side"
+        }
     },
     "proxyDelete": {
         "title": "Slet Proxy",
@@ -797,5 +912,463 @@
         "warningTitle": "Advarsel!",
         "warningDesc": "Vær forsigtig, denne handling kan ikke fortrydes.",
         "deleteBtn": "Slet"
+    },
+    "systemConfig": {
+        "pageTitle": "Systemkonfigurationer",
+        "pageDescription": "Disse parametre initialiseres via CLI-flag eller miljøvariabler. De er skrivebeskyttede.",
+        "status": {
+            "enabled": "Aktiveret",
+            "disabled": "Deaktiveret",
+            "configured": "Konfigureret",
+            "missing": "Mangler",
+            "auto": "Auto",
+            "notSet": "Ikke angivet"
+        },
+        "sections": {
+            "network": {
+                "title": "Netværk",
+                "desc": "HTTP og offentlig adgang"
+            },
+            "cors": {
+                "title": "CORS",
+                "desc": "Adgangsregler for cross-origin"
+            },
+            "logging": {
+                "title": "Logning",
+                "desc": "Log-output adfærd"
+            },
+            "storage": {
+                "title": "Lagring & Cache",
+                "desc": "Database-stier og grænser"
+            },
+            "security": {
+                "title": "Sikkerhed",
+                "desc": "Godkendelse & kryptering"
+            },
+            "performance": {
+                "title": "Ydeevne",
+                "desc": "Samtidighed & komprimering"
+            }
+        }
+    },
+    "apiTokens": {
+        "page": {
+            "loadError": "Kunne ikke indlæse API-tokens.",
+            "emptyTitle": "Ingen API-tokens",
+            "emptyDescription": "Du har ikke oprettet nogen API-tokens endnu. Klik nedenfor for at oprette en.",
+            "addBtn": "Tilføj token"
+        },
+        "list": {
+            "unnamedToken": "Navnløst token",
+            "statusActive": "Aktiv",
+            "statusExpired": "Udløbet",
+            "neverExpires": "Udløber aldrig",
+            "expiresOnShort": "Udløber den {{date}}",
+            "tokenLabel": "Token",
+            "createdLabel": "Oprettet",
+            "lastUsedLabel": "Sidst brugt",
+            "expiresOnLabel": "Udløber den",
+            "neverUsed": "Aldrig",
+            "neverLabel": "Aldrig",
+            "deleteBtn": "Slet token"
+        },
+        "dialog": {
+            "createTitle": "Opret adgangstoken",
+            "editTitle": "Rediger adgangstoken",
+            "description": "Klik på gem, når du er færdig.",
+            "save": "Gem",
+            "saveChanges": "Gem ændringer"
+        },
+        "deleteDialog": {
+            "title": "Slet adgangstoken?",
+            "description": "Denne handling kan ikke fortrydes. Enhver applikation, der bruger dette token, mister øjeblikkeligt adgangen.",
+            "cancel": "Annuller",
+            "confirm": "Slet",
+            "deleting": "Sletter..."
+        },
+        "form": {
+            "nameLabel": "Navn",
+            "namePlaceholder": "Giv dette token et kort navn",
+            "nameDescription": "Valgfrit · Max 32 tegn",
+            "expirationLabel": "Udløb",
+            "expirationPlaceholder": "Vælg udløb",
+            "expirationDescription": "Tokens udløber automatisk efter den valgte tid.",
+            "never": "Aldrig",
+            "1day": "1 dag",
+            "7days": "7 dage",
+            "30days": "30 dage",
+            "errorMax": "Max 32 tegn",
+            "errorNumber": "Skal være et tal",
+            "errorInt": "Skal være et heltal",
+            "errorPositive": "Skal være større end 0"
+        },
+        "notifications": {
+            "createSuccess": "Adgangstoken oprettet",
+            "createSuccessDesc": "Adgangstokenet er blevet oprettet med succes.",
+            "updateSuccess": "Adgangstoken opdateret",
+            "updateSuccessDesc": "Adgangstokenet er blevet opdateret med succes.",
+            "createFailed": "Oprettelse mislykkedes",
+            "updateFailed": "Opdatering mislykkedes",
+            "deleteSuccess": "Token slettet",
+            "deleteFailed": "Kunne ikke slette token",
+            "copied": "Kopieret til udklipsholder",
+            "genericError": "Operationen mislykkedes. Prøv igen.",
+            "close": "Luk",
+            "tryAgain": "Prøv igen"
+        }
+    },
+    "permission": {
+        "scope": {
+            "global": "Global",
+            "account": "Konto #{{id}}"
+        },
+        "dialog": {
+            "global_title": "Globale tilladelser",
+            "account_title": "Kontotilladelser",
+            "global_description": "Systemdækkende tilladelser, der er tildelt denne bruger.",
+            "account_description": "Tilladelser, der er begrænset til den valgte konto."
+        },
+        "category": {
+            "system_identity": "System og identitet",
+            "global_data": "Globale data (Administrator)",
+            "account": "Kontotilladelser"
+        },
+        "system": {
+            "access": "Grundlæggende systemadgang",
+            "root": "Fuld systemkontrol"
+        },
+        "user": {
+            "manage": "Administrere alle brugere",
+            "view": "Se grundlæggende brugeroplysninger"
+        },
+        "token": {
+            "manage": "Administrere adgangstokens"
+        },
+        "account": {
+            "create": "Oprette e-mailkonti",
+            "manage": "Administrere tildelte konti",
+            "manage_all": "Administrere alle kontoindstillinger",
+            "read_details": "Se kontodetaljer"
+        },
+        "data": {
+            "read": "Læse tildelte e-maildata",
+            "read_all": "Læse alle e-maildata",
+            "manage": "Administrere tildelte e-mailmetadata",
+            "manage_all": "Administrere al e-mailmetadata",
+            "raw_download": "Downloade tildelte rå e-mails",
+            "raw_download_all": "Downloade alle rå e-mails",
+            "delete": "Slette tildelte e-mails",
+            "delete_all": "Slette e-mails fra alle konti",
+            "export_batch": "Batch-eksportere tildelte data",
+            "export_batch_all": "Batch-eksportere alle data",
+            "import_batch": "Batch-importere e-maildata"
+        }
+    },
+    "users": {
+        "columns": {
+            "id": "ID",
+            "avatar": "Avatar",
+            "username": "Brugernavn",
+            "email": "E-mail",
+            "roles": "Roller & rettigheder",
+            "created_at": "Oprettet",
+            "updated_at": "Opdateret",
+            "actions": "Handlinger"
+        },
+        "buttons": {
+            "add": "Tilføj bruger",
+            "add_new": "Ny bruger"
+        },
+        "empty": {
+            "title": "Ingen brugere fundet",
+            "description": "Klik på knappen nedenfor for at tilføje din første bruger."
+        },
+        "nav": {
+            "users": "Brugere",
+            "roles": "Roller",
+            "api_tokens": "API-tokens"
+        },
+        "api_tokens": {
+            "empty": {
+                "title": "Ingen API-tokens fundet",
+                "description": "Der er endnu ikke genereret nogen API-tokens i systemet."
+            },
+            "button": {
+                "generate": "Generer nyt token"
+            },
+            "toolbar": {
+                "search_placeholder": "Søg efter navn, ejer eller token..."
+            },
+            "table": {
+                "name": "Navn",
+                "type": "Type",
+                "last_used": "Sidst brugt",
+                "expires_at": "Udløber",
+                "owner": "Ejer",
+                "created": "Oprettet",
+                "api_key": "API-nøgle",
+                "web_ui": "Web UI",
+                "never": "Aldrig",
+                "permanent": "Permanent",
+                "expired": "Udløbet",
+                "unnamed": "Unavngivet token"
+            },
+            "unnamed": "Unavngivet token",
+            "delete": {
+                "title": "Slet API-token",
+                "desc": "Du er ved at slette dette API-token permanent",
+                "prefix": "Token præfiks",
+                "irreversible": "Denne handling kan ikke fortrydes. Applikationer, der bruger dette token, vil øjeblikkeligt miste adgang.",
+                "confirm_label": "Indtast {{word}} nedenfor for at bekræfte:",
+                "confirm_placeholder": "Indtast \"{{word}}\" for at bekræfte",
+                "warning_title": "Advarsel",
+                "warning_desc": "Scripts eller tjenester, der bruger dette token, vil fejle. Sørg for at have opdateret dine systemer.",
+                "confirm_button": "Slet token",
+                "deleting": "Sletter..."
+            },
+            "toast": {
+                "deleted_title": "API-token slettet",
+                "deleted_desc": "Tokenet \"{{name}}\" blev slettet korrekt.",
+                "delete_failed_title": "Sletning mislykkedes",
+                "delete_failed": "Kunne ikke slette token, prøv venligst igen."
+            }
+        },
+        "tokens": {
+            "schema": {
+                "name_max": "Maks 32 tegn",
+                "expire_number": "Skal være et tal",
+                "expire_int": "Skal være et heltal",
+                "expire_positive": "Skal være større end 0"
+            },
+            "toast": {
+                "update_success_title": "Token opdateret",
+                "update_success_desc": "Adgangstoken blev opdateret.",
+                "create_success_title": "Token oprettet",
+                "create_success_desc": "Adgangstoken blev oprettet.",
+                "update_failed_title": "Opdatering mislykkedes",
+                "create_failed_title": "Oprettelse mislykkedes"
+            },
+            "error": {
+                "fallback": "Handlingen mislykkedes, prøv igen senere."
+            },
+            "dialog": {
+                "edit_title": "Rediger adgangstoken",
+                "create_title": "Opret adgangstoken",
+                "description": "Klik på gem når du er færdig."
+            },
+            "fields": {
+                "name_label": "Navn",
+                "name_placeholder": "Giv tokenet et kort navn",
+                "name_hint": "Valgfrit · Maks 32 tegn",
+                "expire_label": "Udløb",
+                "expire_placeholder": "Vælg udløb",
+                "expire_hint": "Tokenet udløber automatisk efter den valgte tid."
+            },
+            "expire_options": {
+                "never": "Udløber aldrig",
+                "1_day": "1 dag",
+                "7_days": "7 dage",
+                "30_days": "30 dage"
+            }
+        },
+        "tokens_action": {
+            "dialog": {
+                "title": "API-tokens",
+                "description": "Administrer API-tokens for denne bruger."
+            },
+            "empty": {
+                "title": "Ingen API-tokens",
+                "description": "Denne bruger har ingen API-tokens i øjeblikket."
+            },
+            "buttons": {
+                "add": "Tilføj token"
+            },
+            "list": {
+                "unnamed_token": "Unavngivet token",
+                "status_expired": "Udløbet",
+                "status_active": "Aktiv",
+                "expires_on_brief": "Udløber {{date}}",
+                "never_expires": "Udløber aldrig",
+                "label_token": "Token",
+                "label_created": "Oprettet",
+                "label_last_used": "Sidst brugt",
+                "label_expires_at": "Udløbsdato",
+                "never": "Aldrig",
+                "button_delete": "Slet token"
+            },
+            "delete_dialog": {
+                "title": "Slet adgangstoken?",
+                "description": "Denne handling kan ikke fortrydes."
+            }
+        },
+        "actions": {
+            "schema": {
+                "account_required": "Vælg venligst en konto",
+                "role_required": "Vælg venligst en rolle",
+                "username_required": "Brugernavn er påkrævet",
+                "username_min": "Mindst 5 tegn",
+                "username_max": "Højst 32 tegn",
+                "email_required": "E-mail er påkrævet",
+                "email_invalid": "Indtast en gyldig e-mail",
+                "global_role_required": "Tildel mindst én global rolle",
+                "description_max": "Beskrivelse maks 256 tegn",
+                "ip_invalid": "Ugyldig IP-adresse",
+                "password_required": "Adgangskode er påkrævet",
+                "password_min": "Mindst 8 tegn",
+                "password_max": "Højst 32 tegn"
+            },
+            "toast": {
+                "updated": "Bruger opdateret",
+                "created": "Bruger oprettet"
+            },
+            "dialog": {
+                "edit_title": "Rediger bruger: {{name}}",
+                "create_title": "Opret ny bruger",
+                "subtitle": "Konfigurer identitet, adgangsniveauer og sikkerhed."
+            },
+            "tabs": {
+                "general": "Generelt",
+                "permissions": "Kontorettigheder",
+                "security": "Sikkerhed & ACL"
+            },
+            "sections": {
+                "basic": "Basis identitet",
+                "global": "Globale rettigheder",
+                "mail_access": "E-mail adgangskontrol",
+                "mail_access_subtitle": "E-mailkonti som denne bruger må administrere.",
+                "policy": "Politikker"
+            },
+            "fields": {
+                "username": "Brugernavn",
+                "username_hint": "Unikt ID til login.",
+                "email": "E-mailadresse",
+                "email_hint": "Primær kontakt og notifikationer.",
+                "password": "Adgangskode",
+                "password_placeholder_create": "Mindst 8 tegn",
+                "password_placeholder_edit": "Lad stå tom for at beholde nuværende",
+                "password_hint_create": "Sikker adgangskode til første opsætning.",
+                "password_hint_edit": "Indtast kun hvis du vil ændre den.",
+                "global_roles_hint": "Tildel systemrettigheder.",
+                "description": "Beskrivelse (valgfrit)",
+                "description_placeholder": "Notater om brugeren...",
+                "description_hint": "Interne noter (maks 256 tegn).",
+                "select_account": "Vælg konto",
+                "assign_role": "Tildel rolle",
+                "ip_whitelist": "IP Whitelist",
+                "ip_whitelist_hint": "Begræns login til disse IP'er (én pr. linje).",
+                "rate_quota": "Rate kvota",
+                "burst_interval": "Burst interval (sek)"
+            },
+            "buttons": {
+                "add_account": "Tilføj konto",
+                "update": "Opdater bruger",
+                "create": "Opret bruger"
+            },
+            "states": {
+                "full_access": "Fuld adgangs-tilstand",
+                "full_access_desc": "Administratorer har adgang til alle konti som standard.",
+                "no_accounts": "Ingen specifikke konti tildelt.",
+                "security_disabled": "Sikkerhedspolitikker er deaktiveret."
+            },
+            "api_tokens": "API-tokens",
+            "placeholder": {
+                "filter": "Søg efter brugere..."
+            },
+            "delete": {
+                "title": "Slet bruger",
+                "confirm_msg": "Du sletter brugeren {{name}} (ID: {{id}}) permanent.",
+                "irreversible": "Denne handling kan ikke fortrydes.",
+                "input_label": "Indtast bruger-ID for at bekræfte:",
+                "placeholder": "Indtast \"{{id}}\"",
+                "alert_title": "Advarsel: Permanent handling.",
+                "alert_desc": "Brugeren og alle tilhørende data vil blive slettet.",
+                "button_confirm": "Slet bruger",
+                "button_deleting": "Sletter...",
+                "toast": {
+                    "success_title": "Bruger slettet",
+                    "success_desc": "Brugeren \"{{name}}\" blev fjernet.",
+                    "failed_title": "Sletning mislykkedes",
+                    "failed_fallback": "Kunne ikke slette brugeren."
+                }
+            }
+        }
+    },
+    "roles": {
+        "title": {
+            "create": "Opret ny rolle",
+            "edit": "Rediger rolle: {{name}}"
+        },
+        "description_hint": "Definer adgangsomfang og rettigheder.",
+        "form": {
+            "name_label": "Rollenavn",
+            "type_label": "Rolletype",
+            "desc_label": "Beskrivelse",
+            "matrix_label": "Rettighedsmatrix ({{type}})",
+            "builtin_badge": "Indbygget rolle",
+            "builtin_desc": "Denne rolle er foruddefineret og skrivebeskyttet."
+        },
+        "types": {
+            "Global": "Global",
+            "Account": "Konto"
+        },
+        "categories": {
+            "identity": "Identitet & Administration",
+            "global_data": "Global dataadgang",
+            "account_resource": "Kontoresource adgang"
+        },
+        "actions": {
+            "cancel": "Annuller",
+            "submit_create": "Opret rolle",
+            "submit_update": "Opdater rolle",
+            "success_create": "Rolle oprettet",
+            "success_update": "Rolle opdateret",
+            "failed": "Handlingen mislykkedes",
+            "close": "Luk",
+            "retry": "Prøv igen",
+            "add": "Tilføj rolle"
+        },
+        "validation": {
+            "name_required": "Rollenavn er påkrævet",
+            "perm_required": "Vælg mindst én rettighed"
+        },
+        "columns": {
+            "id": "ID",
+            "name": "Navn",
+            "role_type": "Type",
+            "permissions": "Rettigheder",
+            "created_at": "Oprettet",
+            "updated_at": "Opdateret"
+        },
+        "placeholder": {
+            "filter": "Søg efter roller..."
+        },
+        "delete": {
+            "dialog_title": "Slet rolle",
+            "warning_text": "Du sletter rollen {{name}} (ID: {{id}}) permanent.",
+            "irreversible": "Denne handling kan ikke fortrydes.",
+            "confirm_label": "Indtast rolle-ID for at bekræfte:",
+            "placeholder": "Indtast \"{{id}}\"",
+            "alert_title": "Advarsel: Permanent handling.",
+            "alert_desc": "Sletning af denne rolle vil fjerne den fra alle tildelte brugere.",
+            "confirm_btn": "Slet rolle",
+            "deleting": "Sletter...",
+            "success_title": "Rolle slettet",
+            "success_desc": "Rollen \"{{name}}\" blev fjernet.",
+            "error_title": "Sletning mislykkedes",
+            "error_fallback": "Kunne ikke slette rollen."
+        },
+        "details": {
+            "title": "Rettigheder: {{name}}",
+            "unknown": "Ukendt rolle",
+            "role_badge": "{{type}} rolle",
+            "desc_global": "Global administration og systemadgang.",
+            "desc_account": "Adgang og datahandlinger for individuelle konti.",
+            "close_btn": "Luk",
+            "view_permissions": "Se detaljer"
+        },
+        "empty": {
+            "title": "Ingen roller fundet",
+            "desc": "Du har ikke oprettet nogen brugerdefinerede roller endnu."
+        }
     }
 }

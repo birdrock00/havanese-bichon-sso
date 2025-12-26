@@ -16,13 +16,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::modules::common::auth::ClientContext;
 use crate::modules::dashboard::DashboardStats;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::rest::api::ApiTags;
 use crate::modules::rest::ApiResult;
+use crate::modules::settings::cli::SETTINGS;
 use crate::modules::settings::proxy::Proxy;
+use crate::modules::settings::SystemConfigurations;
+use crate::modules::users::permissions::Permission;
 use crate::modules::version::{fetch_notifications, Notifications};
 use crate::raise_error;
 use poem_openapi::param::Path;
@@ -60,14 +62,20 @@ impl SystemApi {
         path = "/dashboard-stats",
         operation_id = "get_dashboard_stats"
     )]
-    async fn get_dashboard_stats(&self) -> ApiResult<Json<DashboardStats>> {
-        let stats = DashboardStats::get().await?;
+    async fn get_dashboard_stats(&self, context: ClientContext) -> ApiResult<Json<DashboardStats>> {
+        let stats = DashboardStats::get(context).await?;
         Ok(Json(stats))
     }
 
     /// Get the full list of SOCKS5 proxy configurations.
     #[oai(method = "get", path = "/list-proxy", operation_id = "list_proxy")]
-    async fn list_proxy(&self) -> ApiResult<Json<Vec<Proxy>>> {
+    async fn list_proxy(&self, context: ClientContext) -> ApiResult<Json<Vec<Proxy>>> {
+        context
+            .require_any_permission(vec![
+                (None, Permission::ACCOUNT_CREATE),
+                (None, Permission::ROOT),
+            ])
+            .await?;
         let proxies = Proxy::list_all()
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
@@ -82,7 +90,9 @@ impl SystemApi {
         id: Path<u64>,
         context: ClientContext,
     ) -> ApiResult<()> {
-        context.require_root()?;
+        context
+            .require_permission(None, Permission::ROOT)
+            .await?;
         Ok(Proxy::delete(id.0).await?)
     }
 
@@ -94,14 +104,18 @@ impl SystemApi {
         id: Path<u64>,
         context: ClientContext,
     ) -> ApiResult<Json<Proxy>> {
-        context.require_root()?;
+        context
+            .require_permission(None, Permission::ROOT)
+            .await?;
         Ok(Json(Proxy::get(id.0).await?))
     }
 
     /// Create a new proxy configuration. Requires root permission.
     #[oai(path = "/proxy", method = "post", operation_id = "create_proxy")]
     async fn create_proxy(&self, url: PlainText<String>, context: ClientContext) -> ApiResult<()> {
-        context.require_root()?;
+        context
+            .require_permission(None, Permission::ROOT)
+            .await?;
         let entity = Proxy::new(url.0);
         Ok(entity.save().await?)
     }
@@ -114,7 +128,28 @@ impl SystemApi {
         url: PlainText<String>,
         context: ClientContext,
     ) -> ApiResult<()> {
-        context.require_root()?;
+        context
+            .require_permission(None, Permission::ROOT)
+            .await?;
         Ok(Proxy::update(id.0, url.0).await?)
+    }
+    /// Get system configurations.
+    ///
+    /// Returns a read-only snapshot of the server configuration
+    /// resolved at startup. Sensitive values are not exposed.
+    #[oai(
+        method = "get",
+        path = "/system-configurations",
+        operation_id = "get_system_configurations"
+    )]
+    async fn get_system_configurations(
+        &self,
+        context: ClientContext,
+    ) -> ApiResult<Json<SystemConfigurations>> {
+        context
+            .require_permission(None, Permission::ROOT)
+            .await?;
+        let config: SystemConfigurations = SystemConfigurations::from(&*SETTINGS);
+        Ok(Json(config))
     }
 }

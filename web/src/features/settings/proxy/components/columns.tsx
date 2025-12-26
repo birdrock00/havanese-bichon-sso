@@ -19,11 +19,11 @@
 
 import { ColumnDef } from '@tanstack/react-table'
 import LongText from '@/components/long-text'
-
-import { Proxy } from '../data/schema'
 import { DataTableColumnHeader } from './data-table-column-header'
 import { DataTableRowActions } from './data-table-row-actions'
 import { format } from 'date-fns'
+import { Proxy } from '@/api/system/api'
+
 
 export const getColumns = (t: (key: string) => string): ColumnDef<Proxy>[] => [
   {

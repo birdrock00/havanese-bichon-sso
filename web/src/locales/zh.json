@@ -3,6 +3,7 @@
     "submit": "提交",
     "cancel": "取消",
     "save": "保存",
+    "save_changes": "保存修改",
     "delete": "删除",
     "edit": "编辑",
     "search": "搜索",
@@ -40,7 +41,13 @@
     "all": "全部",
     "none": "无",
     "showLess": "显示更少",
-    "showMore": "显示更多..."
+    "showMore": "显示更多...",
+    "project_description": "Bichon 是一个开源项目。",
+    "view_on_github_button": "在 GitHub 上查看",
+    "op_failed": "操作失败",
+    "na": "无",
+    "retry": "重试",
+    "deleting": "正在删除..."
   },
   "navigation": {
     "home": "首页",
@@ -53,7 +60,8 @@
     "apiDocs": "API 文档",
     "general": "常规",
     "auth": "认证",
-    "other": "其他"
+    "other": "其他",
+    "users": "系统用户"
   },
   "auth": {
     "welcome": "欢迎使用 Bichon",
@@ -130,6 +138,30 @@
     "systemVersion": "系统版本"
   },
   "accounts": {
+    "access_control": {
+      "title": "账户访问分配",
+      "description": "为 {{email}} 分配角色和授权用户",
+      "role_label": "访问角色",
+      "role_placeholder": "选择角色",
+      "role_loading": "正在加载角色...",
+      "user_label": "选择授权用户",
+      "user_search_placeholder": "按用户名或邮箱搜索...",
+      "user_empty": "未找到相关用户",
+      "user_selected_count": "已选择：{{count}} 个用户",
+      "buttons": {
+        "cancel": "取消",
+        "save": "保存分配"
+      },
+      "validation": {
+        "user_required": "请至少选择一个用户",
+        "role_required": "请选择要分配的角色"
+      },
+      "toast": {
+        "success_title": "分配成功",
+        "success_desc": "权限已成功分配给 {{email}}",
+        "failed_title": "分配失败"
+      }
+    },
     "title": "邮件账户",
     "description": "管理和配置您的邮件账户。",
     "addImap": "添加 IMAP",
@@ -423,6 +455,25 @@
       "noSubject": "（无主题）",
       "loadingMore": "加载中...",
       "loadMore": "加载更多"
+    },
+    "bulkActions": {
+      "ariaLabel": "已选择 {{count}} 条消息。批量操作工具栏",
+      "delete": "删除",
+      "deleteDesc": "删除选中的消息",
+      "selected": "已选择 {{count}} 项",
+      "clear": "清除选择"
+    },
+    "delete": {
+      "title": "删除消息",
+      "confirmPrefix": "确认要删除",
+      "countLabel": "{{count}} 条消息吗？",
+      "confirmDetail": "此操作无法撤销。",
+      "confirmButton": "删除",
+      "warningTitle": "警告",
+      "warningDesc": "删除的消息将被永久移除，无法恢复。",
+      "successTitle": "消息已删除",
+      "successDesc": "选定的消息已成功删除。",
+      "errorTitle": "删除失败"
     }
   },
   "mail": {
@@ -705,7 +756,60 @@
     "pleaseUseAnIpAddressForBetterReliability": "请使用 IP 地址（例如：127.0.0.1）而不是主机名或域名，以获得更好的可靠性。",
     "adding": "添加中...",
     "yourProxyHasBeenSuccessfully": "您的代理已成功{{action}}。",
-    "proxyUpdateOrAddFailed": "{{action}}失败，请稍后重试"
+    "proxyUpdateOrAddFailed": "{{action}}失败，请稍后重试",
+    "sidebar": {
+      "profile": "个人资料",
+      "apiTokens": "API 令牌",
+      "proxy": "网络代理",
+      "configurations": "系统配置"
+    },
+    "profile": {
+      "loadError": "加载用户信息失败。",
+      "uploadTitle": "上传头像",
+      "maxSize": "最大 {{size}}",
+      "avatarAlt": "头像",
+      "removeAvatar": "移除头像",
+      "uploadError": "文件上传错误",
+      "field": {
+        "username": "用户名",
+        "email": "邮箱",
+        "password": "密码"
+      },
+      "placeholder": {
+        "password_keep": "留空以保持当前密码"
+      },
+      "button": {
+        "update_profile": "更新资料",
+        "permissions": "权限",
+        "view_global_permissions": "查看全局权限"
+      },
+      "section": {
+        "roles": "角色",
+        "accounts": "已关联 {{count}} 个账户"
+      },
+      "account": {
+        "id": "账户 ID：{{id}}"
+      },
+      "toast": {
+        "updated": "个人资料更新成功",
+        "update_failed": "个人资料更新失败"
+      },
+      "validation": {
+        "username": {
+          "required": "用户名不能为空",
+          "min": "用户名长度至少为 5 个字符",
+          "max": "用户名长度不能超过 32 个字符"
+        },
+        "email": {
+          "required": "邮箱不能为空",
+          "invalid": "请输入有效的邮箱地址"
+        },
+        "password": {
+          "min": "密码长度至少为 8 个字符",
+          "max": "密码长度不能超过 32 个字符"
+        }
+      }
+    }
   },
   "apiDocs": {
     "choosePreferredType": "选择您首选的 API 文档类型",
@@ -765,7 +869,8 @@
     "folderLimitMustBeNumber": "文件夹限制必须是数字",
     "folderLimitMustBeAtLeast100": "文件夹限制必须至少为 100",
     "incrementalSyncMustBeNumber": "增量同步间隔必须是数字",
-    "incrementalSyncMustBeAtLeast10": "增量同步间隔必须至少为 10 分钟"
+    "incrementalSyncMustBeAtLeast10": "增量同步间隔必须至少为 10 分钟",
+    "pleaseEnterUsernameOrEmail": "请输入您的用户名或邮箱"
   },
   "table": {
     "noResults": "未找到结果",
@@ -780,7 +885,17 @@
     "desc": "降序",
     "hide": "隐藏",
     "edit": "编辑",
-    "delete": "删除"
+    "delete": "删除",
+    "pagination": {
+      "selected": "已选择 {{selected}} / {{total}} 行。",
+      "fixed_page_size": "每页 {{size}} 行。",
+      "rows_per_page": "每页行数",
+      "page_info": "第 {{page}} 页，共 {{total}} 页",
+      "first": "跳转到第一页",
+      "previous": "上一页",
+      "next": "下一页",
+      "last": "跳转到最后一页"
+    }
   },
   "proxyDelete": {
     "title": "删除代理",
@@ -797,5 +912,463 @@
     "warningTitle": "警告！",
     "warningDesc": "请小心，此操作无法回滚。",
     "deleteBtn": "删除"
+  },
+  "systemConfig": {
+    "pageTitle": "系统级配置",
+    "pageDescription": "这些参数通过 CLI 标志或环境变量初始化。它们当前为只读，以确保环境一致性。",
+    "status": {
+      "enabled": "已启用",
+      "disabled": "已禁用",
+      "configured": "已配置",
+      "missing": "缺失",
+      "auto": "自动",
+      "notSet": "未设置"
+    },
+    "sections": {
+      "network": {
+        "title": "网络",
+        "desc": "HTTP 与公共访问"
+      },
+      "cors": {
+        "title": "CORS",
+        "desc": "跨域访问规则"
+      },
+      "logging": {
+        "title": "日志",
+        "desc": "日志输出行为"
+      },
+      "storage": {
+        "title": "存储与缓存",
+        "desc": "数据库路径与限制"
+      },
+      "security": {
+        "title": "安全",
+        "desc": "身份验证与加密"
+      },
+      "performance": {
+        "title": "性能",
+        "desc": "并发与压缩"
+      }
+    }
+  },
+  "apiTokens": {
+    "page": {
+      "loadError": "加载 API 令牌失败。",
+      "emptyTitle": "无 API 令牌",
+      "emptyDescription": "您尚未创建任何 API 令牌。点击下方按钮创建一个。",
+      "addBtn": "添加令牌"
+    },
+    "list": {
+      "unnamedToken": "未命名令牌",
+      "statusActive": "已激活",
+      "statusExpired": "已过期",
+      "neverExpires": "永不过期",
+      "expiresOnShort": "有效期至 {{date}}",
+      "tokenLabel": "令牌",
+      "createdLabel": "创建于",
+      "lastUsedLabel": "最后使用",
+      "expiresOnLabel": "有效期至",
+      "neverUsed": "未使用",
+      "neverLabel": "从不",
+      "deleteBtn": "删除令牌"
+    },
+    "dialog": {
+      "createTitle": "创建访问令牌",
+      "editTitle": "编辑访问令牌",
+      "description": "完成后点击保存。",
+      "save": "保存",
+      "saveChanges": "保存修改"
+    },
+    "deleteDialog": {
+      "title": "删除访问令牌？",
+      "description": "此操作无法撤销。任何使用此令牌的应用将立即失去访问权限。",
+      "cancel": "取消",
+      "confirm": "删除",
+      "deleting": "正在删除..."
+    },
+    "form": {
+      "nameLabel": "名称",
+      "namePlaceholder": "为该访问令牌起一个简短的名称",
+      "nameDescription": "可选 · 最多 32 个字符",
+      "expirationLabel": "有效期",
+      "expirationPlaceholder": "选择有效期",
+      "expirationDescription": "令牌将在选定时间后自动过期。",
+      "never": "永久",
+      "1day": "1 天",
+      "7days": "7 天",
+      "30days": "30 天",
+      "errorMax": "最多 32 个字符",
+      "errorNumber": "必须为数字",
+      "errorInt": "必须为整数",
+      "errorPositive": "必须大于 0"
+    },
+    "notifications": {
+      "createSuccess": "访问令牌已创建",
+      "createSuccessDesc": "访问令牌已成功创建。",
+      "updateSuccess": "访问令牌已更新",
+      "updateSuccessDesc": "访问令牌已成功更新。",
+      "createFailed": "创建失败",
+      "updateFailed": "更新失败",
+      "deleteSuccess": "访问令牌已成功删除",
+      "deleteFailed": "删除访问令牌失败",
+      "copied": "已复制到剪贴板",
+      "genericError": "操作失败，请重试。",
+      "close": "关闭",
+      "tryAgain": "重试"
+    }
+  },
+  "permission": {
+    "scope": {
+      "global": "全局",
+      "account": "账户 #{{id}}"
+    },
+    "dialog": {
+      "global_title": "全局权限",
+      "account_title": "账户权限",
+      "global_description": "授予该用户的系统级权限。",
+      "account_description": "仅适用于指定账户的权限。"
+    },
+    "category": {
+      "system_identity": "系统与身份",
+      "global_data": "全局数据（管理员）",
+      "account": "账户权限"
+    },
+    "system": {
+      "access": "基础系统访问",
+      "root": "系统最高控制权"
+    },
+    "user": {
+      "manage": "管理所有用户",
+      "view": "查看基础用户名"
+    },
+    "token": {
+      "manage": "管理访问令牌"
+    },
+    "account": {
+      "create": "创建邮箱账户",
+      "manage": "管理分配的账户",
+      "manage_all": "管理所有账户配置",
+      "read_details": "查看账户详细信息"
+    },
+    "data": {
+      "read": "读取分配账户的邮件数据",
+      "read_all": "读取所有邮件数据",
+      "manage": "管理分配账户的邮件元数据",
+      "manage_all": "管理所有邮件元数据",
+      "raw_download": "下载分配账户的原始邮件",
+      "raw_download_all": "下载所有原始邮件",
+      "delete": "删除分配账户的邮件",
+      "delete_all": "删除所有账户的邮件",
+      "export_batch": "批量导出分配账户的数据",
+      "export_batch_all": "批量导出所有数据",
+      "import_batch": "批量导入邮件数据"
+    }
+  },
+  "users": {
+    "columns": {
+      "id": "ID",
+      "avatar": "头像",
+      "username": "用户名",
+      "email": "邮箱地址",
+      "roles": "角色权限",
+      "created_at": "创建时间",
+      "updated_at": "更新时间",
+      "actions": "操作"
+    },
+    "buttons": {
+      "add": "添加用户",
+      "add_new": "添加新用户"
+    },
+    "empty": {
+      "title": "未发现用户",
+      "description": "点击下方按钮开始添加第一个用户。"
+    },
+    "nav": {
+      "users": "用户",
+      "roles": "角色",
+      "api_tokens": "API 令牌"
+    },
+    "api_tokens": {
+      "empty": {
+        "title": "未找到 API 令牌",
+        "description": "系统中尚未生成任何 API 令牌。"
+      },
+      "button": {
+        "generate": "生成新令牌"
+      },
+      "toolbar": {
+        "search_placeholder": "按名称、所有者或令牌搜索..."
+      },
+      "table": {
+        "name": "名称",
+        "type": "类型",
+        "last_used": "上次使用",
+        "expires_at": "过期时间",
+        "owner": "所有者",
+        "created": "创建时间",
+        "api_key": "API 密钥",
+        "web_ui": "Web 界面",
+        "never": "从未",
+        "permanent": "永久",
+        "expired": "已过期",
+        "unnamed": "未命名令牌"
+      },
+      "unnamed": "未命名令牌",
+      "delete": {
+        "title": "删除 API 令牌",
+        "desc": "你即将永久删除该 API 令牌",
+        "prefix": "令牌前缀",
+        "irreversible": "此操作无法撤销。任何使用该令牌的应用将立即失去访问权限。",
+        "confirm_label": "为确认操作，请在下方输入 {{word}}：",
+        "confirm_placeholder": "输入“{{word}}”以确认",
+        "warning_title": "警告",
+        "warning_desc": "任何使用该令牌的脚本、服务或集成都会失败。请在继续之前确保已更新你的系统。",
+        "confirm_button": "删除令牌",
+        "deleting": "正在删除..."
+      },
+      "toast": {
+        "deleted_title": "API 令牌已删除",
+        "deleted_desc": "令牌“{{name}}”已成功移除。",
+        "delete_failed_title": "删除失败",
+        "delete_failed": "删除令牌失败，请重试。"
+      }
+    },
+    "tokens": {
+      "schema": {
+        "name_max": "最多 32 个字符",
+        "expire_number": "必须是数字",
+        "expire_int": "必须是整数",
+        "expire_positive": "必须大于 0"
+      },
+      "toast": {
+        "update_success_title": "访问令牌已更新",
+        "update_success_desc": "访问令牌已成功更新。",
+        "create_success_title": "访问令牌已创建",
+        "create_success_desc": "访问令牌已成功创建。",
+        "update_failed_title": "更新失败",
+        "create_failed_title": "创建失败"
+      },
+      "error": {
+        "fallback": "操作失败，请稍后重试。"
+      },
+      "dialog": {
+        "edit_title": "编辑访问令牌",
+        "create_title": "创建访问令牌",
+        "description": "完成后点击保存。"
+      },
+      "fields": {
+        "name_label": "名称",
+        "name_placeholder": "为该访问令牌起一个简短的名称",
+        "name_hint": "可选 · 最多 32 个字符",
+        "expire_label": "有效期",
+        "expire_placeholder": "选择有效期",
+        "expire_hint": "令牌将在选定的时间后自动过期。"
+      },
+      "expire_options": {
+        "never": "永不过期",
+        "1_day": "1 天",
+        "7_days": "7 天",
+        "30_days": "30 天"
+      }
+    },
+    "tokens_action": {
+      "dialog": {
+        "title": "API 令牌",
+        "description": "管理此用户的 API 令牌。您可以查看、复制或监控令牌使用情况。"
+      },
+      "empty": {
+        "title": "无 API 令牌",
+        "description": "该用户目前没有 API 令牌。点击下方按钮创建一个。"
+      },
+      "buttons": {
+        "add": "添加令牌"
+      },
+      "list": {
+        "unnamed_token": "未命名令牌",
+        "status_expired": "已过期",
+        "status_active": "活跃",
+        "expires_on_brief": "有效期至 {{date}}",
+        "never_expires": "永不过期",
+        "label_token": "令牌",
+        "label_created": "创建于",
+        "label_last_used": "上次使用",
+        "label_expires_at": "过期时间",
+        "never": "从未",
+        "button_delete": "删除令牌"
+      },
+      "delete_dialog": {
+        "title": "删除访问令牌？",
+        "description": "此操作无法撤销。任何正在使用此令牌的应用程序都将立即失去访问权限。"
+      }
+    },
+    "actions": {
+      "schema": {
+        "account_required": "请选择一个账户",
+        "role_required": "请选择一个角色",
+        "username_required": "用户名不能为空",
+        "username_min": "用户名长度至少为 5 个字符",
+        "username_max": "用户名长度不能超过 32 个字符",
+        "email_required": "邮箱地址不能为空",
+        "email_invalid": "请输入有效的邮箱地址",
+        "global_role_required": "请至少为此用户分配一个全局角色",
+        "description_max": "描述长度不能超过 256 个字符",
+        "ip_invalid": "发现无效的 IP 地址",
+        "password_required": "密码不能为空",
+        "password_min": "密码长度至少为 8 个字符",
+        "password_max": "密码长度不能超过 32 个字符"
+      },
+      "toast": {
+        "updated": "用户已更新",
+        "created": "用户已创建"
+      },
+      "dialog": {
+        "edit_title": "编辑用户: {{name}}",
+        "create_title": "创建新用户",
+        "subtitle": "配置身份、访问级别和安全策略。"
+      },
+      "tabs": {
+        "general": "基本信息",
+        "permissions": "账户权限",
+        "security": "安全与 ACL"
+      },
+      "sections": {
+        "basic": "基础身份",
+        "global": "全局权限",
+        "mail_access": "邮件访问控制",
+        "mail_access_subtitle": "定义此用户可以管理的邮件账户。",
+        "policy": "策略开关"
+      },
+      "fields": {
+        "username": "用户名",
+        "username_hint": "用于系统登录的唯一标识。",
+        "email": "邮箱地址",
+        "email_hint": "主要联系方式和通知地址。",
+        "password": "密码",
+        "password_placeholder_create": "至少 8 个字符",
+        "password_placeholder_edit": "留空则保持当前密码",
+        "password_hint_create": "初始用户设置的安全密码。",
+        "password_hint_edit": "仅在您希望更改密码时输入新密码。",
+        "global_roles_hint": "分配高级系统权限。可以选择多个角色。",
+        "description": "描述（可选）",
+        "description_placeholder": "添加关于此用户的一些注释...",
+        "description_hint": "此账户的内部说明或附加背景信息（最多 256 个字符）。",
+        "select_account": "选择账户",
+        "assign_role": "分配角色",
+        "ip_whitelist": "IP 白名单",
+        "ip_whitelist_hint": "限制这些 IP 地址登录（每行一个）。",
+        "rate_quota": "频率限额",
+        "burst_interval": "突发间隔 (秒)"
+      },
+      "buttons": {
+        "add_account": "添加账户",
+        "update": "更新用户",
+        "create": "创建用户"
+      },
+      "states": {
+        "full_access": "全权限模式",
+        "full_access_desc": "拥有系统管理员角色的用户拥有对所有账户的固有访问权限，无需手动分配。",
+        "no_accounts": "未分配特定账户。",
+        "security_disabled": "此用户当前禁用了高级安全策略。"
+      },
+      "api_tokens": "API 令牌",
+      "placeholder": {
+        "filter": "搜索用户..."
+      },
+      "delete": {
+        "title": "删除用户",
+        "confirm_msg": "您即将永久删除用户 {{name}} (ID: {{id}})。",
+        "irreversible": "此操作无法撤销。",
+        "input_label": "为确认操作，请在下方输入用户 ID：",
+        "placeholder": "输入 \"{{id}}\" 以确认",
+        "alert_title": "警告：此操作是永久性的。",
+        "alert_desc": "一旦删除，该用户及其所有相关数据将立即被清除。请在继续操作前核实此账户是否已不再需要。",
+        "button_confirm": "删除用户",
+        "button_deleting": "正在删除...",
+        "toast": {
+          "success_title": "用户已删除",
+          "success_desc": "用户 \"{{name}}\" (ID: {{id}}) 已成功移除。",
+          "failed_title": "删除失败",
+          "failed_fallback": "删除用户失败，请重试。"
+        }
+      }
+    }
+  },
+  "roles": {
+    "title": {
+      "create": "创建新角色",
+      "edit": "编辑角色: {{name}}"
+    },
+    "description_hint": "定义访问范围和功能权限。",
+    "form": {
+      "name_label": "角色名称",
+      "type_label": "角色类型",
+      "desc_label": "描述",
+      "matrix_label": "{{type}} 权限矩阵",
+      "builtin_badge": "内置角色",
+      "builtin_desc": "此角色由系统预定义。其权限为**只读**，无法被修改。"
+    },
+    "types": {
+      "Global": "全局",
+      "Account": "账户"
+    },
+    "categories": {
+      "identity": "身份与管理",
+      "global_data": "全局数据访问",
+      "account_resource": "账户资源访问"
+    },
+    "actions": {
+      "cancel": "取消",
+      "submit_create": "创建角色",
+      "submit_update": "更新角色",
+      "success_create": "角色创建成功",
+      "success_update": "角色更新成功",
+      "failed": "操作失败",
+      "close": "关闭",
+      "retry": "重试",
+      "add": "添加角色"
+    },
+    "validation": {
+      "name_required": "角色名称不能为空",
+      "perm_required": "请至少选择一个权限"
+    },
+    "columns": {
+      "id": "ID",
+      "name": "名称",
+      "role_type": "角色类型",
+      "permissions": "权限",
+      "created_at": "创建时间",
+      "updated_at": "更新时间"
+    },
+    "placeholder": {
+      "filter": "搜索角色..."
+    },
+    "delete": {
+      "dialog_title": "删除用户角色",
+      "warning_text": "您即将永久删除角色 {{name}} (ID: {{id}})。",
+      "irreversible": "此操作无法撤销。",
+      "confirm_label": "请键入角色 ID 以确认：",
+      "placeholder": "键入 \"{{id}}\" 以确认",
+      "alert_title": "警告：此操作是永久性的。",
+      "alert_desc": "删除此角色将从所有当前分配了该角色的用户中将其移除。在继续之前，请确保您已检查并重新分配受影响的用户。",
+      "confirm_btn": "删除角色",
+      "deleting": "正在删除...",
+      "success_title": "角色已删除",
+      "success_desc": "用户角色 \"{{name}}\" (ID: {{id}}) 已成功移除。",
+      "error_title": "删除失败",
+      "error_fallback": "无法删除该角色，请稍后重试。"
+    },
+    "details": {
+      "title": "角色权限: {{name}}",
+      "unknown": "未知角色",
+      "role_badge": "{{type}} 角色",
+      "desc_global": "全局管理与系统级访问权限。",
+      "desc_account": "单个账户的访问及数据操作权限。",
+      "close_btn": "关闭详情视图",
+      "view_permissions": "权限详情"
+    },
+    "empty": {
+      "title": "未找到角色",
+      "desc": "您尚未创建任何自定义角色。点击下方按钮开始添加新角色。"
+    }
   }
 }

@@ -3,6 +3,7 @@
         "submit": "Enviar",
         "cancel": "Cancelar",
         "save": "Salvar",
+        "save_changes": "Salvar alterações",
         "delete": "Excluir",
         "edit": "Editar",
         "search": "Pesquisar",
@@ -19,28 +20,34 @@
         "empty": "Vazio",
         "noData": "Sem dados",
         "table": {
-            "noResults": "Nenhum resultado encontrado"
+            "noResults": "Nenhum resultado."
         },
-        "failed": "Falha",
-        "notFound": "Não Encontrado",
+        "failed": "Falhou",
+        "notFound": "Não encontrado",
         "back": "Voltar",
         "goBack": "Voltar",
-        "backToHome": "Voltar à Página Inicial",
-        "tryAgain": "Tentar Novamente",
+        "backToHome": "Voltar ao Início",
+        "tryAgain": "Tentar novamente",
         "more": "Mais",
         "actions": "Ações",
-        "filter": "Filtro",
+        "filter": "Filtrar",
         "reset": "Redefinir",
         "clear": "Limpar",
         "error": "Erro",
         "apply": "Aplicar",
         "select": "Selecionar",
-        "selectAll": "Selecionar Todos",
-        "deselectAll": "Desmarcar Todos",
-        "all": "Todos",
+        "selectAll": "Selecionar tudo",
+        "deselectAll": "Desmarcar tudo",
+        "all": "Tudo",
         "none": "Nenhum",
-        "showLess": "mostrar menos",
-        "showMore": "mostrar mais..."
+        "showLess": "Mostrar menos",
+        "showMore": "Mostrar mais...",
+        "project_description": "Bichon é um projeto de código aberto.",
+        "view_on_github_button": "Ver no GitHub",
+        "op_failed": "Operação falhou",
+        "na": "N/A",
+        "retry": "Repetir",
+        "deleting": "Excluindo..."
     },
     "navigation": {
         "home": "Início",
@@ -53,7 +60,8 @@
         "apiDocs": "Documentação da API",
         "general": "Geral",
         "auth": "Autenticação",
-        "other": "Outro"
+        "other": "Outro",
+        "users": "Usuários do sistema"
     },
     "auth": {
         "welcome": "Bem-vindo ao Bichon",
@@ -130,6 +138,30 @@
         "systemVersion": "Versão do sistema"
     },
     "accounts": {
+        "access_control": {
+            "title": "Atribuição de Acesso à Conta",
+            "description": "Atribuir funções e usuários autorizados a {{email}}",
+            "role_label": "Função de Acesso",
+            "role_placeholder": "Selecionar uma função",
+            "role_loading": "Carregando funções...",
+            "user_label": "Selecionar Usuários Autorizados",
+            "user_search_placeholder": "Buscar por nome ou e-mail...",
+            "user_empty": "Nenhum usuário encontrado",
+            "user_selected_count": "Selecionado(s): {{count}}",
+            "buttons": {
+                "cancel": "Cancelar",
+                "save": "Salvar Atribuição"
+            },
+            "validation": {
+                "user_required": "Selecione pelo menos um usuário",
+                "role_required": "Selecione uma função para atribuir"
+            },
+            "toast": {
+                "success_title": "Atribuição Concluída",
+                "success_desc": "As permissões foram atribuídas com sucesso a {{email}}",
+                "failed_title": "Falha na Atribuição"
+            }
+        },
         "title": "Contas de Email",
         "description": "Gerencie e configure suas contas de email.",
         "addImap": "Adicionar Conta IMAP",
@@ -423,6 +455,25 @@
             "noSubject": "(Sem Assunto)",
             "loadingMore": "Carregando...",
             "loadMore": "Carregar Mais"
+        },
+        "bulkActions": {
+            "ariaLabel": "{{count}} mensagens selecionadas. Barra de ações",
+            "delete": "Excluir",
+            "deleteDesc": "Excluir mensagens selecionadas",
+            "selected": "{{count}} selecionadas",
+            "clear": "Limpar seleção"
+        },
+        "delete": {
+            "title": "Excluir mensagens",
+            "confirmPrefix": "Tem certeza que deseja excluir",
+            "countLabel": "{{count}} mensagem(ns)?",
+            "confirmDetail": "Esta ação não pode ser desfeita.",
+            "confirmButton": "Excluir",
+            "warningTitle": "Aviso",
+            "warningDesc": "As mensagens serão removidas permanentemente.",
+            "successTitle": "Excluído",
+            "successDesc": "Mensagens excluídas com sucesso.",
+            "errorTitle": "Erro ao excluir"
         }
     },
     "mail": {
@@ -705,7 +756,60 @@
         "pleaseUseAnIpAddressForBetterReliability": "Por favor, use um endereço IP (Ex: 127.0.0.1) em vez de um hostname ou domínio para melhor confiabilidade.",
         "adding": "Adicionando...",
         "yourProxyHasBeenSuccessfully": "Seu Proxy foi {{action}} com sucesso.",
-        "proxyUpdateOrAddFailed": "Falha ao {{action}}, por favor, tente novamente mais tarde"
+        "proxyUpdateOrAddFailed": "Falha ao {{action}}, por favor, tente novamente mais tarde",
+        "sidebar": {
+            "profile": "Perfil",
+            "apiTokens": "Tokens API",
+            "proxy": "Proxy de rede",
+            "configurations": "Configurações do sistema"
+        },
+        "profile": {
+            "loadError": "Não foi possível carregar as informações do usuário.",
+            "uploadTitle": "Enviar avatar",
+            "maxSize": "Até {{size}}",
+            "avatarAlt": "Avatar",
+            "removeAvatar": "Remover avatar",
+            "uploadError": "Erro(s) ao enviar o arquivo",
+            "field": {
+                "username": "Nome de usuário",
+                "email": "E-mail",
+                "password": "Senha"
+            },
+            "placeholder": {
+                "password_keep": "Deixe em branco para manter a senha atual"
+            },
+            "button": {
+                "update_profile": "Atualizar perfil",
+                "permissions": "Permissões",
+                "view_global_permissions": "Ver permissões globais"
+            },
+            "section": {
+                "roles": "Funções",
+                "accounts": "{{count}} contas vinculadas"
+            },
+            "account": {
+                "id": "ID da conta: {{id}}"
+            },
+            "toast": {
+                "updated": "Perfil atualizado com sucesso",
+                "update_failed": "Falha ao atualizar o perfil"
+            },
+            "validation": {
+                "username": {
+                    "required": "O nome de usuário é obrigatório",
+                    "min": "O nome de usuário deve ter pelo menos 5 caracteres",
+                    "max": "O nome de usuário deve ter no máximo 32 caracteres"
+                },
+                "email": {
+                    "required": "O e-mail é obrigatório",
+                    "invalid": "Por favor, insira um endereço de e-mail válido"
+                },
+                "password": {
+                    "min": "A senha deve ter pelo menos 8 caracteres",
+                    "max": "A senha deve ter no máximo 32 caracteres"
+                }
+            }
+        }
     },
     "apiDocs": {
         "choosePreferredType": "Escolha o seu tipo de documentação de API preferido",
@@ -765,7 +869,8 @@
         "folderLimitMustBeNumber": "O Limite de Pasta deve ser um número",
         "folderLimitMustBeAtLeast100": "O Limite de Pasta deve ser pelo menos 100",
         "incrementalSyncMustBeNumber": "O Intervalo de Sincronização Incremental deve ser um número",
-        "incrementalSyncMustBeAtLeast10": "O Intervalo de Sincronização Incremental deve ser de pelo menos 10 minutos"
+        "incrementalSyncMustBeAtLeast10": "O Intervalo de Sincronização Incremental deve ser de pelo menos 10 minutos",
+        "pleaseEnterUsernameOrEmail": "Por favor, digite seu nome de usuário ou e-mail"
     },
     "table": {
         "noResults": "Nenhum resultado encontrado",
@@ -780,7 +885,17 @@
         "desc": "Desc",
         "hide": "Ocultar",
         "edit": "Editar",
-        "delete": "Excluir"
+        "delete": "Excluir",
+        "pagination": {
+            "selected": "{{selected}} de {{total}} linha(s) selecionada(s).",
+            "fixed_page_size": "{{size}} linhas por página.",
+            "rows_per_page": "Linhas por página",
+            "page_info": "Página {{page}} de {{total}}",
+            "first": "Primeira página",
+            "previous": "Página anterior",
+            "next": "Próxima página",
+            "last": "Última página"
+        }
     },
     "proxyDelete": {
         "title": "Excluir Proxy",
@@ -797,5 +912,463 @@
         "warningTitle": "Aviso!",
         "warningDesc": "Por favor, tenha cuidado, esta ação é irreversível.",
         "deleteBtn": "Excluir"
+    },
+    "systemConfig": {
+        "pageTitle": "Configurações a nível de sistema",
+        "pageDescription": "Estes parâmetros são inicializados via flags CLI ou variáveis de ambiente. Estão em modo somente leitura.",
+        "status": {
+            "enabled": "Ativado",
+            "disabled": "Desativado",
+            "configured": "Configurado",
+            "missing": "Em falta",
+            "auto": "Auto",
+            "notSet": "Não definido"
+        },
+        "sections": {
+            "network": {
+                "title": "Rede",
+                "desc": "HTTP e acesso público"
+            },
+            "cors": {
+                "title": "CORS",
+                "desc": "Regras de acesso cross-origin"
+            },
+            "logging": {
+                "title": "Logging",
+                "desc": "Comportamento de saída de logs"
+            },
+            "storage": {
+                "title": "Armazenamento e Cache",
+                "desc": "Caminhos de base de dados e limites"
+            },
+            "security": {
+                "title": "Segurança",
+                "desc": "Autenticação e criptografia"
+            },
+            "performance": {
+                "title": "Desempenho",
+                "desc": "Concorrência e compressão"
+            }
+        }
+    },
+    "apiTokens": {
+        "page": {
+            "loadError": "Errore ao carregar os tokens API.",
+            "emptyTitle": "Nenhum token API",
+            "emptyDescription": "Ainda não criou nenhum token API. Clique abaixo para criar um.",
+            "addBtn": "Adicionar token"
+        },
+        "list": {
+            "unnamedToken": "Token sem nome",
+            "statusActive": "Ativo",
+            "statusExpired": "Expirado",
+            "neverExpires": "Nunca expira",
+            "expiresOnShort": "Expira em {{date}}",
+            "tokenLabel": "Token",
+            "createdLabel": "Criado em",
+            "lastUsedLabel": "Último uso",
+            "expiresOnLabel": "Expira em",
+            "neverUsed": "Nunca",
+            "neverLabel": "Nunca",
+            "deleteBtn": "Eliminar token"
+        },
+        "dialog": {
+            "createTitle": "Criar token de acesso",
+            "editTitle": "Editar token de acesso",
+            "description": "Clique em guardar quando terminar.",
+            "save": "Guardar",
+            "saveChanges": "Guardar alterações"
+        },
+        "deleteDialog": {
+            "title": "Eliminar token de acesso?",
+            "description": "Esta ação não pode ser desfeita. Qualquer aplicação que utilize este token perderá imediatamente o acesso.",
+            "cancel": "Cancelar",
+            "confirm": "Eliminar",
+            "deleting": "A eliminar..."
+        },
+        "form": {
+            "nameLabel": "Nome",
+            "namePlaceholder": "Dê um nome curto a este token",
+            "nameDescription": "Opcional · Máx. 32 caracteres",
+            "expirationLabel": "Expiração",
+            "expirationPlaceholder": "Selecionar expiração",
+            "expirationDescription": "Os tokens expirarão automaticamente após o tempo selecionado.",
+            "never": "Nunca",
+            "1day": "1 dia",
+            "7days": "7 dias",
+            "30days": "30 dias",
+            "errorMax": "Máximo 32 caracteres",
+            "errorNumber": "Deve ser um número",
+            "errorInt": "Deve ser um número inteiro",
+            "errorPositive": "Deve ser maior que 0"
+        },
+        "notifications": {
+            "createSuccess": "Token criado",
+            "createSuccessDesc": "O token de acesso foi criado com sucesso.",
+            "updateSuccess": "Token atualizado",
+            "updateSuccessDesc": "O token de acesso foi atualizado com sucesso.",
+            "createFailed": "Falha na criação",
+            "updateFailed": "Falha na atualização",
+            "deleteSuccess": "Token eliminado",
+            "deleteFailed": "Falha ao eliminar",
+            "copied": "Copiado",
+            "genericError": "A operação falhou. Tente novamente.",
+            "close": "Fechar",
+            "tryAgain": "Tentar novamente"
+        }
+    },
+    "permission": {
+        "scope": {
+            "global": "Global",
+            "account": "Conta #{{id}}"
+        },
+        "dialog": {
+            "global_title": "Permissões globais",
+            "account_title": "Permissões da conta",
+            "global_description": "Permissões de sistema concedidas a este usuário.",
+            "account_description": "Permissões limitadas à conta selecionada."
+        },
+        "category": {
+            "system_identity": "Sistema e identidade",
+            "global_data": "Dados globais (Admin)",
+            "account": "Permissões da conta"
+        },
+        "system": {
+            "access": "Acesso básico ao sistema",
+            "root": "Controle total do sistema"
+        },
+        "user": {
+            "manage": "Gerenciar todos os usuários",
+            "view": "Visualizar nomes de usuário básicos"
+        },
+        "token": {
+            "manage": "Gerenciar tokens de acesso"
+        },
+        "account": {
+            "create": "Criar contas de e-mail",
+            "manage": "Gerenciar contas atribuídas",
+            "manage_all": "Gerenciar todas as configurações de contas",
+            "read_details": "Visualizar detalhes da conta"
+        },
+        "data": {
+            "read": "Ler dados de e-mail atribuídos",
+            "read_all": "Ler todos os dados de e-mail",
+            "manage": "Gerenciar metadados de e-mail atribuídos",
+            "manage_all": "Gerenciar todos os metadados de e-mail",
+            "raw_download": "Baixar e-mails brutos atribuídos",
+            "raw_download_all": "Baixar todos os e-mails brutos",
+            "delete": "Excluir e-mails atribuídos",
+            "delete_all": "Excluir e-mails de todas as contas",
+            "export_batch": "Exportar dados atribuídos em lote",
+            "export_batch_all": "Exportar todos os dados em lote",
+            "import_batch": "Importar dados de e-mail em lote"
+        }
+    },
+    "users": {
+        "columns": {
+            "id": "ID",
+            "avatar": "Avatar",
+            "username": "Nome de usuário",
+            "email": "E-mail",
+            "roles": "Funções e permissões",
+            "created_at": "Criado em",
+            "updated_at": "Atualizado em",
+            "actions": "Ações"
+        },
+        "buttons": {
+            "add": "Adicionar usuário",
+            "add_new": "Novo usuário"
+        },
+        "empty": {
+            "title": "Nenhum usuário encontrado",
+            "description": "Clique no botão abaixo para adicionar seu primeiro usuário."
+        },
+        "nav": {
+            "users": "Usuários",
+            "roles": "Funções",
+            "api_tokens": "Tokens de API"
+        },
+        "api_tokens": {
+            "empty": {
+                "title": "Nenhum token de API encontrado",
+                "description": "Nenhum token de API foi gerado no sistema ainda."
+            },
+            "button": {
+                "generate": "Gerar novo token"
+            },
+            "toolbar": {
+                "search_placeholder": "Buscar por nome, proprietário ou token..."
+            },
+            "table": {
+                "name": "Nome",
+                "type": "Tipo",
+                "last_used": "Último uso",
+                "expires_at": "Expira em",
+                "owner": "Proprietário",
+                "created": "Criado",
+                "api_key": "Chave API",
+                "web_ui": "Interface Web",
+                "never": "Nunca",
+                "permanent": "Permanente",
+                "expired": "Expirado",
+                "unnamed": "Token sem nome"
+            },
+            "unnamed": "Token sem nome",
+            "delete": {
+                "title": "Excluir token de API",
+                "desc": "Você está prestes a excluir permanentemente este token de API",
+                "prefix": "Prefixo do token",
+                "irreversible": "Esta ação não pode ser desfeita. Quaisquer aplicativos que usem este token perderão o acesso imediatamente.",
+                "confirm_label": "Para confirmar, digite {{word}} abaixo:",
+                "confirm_placeholder": "Digite \"{{word}}\" para confirmar",
+                "warning_title": "Aviso",
+                "warning_desc": "Quaisquer scripts ou serviços que usem este token falharão. Certifique-se de atualizar seus sistemas.",
+                "confirm_button": "Excluir token",
+                "deleting": "Excluindo..."
+            },
+            "toast": {
+                "deleted_title": "Token de API excluído",
+                "deleted_desc": "O token \"{{name}}\" foi removido com sucesso.",
+                "delete_failed_title": "Falha ao excluir",
+                "delete_failed": "Não foi possível excluir o token, tente novamente."
+            }
+        },
+        "tokens": {
+            "schema": {
+                "name_max": "Máx. 32 caracteres",
+                "expire_number": "Deve ser um número",
+                "expire_int": "Deve ser um número inteiro",
+                "expire_positive": "Deve ser maior que 0"
+            },
+            "toast": {
+                "update_success_title": "Token atualizado",
+                "update_success_desc": "O token de acesso foi atualizado com sucesso.",
+                "create_success_title": "Token criado",
+                "create_success_desc": "O token de acesso foi criado com sucesso.",
+                "update_failed_title": "Falha na atualização",
+                "create_failed_title": "Falha na criação"
+            },
+            "error": {
+                "fallback": "A operação falhou, tente novamente mais tarde."
+            },
+            "dialog": {
+                "edit_title": "Editar token de acesso",
+                "create_title": "Criar token de acesso",
+                "description": "Clique em salvar quando terminar."
+            },
+            "fields": {
+                "name_label": "Nome",
+                "name_placeholder": "Dê um nome curto ao token",
+                "name_hint": "Opcional · Máx. 32 caracteres",
+                "expire_label": "Expiração",
+                "expire_placeholder": "Escolha a expiração",
+                "expire_hint": "O token expirará automaticamente após o tempo selecionado."
+            },
+            "expire_options": {
+                "never": "Nunca expira",
+                "1_day": "1 dia",
+                "7_days": "7 dias",
+                "30_days": "30 dias"
+            }
+        },
+        "tokens_action": {
+            "dialog": {
+                "title": "Tokens de API",
+                "description": "Gerenciar tokens de API para este usuário."
+            },
+            "empty": {
+                "title": "Sem tokens de API",
+                "description": "Este usuário não possui tokens de API no momento."
+            },
+            "buttons": {
+                "add": "Adicionar token"
+            },
+            "list": {
+                "unnamed_token": "Token sem nome",
+                "status_expired": "Expirado",
+                "status_active": "Ativo",
+                "expires_on_brief": "Expira em {{date}}",
+                "never_expires": "Nunca expira",
+                "label_token": "Token",
+                "label_created": "Criado em",
+                "label_last_used": "Último uso",
+                "label_expires_at": "Expira em",
+                "never": "Nunca",
+                "button_delete": "Excluir token"
+            },
+            "delete_dialog": {
+                "title": "Excluir token de acesso?",
+                "description": "Esta ação não pode ser desfeita."
+            }
+        },
+        "actions": {
+            "schema": {
+                "account_required": "Selecione uma conta",
+                "role_required": "Selecione uma função",
+                "username_required": "Nome de usuário é obrigatório",
+                "username_min": "Mínimo 5 caracteres",
+                "username_max": "Máximo 32 caracteres",
+                "email_required": "E-mail é obrigatório",
+                "email_invalid": "Insira um e-mail válido",
+                "global_role_required": "Atribua pelo menos uma função global",
+                "description_max": "Máximo 256 caracteres na descrição",
+                "ip_invalid": "IP inválido detectado",
+                "password_required": "Senha é obrigatória",
+                "password_min": "Mínimo 8 caracteres",
+                "password_max": "Máximo 32 caracteres"
+            },
+            "toast": {
+                "updated": "Usuário atualizado",
+                "created": "Usuário criado"
+            },
+            "dialog": {
+                "edit_title": "Editar usuário: {{name}}",
+                "create_title": "Criar novo usuário",
+                "subtitle": "Configure identidade, níveis de acesso e segurança."
+            },
+            "tabs": {
+                "general": "Geral",
+                "permissions": "Permissões de conta",
+                "security": "Segurança e ACL"
+            },
+            "sections": {
+                "basic": "Identidade básica",
+                "global": "Permissões globais",
+                "mail_access": "Controle de acesso de e-mail",
+                "mail_access_subtitle": "Contas de e-mail que este usuário pode gerenciar.",
+                "policy": "Políticas"
+            },
+            "fields": {
+                "username": "Nome de usuário",
+                "username_hint": "Identificador exclusivo para login.",
+                "email": "E-mail",
+                "email_hint": "Contato principal e notificações.",
+                "password": "Senha",
+                "password_placeholder_create": "Mínimo 8 caracteres",
+                "password_placeholder_edit": "Deixe em branco para manter a atual",
+                "password_hint_create": "Senha segura para configuração inicial.",
+                "password_hint_edit": "Insira apenas se desejar alterar.",
+                "global_roles_hint": "Atribua permissões de sistema.",
+                "description": "Descrição (opcional)",
+                "description_placeholder": "Notas sobre este usuário...",
+                "description_hint": "Notas internas (máx. 256 caracteres).",
+                "select_account": "Escolher conta",
+                "assign_role": "Atribuir função",
+                "ip_whitelist": "Lista branca de IP",
+                "ip_whitelist_hint": "Restringir login a estes IPs (um por linha).",
+                "rate_quota": "Cota de taxa",
+                "burst_interval": "Intervalo de burst (seg)"
+            },
+            "buttons": {
+                "add_account": "Adicionar conta",
+                "update": "Atualizar usuário",
+                "create": "Criar usuário"
+            },
+            "states": {
+                "full_access": "Modo de acesso total",
+                "full_access_desc": "Administradores têm acesso inerente a todas as contas.",
+                "no_accounts": "Nenhuma conta específica atribuída.",
+                "security_disabled": "Políticas de segurança desativadas."
+            },
+            "api_tokens": "Tokens de API",
+            "placeholder": {
+                "filter": "Buscar usuários..."
+            },
+            "delete": {
+                "title": "Excluir usuário",
+                "confirm_msg": "Você está excluindo o usuário {{name}} (ID: {{id}}) permanentemente.",
+                "irreversible": "Esta ação é irreversível.",
+                "input_label": "Digite o ID do usuário para confirmar:",
+                "placeholder": "Digite \"{{id}}\"",
+                "alert_title": "Aviso: ação permanente.",
+                "alert_desc": "O usuário e todos os dados relacionados serão apagados.",
+                "button_confirm": "Excluir usuário",
+                "button_deleting": "Excluindo...",
+                "toast": {
+                    "success_title": "Usuário excluído",
+                    "success_desc": "O usuário \"{{name}}\" foi removido com sucesso.",
+                    "failed_title": "Falha ao excluir",
+                    "failed_fallback": "Não foi possível excluir o usuário."
+                }
+            }
+        }
+    },
+    "roles": {
+        "title": {
+            "create": "Criar nova função",
+            "edit": "Editar função: {{name}}"
+        },
+        "description_hint": "Defina o escopo de acesso e permissões.",
+        "form": {
+            "name_label": "Nome da função",
+            "type_label": "Tipo de função",
+            "desc_label": "Descrição",
+            "matrix_label": "Matriz de permissões ({{type}})",
+            "builtin_badge": "Função integrada",
+            "builtin_desc": "Esta função é predefinida e somente leitura."
+        },
+        "types": {
+            "Global": "Global",
+            "Account": "Conta"
+        },
+        "categories": {
+            "identity": "Identidade e Gestão",
+            "global_data": "Acesso a dados globais",
+            "account_resource": "Acesso a recursos de conta"
+        },
+        "actions": {
+            "cancel": "Cancelar",
+            "submit_create": "Criar função",
+            "submit_update": "Atualizar função",
+            "success_create": "Função criada com sucesso",
+            "success_update": "Função atualizada com sucesso",
+            "failed": "A operação falhou",
+            "close": "Fechar",
+            "retry": "Tentar novamente",
+            "add": "Adicionar função"
+        },
+        "validation": {
+            "name_required": "Nome da função é obrigatório",
+            "perm_required": "Selecione pelo menos uma permissão"
+        },
+        "columns": {
+            "id": "ID",
+            "name": "Nome",
+            "role_type": "Tipo",
+            "permissions": "Permissões",
+            "created_at": "Criado em",
+            "updated_at": "Atualizado em"
+        },
+        "placeholder": {
+            "filter": "Buscar funções..."
+        },
+        "delete": {
+            "dialog_title": "Excluir função",
+            "warning_text": "Você está excluindo a função {{name}} (ID: {{id}}) permanentemente.",
+            "irreversible": "Esta ação não pode ser desfeita.",
+            "confirm_label": "Digite o ID da função para confirmar:",
+            "placeholder": "Digite \"{{id}}\"",
+            "alert_title": "Aviso: ação permanente.",
+            "alert_desc": "Excluir esta função a removerá de todos os usuários atribuídos.",
+            "confirm_btn": "Excluir função",
+            "deleting": "Excluindo...",
+            "success_title": "Função excluída",
+            "success_desc": "A função \"{{name}}\" foi removida.",
+            "error_title": "Falha ao excluir",
+            "error_fallback": "Não foi possível excluir a função."
+        },
+        "details": {
+            "title": "Permissões: {{name}}",
+            "unknown": "Função desconhecida",
+            "role_badge": "Função {{type}}",
+            "desc_global": "Gestão global e acesso ao sistema.",
+            "desc_account": "Operações de dados em contas individuais.",
+            "close_btn": "Fechar",
+            "view_permissions": "Ver detalhes"
+        },
+        "empty": {
+            "title": "Nenhuma função encontrada",
+            "desc": "Você ainda não criou funções personalizadas."
+        }
     }
 }

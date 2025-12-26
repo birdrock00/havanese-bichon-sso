@@ -54,7 +54,7 @@ export function AccountDeleteDialog({ open, onOpenChange, currentRow }: Props) {
   }
 
   function handleError(error: AxiosError) {
-    const errorMessage = error.response?.data ||
+    const errorMessage = (error.response?.data as { message?: string })?.message ||
       error.message ||
       t('dialogs.deleteFailed');
 

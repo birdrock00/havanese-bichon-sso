@@ -17,10 +17,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-use crate::modules::database::manager::DB_MANAGER;
-use crate::modules::database::{find_impl, upsert_impl};
-use crate::modules::error::BichonResult;
-use crate::utc_now;
+// use crate::modules::database::manager::DB_MANAGER;
+// use crate::modules::database::{find_impl, upsert_impl};
+// use crate::modules::error::BichonResult;
+// use crate::utc_now;
 use native_db::*;
 use native_model::{native_model, Model};
 use serde::{Deserialize, Serialize};
@@ -37,34 +37,34 @@ pub struct SystemSetting {
 }
 
 impl SystemSetting {
-    pub fn new(key: String, value: String) -> Self {
-        Self {
-            key,
-            value,
-            created_at: utc_now!(),
-            updated_at: utc_now!(),
-        }
-    }
+    // pub fn new(key: String, value: String) -> Self {
+    //     Self {
+    //         key,
+    //         value,
+    //         created_at: utc_now!(),
+    //         updated_at: utc_now!(),
+    //     }
+    // }
     //overwrite
-    pub async fn set(&self) -> BichonResult<()> {
-        upsert_impl(DB_MANAGER.meta_db(), self.to_owned()).await
-    }
+    // pub async fn set(&self) -> BichonResult<()> {
+    //     upsert_impl(DB_MANAGER.meta_db(), self.to_owned()).await
+    // }
 
-    pub fn get(key: &str) -> BichonResult<Option<SystemSetting>> {
-        find_impl(DB_MANAGER.meta_db(), key)
-    }
+    // pub fn get(key: &str) -> BichonResult<Option<SystemSetting>> {
+    //     find_impl(DB_MANAGER.meta_db(), key)
+    // }
 
     // pub async fn list() -> RustMailerResult<Vec<SystemSetting>> {
     //     list_all_impl(DB_MANAGER.metadata_db()).await
     // }
 
-    pub fn get_existing_value(key: &str) -> BichonResult<Option<String>> {
-        let setting = Self::get(key)?;
-        Ok(setting.map(|s| s.value))
-    }
+    // pub fn get_existing_value(key: &str) -> BichonResult<Option<String>> {
+    //     let setting = Self::get(key)?;
+    //     Ok(setting.map(|s| s.value))
+    // }
 
-    pub async fn set_value(key: &str, value: String) -> BichonResult<()> {
-        let setting = Self::new(key.to_string(), value);
-        setting.set().await
-    }
+    // pub async fn set_value(key: &str, value: String) -> BichonResult<()> {
+    //     let setting = Self::new(key.to_string(), value);
+    //     setting.set().await
+    // }
 }

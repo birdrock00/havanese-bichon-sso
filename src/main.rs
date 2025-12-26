@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use mimalloc::MiMalloc;
 use modules::{
     common::rustls::RustMailerTls,
@@ -25,11 +24,12 @@ use modules::{
     logger,
     rest::start_http_server,
     tasks::PeriodicTasks,
-    token::root::ensure_root_token,
 };
 use tracing::info;
 
-use crate::modules::{common::signal::SignalManager, settings::dir::DataDirManager};
+use crate::modules::{
+    common::signal::SignalManager, settings::dir::DataDirManager, users::manager::UserManager,
+};
 
 mod modules;
 
@@ -68,7 +68,7 @@ async fn initialize() -> BichonResult<()> {
     // SETTINGS.validate()?;
     SignalManager::initialize().await?;
     DataDirManager::initialize().await?;
-    ensure_root_token().await?;
+    UserManager::initialize().await?;
     RustMailerTls::initialize().await?;
     EmailClientExecutors::initialize().await?;
     PeriodicTasks::start_background_tasks();

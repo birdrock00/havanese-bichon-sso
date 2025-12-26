@@ -47,7 +47,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
     {
       accessorKey: "email",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('accounts.email')} />
+        <DataTableColumnHeader column={column} title={t('accounts.email')} className="justify-center" />
       ),
       cell: ({ row }) => {
         return <LongText>{row.original.email}</LongText>
@@ -57,7 +57,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
     {
       accessorKey: "enabled",
       header: ({ column }) => (
-        <DataTableColumnHeader className="text-center" column={column} title={t('accounts.enabled')} />
+        <DataTableColumnHeader className="justify-center" column={column} title={t('accounts.enabled')} />
       ),
       cell: EnableAction,
       meta: { className: 'w-18 text-center' },
@@ -69,7 +69,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         <DataTableColumnHeader column={column} title={t('accounts.auth')} />
       ),
       cell: OAuth2Action,
-      meta: { className: 'w-18 text-center' },
+      meta: { className: 'text-center' },
       enableHiding: false,
       enableSorting: false
     },
@@ -88,14 +88,14 @@ export function useColumns(): ColumnDef<AccountModel>[] {
     {
       accessorKey: "sync_interval_sec",
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title={t('accounts.incSync')} />
+        <DataTableColumnHeader column={column} title={t('accounts.incSync')} className="justify-center" />
       ),
       cell: ({ row }) => {
         let account_type = row.original.account_type;
         if (account_type === "NoSync") {
-          return <LongText>n/a</LongText>
+          return <LongText className="text-center">n/a</LongText>
         }
-        return <LongText>{row.original.sync_interval_min} min</LongText>
+        return <LongText className="text-center">{row.original.sync_interval_min} min</LongText>
       },
       //meta: { className: 'w-18 text-center' },
       enableHiding: false,
@@ -106,7 +106,28 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         <DataTableColumnHeader column={column} title={t('accounts.state')} />
       ),
       cell: RunningStateCellAction,
-      meta: { className: 'w-36' },
+      meta: { className: 'text-center' },
+      enableHiding: false,
+    },
+    {
+      accessorKey: 'created_by',
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Owner" className="justify-center" />
+      ),
+      cell: ({ row }) => {
+        const { created_user_name, created_user_email } = row.original;
+        return (
+          <div className="flex flex-col py-1 text-center">
+            <span className="text-sm font-medium text-foreground">
+              {created_user_name}
+            </span>
+            <span className="text-[11px] text-muted-foreground font-mono">
+              {created_user_email}
+            </span>
+          </div>
+        );
+      },
+      meta: { className: 'w-60 text-center' },
       enableHiding: false,
     },
     {
