@@ -29,16 +29,20 @@ use crate::modules::error::BichonResult;
 use crate::modules::settings::cli::SETTINGS;
 use crate::raise_error;
 
-static ENCRYPT_PASSWORD: LazyLock<String> =
-    LazyLock::new(|| match &SETTINGS.bichon_encrypt_password {
-        Some(p) => p.clone(),
-        None => {
-            // unwrap() is safe here, because SETTINGS validates that at least one of the encrypt_password
-            // fields is set.
-            fs::read_to_string(SETTINGS.bichon_encrypt_password_file.as_ref().unwrap())
-                .expect("failed to read the file with the encrypt password")
-        }
-    });
+static ENCRYPT_PASSWORD: LazyLock<String> = LazyLock::new(|| {
+    if let Some(file_path) = &SETTINGS.bichon_encrypt_password_file {
+        return fs::read_to_string(file_path)
+            .expect("failed to read the file with the encrypt password")
+            .trim()
+            .to_string();
+    }
+
+    if let Some(p) = &SETTINGS.bichon_encrypt_password {
+        return p.clone();
+    }
+
+    panic!("Neither encrypt_password nor encrypt_password_file is set. This should have been validated by SETTINGS.");
+});
 
 struct SingleNonceSequence([u8; 12]);
 
