@@ -1370,5 +1370,13 @@
             "title": "Nessun ruolo trovato",
             "desc": "Non hai ancora creato alcun ruolo personalizzato."
         }
+    },
+    "profile": {
+        "avatar_alt": "Avatar",
+        "menu": {
+            "profile": "Profilo",
+            "settings": "Impostazioni",
+            "sign_out": "Disconnetti"
+        }
     }
 }

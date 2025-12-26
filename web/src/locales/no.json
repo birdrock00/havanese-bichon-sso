@@ -1370,5 +1370,13 @@
             "title": "Ingen roller funnet",
             "desc": "Du har ikke opprettet noen egendefinerte roller ennå."
         }
+    },
+    "profile": {
+        "avatar_alt": "Avatar",
+        "menu": {
+            "profile": "Profil",
+            "settings": "Innstillinger",
+            "sign_out": "Logg ut"
+        }
     }
 }

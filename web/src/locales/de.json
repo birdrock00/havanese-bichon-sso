@@ -1370,5 +1370,13 @@
             "title": "Keine Rollen gefunden",
             "desc": "Sie haben noch keine benutzerdefinierten Rollen erstellt."
         }
+    },
+    "profile": {
+        "avatar_alt": "Avatar",
+        "menu": {
+            "profile": "Profil",
+            "settings": "Einstellungen",
+            "sign_out": "Abmelden"
+        }
     }
 }

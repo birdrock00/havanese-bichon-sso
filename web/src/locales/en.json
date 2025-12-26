@@ -1370,5 +1370,13 @@
       "title": "No Roles Found",
       "desc": "You haven't created any custom roles yet."
     }
+  },
+  "profile": {
+    "avatar_alt": "Avatar",
+    "menu": {
+      "profile": "Profile",
+      "settings": "Settings",
+      "sign_out": "Sign out"
+    }
   }
 }

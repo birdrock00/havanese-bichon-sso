@@ -1370,5 +1370,13 @@
             "title": "Geen rollen gevonden",
             "desc": "U heeft nog geen aangepaste rollen gemaakt."
         }
+    },
+    "profile": {
+        "avatar_alt": "Avatar",
+        "menu": {
+            "profile": "Profiel",
+            "settings": "Instellingen",
+            "sign_out": "Uitloggen"
+        }
     }
 }

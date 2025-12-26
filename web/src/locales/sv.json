@@ -1370,5 +1370,13 @@
             "title": "Inga roller hittades",
             "desc": "Du har inte skapat några anpassade roller än."
         }
+    },
+    "profile": {
+        "avatar_alt": "Avatar",
+        "menu": {
+            "profile": "Profil",
+            "settings": "Inställningar",
+            "sign_out": "Logga ut"
+        }
     }
 }

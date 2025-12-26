@@ -1370,5 +1370,13 @@
             "title": "No se encontraron roles",
             "desc": "Aún no ha creado ningún rol personalizado."
         }
+    },
+    "profile": {
+        "avatar_alt": "Avatar",
+        "menu": {
+            "profile": "Perfil",
+            "settings": "Configuración",
+            "sign_out": "Cerrar sesión"
+        }
     }
 }

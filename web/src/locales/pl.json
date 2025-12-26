@@ -1370,5 +1370,13 @@
       "title": "Nie znaleziono ról",
       "desc": "Nie utworzyłeś jeszcze żadnych własnych ról."
     }
+  },
+  "profile": {
+    "avatar_alt": "Awatar",
+    "menu": {
+      "profile": "Profil",
+      "settings": "Ustawienia",
+      "sign_out": "Wyloguj się"
+    }
   }
 }

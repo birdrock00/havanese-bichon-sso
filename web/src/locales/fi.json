@@ -1370,5 +1370,13 @@
             "title": "Rooleja ei löytynyt",
             "desc": "Et ole vielä luonut mukautettuja rooleja."
         }
+    },
+    "profile": {
+        "avatar_alt": "Profiilikuva",
+        "menu": {
+            "profile": "Profiili",
+            "settings": "Asetukset",
+            "sign_out": "Kirjaudu ulos"
+        }
     }
 }

@@ -1370,5 +1370,13 @@
             "title": "Nenhuma função encontrada",
             "desc": "Você ainda não criou funções personalizadas."
         }
+    },
+    "profile": {
+        "avatar_alt": "Avatar",
+        "menu": {
+            "profile": "Perfil",
+            "settings": "Configurações",
+            "sign_out": "Sair"
+        }
     }
 }

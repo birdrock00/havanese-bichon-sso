@@ -33,13 +33,13 @@ import { useCurrentUser } from '@/hooks/use-current-user';
 import useDialogState from '@/hooks/use-dialog-state';
 
 import { useMemo } from 'react';
-// import { useTranslation } from 'react-i18next';
 import { SignOutDialog } from './sign-out-dialog';
 import { Link } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
 
 export function ProfileDropdown() {
   const [open, setOpen] = useDialogState()
-  // const { t } = useTranslation()
+  const { t } = useTranslation()
 
   const { data: user } = useCurrentUser()
 
@@ -50,6 +50,7 @@ export function ProfileDropdown() {
   }, [user]);
 
   const fallbackName = user?.username ? user.username.charAt(0).toUpperCase() : 'U';
+
   return (
     <>
       <DropdownMenu modal={false}>
@@ -57,7 +58,7 @@ export function ProfileDropdown() {
           <Button variant="ghost" className="relative h-8 w-8 rounded-full">
             <Avatar className="h-8 w-8">
               {avatarSrc ? (
-                <img src={avatarSrc} alt="Avatar" className="h-full w-full object-cover" />
+                <img src={avatarSrc} alt={t('profile.avatar_alt')} className="h-full w-full object-cover" />
               ) : (
                 <AvatarFallback className="text-xs">{fallbackName}</AvatarFallback>
               )}
@@ -77,15 +78,15 @@ export function ProfileDropdown() {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem asChild>
-              <Link to='/settings/profile'>Profile</Link>
+              <Link to='/settings/profile'>{t('profile.menu.profile')}</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link to='/settings'>Settings</Link>
+              <Link to='/settings'>{t('profile.menu.settings')}</Link>
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setOpen(true)}>
-            Sign out
+            {t('profile.menu.sign_out')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
