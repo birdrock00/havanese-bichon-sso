@@ -40,70 +40,79 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Proxy } from '../data/schema'
 import { AxiosError } from 'axios'
 import { ToastAction } from '@/components/ui/toast'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { add_proxy, update_proxy } from '@/api/system/api'
 import { useTranslation } from 'react-i18next'
-
+import { Proxy } from '@/api/system/api'
 
 const proxyFormSchema = z.object({
   url: z.string()
     .min(1, "Proxy address cannot be empty")
-    .refine(
-      (value) => {
-        try {
-          const url = new URL(value);
-          return url.protocol === 'socks5:' || url.protocol === 'http:';
-        } catch {
-          return false;
-        }
-      },
-      {
-        message: "URL must start with http:// or socks5://",
+    .superRefine((value, ctx) => {
+
+      if (value.length === 0) {
+        return;
       }
-    )
-    .refine(
-      (value) => {
-        const url = new URL(value);
-        return /^[a-zA-Z0-9\-\.]+$/.test(url.hostname);
-      },
-      {
-        message: "Hostname contains invalid characters",
+
+      let url: URL;
+      try {
+        url = new URL(value);
+      } catch (e) {
+
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Invalid URL format",
+          path: [],
+        });
+        return;
       }
-    )
-    .refine(
-      (value) => {
-        const url = new URL(value);
-        const port = parseInt(url.port || '1080');
-        return port > 0 && port <= 65535;
-      },
-      {
-        message: "Port must be between 1-65535",
+
+
+      if (url.protocol !== 'socks5:' && url.protocol !== 'http:') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "URL must start with http:// or socks5://",
+          path: [],
+        });
       }
-    )
-    .refine(
-      (value) => {
-        const url = new URL(value);
-        if (url.username && !url.password) return false;
-        return true;
-      },
-      {
-        message: "Password cannot be empty when username is provided",
+
+
+      if (!/^[a-zA-Z0-9\-\.]+$/.test(url.hostname)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Hostname contains invalid characters",
+          path: [],
+        });
       }
-    )
-    .refine(
-      (value) => {
-        const url = new URL(value);
-        if (url.password) return url.password.length >= 8;
-        return true;
-      },
-      {
-        message: "Password must be at least 8 characters",
+
+
+      const port = parseInt(url.port || '1080');
+      if (port <= 0 || port > 65535) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Port must be between 1-65535",
+          path: [],
+        });
       }
-    )
+
+
+      if (url.username && !url.password) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Password cannot be empty when username is provided",
+          path: [],
+        });
+      } else if (url.password && url.password.length < 8) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Password must be at least 8 characters",
+          path: [],
+        });
+      }
+    })
 });
 
 export type ProxyForm = z.infer<typeof proxyFormSchema>;
@@ -174,7 +183,6 @@ export function ProxyActionDialog({ currentRow, open, onOpenChange }: Props) {
       description: errorMessage as string,
       action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
     });
-    console.error(error);
   }
 
 

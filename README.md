@@ -386,6 +386,41 @@ A special thank you to **[@rallisf1](https://github.com/rallisf1)** for sharing 
 
 This data is provided solely as a **reference** for real-world usage. We encourage more users to share their Bichon usage screenshots and metrics (e.g., ingestion volume, compression ratio, search speed, etc.) to help the community conduct a more comprehensive assessment of Bichon's suitability and performance.
 
+---
+
+## Roadmap
+
+* [ ] Multi-user support with account/password login
+
+  * System-level roles (admin / user)
+  * Per-mail-account permissions
+
+* [ ] `bichon-cli` command-line tool
+
+  * Import emails from `eml`, `mbox`, `msg`, `pst`
+
+* [ ] Manual sync controls
+
+  * Sync on demand
+  * Sync a single folder
+  * Verify completeness by comparing with the mail server
+
+* [ ] Post-sync server cleanup
+
+  * Clean up server-side emails after successful sync
+  * Free up mailbox space (e.g. Gmail)
+
+* [ ] Email export
+
+  * Export by folder
+  * Export by entire account
+
+* [ ] Account-to-account email sync
+
+  * Sync emails to a specified target account
+  * Support mailbox migration
+
+---
 
 ## 🛠️ Tech Stack
 
@@ -449,9 +484,12 @@ cargo build
 Or run directly:
 
 ```bash
+export BICHON_ENCRYPT_PASSWORD=dummy-password-for-testing
 cargo run -- --bichon-root-dir e:\bichon-data
 ```
+
 `--bichon-root-dir` specifies the directory where **all Bichon data** will be stored.
+`BICHON_ENCRYPT_PASSWORD` is the password used to encrypt the sensitive data (see `cargo run -- --help` for alternative ways to specify this).
 
 ### WebUI Access
 

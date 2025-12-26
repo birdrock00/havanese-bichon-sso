@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::modules::cache::imap::mailbox::MailBox;
 use crate::modules::common::auth::ClientContext;
 use crate::modules::mailbox::list::get_account_mailboxes;
@@ -52,7 +51,9 @@ impl MailBoxApi {
         context: ClientContext,
     ) -> ApiResult<Json<Vec<MailBox>>> {
         let account_id = account_id.0;
-        context.require_account_access(account_id)?;
+        context
+            .require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)
+            .await?;
         let remote = remote.0.unwrap_or(false);
         Ok(Json(get_account_mailboxes(account_id, remote).await?))
     }

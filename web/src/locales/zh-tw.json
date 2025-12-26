@@ -1,8 +1,9 @@
 {
     "common": {
-        "submit": "送出",
+        "submit": "提交",
         "cancel": "取消",
         "save": "儲存",
+        "save_changes": "儲存修改",
         "delete": "刪除",
         "edit": "編輯",
         "search": "搜尋",
@@ -16,21 +17,21 @@
         "no": "否",
         "ok": "確定",
         "loading": "載入中...",
-        "empty": "空白",
-        "noData": "無資料",
+        "empty": "空",
+        "noData": "無數據",
         "table": {
-            "noResults": "查無結果"
+            "noResults": "無結果。"
         },
         "failed": "失敗",
-        "notFound": "找不到",
+        "notFound": "未找到",
         "back": "返回",
         "goBack": "返回",
-        "backToHome": "回首頁",
+        "backToHome": "返回首頁",
         "tryAgain": "重試",
         "more": "更多",
         "actions": "操作",
         "filter": "篩選",
-        "reset": "重設",
+        "reset": "重置",
         "clear": "清除",
         "error": "錯誤",
         "apply": "套用",
@@ -39,8 +40,14 @@
         "deselectAll": "取消全選",
         "all": "全部",
         "none": "無",
-        "showLess": "顯示較少",
-        "showMore": "顯示更多..."
+        "showLess": "顯示更少",
+        "showMore": "顯示更多...",
+        "project_description": "Bichon 是一個開源項目。",
+        "view_on_github_button": "在 GitHub 上查看",
+        "op_failed": "操作失敗",
+        "na": "無",
+        "retry": "重試",
+        "deleting": "正在刪除..."
     },
     "navigation": {
         "home": "首頁",
@@ -53,7 +60,8 @@
         "apiDocs": "API文件",
         "general": "一般",
         "auth": "驗證",
-        "other": "其他"
+        "other": "其他",
+        "users": "系統使用者"
     },
     "auth": {
         "welcome": "歡迎使用 Bichon",
@@ -130,6 +138,30 @@
         "systemVersion": "系統版本"
     },
     "accounts": {
+        "access_control": {
+            "title": "帳戶訪問分配",
+            "description": "為 {{email}} 分配角色和授權用戶",
+            "role_label": "訪問角色",
+            "role_placeholder": "選擇角色",
+            "role_loading": "正在加載角色...",
+            "user_label": "選擇授權用戶",
+            "user_search_placeholder": "按用戶名或信箱搜尋...",
+            "user_empty": "未找到相關用戶",
+            "user_selected_count": "已選擇：{{count}} 個用戶",
+            "buttons": {
+                "cancel": "取消",
+                "save": "保存分配"
+            },
+            "validation": {
+                "user_required": "請至少選擇一個用戶",
+                "role_required": "請選擇要分配的角色"
+            },
+            "toast": {
+                "success_title": "分配成功",
+                "success_desc": "權限已成功分配給 {{email}}",
+                "failed_title": "分配失敗"
+            }
+        },
         "title": "郵件帳號",
         "description": "管理和設定您的郵件帳號。",
         "addImap": "新增 IMAP 帳號",
@@ -423,6 +455,25 @@
             "noSubject": "(無主旨)",
             "loadingMore": "載入中...",
             "loadMore": "載入更多"
+        },
+        "bulkActions": {
+            "ariaLabel": "已選擇 {{count}} 條訊息。批量操作工具列",
+            "delete": "刪除",
+            "deleteDesc": "刪除選中的訊息",
+            "selected": "已選擇 {{count}} 項",
+            "clear": "清除選取"
+        },
+        "delete": {
+            "title": "刪除訊息",
+            "confirmPrefix": "確認要刪除",
+            "countLabel": "{{count}} 條訊息嗎？",
+            "confirmDetail": "此操作無法復原。",
+            "confirmButton": "刪除",
+            "warningTitle": "警告",
+            "warningDesc": "刪除的訊息將被永久移除，無法恢復。",
+            "successTitle": "訊息已刪除",
+            "successDesc": "選定的訊息已成功刪除。",
+            "errorTitle": "刪除失敗"
         }
     },
     "mail": {
@@ -705,7 +756,60 @@
         "pleaseUseAnIpAddressForBetterReliability": "為了提高可靠性，請使用 IP 地址（例如：127.0.0.1），而非主機名稱或網域。",
         "adding": "正在新增...",
         "yourProxyHasBeenSuccessfully": "您的代理已成功{{action}}。",
-        "proxyUpdateOrAddFailed": "{{action}} 失敗，請稍後再試"
+        "proxyUpdateOrAddFailed": "{{action}} 失敗，請稍後再試",
+        "sidebar": {
+            "profile": "個人資料",
+            "apiTokens": "API 權杖",
+            "proxy": "網路代理",
+            "configurations": "系統配置"
+        },
+        "profile": {
+            "loadError": "無法載入使用者資訊。",
+            "uploadTitle": "上傳頭像",
+            "maxSize": "最大 {{size}}",
+            "avatarAlt": "頭像",
+            "removeAvatar": "移除頭像",
+            "uploadError": "檔案上傳錯誤",
+            "field": {
+                "username": "使用者名稱",
+                "email": "電子郵件",
+                "password": "密碼"
+            },
+            "placeholder": {
+                "password_keep": "留空以保留目前的密碼"
+            },
+            "button": {
+                "update_profile": "更新個人資料",
+                "permissions": "權限",
+                "view_global_permissions": "查看全域權限"
+            },
+            "section": {
+                "roles": "角色",
+                "accounts": "已連結 {{count}} 個帳戶"
+            },
+            "account": {
+                "id": "帳戶 ID：{{id}}"
+            },
+            "toast": {
+                "updated": "個人資料更新成功",
+                "update_failed": "更新個人資料失敗"
+            },
+            "validation": {
+                "username": {
+                    "required": "必須填寫使用者名稱",
+                    "min": "使用者名稱至少需要 5 個字元",
+                    "max": "使用者名稱最多 32 個字元"
+                },
+                "email": {
+                    "required": "必須填寫電子郵件",
+                    "invalid": "請輸入有效的電子郵件地址"
+                },
+                "password": {
+                    "min": "密碼至少需要 8 個字元",
+                    "max": "密碼最多 32 個字元"
+                }
+            }
+        }
     },
     "apiDocs": {
         "choosePreferredType": "選擇您偏好的 API 文件類型",
@@ -765,7 +869,8 @@
         "folderLimitMustBeNumber": "資料夾限制必須是數字",
         "folderLimitMustBeAtLeast100": "資料夾限制必須至少為 100",
         "incrementalSyncMustBeNumber": "增量同步間隔必須是數字",
-        "incrementalSyncMustBeAtLeast10": "增量同步間隔必須至少為 10 分鐘"
+        "incrementalSyncMustBeAtLeast10": "增量同步間隔必須至少為 10 分鐘",
+        "pleaseEnterUsernameOrEmail": "請輸入您的使用者名稱或電子郵件"
     },
     "table": {
         "noResults": "查無結果",
@@ -780,7 +885,17 @@
         "desc": "降冪",
         "hide": "隱藏",
         "edit": "編輯",
-        "delete": "刪除"
+        "delete": "刪除",
+        "pagination": {
+            "selected": "已選擇 {{selected}} / {{total}} 行。",
+            "fixed_page_size": "每頁 {{size}} 行。",
+            "rows_per_page": "每頁行數",
+            "page_info": "第 {{page}} 頁，共 {{total}} 頁",
+            "first": "跳轉到第一頁",
+            "previous": "上一頁",
+            "next": "下一頁",
+            "last": "跳轉到最後一頁"
+        }
     },
     "proxyDelete": {
         "title": "刪除代理",
@@ -797,5 +912,471 @@
         "warningTitle": "警告！",
         "warningDesc": "請小心，此操作無法復原。",
         "deleteBtn": "刪除"
+    },
+    "systemConfig": {
+        "pageTitle": "系統級配置",
+        "pageDescription": "這些參數透過 CLI 標誌或環境變數初始化。它們目前為唯讀，以確保環境一致性。",
+        "status": {
+            "enabled": "已啟用",
+            "disabled": "已禁用",
+            "configured": "已配置",
+            "missing": "缺失",
+            "auto": "自動",
+            "notSet": "未設置"
+        },
+        "sections": {
+            "network": {
+                "title": "網路",
+                "desc": "HTTP 與公共存取"
+            },
+            "cors": {
+                "title": "CORS",
+                "desc": "跨來源資源共用規則"
+            },
+            "logging": {
+                "title": "日誌",
+                "desc": "日誌輸出行為"
+            },
+            "storage": {
+                "title": "儲存與快取",
+                "desc": "資料庫路徑與限制"
+            },
+            "security": {
+                "title": "安全",
+                "desc": "身分驗證與加密"
+            },
+            "performance": {
+                "title": "效能",
+                "desc": "並行與壓縮"
+            }
+        }
+    },
+    "apiTokens": {
+        "page": {
+            "loadError": "載入 API 權杖失敗。",
+            "emptyTitle": "無 API 權杖",
+            "emptyDescription": "您尚未建立任何 API 權杖。點擊下方按鈕建立一個。",
+            "addBtn": "添加權杖"
+        },
+        "list": {
+            "unnamedToken": "未命名權杖",
+            "statusActive": "已激活",
+            "statusExpired": "已過期",
+            "neverExpires": "永不過期",
+            "expiresOnShort": "有效期至 {{date}}",
+            "tokenLabel": "權杖",
+            "createdLabel": "建立於",
+            "lastUsedLabel": "最後使用",
+            "expiresOnLabel": "有效期至",
+            "neverUsed": "未使用",
+            "neverLabel": "從不",
+            "deleteBtn": "刪除權杖"
+        },
+        "dialog": {
+            "createTitle": "建立存取權杖",
+            "editTitle": "編輯存取權杖",
+            "description": "完成後點擊儲存。",
+            "save": "儲存",
+            "saveChanges": "儲存修改"
+        },
+        "deleteDialog": {
+            "title": "刪除存取權杖？",
+            "description": "此操作無法撤銷。任何使用此權杖的應用程式將立即失去存取權限。",
+            "cancel": "取消",
+            "confirm": "刪除",
+            "deleting": "正在刪除..."
+        },
+        "form": {
+            "nameLabel": "名稱",
+            "namePlaceholder": "為該權杖起一個簡短名稱",
+            "nameDescription": "可選 · 最多 32 個字元",
+            "expirationLabel": "有效期",
+            "expirationPlaceholder": "選擇有效期",
+            "expirationDescription": "權杖將在選定時間後自動過期。",
+            "never": "永久",
+            "1day": "1 天",
+            "7days": "7 天",
+            "30days": "30 天",
+            "errorMax": "最多 32 個字元",
+            "errorNumber": "必須為數字",
+            "errorInt": "必須為整數",
+            "errorPositive": "必須大於 0"
+        },
+        "notifications": {
+            "createSuccess": "權杖已建立",
+            "createSuccessDesc": "存取權杖已成功建立。",
+            "updateSuccess": "權杖已更新",
+            "updateSuccessDesc": "存取權杖已成功更新。",
+            "createFailed": "建立失敗",
+            "updateFailed": "更新失敗",
+            "deleteSuccess": "權杖已刪除",
+            "deleteFailed": "刪除失敗",
+            "copied": "已複製到剪貼簿",
+            "genericError": "操作失敗，請重試。",
+            "close": "關閉",
+            "tryAgain": "重試"
+        }
+    },
+    "permission": {
+        "scope": {
+            "global": "全域",
+            "account": "帳戶 #{{id}}"
+        },
+        "dialog": {
+            "global_title": "全域權限",
+            "account_title": "帳戶權限",
+            "global_description": "授予此使用者的系統層級權限。",
+            "account_description": "僅適用於所選帳戶的權限。"
+        },
+        "category": {
+            "system_identity": "系統與身分",
+            "global_data": "全域資料（管理員）",
+            "account": "帳戶權限"
+        },
+        "system": {
+            "access": "基本系統存取",
+            "root": "系統最高控制權"
+        },
+        "user": {
+            "manage": "管理所有使用者",
+            "view": "檢視基本使用者名稱"
+        },
+        "token": {
+            "manage": "管理存取權杖"
+        },
+        "account": {
+            "create": "建立電子郵件帳戶",
+            "manage": "管理指派的帳戶",
+            "manage_all": "管理所有帳戶設定",
+            "read_details": "檢視帳戶詳細資訊"
+        },
+        "data": {
+            "read": "讀取指派帳戶的郵件資料",
+            "read_all": "讀取所有郵件資料",
+            "manage": "管理指派帳戶的郵件中繼資料",
+            "manage_all": "管理所有郵件中繼資料",
+            "raw_download": "下載指派帳戶的原始郵件",
+            "raw_download_all": "下載所有原始郵件",
+            "delete": "刪除指派帳戶的郵件",
+            "delete_all": "刪除所有帳戶的郵件",
+            "export_batch": "批次匯出指派帳戶的資料",
+            "export_batch_all": "批次匯出所有資料",
+            "import_batch": "批次匯入郵件資料"
+        }
+    },
+    "users": {
+        "columns": {
+            "id": "ID",
+            "avatar": "頭像",
+            "username": "使用者名稱",
+            "email": "電子郵件地址",
+            "roles": "角色權限",
+            "created_at": "建立時間",
+            "updated_at": "更新時間",
+            "actions": "操作"
+        },
+        "buttons": {
+            "add": "新增使用者",
+            "add_new": "新增使用者"
+        },
+        "empty": {
+            "title": "未發現使用者",
+            "description": "點擊下方按鈕開始新增第一個使用者。"
+        },
+        "nav": {
+            "users": "使用者",
+            "roles": "角色",
+            "api_tokens": "API 權杖"
+        },
+        "api_tokens": {
+            "empty": {
+                "title": "未找到 API 權杖",
+                "description": "系統中尚未產生任何 API 權杖。"
+            },
+            "button": {
+                "generate": "產生新權杖"
+            },
+            "toolbar": {
+                "search_placeholder": "按名稱、所有者或權杖搜尋..."
+            },
+            "table": {
+                "name": "名稱",
+                "type": "類型",
+                "last_used": "上次使用",
+                "expires_at": "過期時間",
+                "owner": "所有者",
+                "created": "建立時間",
+                "api_key": "API 金鑰",
+                "web_ui": "Web 介面",
+                "never": "從未",
+                "permanent": "永久",
+                "expired": "已過期",
+                "unnamed": "未命名權杖"
+            },
+            "unnamed": "未命名權杖",
+            "delete": {
+                "title": "刪除 API 權杖",
+                "desc": "您即將永久刪除該 API 權杖",
+                "prefix": "權杖前綴",
+                "irreversible": "此操作無法撤銷。任何使用該權杖的應用程式將立即失去存取權限。",
+                "confirm_label": "為確認操作，請在下方輸入 {{word}}：",
+                "confirm_placeholder": "輸入「{{word}}」以確認",
+                "warning_title": "警告",
+                "warning_desc": "任何使用該權杖的腳本、服務或整合都會失敗。請在繼續之前確保已更新您的系統。",
+                "confirm_button": "刪除權杖",
+                "deleting": "正在刪除..."
+            },
+            "toast": {
+                "deleted_title": "API 權杖已刪除",
+                "deleted_desc": "權杖「{{name}}」已成功移除。",
+                "delete_failed_title": "刪除失敗",
+                "delete_failed": "刪除權杖失敗，請重試。"
+            }
+        },
+        "tokens": {
+            "schema": {
+                "name_max": "最多 32 個字元",
+                "expire_number": "必須是數字",
+                "expire_int": "必須是整數",
+                "expire_positive": "必須大於 0"
+            },
+            "toast": {
+                "update_success_title": "存取權杖已更新",
+                "update_success_desc": "存取權杖已成功更新。",
+                "create_success_title": "存取權杖已建立",
+                "create_success_desc": "存取權杖已成功建立。",
+                "update_failed_title": "更新失敗",
+                "create_failed_title": "建立失敗"
+            },
+            "error": {
+                "fallback": "操作失敗，請稍後重試。"
+            },
+            "dialog": {
+                "edit_title": "編輯存取權杖",
+                "create_title": "建立存取權杖",
+                "description": "完成後點擊儲存。"
+            },
+            "fields": {
+                "name_label": "名稱",
+                "name_placeholder": "為該存取權杖起一個簡短的名稱",
+                "name_hint": "可選 · 最多 32 個字元",
+                "expire_label": "有效期",
+                "expire_placeholder": "選擇有效期",
+                "expire_hint": "權杖將在選定的時間後自動過期。"
+            },
+            "expire_options": {
+                "never": "永不過期",
+                "1_day": "1 天",
+                "7_days": "7 天",
+                "30_days": "30 天"
+            }
+        },
+        "tokens_action": {
+            "dialog": {
+                "title": "API 權杖",
+                "description": "管理此使用者的 API 權杖。您可以查看、複製或監控權杖使用情況。"
+            },
+            "empty": {
+                "title": "無 API 權杖",
+                "description": "該使用者目前沒有 API 權杖。點擊下方按鈕建立一個。"
+            },
+            "buttons": {
+                "add": "新增權杖"
+            },
+            "list": {
+                "unnamed_token": "未命名權杖",
+                "status_expired": "已過期",
+                "status_active": "活躍",
+                "expires_on_brief": "有效期至 {{date}}",
+                "never_expires": "永不過期",
+                "label_token": "權杖",
+                "label_created": "建立於",
+                "label_last_used": "上次使用",
+                "label_expires_at": "過期時間",
+                "never": "從未",
+                "button_delete": "刪除權杖"
+            },
+            "delete_dialog": {
+                "title": "刪除存取權杖？",
+                "description": "此操作無法撤銷。任何正在使用此權杖的應用程式都將立即失去存取權限。"
+            }
+        },
+        "actions": {
+            "schema": {
+                "account_required": "請選擇一個帳戶",
+                "role_required": "請選擇一個角色",
+                "username_required": "使用者名稱不能為空",
+                "username_min": "使用者名稱長度至少為 5 個字元",
+                "username_max": "使用者名稱長度不能超過 32 個字元",
+                "email_required": "電子郵件地址不能為空",
+                "email_invalid": "請輸入有效的電子郵件地址",
+                "global_role_required": "請至少為此使用者分配一個全域角色",
+                "description_max": "描述長度不能超過 256 個字元",
+                "ip_invalid": "發現無效的 IP 地址",
+                "password_required": "密碼不能為空",
+                "password_min": "密碼長度至少為 8 個字元",
+                "password_max": "密碼長度不能超過 32 個字元"
+            },
+            "toast": {
+                "updated": "使用者已更新",
+                "created": "使用者已建立"
+            },
+            "dialog": {
+                "edit_title": "編輯使用者: {{name}}",
+                "create_title": "建立新使用者",
+                "subtitle": "配置身份、存取級別和安全策略。"
+            },
+            "tabs": {
+                "general": "基本資訊",
+                "permissions": "帳戶權限",
+                "security": "安全與 ACL"
+            },
+            "sections": {
+                "basic": "基礎身份",
+                "global": "全域權限",
+                "mail_access": "郵件存取控制",
+                "mail_access_subtitle": "定義此使用者可以管理的郵件帳戶。",
+                "policy": "策略開關"
+            },
+            "fields": {
+                "username": "使用者名稱",
+                "username_hint": "用於系統登入的唯一識別碼。",
+                "email": "電子郵件地址",
+                "email_hint": "主要聯繫方式和通知地址。",
+                "password": "密碼",
+                "password_placeholder_create": "至少 8 個字元",
+                "password_placeholder_edit": "留空則保持當前密碼",
+                "password_hint_create": "初始使用者設定的安全密碼。",
+                "password_hint_edit": "僅在您希望更改密碼時輸入新密碼。",
+                "global_roles_hint": "分配高級系統權限。可以選擇多個角色。",
+                "description": "描述（可選）",
+                "description_placeholder": "新增關於此使用者的一些註釋...",
+                "description_hint": "此帳戶的內部說明或附加背景資訊（最多 256 個字元）。",
+                "select_account": "選擇帳戶",
+                "assign_role": "分配角色",
+                "ip_whitelist": "IP 白名單",
+                "ip_whitelist_hint": "限制這些 IP 地址登入（每行一個）。",
+                "rate_quota": "頻率限額",
+                "burst_interval": "突發間隔 (秒)"
+            },
+            "buttons": {
+                "add_account": "新增帳戶",
+                "update": "更新使用者",
+                "create": "建立使用者"
+            },
+            "states": {
+                "full_access": "全權限模式",
+                "full_access_desc": "擁有系統管理員角色的使用者擁有對所有帳戶的固有存取權限，無需手動分配。",
+                "no_accounts": "未分配特定帳戶。",
+                "security_disabled": "此使用者當前禁用了高級安全策略。"
+            },
+            "api_tokens": "API 權杖",
+            "placeholder": {
+                "filter": "搜尋使用者..."
+            },
+            "delete": {
+                "title": "刪除使用者",
+                "confirm_msg": "您即將永久刪除使用者 {{name}} (ID: {{id}})。",
+                "irreversible": "此操作無法撤銷。",
+                "input_label": "為確認操作，請在下方輸入使用者 ID：",
+                "placeholder": "輸入「{{id}}」以確認",
+                "alert_title": "警告：此操作是永久性的。",
+                "alert_desc": "一旦刪除，該使用者及其所有相關數據將立即被清除。請在繼續操作前核實此帳戶是否已不再需要。",
+                "button_confirm": "刪除使用者",
+                "button_deleting": "正在刪除...",
+                "toast": {
+                    "success_title": "使用者已刪除",
+                    "success_desc": "使用者「{{name}}」(ID: {{id}}) 已成功移除。",
+                    "failed_title": "刪除失敗",
+                    "failed_fallback": "刪除使用者失敗，請重試。"
+                }
+            }
+        }
+    },
+    "roles": {
+        "title": {
+            "create": "建立新角色",
+            "edit": "編輯角色: {{name}}"
+        },
+        "description_hint": "定義存取範圍和功能權限。",
+        "form": {
+            "name_label": "角色名稱",
+            "type_label": "角色類型",
+            "desc_label": "描述",
+            "matrix_label": "{{type}} 權限矩陣",
+            "builtin_badge": "內建角色",
+            "builtin_desc": "此角色由系統預定義。其權限為**唯讀**，無法被修改。"
+        },
+        "types": {
+            "Global": "全域",
+            "Account": "帳戶"
+        },
+        "categories": {
+            "identity": "身份與管理",
+            "global_data": "全域數據存取",
+            "account_resource": "帳戶資源存取"
+        },
+        "actions": {
+            "cancel": "取消",
+            "submit_create": "建立角色",
+            "submit_update": "更新角色",
+            "success_create": "角色建立成功",
+            "success_update": "角色更新成功",
+            "failed": "操作失敗",
+            "close": "關閉",
+            "retry": "重試",
+            "add": "新增角色"
+        },
+        "validation": {
+            "name_required": "角色名稱不能為空",
+            "perm_required": "請至少選擇一個權限"
+        },
+        "columns": {
+            "id": "ID",
+            "name": "名稱",
+            "role_type": "角色類型",
+            "permissions": "權限",
+            "created_at": "建立時間",
+            "updated_at": "更新時間"
+        },
+        "placeholder": {
+            "filter": "搜尋角色..."
+        },
+        "delete": {
+            "dialog_title": "刪除使用者角色",
+            "warning_text": "您即將永久刪除角色 {{name}} (ID: {{id}})。",
+            "irreversible": "此操作無法撤銷。",
+            "confirm_label": "請鍵入角色 ID 以確認：",
+            "placeholder": "鍵入「{{id}}」以確認",
+            "alert_title": "警告：此操作是永久性的。",
+            "alert_desc": "刪除此角色將從所有當前分配了該角色的使用者中將其移除。在繼續之前，請確保您已檢查並重新分配受影響的使用者。",
+            "confirm_btn": "刪除角色",
+            "deleting": "正在刪除...",
+            "success_title": "角色已刪除",
+            "success_desc": "使用者角色「{{name}}」(ID: {{id}}) 已成功移除。",
+            "error_title": "刪除失敗",
+            "error_fallback": "無法刪除該角色，請稍後重試。"
+        },
+        "details": {
+            "title": "角色權限: {{name}}",
+            "unknown": "未知角色",
+            "role_badge": "{{type}} 角色",
+            "desc_global": "全域管理與系統級存取權限。",
+            "desc_account": "單個帳戶的存取及數據操作權限。",
+            "close_btn": "關閉詳情視圖",
+            "view_permissions": "權限詳情"
+        },
+        "empty": {
+            "title": "未找到角色",
+            "desc": "您尚未建立任何自定義角色。點擊下方按鈕開始新增新角色。"
+        }
+    },
+    "profile": {
+        "avatar_alt": "頭像",
+        "menu": {
+            "profile": "個人資料",
+            "settings": "設定",
+            "sign_out": "登出"
+        }
     }
 }

@@ -330,18 +330,6 @@ export function Mail({
                                     ))}
                                 </div>
                             ) : (
-                                // <TreeView
-                                //     data={buildTree(mailboxes ?? [])}
-                                //     clickRowToSelect={true}
-                                //     onSelectChange={(item) => {
-                                //         if (item) {
-                                //             setSelectedMailbox(mailboxes?.find(m => m.id === parseInt(item.id, 10)))
-                                //             setPage(0);
-                                //         } else {
-                                //             setSelectedMailbox(undefined)
-                                //         }
-                                //     }}
-                                // />
                                 <RichTreeView
                                     //checkboxSelection
                                     items={tree}

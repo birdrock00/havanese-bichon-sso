@@ -57,6 +57,9 @@ export interface AccountModel {
   folder_limit?: number,
   sync_folders: string[];
   sync_interval_min?: number;
+  created_by: number;
+  created_user_name: string;
+  created_user_email: string;
   created_at: number;
   updated_at: number;
   use_proxy?: number

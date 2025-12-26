@@ -3,6 +3,7 @@
         "submit": "Verzenden",
         "cancel": "Annuleren",
         "save": "Opslaan",
+        "save_changes": "Wijzigingen opslaan",
         "delete": "Verwijderen",
         "edit": "Bewerken",
         "search": "Zoeken",
@@ -17,30 +18,36 @@
         "ok": "OK",
         "loading": "Laden...",
         "empty": "Leeg",
-        "noData": "Geen Gegevens",
+        "noData": "Geen gegevens",
         "table": {
-            "noResults": "Geen resultaten gevonden"
+            "noResults": "Geen resultaten."
         },
         "failed": "Mislukt",
-        "notFound": "Niet Gevonden",
+        "notFound": "Niet gevonden",
         "back": "Terug",
-        "goBack": "Terug Gaan",
-        "backToHome": "Terug naar Startpagina",
-        "tryAgain": "Probeer opnieuw",
+        "goBack": "Ga terug",
+        "backToHome": "Terug naar Home",
+        "tryAgain": "Opnieuw proberen",
         "more": "Meer",
         "actions": "Acties",
-        "filter": "Filter",
+        "filter": "Filteren",
         "reset": "Resetten",
         "clear": "Wissen",
         "error": "Fout",
         "apply": "Toepassen",
         "select": "Selecteren",
-        "selectAll": "Alles Selecteren",
-        "deselectAll": "Alles Deselecteren",
+        "selectAll": "Alles selecteren",
+        "deselectAll": "Alles deselecteren",
         "all": "Alle",
         "none": "Geen",
-        "showLess": "toon minder",
-        "showMore": "toon meer..."
+        "showLess": "Minder weergeven",
+        "showMore": "Meer weergeven...",
+        "project_description": "Bichon is een open-source project.",
+        "view_on_github_button": "Bekijken op GitHub",
+        "op_failed": "Bewerking mislukt",
+        "na": "N.v.t.",
+        "retry": "Opnieuw",
+        "deleting": "Verwijderen..."
     },
     "navigation": {
         "home": "Startpagina",
@@ -53,7 +60,8 @@
         "apiDocs": "API Documentatie",
         "general": "Algemeen",
         "auth": "Authenticatie",
-        "other": "Overig"
+        "other": "Overig",
+        "users": "Systeemgebruikers"
     },
     "auth": {
         "welcome": "Welkom bij Bichon",
@@ -130,6 +138,30 @@
         "systemVersion": "Systeemversie"
     },
     "accounts": {
+        "access_control": {
+            "title": "Toewijzing accounttoegang",
+            "description": "Rollen en geautoriseerde gebruikers toewijzen aan {{email}}",
+            "role_label": "Toegangsrol",
+            "role_placeholder": "Selecteer een rol",
+            "role_loading": "Rollen laden...",
+            "user_label": "Geautoriseerde gebruikers selecteren",
+            "user_search_placeholder": "Zoek op gebruikersnaam of e-mail...",
+            "user_empty": "Geen gebruikers gevonden",
+            "user_selected_count": "Geselecteerd: {{count}} gebruiker(s)",
+            "buttons": {
+                "cancel": "Annuleren",
+                "save": "Toewijzing opslaan"
+            },
+            "validation": {
+                "user_required": "Selecteer ten minste één gebruiker",
+                "role_required": "Selecteer een rol om toe te wijzen"
+            },
+            "toast": {
+                "success_title": "Toewijzing geslaagd",
+                "success_desc": "Machtigingen zijn succesvol toegewezen aan {{email}}",
+                "failed_title": "Toewijzing mislukt"
+            }
+        },
         "title": "E-mailaccounts",
         "description": "Beheer en configureer uw e-mailaccounts.",
         "addImap": "IMAP Toevoegen",
@@ -423,6 +455,25 @@
             "noSubject": "(Geen onderwerp)",
             "loadingMore": "Laden...",
             "loadMore": "Meer laden"
+        },
+        "bulkActions": {
+            "ariaLabel": "{{count}} berichten geselecteerd. Actiebalk",
+            "delete": "Verwijderen",
+            "deleteDesc": "Geselecteerde berichten verwijderen",
+            "selected": "{{count}} geselecteerd",
+            "clear": "Selectie wissen"
+        },
+        "delete": {
+            "title": "Berichten verwijderen",
+            "confirmPrefix": "Weet u zeker dat u",
+            "countLabel": "{{count}} bericht(en) wilt verwijderen?",
+            "confirmDetail": "Dit kan niet ongedaan worden gemaakt.",
+            "confirmButton": "Verwijderen",
+            "warningTitle": "Waarschuwing",
+            "warningDesc": "Berichten worden definitief verwijderd.",
+            "successTitle": "Verwijderd",
+            "successDesc": "Berichten succesvol verwijderd.",
+            "errorTitle": "Verwijderen mislukt"
         }
     },
     "mail": {
@@ -705,7 +756,60 @@
         "pleaseUseAnIpAddressForBetterReliability": "Gebruik alstublieft een IP-adres (bv. 127.0.0.1) in plaats van een hostname of domein voor betere betrouwbaarheid.",
         "adding": "Bezig met toevoegen...",
         "yourProxyHasBeenSuccessfully": "Uw Proxy is succesvol {{action}}.",
-        "proxyUpdateOrAddFailed": "{{action}} mislukt, probeer het later opnieuw"
+        "proxyUpdateOrAddFailed": "{{action}} mislukt, probeer het later opnieuw",
+        "sidebar": {
+            "profile": "Profiel",
+            "apiTokens": "API-tokens",
+            "proxy": "Netwerkproxy",
+            "configurations": "Systeemconfiguraties"
+        },
+        "profile": {
+            "loadError": "Kan gebruikersinformatie niet laden.",
+            "uploadTitle": "Avatar uploaden",
+            "maxSize": "Maximaal {{size}}",
+            "avatarAlt": "Avatar",
+            "removeAvatar": "Avatar verwijderen",
+            "uploadError": "Fout bij uploaden van bestand",
+            "field": {
+                "username": "Gebruikersnaam",
+                "email": "E-mail",
+                "password": "Wachtwoord"
+            },
+            "placeholder": {
+                "password_keep": "Laat leeg om het huidige wachtwoord te behouden"
+            },
+            "button": {
+                "update_profile": "Profiel bijwerken",
+                "permissions": "Rechten",
+                "view_global_permissions": "Globale rechten bekijken"
+            },
+            "section": {
+                "roles": "Rollen",
+                "accounts": "{{count}} gekoppelde accounts"
+            },
+            "account": {
+                "id": "Account-ID: {{id}}"
+            },
+            "toast": {
+                "updated": "Profiel succesvol bijgewerkt",
+                "update_failed": "Bijwerken van profiel mislukt"
+            },
+            "validation": {
+                "username": {
+                    "required": "Gebruikersnaam is verplicht",
+                    "min": "Gebruikersnaam moet minimaal 5 tekens bevatten",
+                    "max": "Gebruikersnaam mag maximaal 32 tekens bevatten"
+                },
+                "email": {
+                    "required": "E-mail is verplicht",
+                    "invalid": "Voer een geldig e-mailadres in"
+                },
+                "password": {
+                    "min": "Wachtwoord moet minimaal 8 tekens bevatten",
+                    "max": "Wachtwoord mag maximaal 32 tekens bevatten"
+                }
+            }
+        }
     },
     "apiDocs": {
         "choosePreferredType": "Kies uw voorkeurstype API-documentatie",
@@ -765,7 +869,8 @@
         "folderLimitMustBeNumber": "Mappenlimiet moet een nummer zijn",
         "folderLimitMustBeAtLeast100": "Mappenlimiet moet ten minste 100 zijn",
         "incrementalSyncMustBeNumber": "Incrementaal sync interval moet een nummer zijn",
-        "incrementalSyncMustBeAtLeast10": "Incrementaal sync interval moet ten minste 10 minuten zijn"
+        "incrementalSyncMustBeAtLeast10": "Incrementaal sync interval moet ten minste 10 minuten zijn",
+        "pleaseEnterUsernameOrEmail": "Voer alstublieft uw gebruikersnaam of e-mailadres in"
     },
     "table": {
         "noResults": "Geen resultaten gevonden",
@@ -780,7 +885,17 @@
         "desc": "Aflopend",
         "hide": "Verbergen",
         "edit": "Bewerken",
-        "delete": "Verwijderen"
+        "delete": "Verwijderen",
+        "pagination": {
+            "selected": "{{selected}} van {{total}} rij(en) geselecteerd.",
+            "fixed_page_size": "{{size}} rijen per pagina.",
+            "rows_per_page": "Rijen per pagina",
+            "page_info": "Pagina {{page}} van {{total}}",
+            "first": "Eerste pagina",
+            "previous": "Vorige pagina",
+            "next": "Volgende pagina",
+            "last": "Laatste pagina"
+        }
     },
     "proxyDelete": {
         "title": "Proxy Verwijderen",
@@ -797,5 +912,471 @@
         "warningTitle": "Waarschuwing!",
         "warningDesc": "Wees voorzichtig, deze bewerking kan niet ongedaan worden gemaakt.",
         "deleteBtn": "Verwijderen"
+    },
+    "systemConfig": {
+        "pageTitle": "Systeemconfiguraties",
+        "pageDescription": "Deze parameters worden geïnitialiseerd via CLI-flags of omgevingsvariabelen. Ze zijn alleen-lezen.",
+        "status": {
+            "enabled": "Ingeschakeld",
+            "disabled": "Uitgeschakeld",
+            "configured": "Geconfigureerd",
+            "missing": "Ontbreekt",
+            "auto": "Auto",
+            "notSet": "Niet ingesteld"
+        },
+        "sections": {
+            "network": {
+                "title": "Netwerk",
+                "desc": "HTTP en publieke toegang"
+            },
+            "cors": {
+                "title": "CORS",
+                "desc": "Cross-origin toegangsregels"
+            },
+            "logging": {
+                "title": "Logging",
+                "desc": "Gedrag van log-output"
+            },
+            "storage": {
+                "title": "Opslag & Cache",
+                "desc": "Databasepaden en limieten"
+            },
+            "security": {
+                "title": "Beveiliging",
+                "desc": "Authenticatie & encryptie"
+            },
+            "performance": {
+                "title": "Prestaties",
+                "desc": "Gelijktijdigheid & compressie"
+            }
+        }
+    },
+    "apiTokens": {
+        "page": {
+            "loadError": "Laden van API-tokens mislukt.",
+            "emptyTitle": "Geen API-tokens",
+            "emptyDescription": "U hebt nog geen API-tokens aangemaakt. Klik hieronder om er een aan te maken.",
+            "addBtn": "Token toevoegen"
+        },
+        "list": {
+            "unnamedToken": "Naamloos token",
+            "statusActive": "Actief",
+            "statusExpired": "Verlopen",
+            "neverExpires": "Verloopt nooit",
+            "expiresOnShort": "Verloopt op {{date}}",
+            "tokenLabel": "Token",
+            "createdLabel": "Aangemaakt",
+            "lastUsedLabel": "Laatst gebruikt",
+            "expiresOnLabel": "Verloopt op",
+            "neverUsed": "Nooit",
+            "neverLabel": "Nooit",
+            "deleteBtn": "Token verwijderen"
+        },
+        "dialog": {
+            "createTitle": "Toegangstoken aanmaken",
+            "editTitle": "Toegangstoken bewerken",
+            "description": "Klik op opslaan als u klaar bent.",
+            "save": "Opslaan",
+            "saveChanges": "Wijzigingen opslaan"
+        },
+        "deleteDialog": {
+            "title": "Toegangstoken verwijderen?",
+            "description": "Deze actie kan niet ongedaan worden gemaakt. Elke applicatie die dit token gebruikt, verliest onmiddellijk de toegang.",
+            "cancel": "Annuleren",
+            "confirm": "Verwijderen",
+            "deleting": "Verwijderen..."
+        },
+        "form": {
+            "nameLabel": "Naam",
+            "namePlaceholder": "Geef dit token een korte naam",
+            "nameDescription": "Optioneel · Max 32 tekens",
+            "expirationLabel": "Vervaldatum",
+            "expirationPlaceholder": "Selecteer vervaldatum",
+            "expirationDescription": "Tokens verlopen automatisch na de geselecteerde tijd.",
+            "never": "Nooit",
+            "1day": "1 dag",
+            "7days": "7 dagen",
+            "30days": "30 dagen",
+            "errorMax": "Max 32 tekens",
+            "errorNumber": "Moet een getal zijn",
+            "errorInt": "Moet een geheel getal zijn",
+            "errorPositive": "Moet groter zijn dan 0"
+        },
+        "notifications": {
+            "createSuccess": "Toegangstoken aangemaakt",
+            "createSuccessDesc": "Het toegangstoken is succesvol aangemaakt.",
+            "updateSuccess": "Toegangstoken bijgewerkt",
+            "updateSuccessDesc": "Het toegangstoken is succesvol bijgewerkt.",
+            "createFailed": "Aanmaken mislukt",
+            "updateFailed": "Bijwerken mislukt",
+            "deleteSuccess": "Token verwijderd",
+            "deleteFailed": "Verwijderen mislukt",
+            "copied": "Gekopieerd naar klembord",
+            "genericError": "Bewerking mislukt. Probeer het opnieuw.",
+            "close": "Sluiten",
+            "tryAgain": "Opnieuw proberen"
+        }
+    },
+    "permission": {
+        "scope": {
+            "global": "Globaal",
+            "account": "Account #{{id}}"
+        },
+        "dialog": {
+            "global_title": "Globale machtigingen",
+            "account_title": "Accountmachtigingen",
+            "global_description": "Systeemwijde machtigingen die aan deze gebruiker zijn toegekend.",
+            "account_description": "Machtigingen die beperkt zijn tot het geselecteerde account."
+        },
+        "category": {
+            "system_identity": "Systeem en identiteit",
+            "global_data": "Globale gegevens (Beheerder)",
+            "account": "Accountmachtigingen"
+        },
+        "system": {
+            "access": "Basistoegang tot het systeem",
+            "root": "Volledige systeemcontrole"
+        },
+        "user": {
+            "manage": "Alle gebruikers beheren",
+            "view": "Basisgebruikersnamen weergeven"
+        },
+        "token": {
+            "manage": "Toegangstokens beheren"
+        },
+        "account": {
+            "create": "E-mailaccounts aanmaken",
+            "manage": "Toegewezen accounts beheren",
+            "manage_all": "Alle accountconfiguraties beheren",
+            "read_details": "Accountdetails bekijken"
+        },
+        "data": {
+            "read": "Toegewezen e-mailgegevens lezen",
+            "read_all": "Alle e-mailgegevens lezen",
+            "manage": "Toegewezen e-mailmetadata beheren",
+            "manage_all": "Alle e-mailmetadata beheren",
+            "raw_download": "Toegewezen onbewerkte e-mails downloaden",
+            "raw_download_all": "Alle onbewerkte e-mails downloaden",
+            "delete": "Toegewezen e-mails verwijderen",
+            "delete_all": "E-mails van alle accounts verwijderen",
+            "export_batch": "Toegewezen gegevens batchgewijs exporteren",
+            "export_batch_all": "Alle gegevens batchgewijs exporteren",
+            "import_batch": "E-mailgegevens batchgewijs importeren"
+        }
+    },
+    "users": {
+        "columns": {
+            "id": "ID",
+            "avatar": "Avatar",
+            "username": "Gebruikersnaam",
+            "email": "E-mailadres",
+            "roles": "Rollen & permissies",
+            "created_at": "Gemaakt op",
+            "updated_at": "Bijgewerkt op",
+            "actions": "Acties"
+        },
+        "buttons": {
+            "add": "Gebruiker toevoegen",
+            "add_new": "Nieuwe gebruiker"
+        },
+        "empty": {
+            "title": "Geen gebruikers gevonden",
+            "description": "Klik op de knop hieronder om uw eerste gebruiker toe te voegen."
+        },
+        "nav": {
+            "users": "Gebruikers",
+            "roles": "Rollen",
+            "api_tokens": "API-tokens"
+        },
+        "api_tokens": {
+            "empty": {
+                "title": "Geen API-tokens gevonden",
+                "description": "Er zijn nog geen API-tokens gegenereerd in het systeem."
+            },
+            "button": {
+                "generate": "Nieuwe token genereren"
+            },
+            "toolbar": {
+                "search_placeholder": "Zoeken op naam, eigenaar of token..."
+            },
+            "table": {
+                "name": "Naam",
+                "type": "Type",
+                "last_used": "Laatst gebruikt",
+                "expires_at": "Verloopt op",
+                "owner": "Eigenaar",
+                "created": "Aangemaakt",
+                "api_key": "API-sleutel",
+                "web_ui": "Web UI",
+                "never": "Nooit",
+                "permanent": "Permanent",
+                "expired": "Verlopen",
+                "unnamed": "Naamloze token"
+            },
+            "unnamed": "Naamloze token",
+            "delete": {
+                "title": "API-token verwijderen",
+                "desc": "U staat op het punt deze API-token definitief te verwijderen",
+                "prefix": "Token-prefix",
+                "irreversible": "Deze actie kan niet ongedaan worden gemaakt. Applicaties die deze token gebruiken, verliezen direct toegang.",
+                "confirm_label": "Typ {{word}} hieronder om te bevestigen:",
+                "confirm_placeholder": "Typ \"{{word}}\" ter bevestiging",
+                "warning_title": "Waarschuwing",
+                "warning_desc": "Scripts of diensten die deze token gebruiken zullen falen. Controleer of uw systemen zijn bijgewerkt.",
+                "confirm_button": "Token verwijderen",
+                "deleting": "Verwijderen..."
+            },
+            "toast": {
+                "deleted_title": "API-token verwijderd",
+                "deleted_desc": "De token \"{{name}}\" is succesvol verwijderd.",
+                "delete_failed_title": "Verwijderen mislukt",
+                "delete_failed": "Kon de token niet verwijderen, probeer het opnieuw."
+            }
+        },
+        "tokens": {
+            "schema": {
+                "name_max": "Max 32 tekens",
+                "expire_number": "Moet een getal zijn",
+                "expire_int": "Moet een geheel getal zijn",
+                "expire_positive": "Moet groter zijn dan 0"
+            },
+            "toast": {
+                "update_success_title": "Token bijgewerkt",
+                "update_success_desc": "Toegangstoken succesvol bijgewerkt.",
+                "create_success_title": "Token aangemaakt",
+                "create_success_desc": "Toegangstoken succesvol aangemaakt.",
+                "update_failed_title": "Update mislukt",
+                "create_failed_title": "Aanmaken mislukt"
+            },
+            "error": {
+                "fallback": "Bewerking mislukt, probeer het later opnieuw."
+            },
+            "dialog": {
+                "edit_title": "Toegangstoken bewerken",
+                "create_title": "Toegangstoken aanmaken",
+                "description": "Klik op opslaan als u klaar bent."
+            },
+            "fields": {
+                "name_label": "Naam",
+                "name_placeholder": "Geef de token een korte naam",
+                "name_hint": "Optioneel · Max 32 tekens",
+                "expire_label": "Vervalsetermijn",
+                "expire_placeholder": "Kies termijn",
+                "expire_hint": "De token verloopt automatisch na de gekozen tijd."
+            },
+            "expire_options": {
+                "never": "Verloopt nooit",
+                "1_day": "1 dag",
+                "7_days": "7 dagen",
+                "30_days": "30 dagen"
+            }
+        },
+        "tokens_action": {
+            "dialog": {
+                "title": "API-tokens",
+                "description": "Beheer API-tokens voor deze gebruiker."
+            },
+            "empty": {
+                "title": "Geen API-tokens",
+                "description": "Deze gebruiker heeft momenteel geen API-tokens."
+            },
+            "buttons": {
+                "add": "Token toevoegen"
+            },
+            "list": {
+                "unnamed_token": "Naamloze token",
+                "status_expired": "Verlopen",
+                "status_active": "Actief",
+                "expires_on_brief": "Verloopt op {{date}}",
+                "never_expires": "Verloopt nooit",
+                "label_token": "Token",
+                "label_created": "Aangemaakt op",
+                "label_last_used": "Laatst gebruikt",
+                "label_expires_at": "Verloopt op",
+                "never": "Nooit",
+                "button_delete": "Token verwijderen"
+            },
+            "delete_dialog": {
+                "title": "Toegangstoken verwijderen?",
+                "description": "Deze actie kan niet ongedaan worden gemaakt."
+            }
+        },
+        "actions": {
+            "schema": {
+                "account_required": "Selecteer een account",
+                "role_required": "Selecteer een rol",
+                "username_required": "Gebruikersnaam is verplicht",
+                "username_min": "Minimaal 5 tekens",
+                "username_max": "Maximaal 32 tekens",
+                "email_required": "E-mail is verplicht",
+                "email_invalid": "Voer een geldig e-mailadres in",
+                "global_role_required": "Wijs minimaal één globale rol toe",
+                "description_max": "Beschrijving max 256 tekens",
+                "ip_invalid": "Ongeldig IP-adres gedetecteerd",
+                "password_required": "Wachtwoord is verplicht",
+                "password_min": "Minimaal 8 tekens",
+                "password_max": "Maximaal 32 tekens"
+            },
+            "toast": {
+                "updated": "Gebruiker bijgewerkt",
+                "created": "Gebruiker aangemaakt"
+            },
+            "dialog": {
+                "edit_title": "Gebruiker bewerken: {{name}}",
+                "create_title": "Nieuwe gebruiker aanmaken",
+                "subtitle": "Configureer identiteit, toegangsniveaus en beleid."
+            },
+            "tabs": {
+                "general": "Algemeen",
+                "permissions": "Accountpermissies",
+                "security": "Beveiliging & ACL"
+            },
+            "sections": {
+                "basic": "Basisidentiteit",
+                "global": "Globale permissies",
+                "mail_access": "E-mailtoegangsbeheer",
+                "mail_access_subtitle": "E-mailaccounts die deze gebruiker mag beheren.",
+                "policy": "Beleid"
+            },
+            "fields": {
+                "username": "Gebruikersnaam",
+                "username_hint": "Unieke ID voor login.",
+                "email": "E-mailadres",
+                "email_hint": "Primair contact en meldingen.",
+                "password": "Wachtwoord",
+                "password_placeholder_create": "Minimaal 8 tekens",
+                "password_placeholder_edit": "Leeg laten om huidige te behouden",
+                "password_hint_create": "Veilig wachtwoord voor eerste installatie.",
+                "password_hint_edit": "Alleen invullen bij wijziging.",
+                "global_roles_hint": "Wijs systeempermissies toe.",
+                "description": "Beschrijving (optioneel)",
+                "description_placeholder": "Notities over deze gebruiker...",
+                "description_hint": "Interne notities (max 256 tekens).",
+                "select_account": "Account kiezen",
+                "assign_role": "Rol toewijzen",
+                "ip_whitelist": "IP Whitelist",
+                "ip_whitelist_hint": "Login beperken tot deze IP's (één per regel).",
+                "rate_quota": "Rate Quota",
+                "burst_interval": "Burst Interval (sec)"
+            },
+            "buttons": {
+                "add_account": "Account toevoegen",
+                "update": "Gebruiker bijwerken",
+                "create": "Gebruiker aanmaken"
+            },
+            "states": {
+                "full_access": "Volledige toegangsmodus",
+                "full_access_desc": "Administrators hebben automatisch toegang tot alle accounts.",
+                "no_accounts": "Geen specifieke accounts toegewezen.",
+                "security_disabled": "Beveiligingsbeleid is uitgeschakeld."
+            },
+            "api_tokens": "API-tokens",
+            "placeholder": {
+                "filter": "Zoek gebruikers..."
+            },
+            "delete": {
+                "title": "Gebruiker verwijderen",
+                "confirm_msg": "U staat op het punt gebruiker {{name}} (ID: {{id}}) definitief te verwijderen.",
+                "irreversible": "Deze actie is onherroepelijk.",
+                "input_label": "Typ de gebruikers-ID ter bevestiging:",
+                "placeholder": "Typ \"{{id}}\"",
+                "alert_title": "Waarschuwing: Definitieve actie.",
+                "alert_desc": "De gebruiker en alle bijbehorende data worden gewist.",
+                "button_confirm": "Gebruiker verwijderen",
+                "button_deleting": "Verwijderen...",
+                "toast": {
+                    "success_title": "Gebruiker verwijderd",
+                    "success_desc": "De gebruiker \"{{name}}\" is verwijderd.",
+                    "failed_title": "Verwijderen mislukt",
+                    "failed_fallback": "Kon de gebruiker niet verwijderen."
+                }
+            }
+        }
+    },
+    "roles": {
+        "title": {
+            "create": "Nieuwe rol maken",
+            "edit": "Rol bewerken: {{name}}"
+        },
+        "description_hint": "Definieer toegang en permissies.",
+        "form": {
+            "name_label": "Rolnaam",
+            "type_label": "Roltype",
+            "desc_label": "Beschrijving",
+            "matrix_label": "Permissiematrix ({{type}})",
+            "builtin_badge": "Ingebouwde rol",
+            "builtin_desc": "Deze rol is vooraf gedefinieerd en alleen-lezen."
+        },
+        "types": {
+            "Global": "Globaal",
+            "Account": "Account"
+        },
+        "categories": {
+            "identity": "Identiteit & Beheer",
+            "global_data": "Globale datatoegang",
+            "account_resource": "Accountresource toegang"
+        },
+        "actions": {
+            "cancel": "Annuleren",
+            "submit_create": "Rol maken",
+            "submit_update": "Rol bijwerken",
+            "success_create": "Rol succesvol aangemaakt",
+            "success_update": "Rol succesvol bijgewerkt",
+            "failed": "Bewerking mislukt",
+            "close": "Sluiten",
+            "retry": "Opnieuw",
+            "add": "Rol toevoegen"
+        },
+        "validation": {
+            "name_required": "Rolnaam is verplicht",
+            "perm_required": "Selecteer minimaal één permissie"
+        },
+        "columns": {
+            "id": "ID",
+            "name": "Naam",
+            "role_type": "Type",
+            "permissions": "Permissies",
+            "created_at": "Gemaakt op",
+            "updated_at": "Bijgewerkt op"
+        },
+        "placeholder": {
+            "filter": "Zoek rollen..."
+        },
+        "delete": {
+            "dialog_title": "Rol verwijderen",
+            "warning_text": "U staat op het punt de rol {{name}} (ID: {{id}}) definitief te verwijderen.",
+            "irreversible": "Deze actie kan niet ongedaan worden gemaakt.",
+            "confirm_label": "Typ de rol-ID ter bevestiging:",
+            "placeholder": "Typ \"{{id}}\"",
+            "alert_title": "Waarschuwing: Definitieve actie.",
+            "alert_desc": "Het verwijderen van deze rol verwijdert deze bij alle toegewezen gebruikers.",
+            "confirm_btn": "Rol verwijderen",
+            "deleting": "Verwijderen...",
+            "success_title": "Rol verwijderd",
+            "success_desc": "De rol \"{{name}}\" is verwijderd.",
+            "error_title": "Verwijderen mislukt",
+            "error_fallback": "Kon de rol niet verwijderen."
+        },
+        "details": {
+            "title": "Permissies: {{name}}",
+            "unknown": "Onbekende rol",
+            "role_badge": "{{type}} rol",
+            "desc_global": "Globaal beheer en systeemtoegang.",
+            "desc_account": "Toegang en data-acties voor individuele accounts.",
+            "close_btn": "Sluiten",
+            "view_permissions": "Details bekijken"
+        },
+        "empty": {
+            "title": "Geen rollen gevonden",
+            "desc": "U heeft nog geen aangepaste rollen gemaakt."
+        }
+    },
+    "profile": {
+        "avatar_alt": "Avatar",
+        "menu": {
+            "profile": "Profiel",
+            "settings": "Instellingen",
+            "sign_out": "Uitloggen"
+        }
     }
 }

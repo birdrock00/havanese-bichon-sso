@@ -16,29 +16,41 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-use crate::modules::token::root::check_root_password;
-use poem::{handler, IntoResponse, Response};
+use crate::modules::users::BichonUser;
+use poem::{handler, web::Json, IntoResponse, Response};
+use serde::Deserialize;
 use tracing::error;
 
-/// Login endpoint for Root user
+#[derive(Deserialize)]
+pub struct LoginPayload {
+    pub username: String,
+    pub password: String,
+}
+
+/// Login endpoint
 ///
 /// Accepts a plain text password and returns the `root_token`
 /// on successful authentication.
 #[handler]
-pub async fn login(password: String) -> Response {
-    match check_root_password(&password) {
-        Ok(root_token) => Response::builder()
-            .status(http::StatusCode::OK)
-            .content_type("text/plain")
-            .body(root_token)
-            .into_response(),
+pub async fn login(payload: Json<LoginPayload>) -> Response {
+    let payload = payload.0;
+    match BichonUser::authenticate_user(payload.username, payload.password).await {
+        Ok(result) => match serde_json::to_string(&result) {
+            Ok(json_string) => Response::builder()
+                .status(http::StatusCode::OK)
+                .content_type("application/json")
+                .body(json_string)
+                .into_response(),
+            Err(_) => Response::builder()
+                .status(http::StatusCode::INTERNAL_SERVER_ERROR)
+                .body("Internal server error during response serialization.")
+                .into_response(),
+        },
         Err(e) => {
-            error!("Root login failed: {:?}", e);
+            error!("Authentication failed with system error: {:?}", e);
             Response::builder()
-                .status(http::StatusCode::UNAUTHORIZED)
-                .content_type("text/plain")
-                .body(e.to_string())
+                .status(http::StatusCode::INTERNAL_SERVER_ERROR)
+                .body("Authentication system failed.".to_string())
                 .into_response()
         }
     }

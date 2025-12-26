@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
+use crate::modules::account::migration::AccountModel;
 use crate::modules::common::auth::ClientContext;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::oauth2::entity::{OAuth2, OAuth2CreateRequest, OAuth2UpdateRequest};
@@ -25,6 +25,7 @@ use crate::modules::oauth2::token::{ExternalOAuth2Request, OAuth2AccessToken};
 use crate::modules::rest::api::ApiTags;
 use crate::modules::rest::response::DataPage;
 use crate::modules::rest::ApiResult;
+use crate::modules::users::permissions::Permission;
 use crate::raise_error;
 use poem_openapi::param::{Path, Query};
 use poem_openapi::payload::{Json, PlainText};
@@ -49,14 +50,26 @@ impl OAuth2Api {
         id: Path<u64>,
         context: ClientContext,
     ) -> ApiResult<Json<OAuth2>> {
-        context.require_root()?;
         let id = id.0;
-        Ok(Json(OAuth2::get(id).await?.ok_or_else(|| {
+        let mut oauth2 = OAuth2::get(id).await?.ok_or_else(|| {
             raise_error!(
                 format!("OAuth2 configuration id='{id}' not found"),
                 ErrorCode::ResourceNotFound
             )
-        })?))
+        })?;
+        if context
+            .has_permission(None, Permission::ROOT)
+            .await
+        {
+            return Ok(Json(oauth2));
+        }
+
+        context
+            .require_permission(None, Permission::ACCOUNT_CREATE)
+            .await?;
+
+        oauth2.scrub_sensitive_fields();
+        Ok(Json(oauth2))
     }
 
     /// Deletes an OAuth2 configuration by name.
@@ -74,7 +87,9 @@ impl OAuth2Api {
         id: Path<u64>,
         context: ClientContext,
     ) -> ApiResult<()> {
-        context.require_root()?;
+        context
+            .require_permission(None, Permission::ROOT)
+            .await?;
         Ok(OAuth2::delete(id.0).await?)
     }
 
@@ -93,7 +108,9 @@ impl OAuth2Api {
         request: Json<OAuth2CreateRequest>,
         context: ClientContext,
     ) -> ApiResult<()> {
-        context.require_root()?;
+        context
+            .require_permission(None, Permission::ROOT)
+            .await?;
         let entity = OAuth2::new(request.0)?;
         Ok(entity.save().await?)
     }
@@ -115,7 +132,9 @@ impl OAuth2Api {
         payload: Json<OAuth2UpdateRequest>,
         context: ClientContext,
     ) -> ApiResult<()> {
-        context.require_root()?;
+        context
+            .require_permission(None, Permission::ROOT)
+            .await?;
         Ok(OAuth2::update(id.0, payload.0).await?)
     }
 
@@ -138,10 +157,23 @@ impl OAuth2Api {
         desc: Query<Option<bool>>,
         context: ClientContext,
     ) -> ApiResult<Json<DataPage<OAuth2>>> {
-        context.require_root()?;
-        Ok(Json(
-            OAuth2::paginate_list(page.0, page_size.0, desc.0).await?,
-        ))
+        let mut list = OAuth2::paginate_list(page.0, page_size.0, desc.0).await?;
+        if context
+            .has_permission(None, Permission::ROOT)
+            .await
+        {
+            return Ok(Json(list));
+        }
+
+        context
+            .require_permission(None, Permission::ACCOUNT_CREATE)
+            .await?;
+
+        for item in &mut list.items {
+            item.scrub_sensitive_fields();
+        }
+
+        Ok(Json(list))
     }
 
     /// Generates an OAuth2 authorization URL for a specific account.
@@ -159,8 +191,14 @@ impl OAuth2Api {
         request: Json<AuthorizeUrlRequest>,
         context: ClientContext,
     ) -> ApiResult<PlainText<String>> {
-        context.require_root()?;
         let request = request.0;
+        context
+            .require_any_permission(vec![
+                (None, Permission::ACCOUNT_CREATE),
+                (Some(request.account_id), Permission::ACCOUNT_MANAGE),
+            ])
+            .await?;
+
         let flow = OAuth2Flow::new(request.oauth2_id);
         Ok(PlainText(flow.authorize_url(request.account_id).await?))
     }
@@ -180,7 +218,9 @@ impl OAuth2Api {
         context: ClientContext,
     ) -> ApiResult<Json<OAuth2AccessToken>> {
         let account = account_id.0;
-        context.require_account_access(account)?;
+        context
+            .require_permission(Some(account), Permission::ACCOUNT_MANAGE)
+            .await?;
         Ok(Json(OAuth2AccessToken::get(account).await?.ok_or_else(
             || {
                 raise_error!(
@@ -218,10 +258,13 @@ impl OAuth2Api {
         request: Json<ExternalOAuth2Request>,
         context: ClientContext,
     ) -> ApiResult<()> {
-        let account = account_id.0;
+        let account_id = account_id.0;
+        AccountModel::check_account_exists(account_id).await?;
         // Check account access permissions
-        context.require_account_access(account)?;
-        OAuth2AccessToken::upsert_external_oauth_token(account, request.0).await?;
+        context
+            .require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)
+            .await?;
+        OAuth2AccessToken::upsert_external_oauth_token(account_id, request.0).await?;
         Ok(())
     }
 }

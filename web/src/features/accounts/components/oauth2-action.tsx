@@ -22,6 +22,9 @@ import { Button } from '@/components/ui/button'
 import { useAccountContext } from '../context'
 import { AccountModel } from '../data/schema'
 import { useTranslation } from 'react-i18next'
+import { useCurrentUser } from '@/hooks/use-current-user'
+import { toast } from '@/hooks/use-toast'
+import { ToastAction } from '@/components/ui/toast'
 
 interface DataTableRowActionsProps {
   row: Row<AccountModel>
@@ -29,8 +32,10 @@ interface DataTableRowActionsProps {
 export function OAuth2Action({ row }: DataTableRowActionsProps) {
   const { t } = useTranslation()
   const { setOpen, setCurrentRow } = useAccountContext()
+  const { require_any_permission } = useCurrentUser()
   const mailer = row.original
   const account_type = mailer.account_type;
+  const hasPermission = require_any_permission(['system:root', 'account:manage'], row.original.id)
 
   if (account_type === "NoSync") {
     return <Button variant={"ghost"} className="text-xs text-muted-foreground">n/a</Button>
@@ -45,8 +50,21 @@ export function OAuth2Action({ row }: DataTableRowActionsProps) {
         size="sm"
         className="text-xs text-blue-500 hover:text-blue-700 underline"
         onClick={() => {
-          setCurrentRow(mailer)
-          setOpen("oauth2")
+          if (hasPermission) {
+            setCurrentRow(mailer)
+            setOpen("oauth2")
+          } else {
+            toast({
+              variant: 'destructive',
+              title: 'Forbidden',
+              description: 'You do not have permission to view oauth2 tokens.',
+              action: (
+                <ToastAction altText="Close">
+                  Close
+                </ToastAction>
+              ),
+            })
+          }
         }}
       >
         OAuth2

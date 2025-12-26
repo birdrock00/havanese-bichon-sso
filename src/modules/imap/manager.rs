@@ -78,7 +78,13 @@ impl ImapConnectionManager {
                 })?;
 
                 let password = decrypt!(&password)?;
-                client.login(&username, &password).await
+                client.login(&username, &password).await.map_err(|e| {
+                    error!(
+                        "IMAP password auth failed for username '{}': {}",
+                        username, e
+                    );
+                    e
+                })
             }
             AuthType::OAuth2 => {
                 let record = OAuth2AccessToken::get(self.account_id).await?;
@@ -90,8 +96,12 @@ impl ImapConnectionManager {
                     )
                 })?;
                 client
-                    .authenticate(OAuth2::new(username, access_token))
+                    .authenticate(OAuth2::new(username.clone(), access_token))
                     .await
+                    .map_err(|e| {
+                        error!("IMAP OAuth2 auth failed for username '{}': {}", username, e);
+                        e
+                    })
             }
         }
     }

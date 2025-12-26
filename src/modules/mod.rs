@@ -36,5 +36,6 @@ pub mod rest;
 pub mod settings;
 pub mod tasks;
 pub mod token;
+pub mod users;
 pub mod utils;
 pub mod version;

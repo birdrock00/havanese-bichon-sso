@@ -26,7 +26,7 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
-import { resetAccessToken } from '@/stores/authStore'
+import { resetToken } from '@/stores/authStore'
 import { toast } from '@/hooks/use-toast'
 import { ThemeProvider } from './context/theme-context'
 import './index.css'
@@ -48,7 +48,7 @@ const handleAxiosError = (error: any) => {
         description: i18n.t('auth.sessionExpiredDesc'),
         action: <ToastAction altText={i18n.t('common.close')}>{i18n.t('common.close')}</ToastAction>,
       });
-      resetAccessToken();
+      resetToken();
       const currentPath = router.history.location.pathname;
       if (currentPath !== '/sign-in') {
         const redirect = `${router.history.location.href}`;
@@ -56,7 +56,12 @@ const handleAxiosError = (error: any) => {
       }
       break;
     case 403:
-      router.navigate({ to: '/403' });
+      toast({
+        variant: 'destructive',
+        title: "Forbidden",
+        description: error.response.data.message,
+        action: <ToastAction altText={i18n.t('common.close')}>{i18n.t('common.close')}</ToastAction>,
+      });
       break;
     case 500:
       toast({

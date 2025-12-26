@@ -273,8 +273,7 @@ export function VirtualizedSelect({
       .filter(Boolean);
 
     if (selectedLabels.length === 0) return placeholder;
-    if (selectedLabels.length <= 3) return selectedLabels.join(', ');
-    return `${selectedLabels[0]}, ${selectedLabels[1]} +${selectedLabels.length - 2} more`;
+    return `${selectedLabels[0]} +${selectedLabels.length - 1} more`;
   };
 
   return (

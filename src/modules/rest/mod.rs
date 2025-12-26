@@ -78,8 +78,7 @@ pub async fn start_http_server() -> BichonResult<()> {
         .with(Timeout)
         .with(Tracing);
 
-    let cors_origins: Option<HashSet<String>> =
-        SETTINGS.bichon_cors_origins.clone();
+    let cors_origins: Option<HashSet<String>> = SETTINGS.bichon_cors_origins.clone();
 
     let cors_origins: Vec<String> = cors_origins.unwrap_or_default().into_iter().collect();
 

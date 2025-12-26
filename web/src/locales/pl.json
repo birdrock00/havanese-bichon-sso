@@ -1,46 +1,53 @@
 {
   "common": {
-    "submit": "Zatwierdź",
+    "submit": "Wyślij",
     "cancel": "Anuluj",
     "save": "Zapisz",
+    "save_changes": "Zapisz zmiany",
     "delete": "Usuń",
     "edit": "Edytuj",
     "search": "Szukaj",
     "add": "Dodaj",
     "remove": "Usuń",
     "create": "Utwórz",
-    "update": "Zaktualizuj",
+    "update": "Aktualizuj",
     "confirm": "Potwierdź",
     "close": "Zamknij",
     "yes": "Tak",
     "no": "Nie",
     "ok": "OK",
     "loading": "Ładowanie...",
-    "empty": "Pusto",
+    "empty": "Puste",
     "noData": "Brak danych",
     "table": {
-      "noResults": "Brak wyników"
+      "noResults": "Brak wyników."
     },
-    "failed": "błąd",
+    "failed": "Nieudane",
     "notFound": "Nie znaleziono",
     "back": "Wstecz",
-    "goBack": "Wróć",
-    "backToHome": "Wróć do początku",
+    "goBack": "Powrót",
+    "backToHome": "Wróć do strony głównej",
     "tryAgain": "Spróbuj ponownie",
     "more": "Więcej",
     "actions": "Akcje",
     "filter": "Filtr",
-    "reset": "Reset",
+    "reset": "Resetuj",
     "clear": "Wyczyść",
     "error": "Błąd",
     "apply": "Zastosuj",
     "select": "Wybierz",
     "selectAll": "Zaznacz wszystko",
     "deselectAll": "Odznacz wszystko",
-    "all": "Wszystko",
-    "none": "Nic",
-    "showLess": "pokaż mniej",
-    "showMore": "pokaż więcej..."
+    "all": "Wszystkie",
+    "none": "Brak",
+    "showLess": "Pokaż mniej",
+    "showMore": "Pokaż więcej...",
+    "project_description": "Bichon to projekt open-source.",
+    "view_on_github_button": "Zobacz na GitHub",
+    "op_failed": "Operacja nie powiodła się",
+    "na": "N/D",
+    "retry": "Ponów",
+    "deleting": "Usuwanie..."
   },
   "navigation": {
     "home": "Home",
@@ -53,7 +60,8 @@
     "apiDocs": "Dokumentacja API",
     "general": "Ogólne",
     "auth": "Auth",
-    "other": "Pozostałe"
+    "other": "Pozostałe",
+    "users": "Użytkownicy systemu"
   },
   "auth": {
     "welcome": "Witaj w Bichon",
@@ -130,6 +138,30 @@
     "systemVersion": "Wersja systemu"
   },
   "accounts": {
+    "access_control": {
+      "title": "Przypisywanie dostępu do konta",
+      "description": "Przypisz role i uprawnionych użytkowników dla {{email}}",
+      "role_label": "Rola dostępu",
+      "role_placeholder": "Wybierz rolę",
+      "role_loading": "Ładowanie ról...",
+      "user_label": "Wybierz uprawnionych użytkowników",
+      "user_search_placeholder": "Szukaj według nazwy lub e-maila...",
+      "user_empty": "Nie znaleziono użytkowników",
+      "user_selected_count": "Wybrano: {{count}} użytkownik(ów)",
+      "buttons": {
+        "cancel": "Anuluj",
+        "save": "Zapisz przypisanie"
+      },
+      "validation": {
+        "user_required": "Proszę wybrać co najmniej jednego użytkownika",
+        "role_required": "Proszę wybrać rolę do przypisania"
+      },
+      "toast": {
+        "success_title": "Przypisanie pomyślne",
+        "success_desc": "Uprawnienia zostały pomyślnie przypisane do {{email}}",
+        "failed_title": "Przypisanie nie powiodło się"
+      }
+    },
     "title": "Konta Email",
     "description": "Zarządzaj i konfiguruj konta email",
     "addImap": "Dodaj IMAP",
@@ -423,6 +455,25 @@
       "noSubject": "(brak tematu)",
       "loadingMore": "Ładowanie...",
       "loadMore": "Załaduj więcej"
+    },
+    "bulkActions": {
+      "ariaLabel": "Wybrano {{count}} wiadomości. Pasek działań",
+      "delete": "Usuń",
+      "deleteDesc": "Usuń wybrane wiadomości",
+      "selected": "Wybrano {{count}}",
+      "clear": "Wyczyść zaznaczenie"
+    },
+    "delete": {
+      "title": "Usuń wiadomości",
+      "confirmPrefix": "Czy na pewno chcesz usunąć",
+      "countLabel": "{{count}} wiadomości?",
+      "confirmDetail": "Tej operacji nie można cofnąć.",
+      "confirmButton": "Usuń",
+      "warningTitle": "Ostrzeżenie",
+      "warningDesc": "Wiadomości zostaną trwale usunięte.",
+      "successTitle": "Usunięto",
+      "successDesc": "Wiadomości zostały pomyślnie usunięte.",
+      "errorTitle": "Błąd usuwania"
     }
   },
   "mail": {
@@ -594,7 +645,7 @@
     "accounts": "Konta",
     "token": "Token",
     "createdAt": "Utworzono",
-    "expiresAt": "Wygasa o" ,
+    "expiresAt": "Wygasa o",
     "edit": "Edytuj",
     "delete": "Usuń",
     "create": "Utwórz",
@@ -705,7 +756,60 @@
     "pleaseUseAnIpAddressForBetterReliability": "Aby zapewnić większą niezawodność, użyj adresu IP (np. 127.0.0.1), a nie nazwy hosta lub domeny.",
     "adding": "Dodawanie...",
     "yourProxyHasBeenSuccessfully": "Proxy zostało {{action}}.",
-    "proxyUpdateOrAddFailed": "Błąd {{action}}, spróbuj później"
+    "proxyUpdateOrAddFailed": "Błąd {{action}}, spróbuj później",
+    "sidebar": {
+      "profile": "Profil",
+      "apiTokens": "Tokeny API",
+      "proxy": "Proxy sieciowe",
+      "configurations": "Konfiguracja systemu"
+    },
+    "profile": {
+      "loadError": "Nie udało się załadować informacji o użytkowniku.",
+      "uploadTitle": "Prześlij awatar",
+      "maxSize": "Do {{size}}",
+      "avatarAlt": "Awatar",
+      "removeAvatar": "Usuń awatar",
+      "uploadError": "Błąd przesyłania pliku",
+      "field": {
+        "username": "Nazwa użytkownika",
+        "email": "E-mail",
+        "password": "Hasło"
+      },
+      "placeholder": {
+        "password_keep": "Pozostaw puste, aby zachować obecne hasło"
+      },
+      "button": {
+        "update_profile": "Zaktualizuj profil",
+        "permissions": "Uprawnienia",
+        "view_global_permissions": "Zobacz globalne uprawnienia"
+      },
+      "section": {
+        "roles": "Role",
+        "accounts": "Połączone konta: {{count}}"
+      },
+      "account": {
+        "id": "ID konta: {{id}}"
+      },
+      "toast": {
+        "updated": "Profil został zaktualizowany",
+        "update_failed": "Nie udało się zaktualizować profilu"
+      },
+      "validation": {
+        "username": {
+          "required": "Nazwa użytkownika jest wymagana",
+          "min": "Nazwa użytkownika musi mieć co najmniej 5 znaków",
+          "max": "Nazwa użytkownika może mieć maksymalnie 32 znaki"
+        },
+        "email": {
+          "required": "Adres e-mail jest wymagany",
+          "invalid": "Wprowadź poprawny adres e-mail"
+        },
+        "password": {
+          "min": "Hasło musi mieć co najmniej 8 znaków",
+          "max": "Hasło może mieć maksymalnie 32 znaki"
+        }
+      }
+    }
   },
   "apiDocs": {
     "choosePreferredType": "Wybierz preferowany typ dokumentacji API",
@@ -765,7 +869,8 @@
     "folderLimitMustBeNumber": "Limit folderów musi być liczbą",
     "folderLimitMustBeAtLeast100": "Limit folderów musi być liczbą nie mniejszą niż 100",
     "incrementalSyncMustBeNumber": "Przyrostowy interwał synchronizacji musi być liczbą",
-    "incrementalSyncMustBeAtLeast10": "Przyrostowy interwał synchronizacji musi wynosić co najmniej 10 minut"
+    "incrementalSyncMustBeAtLeast10": "Przyrostowy interwał synchronizacji musi wynosić co najmniej 10 minut",
+    "pleaseEnterUsernameOrEmail": "Proszę podać nazwę użytkownika lub adres e-mail"
   },
   "table": {
     "noResults": "Brak wyników",
@@ -780,7 +885,17 @@
     "desc": "Malejąco",
     "hide": "Ukryj",
     "edit": "Edytuj",
-    "delete": "Usuń"
+    "delete": "Usuń",
+    "pagination": {
+      "selected": "Wybrano {{selected}} z {{total}} wierszy.",
+      "fixed_page_size": "{{size}} wierszy na stronę.",
+      "rows_per_page": "Wierszy na stronę",
+      "page_info": "Strona {{page}} z {{total}}",
+      "first": "Pierwsza strona",
+      "previous": "Poprzednia strona",
+      "next": "Następna strona",
+      "last": "Ostatnia strona"
+    }
   },
   "proxyDelete": {
     "title": "Usuń Proxy",
@@ -797,5 +912,471 @@
     "warningTitle": "Ostrzeżenie!",
     "warningDesc": "Należy zachować ostrożność, tej operacji nie można cofnąć",
     "deleteBtn": "Usuń"
+  },
+  "systemConfig": {
+    "pageTitle": "Konfiguracje na poziomie systemu",
+    "pageDescription": "Parametry te są inicjowane za pomocą flag CLI lub zmiennych środowiskowych. Są one obecnie tylko do odczytu.",
+    "status": {
+      "enabled": "Włączone",
+      "disabled": "Wyłączone",
+      "configured": "Skonfigurowane",
+      "missing": "Brak",
+      "auto": "Auto",
+      "notSet": "Nie ustawiono"
+    },
+    "sections": {
+      "network": {
+        "title": "Sieć",
+        "desc": "HTTP i dostęp publiczny"
+      },
+      "cors": {
+        "title": "CORS",
+        "desc": "Zasady dostępu cross-origin"
+      },
+      "logging": {
+        "title": "Logowanie",
+        "desc": "Zachowanie wyjściowe logów"
+      },
+      "storage": {
+        "title": "Pamięć i bufor",
+        "desc": "Ścieżki bazy danych i limity"
+      },
+      "security": {
+        "title": "Bezpieczeństwo",
+        "desc": "Uwierzytelnianie i szyfrowanie"
+      },
+      "performance": {
+        "title": "Wydajność",
+        "desc": "Współbieżność i kompresja"
+      }
+    }
+  },
+  "apiTokens": {
+    "page": {
+      "loadError": "Błąd podczas ładowania tokenów API.",
+      "emptyTitle": "Brak tokenów API",
+      "emptyDescription": "Nie utworzono jeszcze żadnych tokenów API. Kliknij poniżej, aby utworzyć nowy.",
+      "addBtn": "Dodaj token"
+    },
+    "list": {
+      "unnamedToken": "Token bez nazwy",
+      "statusActive": "Aktywny",
+      "statusExpired": "Wygasł",
+      "neverExpires": "Nigdy nie wygasa",
+      "expiresOnShort": "Wygasa: {{date}}",
+      "tokenLabel": "Token",
+      "createdLabel": "Utworzono",
+      "lastUsedLabel": "Ostatnio użyto",
+      "expiresOnLabel": "Wygasa w dniu",
+      "neverUsed": "Nigdy",
+      "neverLabel": "Nigdy",
+      "deleteBtn": "Usuń token"
+    },
+    "dialog": {
+      "createTitle": "Utwórz token dostępu",
+      "editTitle": "Edytuj token dostępu",
+      "description": "Kliknij zapisz, gdy skończysz.",
+      "save": "Zapisz",
+      "saveChanges": "Zapisz zmiany"
+    },
+    "deleteDialog": {
+      "title": "Usunąć token dostępu?",
+      "description": "Tej operacji nie można cofnąć. Każda aplikacja używająca tego tokena natychmiast utraci dostęp.",
+      "cancel": "Anuluj",
+      "confirm": "Usuń",
+      "deleting": "Usuwanie..."
+    },
+    "form": {
+      "nameLabel": "Nazwa",
+      "namePlaceholder": "Nadaj temu tokenowi krótką nazwę",
+      "nameDescription": "Opcjonalnie · Maks. 32 znaki",
+      "expirationLabel": "Wygasa",
+      "expirationPlaceholder": "Wybierz czas wygaśnięcia",
+      "expirationDescription": "Tokeny wygasną automatycznie po wybranym czasie.",
+      "never": "Nigdy",
+      "1day": "1 dzień",
+      "7days": "7 dni",
+      "30days": "30 dni",
+      "errorMax": "Maksymalnie 32 znaki",
+      "errorNumber": "Musi być liczbą",
+      "errorInt": "Musi być liczbą całkowitą",
+      "errorPositive": "Musi być większe niż 0"
+    },
+    "notifications": {
+      "createSuccess": "Token dostępu został utworzony",
+      "createSuccessDesc": "Token dostępu został pomyślnie utworzony.",
+      "updateSuccess": "Token dostępu został zaktualizowany",
+      "updateSuccessDesc": "Token dostępu został pomyślnie zaktualizowany.",
+      "createFailed": "Błąd tworzenia",
+      "updateFailed": "Błąd aktualizacji",
+      "deleteSuccess": "Token dostępu został pomyślnie usunięty",
+      "deleteFailed": "Nie udało się usunąć tokena dostępu",
+      "copied": "Skopiowano do schowka",
+      "genericError": "Operacja nie powiodła się. Spróbuj ponownie.",
+      "close": "Zamknij",
+      "tryAgain": "Spróbuj ponownie"
+    }
+  },
+  "permission": {
+    "scope": {
+      "global": "Globalne",
+      "account": "Konto #{{id}}"
+    },
+    "dialog": {
+      "global_title": "Uprawnienia globalne",
+      "account_title": "Uprawnienia konta",
+      "global_description": "Uprawnienia systemowe przyznane temu użytkownikowi.",
+      "account_description": "Uprawnienia ograniczone do wybranego konta."
+    },
+    "category": {
+      "system_identity": "System i tożsamość",
+      "global_data": "Dane globalne (Administrator)",
+      "account": "Uprawnienia konta"
+    },
+    "system": {
+      "access": "Podstawowy dostęp do systemu",
+      "root": "Pełna kontrola systemu"
+    },
+    "user": {
+      "manage": "Zarządzanie wszystkimi użytkownikami",
+      "view": "Wyświetlanie podstawowych nazw użytkowników"
+    },
+    "token": {
+      "manage": "Zarządzanie tokenami dostępu"
+    },
+    "account": {
+      "create": "Tworzenie kont e-mail",
+      "manage": "Zarządzanie przypisanymi kontami",
+      "manage_all": "Zarządzanie wszystkimi konfiguracjami kont",
+      "read_details": "Wyświetlanie szczegółów konta"
+    },
+    "data": {
+      "read": "Odczyt przypisanych danych e-mail",
+      "read_all": "Odczyt wszystkich danych e-mail",
+      "manage": "Zarządzanie przypisanymi metadanymi e-mail",
+      "manage_all": "Zarządzanie wszystkimi metadanymi e-mail",
+      "raw_download": "Pobieranie przypisanych surowych wiadomości e-mail",
+      "raw_download_all": "Pobieranie wszystkich surowych wiadomości e-mail",
+      "delete": "Usuwanie przypisanych wiadomości e-mail",
+      "delete_all": "Usuwanie wiadomości e-mail ze wszystkich kont",
+      "export_batch": "Eksport zbiorczy przypisanych danych",
+      "export_batch_all": "Eksport zbiorczy wszystkich danych",
+      "import_batch": "Import zbiorczy danych e-mail"
+    }
+  },
+  "users": {
+    "columns": {
+      "id": "ID",
+      "avatar": "Awatar",
+      "username": "Nazwa użytkownika",
+      "email": "Adres e-mail",
+      "roles": "Role i uprawnienia",
+      "created_at": "Utworzono",
+      "updated_at": "Zaktualizowano",
+      "actions": "Akcje"
+    },
+    "buttons": {
+      "add": "Dodaj użytkownika",
+      "add_new": "Nowy użytkownik"
+    },
+    "empty": {
+      "title": "Nie znaleziono użytkowników",
+      "description": "Kliknij przycisk poniżej, aby dodać pierwszego użytkownika."
+    },
+    "nav": {
+      "users": "Użytkownicy",
+      "roles": "Role",
+      "api_tokens": "Tokeny API"
+    },
+    "api_tokens": {
+      "empty": {
+        "title": "Nie znaleziono tokenów API",
+        "description": "W systemie nie wygenerowano jeszcze żadnych tokenów API."
+      },
+      "button": {
+        "generate": "Generuj nowy token"
+      },
+      "toolbar": {
+        "search_placeholder": "Szukaj po nazwie, właścicielu lub tokenie..."
+      },
+      "table": {
+        "name": "Nazwa",
+        "type": "Typ",
+        "last_used": "Ostatnio użyty",
+        "expires_at": "Wygasa",
+        "owner": "Właściciel",
+        "created": "Utworzono",
+        "api_key": "Klucz API",
+        "web_ui": "Interfejs Web",
+        "never": "Nigdy",
+        "permanent": "Stały",
+        "expired": "Wygasł",
+        "unnamed": "Token bez nazwy"
+      },
+      "unnamed": "Token bez nazwy",
+      "delete": {
+        "title": "Usuń token API",
+        "desc": "Zamierzasz trwale usunąć ten token API",
+        "prefix": "Prefiks tokena",
+        "irreversible": "Tej operacji nie można cofnąć. Wszystkie aplikacje korzystające z tego tokena natychmiast stracą dostęp.",
+        "confirm_label": "Aby potwierdzić, wpisz {{word}} poniżej:",
+        "confirm_placeholder": "Wpisz \"{{word}}\", aby potwierdzić",
+        "warning_title": "Ostrzeżenie",
+        "warning_desc": "Skrypty lub usługi korzystające z tego tokena przestaną działać. Upewnij się, że zaktualizowałeś swoje systemy.",
+        "confirm_button": "Usuń token",
+        "deleting": "Usuwanie..."
+      },
+      "toast": {
+        "deleted_title": "Token API usunięty",
+        "deleted_desc": "Token \"{{name}}\" został pomyślnie usunięty.",
+        "delete_failed_title": "Błąd usuwania",
+        "delete_failed": "Nie udało się usunąć tokena, spróbuj ponownie."
+      }
+    },
+    "tokens": {
+      "schema": {
+        "name_max": "Maks. 32 znaki",
+        "expire_number": "Musi być liczbą",
+        "expire_int": "Musi być liczbą całkowitą",
+        "expire_positive": "Musi być większa niż 0"
+      },
+      "toast": {
+        "update_success_title": "Token zaktualizowany",
+        "update_success_desc": "Token dostępu został pomyślnie zaktualizowany.",
+        "create_success_title": "Token utworzony",
+        "create_success_desc": "Token dostępu został pomyślnie utworzony.",
+        "update_failed_title": "Błąd aktualizacji",
+        "create_failed_title": "Błąd tworzenia"
+      },
+      "error": {
+        "fallback": "Operacja nie powiodła się, spróbuj ponownie później."
+      },
+      "dialog": {
+        "edit_title": "Edytuj token dostępu",
+        "create_title": "Utwórz token dostępu",
+        "description": "Kliknij zapisz po zakończeniu."
+      },
+      "fields": {
+        "name_label": "Nazwa",
+        "name_placeholder": "Nadaj krótką nazwę tokenowi",
+        "name_hint": "Opcjonalnie · Maks. 32 znaki",
+        "expire_label": "Wygasanie",
+        "expire_placeholder": "Wybierz czas",
+        "expire_hint": "Token wygaśnie automatycznie po wybranym czasie."
+      },
+      "expire_options": {
+        "never": "Nigdy nie wygasa",
+        "1_day": "1 dzień",
+        "7_days": "7 dni",
+        "30_days": "30 dni"
+      }
+    },
+    "tokens_action": {
+      "dialog": {
+        "title": "Tokeny API",
+        "description": "Zarządzaj tokenami API tego użytkownika."
+      },
+      "empty": {
+        "title": "Brak tokenów API",
+        "description": "Ten użytkownik nie posiada obecnie żadnych tokenów API."
+      },
+      "buttons": {
+        "add": "Dodaj token"
+      },
+      "list": {
+        "unnamed_token": "Token bez nazwy",
+        "status_expired": "Wygasł",
+        "status_active": "Aktywny",
+        "expires_on_brief": "Wygasa {{date}}",
+        "never_expires": "Nigdy nie wygasa",
+        "label_token": "Token",
+        "label_created": "Utworzono",
+        "label_last_used": "Użyto",
+        "label_expires_at": "Wygasa",
+        "never": "Nigdy",
+        "button_delete": "Usuń token"
+      },
+      "delete_dialog": {
+        "title": "Usunąć token dostępu?",
+        "description": "Tej operacji nie można cofnąć."
+      }
+    },
+    "actions": {
+      "schema": {
+        "account_required": "Wybierz konto",
+        "role_required": "Wybierz rolę",
+        "username_required": "Nazwa użytkownika jest wymagana",
+        "username_min": "Min. 5 znaków",
+        "username_max": "Maks. 32 znaki",
+        "email_required": "E-mail jest wymagany",
+        "email_invalid": "Wprowadź poprawny adres e-mail",
+        "global_role_required": "Przypisz co najmniej jedną rolę globalną",
+        "description_max": "Opis maks. 256 znaków",
+        "ip_invalid": "Wykryto niepoprawny adres IP",
+        "password_required": "Hasło jest wymagane",
+        "password_min": "Min. 8 znaków",
+        "password_max": "Maks. 32 znaki"
+      },
+      "toast": {
+        "updated": "Użytkownik zaktualizowany",
+        "created": "Użytkownik utworzony"
+      },
+      "dialog": {
+        "edit_title": "Edytuj użytkownika: {{name}}",
+        "create_title": "Utwórz nowego użytkownika",
+        "subtitle": "Konfiguruj tożsamość, poziomy dostępu i polityki."
+      },
+      "tabs": {
+        "general": "Ogólne",
+        "permissions": "Uprawnienia konta",
+        "security": "Bezpieczeństwo i ACL"
+      },
+      "sections": {
+        "basic": "Dane podstawowe",
+        "global": "Uprawnienia globalne",
+        "mail_access": "Dostęp do poczty",
+        "mail_access_subtitle": "Konta e-mail, którymi ten użytkownik może zarządzać.",
+        "policy": "Polityki"
+      },
+      "fields": {
+        "username": "Nazwa użytkownika",
+        "username_hint": "Unikalny identyfikator do logowania.",
+        "email": "Adres e-mail",
+        "email_hint": "Główny kontakt i powiadomienia.",
+        "password": "Hasło",
+        "password_placeholder_create": "Min. 8 znaków",
+        "password_placeholder_edit": "Zostaw puste, by zachować obecne",
+        "password_hint_create": "Bezpieczne hasło dla nowego użytkownika.",
+        "password_hint_edit": "Wpisz tylko, jeśli chcesz zmienić hasło.",
+        "global_roles_hint": "Przypisz uprawnienia systemowe.",
+        "description": "Opis (opcjonalnie)",
+        "description_placeholder": "Notatki o użytkowniku...",
+        "description_hint": "Notatki wewnętrzne (maks. 256 znaków).",
+        "select_account": "Wybierz konto",
+        "assign_role": "Przypisz rolę",
+        "ip_whitelist": "Biała lista IP",
+        "ip_whitelist_hint": "Ogranicz logowanie do tych IP (jedno na linię).",
+        "rate_quota": "Limit częstotliwości",
+        "burst_interval": "Interwał serii (sek)"
+      },
+      "buttons": {
+        "add_account": "Dodaj konto",
+        "update": "Aktualizuj użytkownika",
+        "create": "Utwórz użytkownika"
+      },
+      "states": {
+        "full_access": "Tryb pełnego dostępu",
+        "full_access_desc": "Administratorzy mają wgląd we wszystkie konta.",
+        "no_accounts": "Brak przypisanych kont.",
+        "security_disabled": "Polityki bezpieczeństwa są wyłączone."
+      },
+      "api_tokens": "Tokeny API",
+      "placeholder": {
+        "filter": "Szukaj użytkowników..."
+      },
+      "delete": {
+        "title": "Usuń użytkownika",
+        "confirm_msg": "Trwale usuwasz użytkownika {{name}} (ID: {{id}}).",
+        "irreversible": "Tej operacji nie można cofnąć.",
+        "input_label": "Wpisz ID użytkownika, aby potwierdzić:",
+        "placeholder": "Wpisz \"{{id}}\"",
+        "alert_title": "Uwaga: Operacja trwała.",
+        "alert_desc": "Użytkownik i wszystkie jego dane zostaną skasowane.",
+        "button_confirm": "Usuń użytkownika",
+        "button_deleting": "Usuwanie...",
+        "toast": {
+          "success_title": "Użytkownik usunięty",
+          "success_desc": "Użytkownik \"{{name}}\" został usunięty.",
+          "failed_title": "Błąd usuwania",
+          "failed_fallback": "Nie udało się usunąć użytkownika."
+        }
+      }
+    }
+  },
+  "roles": {
+    "title": {
+      "create": "Utwórz nową rolę",
+      "edit": "Edytuj rolę: {{name}}"
+    },
+    "description_hint": "Zdefiniuj zakres dostępu i uprawnienia.",
+    "form": {
+      "name_label": "Nazwa roli",
+      "type_label": "Typ roli",
+      "desc_label": "Opis",
+      "matrix_label": "Macierz uprawnień ({{type}})",
+      "builtin_badge": "Rola wbudowana",
+      "builtin_desc": "Ta rola jest predefiniowana i tylko do odczytu."
+    },
+    "types": {
+      "Global": "Globalna",
+      "Account": "Konto"
+    },
+    "categories": {
+      "identity": "Tożsamość i Zarządzanie",
+      "global_data": "Dostęp do danych globalnych",
+      "account_resource": "Zasoby konta"
+    },
+    "actions": {
+      "cancel": "Anuluj",
+      "submit_create": "Utwórz rolę",
+      "submit_update": "Aktualizuj rolę",
+      "success_create": "Rola utworzona pomyślnie",
+      "success_update": "Rola zaktualizowana pomyślnie",
+      "failed": "Operacja nie powiodła się",
+      "close": "Zamknij",
+      "retry": "Ponów",
+      "add": "Dodaj rolę"
+    },
+    "validation": {
+      "name_required": "Nazwa roli jest wymagana",
+      "perm_required": "Wybierz co najmniej jedno uprawnienie"
+    },
+    "columns": {
+      "id": "ID",
+      "name": "Nazwa",
+      "role_type": "Typ",
+      "permissions": "Uprawnienia",
+      "created_at": "Utworzono",
+      "updated_at": "Zaktualizowano"
+    },
+    "placeholder": {
+      "filter": "Szukaj ról..."
+    },
+    "delete": {
+      "dialog_title": "Usuń rolę",
+      "warning_text": "Trwale usuwasz rolę {{name}} (ID: {{id}}).",
+      "irreversible": "Tej operacji nie można cofnąć.",
+      "confirm_label": "Wpisz ID roli, aby potwierdzić:",
+      "placeholder": "Wpisz \"{{id}}\"",
+      "alert_title": "Uwaga: Operacja trwała.",
+      "alert_desc": "Usunięcie tej roli spowoduje odebranie jej wszystkim przypisanym użytkownikom.",
+      "confirm_btn": "Usuń rolę",
+      "deleting": "Usuwanie...",
+      "success_title": "Rola usunięta",
+      "success_desc": "Rola \"{{name}}\" została usunięta.",
+      "error_title": "Błąd usuwania",
+      "error_fallback": "Nie udało się usunąć roli."
+    },
+    "details": {
+      "title": "Uprawnienia: {{name}}",
+      "unknown": "Nieznana rola",
+      "role_badge": "Rola {{type}}",
+      "desc_global": "Zarządzanie globalne i dostęp systemowy.",
+      "desc_account": "Dostęp i operacje na danych dla pojedynczych kont.",
+      "close_btn": "Zamknij",
+      "view_permissions": "Zobacz szczegóły"
+    },
+    "empty": {
+      "title": "Nie znaleziono ról",
+      "desc": "Nie utworzyłeś jeszcze żadnych własnych ról."
+    }
+  },
+  "profile": {
+    "avatar_alt": "Awatar",
+    "menu": {
+      "profile": "Profil",
+      "settings": "Ustawienia",
+      "sign_out": "Wyloguj się"
+    }
   }
 }

@@ -25,7 +25,10 @@ use oauth2::OAuth2Api;
 use poem_openapi::{OpenApiService, Tags};
 use system::SystemApi;
 
-use crate::{bichon_version, modules::rest::api::import::ImportApi};
+use crate::{
+    bichon_version,
+    modules::rest::api::{import::ImportApi, users::UsersApi},
+};
 
 pub mod access_token;
 pub mod account;
@@ -35,6 +38,7 @@ pub mod mailbox;
 pub mod message;
 pub mod oauth2;
 pub mod system;
+pub mod users;
 
 #[derive(Tags)]
 pub enum ApiTags {
@@ -46,6 +50,7 @@ pub enum ApiTags {
     Message,
     System,
     Import,
+    Users,
 }
 
 type RustMailOpenApi = (
@@ -57,6 +62,7 @@ type RustMailOpenApi = (
     OAuth2Api,
     MessageApi,
     ImportApi,
+    UsersApi,
 );
 
 pub fn create_openapi_service() -> OpenApiService<RustMailOpenApi, ()> {
@@ -70,6 +76,7 @@ pub fn create_openapi_service() -> OpenApiService<RustMailOpenApi, ()> {
             OAuth2Api,
             MessageApi,
             ImportApi,
+            UsersApi,
         ),
         "BichonApi",
         bichon_version!(),

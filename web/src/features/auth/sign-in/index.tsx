@@ -16,30 +16,41 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-import Logo from '@/assets/logo.svg'
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { UserAuthForm } from './components/user-auth-form'
 import { useTranslation } from 'react-i18next'
+import { AuthLayout } from './auth-layout'
 
 export default function SignIn() {
   const { t } = useTranslation()
   return (
-    <div className='container relative flex h-svh flex-col items-center justify-center'>
-      <div className='p-8 flex flex-col items-center'>
-        <img
-          src={Logo}
-          className='mb-6'
-          width={350}
-          height={350}
-          alt='Bichon Logo'
-        />
-        <h2 className='mb-4 text-lg font-medium text-muted-foreground'>
-          {t('auth.welcome')}
-        </h2>
-        <div className='mx-auto flex w-full flex-col justify-center space-y-2 sm:w-[350px]'>
+    <AuthLayout>
+      <Card className='gap-4'>
+        <CardHeader>
+          <CardTitle className='text-lg tracking-tight'>{t('auth.welcome')}</CardTitle>
+        </CardHeader>
+        <CardContent>
           <UserAuthForm />
-        </div>
-      </div>
-    </div>
+        </CardContent>
+        <CardFooter>
+          <p className="text-muted-foreground px-8 text-center text-sm">
+            {t('common.project_description')}
+            <a
+              href="https://github.com/rustmailer/bichon"
+              className="hover:text-primary underline underline-offset-4 ml-1"
+            >
+              {t('common.view_on_github_button')}
+            </a>
+            .
+          </p>
+        </CardFooter>
+      </Card>
+    </AuthLayout>
   )
 }

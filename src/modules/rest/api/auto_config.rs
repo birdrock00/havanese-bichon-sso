@@ -16,12 +16,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::modules::autoconfig::entity::MailServerConfig;
 use crate::modules::autoconfig::load::resolve_autoconfig;
+use crate::modules::common::auth::ClientContext;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::rest::api::ApiTags;
 use crate::modules::rest::ApiResult;
+use crate::modules::users::permissions::Permission;
 use crate::raise_error;
 use poem_openapi::param::Path;
 use poem_openapi::payload::Json;
@@ -40,8 +41,13 @@ impl AutoConfigApi {
     async fn autoconfig(
         &self,
         /// The email address to lookup configuration for
-        email_address: Path<String>
+        email_address: Path<String>,
+        context: ClientContext,
     ) -> ApiResult<Json<MailServerConfig>> {
+        context
+            .require_permission(None, Permission::ACCOUNT_CREATE)
+            .await?;
+
         let result = resolve_autoconfig(email_address.0.trim())
             .await?
             .ok_or_else(|| {

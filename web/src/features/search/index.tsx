@@ -37,6 +37,7 @@ import { Button } from '@/components/ui/button';
 import { EnvelopeTags } from './tag-facet';
 import { EditTagsDialog } from './add-tag-dialog';
 import { useTranslation } from 'react-i18next';
+import Logo from '@/assets/logo.svg'
 
 export default function Search() {
   const { t } = useTranslation()
@@ -134,16 +135,20 @@ export default function Search() {
                   </Card>
                 )}
 
-                {total === 0 && <div className="text-center py-12 space-y-4">
-                  <div className="bg-muted/50 border-2 border-dashed rounded-xl w-24 h-24 mx-auto flex items-center justify-center">
-                    <SearchIcon className="w-10 h-10 text-muted-foreground" />
+                {total === 0 && <div className="flex h-[750px] shrink-0 items-center justify-center rounded-md border border-dashed">
+                  <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
+                    <img
+                      src={Logo}
+                      className="max-h-[100px] w-auto opacity-20 saturate-0 transition-all duration-300 hover:opacity-100 hover:saturate-100 object-contain"
+                      alt="Bichon Logo"
+                    />
+                    <h3 className="mt-4 text-lg font-semibold">{t('search.noEmailsFound')}</h3>
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                      {Object.keys(filter).length === 0
+                        ? t('search.startSearching')
+                        : t('search.adjustSearch')}
+                    </p>
                   </div>
-                  <h3 className="text-lg font-medium">{t('search.noEmailsFound')}</h3>
-                  <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                    {Object.keys(filter).length === 0
-                      ? t('search.startSearching')
-                      : t('search.adjustSearch')}
-                  </p>
                 </div>}
                 {total > 0 && <ScrollArea className='h-[40rem] w-full pr-4 -mr-4 py-1'>
                   <MailList

@@ -17,9 +17,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import ProxyManagerPage from '@/features/settings/proxy'
+import { Profile } from '@/features/settings/profile'
 import { createLazyFileRoute } from '@tanstack/react-router'
 
 export const Route = createLazyFileRoute('/_authenticated/settings/')({
-  component: ProxyManagerPage,
+  component: Profile,
 })

@@ -24,12 +24,13 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { Proxy } from '../data/schema'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ToastAction } from '@/components/ui/toast'
 import { AxiosError } from 'axios'
 import { delete_proxy } from '@/api/system/api'
 import { useTranslation } from 'react-i18next'
+import { Proxy } from '@/api/system/api'
+
 
 interface Props {
   open: boolean
@@ -53,7 +54,7 @@ export function ProxyDeleteDialog({ open, onOpenChange, currentRow }: Props) {
   }
 
   function handleError(error: AxiosError) {
-    const errorMessage = error.response?.data ||
+    const errorMessage = (error.response?.data as { message?: string })?.message ||
       error.message ||
       t('proxyDelete.failedDesc');
 

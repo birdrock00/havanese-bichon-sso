@@ -3,6 +3,7 @@
         "submit": "Lähetä",
         "cancel": "Peruuta",
         "save": "Tallenna",
+        "save_changes": "Tallenna muutokset",
         "delete": "Poista",
         "edit": "Muokkaa",
         "search": "Hae",
@@ -19,28 +20,34 @@
         "empty": "Tyhjä",
         "noData": "Ei tietoja",
         "table": {
-            "noResults": "Ei tuloksia"
+            "noResults": "Ei tuloksia."
         },
-        "failed": "epäonnistui",
-        "notFound": "Ei löydy",
+        "failed": "Epäonnistui",
+        "notFound": "Ei löytynyt",
         "back": "Takaisin",
-        "goBack": "Palaa takaisin",
-        "backToHome": "Takaisin etusivulle",
+        "goBack": "Mene takaisin",
+        "backToHome": "Takaisin alkuun",
         "tryAgain": "Yritä uudelleen",
         "more": "Lisää",
         "actions": "Toiminnot",
-        "filter": "Suodatin",
+        "filter": "Suodata",
         "reset": "Nollaa",
         "clear": "Tyhjennä",
         "error": "Virhe",
         "apply": "Käytä",
         "select": "Valitse",
         "selectAll": "Valitse kaikki",
-        "deselectAll": "Poista kaikki valinnat",
+        "deselectAll": "Poista valinnat",
         "all": "Kaikki",
         "none": "Ei mitään",
-        "showLess": "näytä vähemmän",
-        "showMore": "näytä lisää..."
+        "showLess": "Näytä vähemmän",
+        "showMore": "Näytä lisää...",
+        "project_description": "Bichon on avoimen lähdekoodin projekti.",
+        "view_on_github_button": "Näytä GitHubissa",
+        "op_failed": "Toiminto epäonnistui",
+        "na": "N/A",
+        "retry": "Yritä uudelleen",
+        "deleting": "Poistetaan..."
     },
     "navigation": {
         "home": "Koti",
@@ -53,7 +60,8 @@
         "apiDocs": "API-dokumentaatio",
         "general": "Yleinen",
         "auth": "Todennus",
-        "other": "Muu"
+        "other": "Muu",
+        "users": "Järjestelmän käyttäjät"
     },
     "auth": {
         "welcome": "Tervetuloa Bichoniin",
@@ -130,6 +138,30 @@
         "systemVersion": "Järjestelmäversio"
     },
     "accounts": {
+        "access_control": {
+            "title": "Tilin pääsynhallinta",
+            "description": "Määritä roolit ja valtuutetut käyttäjät kohteelle {{email}}",
+            "role_label": "Pääsyrooli",
+            "role_placeholder": "Valitse rooli",
+            "role_loading": "Ladataan rooleja...",
+            "user_label": "Valitse valtuutetut käyttäjät",
+            "user_search_placeholder": "Hae käyttäjänimellä tai sähköpostilla...",
+            "user_empty": "Käyttäjiä ei löytynyt",
+            "user_selected_count": "Valittu: {{count}} käyttäjä(ä)",
+            "buttons": {
+                "cancel": "Peruuta",
+                "save": "Tallenna määritys"
+            },
+            "validation": {
+                "user_required": "Valitse vähintään yksi käyttäjä",
+                "role_required": "Valitse määritettävä rooli"
+            },
+            "toast": {
+                "success_title": "Määritys onnistui",
+                "success_desc": "Oikeudet on määritetty onnistuneesti kohteelle {{email}}",
+                "failed_title": "Määritys epäonnistui"
+            }
+        },
         "title": "Sähköpostitilit",
         "description": "Hallinnoi ja määritä sähköpostitilejäsi.",
         "addImap": "Lisää IMAP",
@@ -423,6 +455,25 @@
             "noSubject": "(Ei aihetta)",
             "loadingMore": "Ladataan...",
             "loadMore": "Lataa lisää"
+        },
+        "bulkActions": {
+            "ariaLabel": "{{count}} viestiä valittu. Toimintopalkki",
+            "delete": "Poista",
+            "deleteDesc": "Poista valitut viestit",
+            "selected": "{{count}} valittu",
+            "clear": "Tyhjennä valinnat"
+        },
+        "delete": {
+            "title": "Poista viestit",
+            "confirmPrefix": "Haluatko varmasti poistaa",
+            "countLabel": "{{count}} viestiä?",
+            "confirmDetail": "Tätä toimintoa ei voi peruuttaa.",
+            "confirmButton": "Poista",
+            "warningTitle": "Varoitus",
+            "warningDesc": "Viestit poistetaan pysyvästi.",
+            "successTitle": "Poistettu",
+            "successDesc": "Viestien poisto onnistui.",
+            "errorTitle": "Poisto epäonnistui"
         }
     },
     "mail": {
@@ -705,7 +756,60 @@
         "pleaseUseAnIpAddressForBetterReliability": "Käytä IP-osoitetta (esim. 127.0.0.1) isäntänimen tai verkkotunnuksen sijaan paremman luotettavuuden saavuttamiseksi.",
         "adding": "Lisätään...",
         "yourProxyHasBeenSuccessfully": "Välityspalvelimesi on {{action}} onnistuneesti.",
-        "proxyUpdateOrAddFailed": "{{action}} epäonnistui, yritä myöhemmin uudelleen"
+        "proxyUpdateOrAddFailed": "{{action}} epäonnistui, yritä myöhemmin uudelleen",
+        "sidebar": {
+            "profile": "Profiili",
+            "apiTokens": "API-tunnukset",
+            "proxy": "Verkkovälityspalvelin",
+            "configurations": "Järjestelmäasetukset"
+        },
+        "profile": {
+            "loadError": "Käyttäjätietojen lataaminen epäonnistui.",
+            "uploadTitle": "Lataa avatar",
+            "maxSize": "Enintään {{size}}",
+            "avatarAlt": "Avatar",
+            "removeAvatar": "Poista avatar",
+            "uploadError": "Tiedoston latausvirhe",
+            "field": {
+                "username": "Käyttäjänimi",
+                "email": "Sähköposti",
+                "password": "Salasana"
+            },
+            "placeholder": {
+                "password_keep": "Jätä tyhjäksi säilyttääksesi nykyisen salasanan"
+            },
+            "button": {
+                "update_profile": "Päivitä profiili",
+                "permissions": "Oikeudet",
+                "view_global_permissions": "Näytä globaalit oikeudet"
+            },
+            "section": {
+                "roles": "Roolit",
+                "accounts": "{{count}} liitettyä tiliä"
+            },
+            "account": {
+                "id": "Tilin tunnus: {{id}}"
+            },
+            "toast": {
+                "updated": "Profiili päivitetty",
+                "update_failed": "Profiilin päivitys epäonnistui"
+            },
+            "validation": {
+                "username": {
+                    "required": "Käyttäjänimi vaaditaan",
+                    "min": "Käyttäjänimen on oltava vähintään 5 merkkiä",
+                    "max": "Käyttäjänimi voi olla enintään 32 merkkiä"
+                },
+                "email": {
+                    "required": "Sähköposti vaaditaan",
+                    "invalid": "Anna kelvollinen sähköpostiosoite"
+                },
+                "password": {
+                    "min": "Salasanan on oltava vähintään 8 merkkiä",
+                    "max": "Salasana voi olla enintään 32 merkkiä"
+                }
+            }
+        }
     },
     "apiDocs": {
         "choosePreferredType": "Valitse haluamasi API-dokumentaation tyyppi",
@@ -765,7 +869,8 @@
         "folderLimitMustBeNumber": "Kansiorajan on oltava numero",
         "folderLimitMustBeAtLeast100": "Kansiorajan on oltava vähintään 100",
         "incrementalSyncMustBeNumber": "Lisäävän synkronoinnin välin on oltava numero",
-        "incrementalSyncMustBeAtLeast10": "Lisäävän synkronoinnin välin on oltava vähintään 10 minuuttia"
+        "incrementalSyncMustBeAtLeast10": "Lisäävän synkronoinnin välin on oltava vähintään 10 minuuttia",
+        "pleaseEnterUsernameOrEmail": "Ole hyvä ja anna käyttäjänimesi tai sähköpostiosoitteesi"
     },
     "table": {
         "noResults": "Ei tuloksia löydy",
@@ -780,7 +885,17 @@
         "desc": "Laskeva",
         "hide": "Piilota",
         "edit": "Muokkaa",
-        "delete": "Poista"
+        "delete": "Poista",
+        "pagination": {
+            "selected": "{{selected}} / {{total}} riviä valittu.",
+            "fixed_page_size": "{{size}} riviä sivulla.",
+            "rows_per_page": "Rivejä per sivu",
+            "page_info": "Sivu {{page}} / {{total}}",
+            "first": "Ensimmäinen sivu",
+            "previous": "Edellinen sivu",
+            "next": "Seuraava sivu",
+            "last": "Viimeinen sivu"
+        }
     },
     "proxyDelete": {
         "title": "Poista välityspalvelin",
@@ -797,5 +912,471 @@
         "warningTitle": "Varoitus!",
         "warningDesc": "Ole varovainen, tätä toimenpidettä ei voi kumota.",
         "deleteBtn": "Poista"
+    },
+    "systemConfig": {
+        "pageTitle": "Järjestelmätason konfiguraatiot",
+        "pageDescription": "Nämä parametrit alustetaan CLI-lippujen tai ympäristömuuttujien kautta. Ne ovat vain luku -tilassa.",
+        "status": {
+            "enabled": "Käytössä",
+            "disabled": "Ei käytössä",
+            "configured": "Konfiguroitu",
+            "missing": "Puuttuu",
+            "auto": "Automaattinen",
+            "notSet": "Ei asetettu"
+        },
+        "sections": {
+            "network": {
+                "title": "Verkko",
+                "desc": "HTTP ja julkinen pääsy"
+            },
+            "cors": {
+                "title": "CORS",
+                "desc": "Cross-origin-käyttösäännöt"
+            },
+            "logging": {
+                "title": "Lokitukset",
+                "desc": "Lokien tulostuskäyttäytyminen"
+            },
+            "storage": {
+                "title": "Tallennus ja välimuisti",
+                "desc": "Tietokantapolut ja rajoitukset"
+            },
+            "security": {
+                "title": "Turvallisuus",
+                "desc": "Todennus ja salaus"
+            },
+            "performance": {
+                "title": "Suorituskyky",
+                "desc": "Samanaikaisuus ja pakkaus"
+            }
+        }
+    },
+    "apiTokens": {
+        "page": {
+            "loadError": "API-tunnusten lataaminen epäonnistui.",
+            "emptyTitle": "Ei API-tunnuksia",
+            "emptyDescription": "Et ole vielä luonut API-tunnuksia. Luo uusi napsauttamalla alta.",
+            "addBtn": "Lisää tunnus"
+        },
+        "list": {
+            "unnamedToken": "Nimetön tunnus",
+            "statusActive": "Aktiivinen",
+            "statusExpired": "Vanhentunut",
+            "neverExpires": "Ei vanhene koskaan",
+            "expiresOnShort": "Vanhenee {{date}}",
+            "tokenLabel": "Tunnus",
+            "createdLabel": "Luotu",
+            "lastUsedLabel": "Viimeksi käytetty",
+            "expiresOnLabel": "Vanhenee",
+            "neverUsed": "Ei koskaan",
+            "neverLabel": "Ei koskaan",
+            "deleteBtn": "Poista tunnus"
+        },
+        "dialog": {
+            "createTitle": "Luo pääsytunnus",
+            "editTitle": "Muokkaa pääsytunnusta",
+            "description": "Napsauta tallenna, kun olet valmis.",
+            "save": "Tallenna",
+            "saveChanges": "Tallenna muutokset"
+        },
+        "deleteDialog": {
+            "title": "Poistetaanko pääsytunnus?",
+            "description": "Tätä toimintoa ei voi peruuttaa. Kaikki sovellukset, jotka käyttävät tätä tunnusta, menettävät pääsyn välittömästi.",
+            "cancel": "Peruuta",
+            "confirm": "Poista",
+            "deleting": "Poistetaan..."
+        },
+        "form": {
+            "nameLabel": "Nimi",
+            "namePlaceholder": "Anna tunnukselle lyhyt nimi",
+            "nameDescription": "Valinnainen · Enintään 32 merkkiä",
+            "expirationLabel": "Vanhentuminen",
+            "expirationPlaceholder": "Valitse vanhentumisaika",
+            "expirationDescription": "Tunnukset vanhenevat automaattisesti valitun ajan kuluttua.",
+            "never": "Ei koskaan",
+            "1day": "1 päivä",
+            "7days": "7 päivää",
+            "30days": "30 päivää",
+            "errorMax": "Enintään 32 merkkiä",
+            "errorNumber": "On oltava numero",
+            "errorInt": "On oltava kokonaisluku",
+            "errorPositive": "On oltava suurempi kuin 0"
+        },
+        "notifications": {
+            "createSuccess": "Pääsytunnus luotu",
+            "createSuccessDesc": "Pääsytunnus on luotu onnistuneesti.",
+            "updateSuccess": "Pääsytunnus päivitetty",
+            "updateSuccessDesc": "Pääsytunnus on päivitetty onnistuneesti.",
+            "createFailed": "Luominen epäonnistui",
+            "updateFailed": "Päivitys epäonnistui",
+            "deleteSuccess": "Tunnus poistettu",
+            "deleteFailed": "Poistaminen epäonnistui",
+            "copied": "Kopioitu leikepöydälle",
+            "genericError": "Toiminto epäonnistui. Yritä uudelleen.",
+            "close": "Sulje",
+            "tryAgain": "Yritä uudelleen"
+        }
+    },
+    "permission": {
+        "scope": {
+            "global": "Globaali",
+            "account": "Tili #{{id}}"
+        },
+        "dialog": {
+            "global_title": "Globaalit käyttöoikeudet",
+            "account_title": "Tilikohtaiset käyttöoikeudet",
+            "global_description": "Tälle käyttäjälle myönnetyt järjestelmänlaajuiset käyttöoikeudet.",
+            "account_description": "Valittuun tiliin rajatut käyttöoikeudet."
+        },
+        "category": {
+            "system_identity": "Järjestelmä ja identiteetti",
+            "global_data": "Globaalit tiedot (Ylläpitäjä)",
+            "account": "Tilin käyttöoikeudet"
+        },
+        "system": {
+            "access": "Perusjärjestelmän käyttö",
+            "root": "Täysi järjestelmän hallinta"
+        },
+        "user": {
+            "manage": "Kaikkien käyttäjien hallinta",
+            "view": "Käyttäjien perustietojen tarkastelu"
+        },
+        "token": {
+            "manage": "Käyttöoikeustunnusten hallinta"
+        },
+        "account": {
+            "create": "Sähköpostitilien luominen",
+            "manage": "Määritettyjen tilien hallinta",
+            "manage_all": "Kaikkien tiliasetusten hallinta",
+            "read_details": "Tilin tietojen tarkastelu"
+        },
+        "data": {
+            "read": "Määritettyjen sähköpostitietojen lukeminen",
+            "read_all": "Kaikkien sähköpostitietojen lukeminen",
+            "manage": "Määritetyn sähköpostimetadatan hallinta",
+            "manage_all": "Kaiken sähköpostimetadatan hallinta",
+            "raw_download": "Määritettyjen raakaviestien lataaminen",
+            "raw_download_all": "Kaikkien raakaviestien lataaminen",
+            "delete": "Määritettyjen sähköpostien poistaminen",
+            "delete_all": "Kaikkien tilien sähköpostien poistaminen",
+            "export_batch": "Tietojen erävienti",
+            "export_batch_all": "Kaikkien tietojen erävienti",
+            "import_batch": "Sähköpostitietojen erätuonti"
+        }
+    },
+    "users": {
+        "columns": {
+            "id": "ID",
+            "avatar": "Avatar",
+            "username": "Käyttäjänimi",
+            "email": "Sähköposti",
+            "roles": "Roolit & käyttöoikeudet",
+            "created_at": "Luotu",
+            "updated_at": "Päivitetty",
+            "actions": "Toiminnot"
+        },
+        "buttons": {
+            "add": "Lisää käyttäjä",
+            "add_new": "Uusi käyttäjä"
+        },
+        "empty": {
+            "title": "Käyttäjiä ei löytynyt",
+            "description": "Lisää ensimmäinen käyttäjä napsauttamalla alla olevaa painiketta."
+        },
+        "nav": {
+            "users": "Käyttäjät",
+            "roles": "Roolit",
+            "api_tokens": "API-avaimet"
+        },
+        "api_tokens": {
+            "empty": {
+                "title": "API-avaimia ei löytynyt",
+                "description": "Järjestelmässä ei ole vielä luotu yhtään API-tunnusta."
+            },
+            "button": {
+                "generate": "Luo uusi avain"
+            },
+            "toolbar": {
+                "search_placeholder": "Hae nimellä, omistajalla tai avaimella..."
+            },
+            "table": {
+                "name": "Nimi",
+                "type": "Tyyppi",
+                "last_used": "Viimeksi käytetty",
+                "expires_at": "Vanhenee",
+                "owner": "Omistaja",
+                "created": "Luotu",
+                "api_key": "API-avain",
+                "web_ui": "Web UI",
+                "never": "Ei koskaan",
+                "permanent": "Pysyvä",
+                "expired": "Vanhentunut",
+                "unnamed": "Nimetön avain"
+            },
+            "unnamed": "Nimetön avain",
+            "delete": {
+                "title": "Poista API-avain",
+                "desc": "Olet poistamassa tämän API-avaimen pysyvästi",
+                "prefix": "Avaimen etuliite",
+                "irreversible": "Tätä toimintoa ei voi peruuttaa. Kaikki tätä avainta käyttävät sovellukset menettävät pääsyn välittömästi.",
+                "confirm_label": "Vahvista kirjoittamalla {{word}} alle:",
+                "confirm_placeholder": "Kirjoita \"{{word}}\" vahvistaaksesi",
+                "warning_title": "Varoitus",
+                "warning_desc": "Kaikki tätä avainta käyttävät skriptit tai palvelut lakkaavat toimimasta. Varmista, että olet päivittänyt järjestelmäsi.",
+                "confirm_button": "Poista avain",
+                "deleting": "Poistetaan..."
+            },
+            "toast": {
+                "deleted_title": "API-avain poistettu",
+                "deleted_desc": "Avain \"{{name}}\" poistettiin onnistuneesti.",
+                "delete_failed_title": "Poisto epäonnistui",
+                "delete_failed": "Avainta ei voitu poistaa, yritä uudelleen."
+            }
+        },
+        "tokens": {
+            "schema": {
+                "name_max": "Enintään 32 merkkiä",
+                "expire_number": "On oltava luku",
+                "expire_int": "On oltava kokonaisluku",
+                "expire_positive": "On oltava suurempi kuin 0"
+            },
+            "toast": {
+                "update_success_title": "Avain päivitetty",
+                "update_success_desc": "Pääsyavain päivitettiin onnistuneesti.",
+                "create_success_title": "Avain luotu",
+                "create_success_desc": "Pääsyavain luotiin onnistuneesti.",
+                "update_failed_title": "Päivitys epäonnistui",
+                "create_failed_title": "Luonti epäonnistui"
+            },
+            "error": {
+                "fallback": "Toiminto epäonnistui, yritä myöhemmin uudelleen."
+            },
+            "dialog": {
+                "edit_title": "Muokkaa pääsyavainta",
+                "create_title": "Luo pääsyavain",
+                "description": "Napsauta Tallenna, kun olet valmis."
+            },
+            "fields": {
+                "name_label": "Nimi",
+                "name_placeholder": "Anna avaimelle lyhyt nimi",
+                "name_hint": "Valinnainen · Enintään 32 merkkiä",
+                "expire_label": "Vanhentuminen",
+                "expire_placeholder": "Valitse aika",
+                "expire_hint": "Avain vanhenee automaattisesti valitun ajan kuluttua."
+            },
+            "expire_options": {
+                "never": "Ei koskaan",
+                "1_day": "1 päivä",
+                "7_days": "7 päivää",
+                "30_days": "30 päivää"
+            }
+        },
+        "tokens_action": {
+            "dialog": {
+                "title": "API-avaimet",
+                "description": "Hallitse tämän käyttäjän API-avaimia."
+            },
+            "empty": {
+                "title": "Ei API-avaimia",
+                "description": "Tällä käyttäjällä ei ole tällä hetkellä API-avaimia."
+            },
+            "buttons": {
+                "add": "Lisää avain"
+            },
+            "list": {
+                "unnamed_token": "Nimetön avain",
+                "status_expired": "Vanhentunut",
+                "status_active": "Aktiivinen",
+                "expires_on_brief": "Vanhenee {{date}}",
+                "never_expires": "Ei koskaan",
+                "label_token": "Avain",
+                "label_created": "Luotu",
+                "label_last_used": "Käytetty",
+                "label_expires_at": "Vanhenee",
+                "never": "Ei koskaan",
+                "button_delete": "Poista avain"
+            },
+            "delete_dialog": {
+                "title": "Poistetaanko pääsyavain?",
+                "description": "Tätä toimintoa ei voi peruuttaa."
+            }
+        },
+        "actions": {
+            "schema": {
+                "account_required": "Valitse tili",
+                "role_required": "Valitse rooli",
+                "username_required": "Käyttäjänimi on pakollinen",
+                "username_min": "Vähintään 5 merkkiä",
+                "username_max": "Enintään 32 merkkiä",
+                "email_required": "Sähköposti on pakollinen",
+                "email_invalid": "Anna kelvollinen sähköpostiosoite",
+                "global_role_required": "Määritä vähintään yksi globaali rooli",
+                "description_max": "Kuvaus enintään 256 merkkiä",
+                "ip_invalid": "Virheellinen IP-osoite",
+                "password_required": "Salasana on pakollinen",
+                "password_min": "Vähintään 8 merkkiä",
+                "password_max": "Enintään 32 merkkiä"
+            },
+            "toast": {
+                "updated": "Käyttäjä päivitetty",
+                "created": "Käyttäjä luotu"
+            },
+            "dialog": {
+                "edit_title": "Muokkaa käyttäjää: {{name}}",
+                "create_title": "Luo uusi käyttäjä",
+                "subtitle": "Määritä identiteetti, pääsytasot ja tietoturvakäytännöt."
+            },
+            "tabs": {
+                "general": "Yleiset",
+                "permissions": "Tilin oikeudet",
+                "security": "Turvallisuus & ACL"
+            },
+            "sections": {
+                "basic": "Perustiedot",
+                "global": "Globaalit oikeudet",
+                "mail_access": "Sähköpostin hallinta",
+                "mail_access_subtitle": "Sähköpostitilit, joita tämä käyttäjä voi hallita.",
+                "policy": "Käytännöt"
+            },
+            "fields": {
+                "username": "Käyttäjänimi",
+                "username_hint": "Yksilöllinen tunnus kirjautumiseen.",
+                "email": "Sähköpostiosoite",
+                "email_hint": "Ensisijainen yhteys- ja ilmoitusosoite.",
+                "password": "Salasana",
+                "password_placeholder_create": "Vähintään 8 merkkiä",
+                "password_placeholder_edit": "Jätä tyhjäksi säilyttääksesi nykyisen",
+                "password_hint_create": "Turvallinen salasana uudelle käyttäjälle.",
+                "password_hint_edit": "Kirjoita uusi vain, jos haluat vaihtaa sen.",
+                "global_roles_hint": "Määritä järjestelmäoikeudet.",
+                "description": "Kuvaus (valinnainen)",
+                "description_placeholder": "Huomautuksia käyttäjästä...",
+                "description_hint": "Sisäiset huomautukset (enintään 256 merkkiä).",
+                "select_account": "Valitse tili",
+                "assign_role": "Määritä rooli",
+                "ip_whitelist": "IP-sallintalista",
+                "ip_whitelist_hint": "Rajoita kirjautuminen näihin IP-osoitteisiin (yksi per rivi).",
+                "rate_quota": "Nopeusrajoitus",
+                "burst_interval": "Ryöppyväli (sek)"
+            },
+            "buttons": {
+                "add_account": "Lisää tili",
+                "update": "Päivitä käyttäjä",
+                "create": "Luo käyttäjä"
+            },
+            "states": {
+                "full_access": "Täydet oikeudet -tila",
+                "full_access_desc": "Ylläpitäjillä on oletusarvoisesti pääsy kaikkiin tileihin.",
+                "no_accounts": "Ei määritettyjä tilejä.",
+                "security_disabled": "Turvakäytännöt on poistettu käytöstä."
+            },
+            "api_tokens": "API-avaimet",
+            "placeholder": {
+                "filter": "Hae käyttäjiä..."
+            },
+            "delete": {
+                "title": "Poista käyttäjä",
+                "confirm_msg": "Olet poistamassa käyttäjän {{name}} (ID: {{id}}) pysyvästi.",
+                "irreversible": "Tätä toimintoa ei voi peruuttaa.",
+                "input_label": "Kirjoita käyttäjän ID vahvistaaksesi:",
+                "placeholder": "Kirjoita \"{{id}}\"",
+                "alert_title": "Varoitus: Pysyvä toiminto.",
+                "alert_desc": "Käyttäjä ja kaikki siihen liittyvät tiedot poistetaan.",
+                "button_confirm": "Poista käyttäjä",
+                "button_deleting": "Poistetaan...",
+                "toast": {
+                    "success_title": "Käyttäjä poistettu",
+                    "success_desc": "Käyttäjä \"{{name}}\" poistettiin onnistuneesti.",
+                    "failed_title": "Poisto epäonnistui",
+                    "failed_fallback": "Käyttäjää ei voitu poistaa."
+                }
+            }
+        }
+    },
+    "roles": {
+        "title": {
+            "create": "Luo uusi rooli",
+            "edit": "Muokkaa roolia: {{name}}"
+        },
+        "description_hint": "Määritä käyttöalue ja oikeudet.",
+        "form": {
+            "name_label": "Roolin nimi",
+            "type_label": "Roolin tyyppi",
+            "desc_label": "Kuvaus",
+            "matrix_label": "Oikeusmatriisi ({{type}})",
+            "builtin_badge": "Järjestelmärooli",
+            "builtin_desc": "Tämä rooli on ennalta määritetty ja vain luku -muodossa."
+        },
+        "types": {
+            "Global": "Globaali",
+            "Account": "Tili"
+        },
+        "categories": {
+            "identity": "Identiteetti & Hallinta",
+            "global_data": "Globaali pääsy tietoon",
+            "account_resource": "Tilin resurssien hallinta"
+        },
+        "actions": {
+            "cancel": "Peruuta",
+            "submit_create": "Luo rooli",
+            "submit_update": "Päivitä rooli",
+            "success_create": "Rooli luotiin onnistuneesti",
+            "success_update": "Rooli päivitettiin onnistuneesti",
+            "failed": "Toiminto epäonnistui",
+            "close": "Sulje",
+            "retry": "Yritä uudelleen",
+            "add": "Lisää rooli"
+        },
+        "validation": {
+            "name_required": "Roolin nimi on pakollinen",
+            "perm_required": "Valitse vähintään yksi oikeus"
+        },
+        "columns": {
+            "id": "ID",
+            "name": "Nimi",
+            "role_type": "Tyyppi",
+            "permissions": "Oikeudet",
+            "created_at": "Luotu",
+            "updated_at": "Päivitetty"
+        },
+        "placeholder": {
+            "filter": "Hae rooleja..."
+        },
+        "delete": {
+            "dialog_title": "Poista rooli",
+            "warning_text": "Olet poistamassa roolin {{name}} (ID: {{id}}) pysyvästi.",
+            "irreversible": "Tätä toimintoa ei voi peruuttaa.",
+            "confirm_label": "Kirjoita roolin ID vahvistaaksesi:",
+            "placeholder": "Kirjoita \"{{id}}\"",
+            "alert_title": "Varoitus: Pysyvä toiminto.",
+            "alert_desc": "Tämän roolin poistaminen poistaa sen kaikilta käyttäjiltä, joille se on määritetty.",
+            "confirm_btn": "Poista rooli",
+            "deleting": "Poistetaan...",
+            "success_title": "Rooli poistettu",
+            "success_desc": "Rooli \"{{name}}\" poistettiin.",
+            "error_title": "Poisto epäonnistui",
+            "error_fallback": "Roolia ei voitu poistaa."
+        },
+        "details": {
+            "title": "Oikeudet: {{name}}",
+            "unknown": "Tuntematon rooli",
+            "role_badge": "{{type}}-rooli",
+            "desc_global": "Globaali hallinta ja järjestelmän pääsyoikeudet.",
+            "desc_account": "Pääsy ja toiminnot yksittäisten tilien tietoihin.",
+            "close_btn": "Sulje",
+            "view_permissions": "Katso yksityiskohdat"
+        },
+        "empty": {
+            "title": "Rooleja ei löytynyt",
+            "desc": "Et ole vielä luonut mukautettuja rooleja."
+        }
+    },
+    "profile": {
+        "avatar_alt": "Profiilikuva",
+        "menu": {
+            "profile": "Profiili",
+            "settings": "Asetukset",
+            "sign_out": "Kirjaudu ulos"
+        }
     }
 }

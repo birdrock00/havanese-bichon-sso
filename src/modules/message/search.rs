@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::collections::HashSet;
 
 use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
@@ -72,9 +73,18 @@ impl SearchRequest {
     }
 }
 
-pub async fn search_messages_impl(request: SearchRequest) -> BichonResult<DataPage<Envelope>> {
+pub async fn search_messages_impl(
+    accounts: Option<HashSet<u64>>,
+    request: SearchRequest,
+) -> BichonResult<DataPage<Envelope>> {
     request.validate()?;
     ENVELOPE_INDEX_MANAGER
-        .search(request.filter, request.page, request.page_size, true)
+        .search(
+            accounts,
+            request.filter,
+            request.page,
+            request.page_size,
+            true,
+        )
         .await
 }
