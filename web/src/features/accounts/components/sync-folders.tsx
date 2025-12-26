@@ -251,7 +251,12 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
                             <TreeItemIconContainer {...getIconContainerProps()}>
                                 <TreeItemIcon status={status} />
                             </TreeItemIconContainer>
-                            <TreeItemCheckbox {...getCheckboxProps()} />
+                            <TreeItemCheckbox {...getCheckboxProps()} sx={{
+                                color: 'hsl(var(--muted-foreground) / 0.4)',
+                                '&.Mui-checked': {
+                                    color: 'hsl(var(--primary))',
+                                },
+                            }} />
                             <CustomLabel
                                 {...getLabelProps({
                                     exists: item.exists,
