@@ -17,13 +17,14 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::modules::common::AddrVec;
+use crate::modules::envelope::utils::normalize_subject;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::error::BichonResult;
 use crate::modules::utils::create_hash;
 use crate::{calculate_hash, raise_error, utc_now};
 use crate::{id, modules::indexer::envelope::Envelope};
 use async_imap::types::Fetch;
-use mail_parser::{Message, MessageParser, MimeHeaders};
+use mail_parser::{HeaderName, Message, MessageParser, MimeHeaders};
 
 pub fn extract_envelope(fetch: &Fetch, account_id: u64, mailbox_id: u64) -> BichonResult<Envelope> {
     let internal_date = fetch
@@ -62,7 +63,13 @@ pub fn extract_envelope(fetch: &Fetch, account_id: u64, mailbox_id: u64) -> Bich
     let in_reply_to = message.in_reply_to().as_text().map(String::from);
     let references = extract_references(&message);
     let thread_id = compute_thread_id(in_reply_to, references, &message_id);
-    let subject = message.subject().map(String::from).unwrap_or("".into());
+
+    let mut subject = message.subject().map(String::from).unwrap_or_default();
+
+    if subject.contains('\u{FFFD}') {
+        subject = normalize_subject(message.header_raw(HeaderName::Subject));
+    }
+
     let date = message.date().map(|d| d.to_timestamp() * 1000).unwrap_or(0);
     let bcc: Option<Vec<String>> = message.bcc().map(|addr| {
         AddrVec::from(addr)
@@ -150,7 +157,12 @@ pub fn extract_envelope_from_eml(
     let in_reply_to = message.in_reply_to().as_text().map(String::from);
     let references = extract_references(&message);
     let thread_id = compute_thread_id(in_reply_to, references, &message_id);
-    let subject = message.subject().map(String::from).unwrap_or("".into());
+
+    let mut subject = message.subject().map(String::from).unwrap_or_default();
+    if subject.contains('\u{FFFD}') {
+        subject = normalize_subject(message.header_raw(HeaderName::Subject));
+    }
+
     let date = message.date().map(|d| d.to_timestamp() * 1000).unwrap_or(0);
     let bcc: Option<Vec<String>> = message.bcc().map(|addr| {
         AddrVec::from(addr)

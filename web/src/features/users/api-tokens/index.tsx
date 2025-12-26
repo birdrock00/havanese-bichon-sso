@@ -18,7 +18,6 @@
 
 import { useState } from 'react'
 import useDialogState from '@/hooks/use-dialog-state'
-import { Button } from '@/components/ui/button'
 import { getColumns } from './components/columns'
 import { ApiTokenDeleteDialog } from './components/delete-dialog'
 import { ApiTokensTable } from './components/table'
