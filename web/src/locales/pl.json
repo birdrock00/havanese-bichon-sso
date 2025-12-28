@@ -398,6 +398,13 @@
     }
   },
   "search": {
+    "size": "Rozmiar",
+    "any": "Dowolny",
+    "tiny": "Bardzo mały (<15 KB)",
+    "small": "Mały (<2 MB)",
+    "medium": "Średni (<20 MB)",
+    "large": "Duży (≥20 MB)",
+    "sizeDescription": "Rozmiar odnosi się do całkowitego rozmiaru wiadomości e-mail, łącznie z załącznikami.",
     "title": "Szukaj",
     "searching": "Wyszukiwanie, proszę czekać...",
     "noEmailsFound": "Nie znaleziono wiadomości",

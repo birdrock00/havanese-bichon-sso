@@ -398,6 +398,13 @@
         }
     },
     "search": {
+        "size": "Størrelse",
+        "any": "Alle",
+        "tiny": "Svært liten (<15 KB)",
+        "small": "Liten (<2 MB)",
+        "medium": "Middels (<20 MB)",
+        "large": "Stor (≥20 MB)",
+        "sizeDescription": "Størrelsen viser til e-postens totale størrelse, inkludert vedlegg.",
         "title": "Søk",
         "searching": "Søker, vennligst vent…",
         "noEmailsFound": "Ingen e-poster funnet",

@@ -398,6 +398,13 @@
     }
   },
   "search": {
+    "size": "大小",
+    "any": "不限",
+    "tiny": "很小（<15 KB）",
+    "small": "小（<2 MB）",
+    "medium": "中（<20 MB）",
+    "large": "大（≥20 MB）",
+    "sizeDescription": "大小指的是邮件整体大小，包含附件。",
     "title": "搜索",
     "searching": "搜索中，请稍候…",
     "noEmailsFound": "未找到邮件",
@@ -428,7 +435,7 @@
     "noActiveEmailAccount": "没有活动的邮件账户。",
     "addEmailAccount": "添加邮件账户",
     "noMailboxSelectAccount": "没有邮箱。请先选择一个账户。",
-    "searchInSubjectBody": "在主题、正文、附件中搜索...",
+    "searchInSubjectBody": "在主题、正文、附件名字中搜索...",
     "searchingButton": "搜索中...",
     "searchButton": "搜索",
     "advanced": "高级",

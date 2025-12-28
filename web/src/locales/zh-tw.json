@@ -428,7 +428,7 @@
         "noActiveEmailAccount": "沒有啟用的電子郵件帳號。",
         "addEmailAccount": "新增電子郵件帳號",
         "noMailboxSelectAccount": "沒有信箱，請先選擇一個帳號。",
-        "searchInSubjectBody": "在主旨、內文或附件中搜尋...",
+        "searchInSubjectBody": "在主旨、內文或附件名字中搜尋...",
         "searchingButton": "正在搜尋...",
         "searchButton": "搜尋",
         "advanced": "進階",

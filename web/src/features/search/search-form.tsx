@@ -37,6 +37,7 @@ import { useSearchContext } from "./context";
 import { toast } from "@/hooks/use-toast";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useTranslation } from "react-i18next";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const getSearchFilterSchema = (t: (key: string) => string) => z.object({
     text: z.string().optional().or(z.literal("")),
@@ -66,8 +67,7 @@ const getSearchFilterSchema = (t: (key: string) => string) => z.object({
     before: z.date().optional(),
     account_id: z.number().optional().or(z.literal("")),
     mailbox_id: z.number().optional().or(z.literal("")),
-    min_size: z.number().optional().or(z.literal("")),
-    max_size: z.number().optional().or(z.literal("")),
+    size_preset: z.enum(['any', 'tiny', 'small', 'medium', 'large']).optional(),
     message_id: z.string().optional().or(z.literal("")),
 });
 
@@ -98,6 +98,23 @@ const cleanEmpty = <T extends Record<string, any>>(obj: T): Partial<T> => {
     ) as Partial<T>;
 };
 
+function withSizePreset(values: Record<string, any>) {
+    const { size_preset, ...rest } = values;
+
+    switch (size_preset) {
+        case 'tiny':
+            return { ...rest, max_size: 15 * 1024 };
+        case 'small':
+            return { ...rest, max_size: 2 * 1024 * 1024 };
+        case 'medium':
+            return { ...rest, max_size: 20 * 1024 * 1024 };
+        case 'large':
+            return { ...rest, min_size: 20 * 1024 * 1024 };
+        default:
+            return rest;
+    }
+}
+
 export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChange }: Props) {
     const { t } = useTranslation()
     const [showAdvanced, setShowAdvanced] = useState(false);
@@ -116,8 +133,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
             bcc: "",
             attachment_name: "",
             message_id: "",
-            min_size: undefined,
-            max_size: undefined,
+            size_preset: 'any',
             has_attachment: false,
             since: undefined,
             before: undefined,
@@ -143,11 +159,16 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
 
     const handleSubmit = (values: Record<string, any>) => {
         let cleaned = cleanEmpty(values);
-        if (selectedTags.length > 0) {
-            cleaned.tags = selectedTags;
-        }
-        if (Object.keys(cleaned).length > 0) {
-            onSubmit(cleaned);
+        const payload = withSizePreset(cleaned);
+
+
+        const finalPayload =
+            selectedTags.length > 0
+                ? { ...payload, tags: selectedTags }
+                : payload;
+
+        if (Object.keys(finalPayload).length > 0) {
+            onSubmit(finalPayload);
         } else {
             toast({
                 title: t('search.pleaseSelectAtLeastOne'),
@@ -168,8 +189,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
             before: undefined,
             account_id: undefined,
             mailbox_id: undefined,
-            min_size: undefined,
-            max_size: undefined,
+            size_preset: 'any',
             message_id: "",
         });
         setSelectedAccountId(undefined);
@@ -414,27 +434,33 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                         />
                                         <FormField
                                             control={form.control}
-                                            name="min_size"
+                                            name="size_preset"
                                             render={({ field }) => (
                                                 <FormItem>
-                                                    <FormLabel className="text-xs">{t('search.minSize')} (bytes):</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="number" placeholder="1MB = 1048576" className="h-9" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10))} />
-                                                    </FormControl>
+                                                    <FormLabel className="text-xs">
+                                                        {t('search.size')}
+                                                    </FormLabel>
+                                                    <Select
+                                                        value={field.value}
+                                                        onValueChange={(value) => field.onChange(value)}
+                                                    >
+                                                        <FormControl>
+                                                            <SelectTrigger className="h-9">
+                                                                <SelectValue placeholder={t('search.any')} />
+                                                            </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                            <SelectItem value="any">{t('search.any')}</SelectItem>
+                                                            <SelectItem value="tiny">{t('search.tiny')}</SelectItem>
+                                                            <SelectItem value="small">{t('search.small')}</SelectItem>
+                                                            <SelectItem value="medium">{t('search.medium')}</SelectItem>
+                                                            <SelectItem value="large">{t('search.large')}</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
                                                     <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="max_size"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel className="text-xs">{t('search.maxSize')} (bytes):</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="number" placeholder="10MB = 10485760" className="h-9" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10))} />
-                                                    </FormControl>
-                                                    <FormMessage />
+                                                    <FormDescription className="text-xs">
+                                                        {t('search.sizeDescription')}
+                                                    </FormDescription>
                                                 </FormItem>
                                             )}
                                         />

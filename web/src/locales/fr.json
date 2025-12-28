@@ -398,6 +398,13 @@
         }
     },
     "search": {
+        "size": "Taille",
+        "any": "Toutes",
+        "tiny": "Très petite (<15 KB)",
+        "small": "Petite (<2 MB)",
+        "medium": "Moyenne (<20 MB)",
+        "large": "Grande (≥20 MB)",
+        "sizeDescription": "La taille correspond à la taille totale de l’e-mail, pièces jointes incluses.",
         "title": "Recherche",
         "searching": "Recherche en cours, veuillez patienter...",
         "noEmailsFound": "Aucun e-mail trouvé",
