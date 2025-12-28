@@ -20,11 +20,11 @@
 import { Row } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
 import { useAccountContext } from '../context'
-import { AccountModel } from '../data/schema'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { toast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
+import { AccountModel } from '@/api/account/api'
 
 interface DataTableRowActionsProps {
   row: Row<AccountModel>

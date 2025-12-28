@@ -30,10 +30,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAccountContext } from '../context'
-import { AccountModel } from '../data/schema'
 import { Mailbox, MessageSquareMore } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { AccountModel } from '@/api/account/api'
 
 interface DataTableRowActionsProps {
   row: Row<AccountModel>
@@ -113,7 +113,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
               setOpen('access-assign')
             }}
           >
-            <span>Access Control</span>
+            <span>{t('accounts.accessControl')}</span>
             <DropdownMenuShortcut>
               <IconShieldLock size={16} />
             </DropdownMenuShortcut>

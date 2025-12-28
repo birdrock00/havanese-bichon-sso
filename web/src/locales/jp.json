@@ -138,6 +138,22 @@
         "systemVersion": "システムバージョン"
     },
     "accounts": {
+        "beforeRelativeValue": "{{value}} {{unit}} 前より前のメールを同期",
+        "sinceRelativeValue": "過去 {{value}} {{unit}} 分のメールを同期",
+        "syncBatchSize": "同期バッチサイズ",
+        "syncBatchSizeDescription": "1回のIMAPリクエストで取得するメッセージ数",
+        "incrementalSyncDescription": "増分メール同期の実行頻度（分単位）",
+        "syncScope": "同期戦略",
+        "syncScopeDescription": "インデックスを作成し、アーカイブするメールを選択します。",
+        "selectMode": "フィルタモードを選択",
+        "syncAll": "すべてのメールを同期",
+        "sinceFixed": "指定した日付以降",
+        "sinceRelative": "最近のメールのみ同期",
+        "beforeRelative": "古いメールのみアーカイブ",
+        "duration": "期間",
+        "unit": "単位",
+        "accessControl": "アクセス制御",
+        "owner": "作成者",
         "access_control": {
             "title": "アカウントアクセス割り当て",
             "description": "{{email}} にロールと権限ユーザーを割り当てます",

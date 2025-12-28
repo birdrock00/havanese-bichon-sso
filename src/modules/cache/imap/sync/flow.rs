@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::{
     modules::{
         account::{migration::AccountModel, state::AccountRunningState},
@@ -37,7 +36,7 @@ use crate::{
 use std::time::Instant;
 use tracing::{debug, error, info, warn};
 
-pub const BATCH_SIZE: u32 = 50;
+pub const DEFAULT_BATCH_SIZE: u32 = 50;
 
 pub async fn fetch_and_save_since_date(
     account: &AccountModel,
@@ -69,7 +68,11 @@ pub async fn fetch_and_save_since_date(
 
     // let semaphore = Arc::new(Semaphore::new(5));
 
-    let uid_batches = generate_uid_sequence_hashset(uid_vec, BATCH_SIZE as usize, false);
+    let uid_batches = generate_uid_sequence_hashset(
+        uid_vec,
+        account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE) as usize,
+        false,
+    );
     AccountRunningState::set_initial_current_syncing_folder(
         account_id,
         mailbox.name.clone(),
@@ -105,9 +108,11 @@ pub async fn fetch_and_save_full_mailbox(
         _ => total,
     };
     let page_size = if let Some(limit) = folder_limit {
-        limit.max(100).min(BATCH_SIZE as u32)
+        limit
+            .max(100)
+            .min(account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE))
     } else {
-        BATCH_SIZE as u32
+        account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE)
     };
 
     let total_batches = total_to_fetch.div_ceil(page_size);
@@ -349,7 +354,7 @@ async fn perform_incremental_sync(
             Some(max_uid) => {
                 let executor = MAIL_CONTEXT.imap(account.id).await?;
                 executor
-                    .fetch_new_mail(account.id, local_mailbox, max_uid + 1)
+                    .fetch_new_mail(account, local_mailbox, max_uid + 1)
                     .await?;
             }
             None => {

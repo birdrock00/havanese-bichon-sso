@@ -19,12 +19,12 @@
 
 import { Row } from '@tanstack/react-table'
 import { Button } from '@/components/ui/button'
-import { AccountModel } from '../data/schema';
 import { useAccountContext } from '../context';
 import { useTranslation } from 'react-i18next';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { toast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
+import { AccountModel } from '@/api/account/api';
 
 interface Props {
   row: Row<AccountModel>

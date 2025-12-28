@@ -138,6 +138,22 @@
     "systemVersion": "System Version"
   },
   "accounts": {
+    "beforeRelativeValue": "Sync emails before {{value}} {{unit}} ago",
+    "sinceRelativeValue": "Sync emails from the last",
+    "syncBatchSize": "Sync batch size",
+    "syncBatchSizeDescription": "Number of messages fetched per IMAP request",
+    "incrementalSyncDescription": "How often incremental email synchronization is performed (in minutes)",
+    "syncScopeDescription": "Choose which emails should be indexed and archived.",
+    "syncScope": "Sync Strategy",
+    "selectMode": "Select filter mode",
+    "syncAll": "Sync All Emails",
+    "sinceFixed": "Since Specific Date",
+    "sinceRelative": "Sync Recent Emails Only",
+    "beforeRelative": "Archive Old Emails Only",
+    "duration": "Duration",
+    "unit": "Unit",
+    "accessControl": "Access Control",
+    "owner": "Creator",
     "access_control": {
       "title": "Account Access Assignment",
       "description": "Assign roles and authorized users to {{email}}",

@@ -138,6 +138,22 @@
         "systemVersion": "Järjestelmäversio"
     },
     "accounts": {
+        "beforeRelativeValue": "Synkronoi sähköpostit, jotka ovat vanhempia kuin {{value}} {{unit}}",
+        "sinceRelativeValue": "Synkronoi viimeisimmän {{value}} {{unit}} sähköpostit",
+        "syncBatchSize": "Synkronoinnin eräkoko",
+        "syncBatchSizeDescription": "Per IMAP-pyyntö noudettujen viestien määrä",
+        "incrementalSyncDescription": "Kuinka usein inkrementaalinen sähköpostin synkronointi suoritetaan (minuutteina)",
+        "syncScope": "Synkronointistrategia",
+        "syncScopeDescription": "Valitse mitkä sähköpostit indeksoidaan ja arkistoidaan.",
+        "selectMode": "Valitse suodatustila",
+        "syncAll": "Synkronoi kaikki sähköpostit",
+        "sinceFixed": "Tietystä päivämäärästä lähtien",
+        "sinceRelative": "Synkronoi vain viimeisimmät sähköpostit",
+        "beforeRelative": "Arkistoi vain vanhat sähköpostit",
+        "duration": "Kesto",
+        "unit": "Yksikkö",
+        "accessControl": "Pääsynhallinta",
+        "owner": "Luoja",
         "access_control": {
             "title": "Tilin pääsynhallinta",
             "description": "Määritä roolit ja valtuutetut käyttäjät kohteelle {{email}}",

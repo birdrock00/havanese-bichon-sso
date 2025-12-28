@@ -27,9 +27,28 @@ export default function Step4() {
     const { getValues } = useFormContext<Account>();
     const summaryData = getValues();
 
+
+    const sinceText = (() => {
+        if (summaryData.date_since?.fixed) {
+            return summaryData.date_since.fixed;
+        }
+
+        if (summaryData.date_since?.relative?.value) {
+            return `${t('accounts.sinceRelativeValue', {
+                value: summaryData.date_since!.relative!.value,
+                unit: t(`accounts.${summaryData.date_since!.relative!.unit!.toLowerCase()}`)
+            })}`;
+        }
+
+        return t('accounts.syncAll');
+    })();
+
+    const hasSince = !!summaryData.date_since;
+    const hasBefore = !!summaryData.date_before?.value;
+
     return (
         <div className="p-5 rounded-xl">
-            <Accordion type="multiple" defaultValue={['email', 'name', 'imap', 'date_since', 'folder_limit', 'sync_interval']}>
+            <Accordion type="multiple" defaultValue={['email', 'name', 'imap', 'date_since', 'folder_limit', 'sync_interval', 'sync_scope', 'sync_batch_size']}>
                 <AccordionItem key="email" value="email">
                     <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.email')}:</AccordionTrigger>
                     <AccordionContent>{summaryData.email}</AccordionContent>
@@ -82,16 +101,43 @@ export default function Step4() {
                     </AccordionContent>
                 </AccordionItem>
 
-                <AccordionItem key="date_since" value="date_since">
-                    <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.dateSelection')}:</AccordionTrigger>
-                    <AccordionContent>
-                        {summaryData.date_since?.fixed
-                            ? t('accounts.since') + ' ' + summaryData.date_since.fixed
-                            : summaryData.date_since?.relative && summaryData.date_since.relative.value && summaryData.date_since.relative.unit
-                                ? t('accounts.recent') + ' ' + summaryData.date_since.relative.value + ' ' + summaryData.date_since.relative.unit
-                                : t('accounts.notAvailable')}
+                <AccordionItem key="sync_scope" value="sync_scope">
+                    <AccordionTrigger className="font-medium capitalize text-gray-600">
+                        {t('accounts.syncScope')}:
+                    </AccordionTrigger>
+
+                    <AccordionContent className="space-y-3">
+                        {hasSince && (
+                            <div className="flex flex-col">
+                                <span className="text-xs text-muted-foreground">
+                                    {t('accounts.sinceFixed')}:
+                                </span>
+                                <span className="text-sm">{sinceText}</span>
+                            </div>
+                        )}
+
+                        {hasBefore && (
+                            <div className="flex flex-col border-t pt-2">
+                                <span className="text-xs text-muted-foreground">
+                                    {t('accounts.beforeRelative')}:
+                                </span>
+                                <span className="text-sm">
+                                    {t('accounts.beforeRelativeValue', {
+                                        value: summaryData.date_before!.value,
+                                        unit: t(`accounts.${summaryData.date_before!.unit!.toLowerCase()}`)
+                                    })}
+                                </span>
+                            </div>
+                        )}
+
+                        {!hasSince && !hasBefore && (
+                            <span className="text-sm text-muted-foreground">
+                                {t('accounts.syncAll')}
+                            </span>
+                        )}
                     </AccordionContent>
                 </AccordionItem>
+
 
                 <AccordionItem key="folder_limit" value="folder_limit">
                     <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.folderLimit')}:</AccordionTrigger>
@@ -101,6 +147,11 @@ export default function Step4() {
                 <AccordionItem key="sync_interval" value="sync_interval">
                     <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.incrementalSync')}:</AccordionTrigger>
                     <AccordionContent>{summaryData.sync_interval_min} {t('accounts.minutes')}</AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem key="sync_batch_size" value="sync_batch_size">
+                    <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.syncBatchSize')}:</AccordionTrigger>
+                    <AccordionContent>{summaryData.sync_batch_size}</AccordionContent>
                 </AccordionItem>
             </Accordion>
         </div>

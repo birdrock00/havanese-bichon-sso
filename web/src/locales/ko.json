@@ -138,6 +138,22 @@
         "systemVersion": "시스템 버전"
     },
     "accounts": {
+        "beforeRelativeValue": "{{value}} {{unit}} 전 이전 이메일 동기화",
+        "sinceRelativeValue": "지난 {{value}} {{unit}} 동안의 이메일 동기화",
+        "syncBatchSize": "동기화 배치 크기",
+        "syncBatchSizeDescription": "IMAP 요청당 가져올 메시지 수",
+        "incrementalSyncDescription": "증분 이메일 동기화 수행 빈도 (분 단위)",
+        "syncScope": "동기화 전략",
+        "syncScopeDescription": "인덱싱 및 아카이빙할 이메일을 선택하십시오.",
+        "selectMode": "필터 모드 선택",
+        "syncAll": "모든 이메일 동기화",
+        "sinceFixed": "특정 날짜 이후",
+        "sinceRelative": "최신 이메일만 동기화",
+        "beforeRelative": "오래된 이메일만 아카이브",
+        "duration": "기간",
+        "unit": "단위",
+        "accessControl": "액세스 제어",
+        "owner": "생성자",
         "access_control": {
             "title": "계정 액세스 할당",
             "description": "{{email}}에 역할 및 권한 사용자를 할당합니다",

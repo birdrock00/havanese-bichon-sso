@@ -27,7 +27,11 @@ use tracing::info;
 use crate::{
     encrypt,
     modules::{
-        account::{entity::ImapConfig, since::DateSince, state::AccountRunningState},
+        account::{
+            entity::ImapConfig,
+            since::{DateSince, RelativeDate},
+            state::AccountRunningState,
+        },
         cache::imap::mailbox::MailBox,
         database::{list_all_impl, with_transaction},
         error::BichonResult,
@@ -136,10 +140,12 @@ pub struct AccountV3 {
     pub name: Option<String>,
     pub capabilities: Option<Vec<String>>,
     pub date_since: Option<DateSince>,
+    pub date_before: Option<RelativeDate>,
     pub folder_limit: Option<u32>,
     pub sync_folders: Option<Vec<String>>,
     pub account_type: AccountType,
     pub sync_interval_min: Option<i64>,
+    pub sync_batch_size: Option<u32>,
     pub known_folders: Option<BTreeSet<String>>,
     pub created_at: i64,
     pub updated_at: i64,
@@ -174,6 +180,8 @@ impl AccountV3 {
             use_dangerous: request.use_dangerous,
             pgp_key: request.pgp_key,
             created_by: user_id,
+            sync_batch_size: request.sync_batch_size,
+            date_before: request.date_before,
         })
     }
 
@@ -404,6 +412,12 @@ impl AccountV3 {
 
         if let Some(date_since) = request.date_since {
             new.date_since = Some(date_since);
+            new.date_before = None;
+        }
+
+        if let Some(date_before) = request.date_before {
+            new.date_before = Some(date_before);
+            new.date_since = None;
         }
 
         if let Some(folder_limit) = request.folder_limit {
@@ -439,6 +453,11 @@ impl AccountV3 {
             if let Some(sync_interval_min) = &request.sync_interval_min {
                 new.sync_interval_min = Some(*sync_interval_min);
             }
+
+            if let Some(sync_batch_size) = &request.sync_batch_size {
+                new.sync_batch_size = Some(*sync_batch_size);
+            }
+
             if let Some(use_proxy) = request.use_proxy {
                 new.use_proxy = Some(use_proxy);
             }
@@ -558,6 +577,8 @@ impl From<AccountV2> for AccountV3 {
             use_proxy: value.use_proxy,
             use_dangerous: value.use_dangerous,
             pgp_key: value.pgp_key,
+            sync_batch_size: None,
+            date_before: None,
         }
     }
 }

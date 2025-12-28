@@ -24,11 +24,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ConfirmDialog } from '@/components/confirm-dialog'
-import { AccountModel } from '../data/schema'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ToastAction } from '@/components/ui/toast'
 import { AxiosError } from 'axios'
-import { remove_account } from '@/api/account/api'
+import { AccountModel, remove_account } from '@/api/account/api'
 import { useTranslation } from 'react-i18next'
 
 interface Props {

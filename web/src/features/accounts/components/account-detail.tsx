@@ -17,7 +17,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import { AccountModel } from '../data/schema'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,6 +24,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTranslation } from 'react-i18next'
+import { AccountModel } from '@/api/account/api'
 
 interface Props {
   open: boolean
@@ -34,6 +34,30 @@ interface Props {
 
 export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
   const { t } = useTranslation()
+
+
+
+
+  const sinceText = (() => {
+    if (currentRow.date_since?.fixed) {
+      return currentRow.date_since.fixed;
+    }
+
+    if (currentRow.date_since?.relative?.value) {
+      return `${t('accounts.sinceRelativeValue', {
+        value: currentRow.date_since!.relative!.value,
+        unit: t(`accounts.${currentRow.date_since!.relative!.unit!.toLowerCase()}`)
+      })}`;
+    }
+
+    return t('accounts.syncAll');
+  })();
+
+  const hasSince = !!currentRow.date_since;
+  const hasBefore = !!currentRow.date_before?.value;
+
+
+
   return (
     <Dialog
       open={open}
@@ -77,6 +101,10 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                         <span className="text-muted-foreground">{t('accounts.incrementalSyncInterval')}:</span>
                         <span>{t('accounts.everyMinutes', { minutes: currentRow.sync_interval_min })}</span>
                       </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-muted-foreground">{t('accounts.syncBatchSize')}:</span>
+                        <span>{currentRow.sync_batch_size}</span>
+                      </div>
                       <div className="flex flex-col gap-2">
                         <span className="text-muted-foreground">{t('accounts.capabilities')}:</span>
                         <code className="rounded-md bg-muted/50 px-2 py-1 text-sm border overflow-x-auto inline-block">
@@ -84,14 +112,33 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                         </code>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">{t('accounts.dateSelection')}:</span>
-                        <span>
-                          {currentRow.date_since?.fixed
-                            ? t('accounts.since') + ' ' + currentRow.date_since.fixed
-                            : currentRow.date_since?.relative
-                              ? t('accounts.recent') + ' ' + currentRow.date_since.relative.value + ' ' + currentRow.date_since.relative.unit
-                              : t('accounts.notAvailable')}
-                        </span>
+                        <span className="text-muted-foreground">{t('accounts.syncScope')}:</span>
+                        {hasSince && (
+                          <div className="flex flex-col">
+                            <span className="text-xs text-muted-foreground">
+                              {t('accounts.sinceFixed')}:
+                            </span>
+                            <span className="text-sm">{sinceText}</span>
+                          </div>
+                        )}
+                        {hasBefore && (
+                          <div className="flex flex-col border-t pt-2">
+                            <span className="text-xs text-muted-foreground">
+                              {t('accounts.beforeRelative')}:
+                            </span>
+                            <span className="text-sm">
+                              {t('accounts.beforeRelativeValue', {
+                                value: currentRow.date_before!.value,
+                                unit: t(`accounts.${currentRow.date_before!.unit!.toLowerCase()}`)
+                              })}
+                            </span>
+                          </div>
+                        )}
+                        {!hasSince && !hasBefore && (
+                          <span className="text-sm text-muted-foreground">
+                            {t('accounts.syncAll')}
+                          </span>
+                        )}
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-muted-foreground">{t('accounts.folderLimit')}:</span>
@@ -100,8 +147,6 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                     </div>
                   </CardContent>
                 </Card>
-
-                {/* Server Configuration Card */}
                 <Card>
                   <CardHeader>
                     <CardTitle>{t('accounts.serverConfiguration')}</CardTitle>
@@ -143,8 +188,6 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                     </div>
                   </CardContent>
                 </Card>
-
-                {/* Sync Folders Card */}
                 <Card>
                   <CardHeader>
                     <CardTitle>{t('accounts.syncFoldersTitle')}</CardTitle>

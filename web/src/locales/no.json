@@ -138,6 +138,22 @@
         "systemVersion": "Systemversjon"
     },
     "accounts": {
+        "beforeRelativeValue": "Synkroniser e-poster fra før {{value}} {{unit}} siden",
+        "sinceRelativeValue": "Synkroniser e-poster fra de siste {{value}} {{unit}}",
+        "syncBatchSize": "Synkroniserings-batchstørrelse",
+        "syncBatchSizeDescription": "Antall meldinger hentet per IMAP-forespørsel",
+        "incrementalSyncDescription": "Hvor ofte inkrementell e-post-synkronisering utføres (i minutter)",
+        "syncScope": "Synkroniseringsstrategi",
+        "syncScopeDescription": "Velg hvilke e-poster som skal indekseres og arkiveres.",
+        "selectMode": "Velg filtermodus",
+        "syncAll": "Synkroniser alle e-poster",
+        "sinceFixed": "Siden spesifikk dato",
+        "sinceRelative": "Synkroniser kun nylige e-poster",
+        "beforeRelative": "Arkiver kun gamle e-poster",
+        "duration": "Varighet",
+        "unit": "Enhet",
+        "accessControl": "Tilgangskontroll",
+        "owner": "Opprettet av",
         "access_control": {
             "title": "Tildeling av kontotilgang",
             "description": "Tildel roller og autoriserte brukere til {{email}}",

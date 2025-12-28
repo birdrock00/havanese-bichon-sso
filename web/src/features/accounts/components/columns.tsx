@@ -19,8 +19,6 @@
 
 import { ColumnDef } from '@tanstack/react-table'
 import LongText from '@/components/long-text'
-
-import { AccountModel } from '../data/schema'
 import { DataTableColumnHeader } from './data-table-column-header'
 import { DataTableRowActions } from './data-table-row-actions'
 import { format } from 'date-fns'
@@ -28,6 +26,7 @@ import { OAuth2Action } from './oauth2-action'
 import { RunningStateCellAction } from './running-state-action'
 import { EnableAction } from './enable-action'
 import { useTranslation } from 'react-i18next'
+import { AccountModel } from '@/api/account/api'
 
 export function useColumns(): ColumnDef<AccountModel>[] {
   const { t } = useTranslation()
@@ -112,7 +111,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
     {
       accessorKey: 'created_by',
       header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Owner" className="justify-center" />
+        <DataTableColumnHeader column={column} title={t('accounts.owner')} className="justify-center" />
       ),
       cell: ({ row }) => {
         const { created_user_name, created_user_email } = row.original;

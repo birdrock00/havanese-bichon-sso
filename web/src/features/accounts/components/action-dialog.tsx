@@ -16,14 +16,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
-import { AccountModel, ImapConfig } from '../data/schema';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
@@ -31,11 +29,12 @@ import Step1 from './step1';
 import Step2 from './step2';
 import Step3 from './step3';
 import Step4 from './step4';
-import { create_account, autoconfig, update_account } from '@/api/account/api';
+import { create_account, autoconfig, update_account, AccountModel, ImapConfig } from '@/api/account/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ToastAction } from '@/components/ui/toast';
 import { AxiosError } from 'axios';
 import { useTranslation } from 'react-i18next';
+import { cn } from "@/lib/utils";
 
 const encryptionSchema = z.union([
   z.literal('Ssl'),
@@ -80,7 +79,7 @@ const getRelativeDateSchema = (t: (key: string) => string) => z.object({
 });
 
 const getDateSelectionSchema = (t: (key: string) => string) => z.union([
-  z.object({ fixed: z.string({ message: t('accounts.selectDate') }) },),
+  z.object({ fixed: z.string({ message: t('accounts.selectDate') }) }),
   z.object({ relative: getRelativeDateSchema(t) }),
   z.undefined(),
 ]);
@@ -107,8 +106,13 @@ export type Account = {
       value?: number;
     };
   };
+  date_before?: {
+    unit?: 'Days' | 'Months' | 'Years';
+    value?: number;
+  };
   folder_limit?: number;
   sync_interval_min: number;
+  sync_batch_size: number;
 };
 
 const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
@@ -119,12 +123,18 @@ const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
     enabled: z.boolean(),
     use_dangerous: z.boolean(),
     date_since: getDateSelectionSchema(t).optional(),
+    date_before: getRelativeDateSchema(t).optional(),
     folder_limit: z
       .number({ invalid_type_error: t('validation.folderLimitMustBeNumber') })
       .int()
       .min(100, { message: t('validation.folderLimitMustBeAtLeast100') })
       .optional(),
     sync_interval_min: z.number({ invalid_type_error: t('validation.incrementalSyncMustBeNumber') }).int().min(10, { message: t('validation.incrementalSyncMustBeAtLeast10') }),
+    sync_batch_size: z
+      .number({ invalid_type_error: t('validation.incrementalSyncMustBeNumber') })
+      .int()
+      .min(30, { message: t('validation.incrementalSyncMustBeAtLeast10') })
+      .max(200, { message: t('validation.incrementalSyncMustBeAtLeast10') }),
   });
 
 type Step = {
@@ -133,14 +143,12 @@ type Step = {
   fields: (keyof Account)[];
 };
 
-export type Steps = [
-  ...Step[]
-];
+export type Steps = [...Step[]];
 
 const getSteps = (t: (key: string) => string): Steps => [
   { id: "step-1", name: t('accounts.steps.emailAddress'), fields: ["email"] },
   { id: "step-2", name: t('accounts.steps.imap'), fields: ["imap", "use_dangerous", "name"] },
-  { id: "step-3", name: t('accounts.steps.syncPreferences'), fields: ["enabled", "date_since", "folder_limit", "sync_interval_min"] },
+  { id: "step-3", name: t('accounts.steps.syncPreferences'), fields: ["enabled", "date_since", "date_before", "folder_limit", "sync_interval_min", "sync_batch_size"] },
   { id: "step-4", name: t('accounts.steps.summary'), fields: [] },
 ];
 
@@ -168,8 +176,10 @@ const defaultValues: Account = {
   enabled: true,
   use_dangerous: false,
   date_since: undefined,
+  date_before: undefined,
   folder_limit: undefined,
   sync_interval_min: 10,
+  sync_batch_size: 50,
 };
 
 const emptyImap: ImapConfig = {
@@ -194,8 +204,10 @@ const mapCurrentRowToFormValues = (currentRow: AccountModel): Account => {
     enabled: currentRow.enabled,
     use_dangerous: currentRow.use_dangerous,
     date_since: currentRow.date_since ?? undefined,
+    date_before: currentRow.date_before ?? undefined,
     folder_limit: currentRow.folder_limit ?? undefined,
     sync_interval_min: currentRow.sync_interval_min ?? 10,
+    sync_batch_size: currentRow.sync_batch_size ?? 50,
   };
 };
 
@@ -272,8 +284,10 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
         enabled: data.enabled,
         use_dangerous: data.use_dangerous,
         date_since: data.date_since,
+        date_before: data.date_before,
         folder_limit: data.folder_limit,
         sync_interval_min: data.sync_interval_min,
+        sync_batch_size: data.sync_batch_size,
       };
       if (isEdit) {
         updateMutation.mutate(commonData);
@@ -330,61 +344,67 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
     <Dialog
       open={open}
       onOpenChange={(state) => {
-        form.reset();
-        setCurrentStep(1);
+        if (!state) {
+          form.reset();
+          setCurrentStep(1);
+        }
         onOpenChange(state);
       }}
     >
-      <DialogContent className='max-w-5xl'>
-        <DialogHeader className='text-left mb-4'>
-          <DialogTitle>{isEdit ? t('accounts.updateAccount') : t('accounts.addAccount')}</DialogTitle>
-          <DialogDescription>
-            {isEdit ? t('accounts.updateAccount') : t('accounts.addAccount')}
-            {t('accounts.clickSaveWhenDone')}
-          </DialogDescription>
-        </DialogHeader>
-        <ScrollArea className="h-[38rem] w-full pr-4 -mr-4 py-1">
-          <>
-            <div className="flex my-5 space-x-4 md:hidden">
-              {steps.map((step, index) => (
+      <DialogContent className="max-w-[95vw] md:max-w-5xl w-full p-0 overflow-hidden flex flex-col h-[90vh]">
+        <div className="p-6 pb-2 flex-shrink-0">
+          <DialogHeader className="text-left">
+            <DialogTitle>{isEdit ? t('accounts.updateAccount') : t('accounts.addAccount')}</DialogTitle>
+            <DialogDescription>
+              {isEdit ? t('accounts.updateAccount') : t('accounts.addAccount')}
+              {t('accounts.clickSaveWhenDone')}
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden border-y">
+          <div className="md:hidden flex px-6 py-2 space-x-2 overflow-x-auto border-b flex-shrink-0 bg-background/50">
+            {steps.map((step, index) => (
+              <div key={step.id} className="flex flex-col items-center flex-shrink-0 min-w-[70px]">
                 <Button
-                  key={step.id}
-                  className={`size-9 rounded-full border font-bold ${currentStep === index + 1 ? "bg-primary text-white" : "bg-gray-200 text-black"
-                    }`}
+                  variant={currentStep === index + 1 ? "default" : "secondary"}
+                  className="size-8 rounded-full font-bold p-0"
                   disabled={currentStep === index + 1}
                   onClick={() => setCurrentStep(index + 1)}
                 >
                   {index + 1}
                 </Button>
-              ))}
-            </div>
-            <div className="w-full max-w-full p-4">
-              <div className="flex md:h-min rounded-xl md:rounded-2xl p-4">
-                <div className="hidden md:block w-[260px] flex-shrink-0 rounded-xl p-5 pt-7 fixed">
-                  {steps.map((step, index) => (
-                    <div className="my-3 ml-2 flex items-center" key={step.id}>
-                      <Button
-                        className={`size-8 border rounded-full text-sm font-bold ${currentStep === index + 1 ? "bg-primary text-white" : "bg-gray-200 text-black"
-                          }`}
-                        disabled={currentStep === index + 1}
-                        onClick={() => setCurrentStep(index + 1)}
-                      >
-                        {index + 1}
-                      </Button>
-                      <div className="flex flex-col items-baseline uppercase ml-5">
-                        <span className="text-xs">{t('accounts.step', { index: index + 1 })}</span>
-                        <span className="font-bold text-sm tracking-wider">{step.name}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <span className="text-[10px] mt-1 text-muted-foreground line-clamp-1">{step.name}</span>
+              </div>
+            ))}
+          </div>
 
+          <div className="hidden md:block w-[240px] flex-shrink-0 px-8 py-4 border-r overflow-y-auto">
+            {steps.map((step, index) => (
+              <div className="mb-8 flex items-center" key={step.id}>
+                <Button
+                  variant={currentStep === index + 1 ? "default" : "secondary"}
+                  className="size-9 rounded-full text-sm font-bold"
+                  disabled={currentStep === index + 1}
+                  onClick={() => setCurrentStep(index + 1)}
+                >
+                  {index + 1}
+                </Button>
+                <div className="flex flex-col items-baseline uppercase ml-4">
+                  <span className="text-[10px] text-muted-foreground">{t('accounts.step', { index: index + 1 })}</span>
+                  <span className={cn("font-bold text-sm tracking-wider", currentStep === index + 1 ? "text-foreground" : "text-muted-foreground")}>
+                    {step.name}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex-1 min-h-0 relative">
+            <ScrollArea className="h-full w-full">
+              <div className="p-6 md:p-10 lg:p-14">
                 <Form {...form}>
-                  <form
-                    id="account-register-form"
-                    className="flex-grow flex flex-col px-4 md:px-8 lg:px-12 ml-[240px]"
-                    onSubmit={form.handleSubmit(onSubmit)}
-                  >
+                  <form id="account-register-form" onSubmit={form.handleSubmit(onSubmit)}>
                     {currentStep === 1 && <Step1 isEdit={isEdit} />}
                     {currentStep === 2 && <Step2 isEdit={isEdit} />}
                     {currentStep === 3 && <Step3 />}
@@ -392,14 +412,16 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
                   </form>
                 </Form>
               </div>
-            </div>
-          </>
-        </ScrollArea>
-        <DialogFooter className="flex flex-wrap gap-2">
+            </ScrollArea>
+          </div>
+        </div>
+
+        <DialogFooter className="p-4 md:p-6 bg-background flex flex-row sm:justify-end gap-2 flex-shrink-0">
           {currentStep > 1 && (
             <Button
               type="button"
-              className="flex-grow sm:flex-grow-0 shadow-none text-nowrap text-sm"
+              variant="outline"
+              className="flex-1 sm:flex-none"
               onClick={() => setCurrentStep(currentStep - 1)}
             >
               {t('accounts.goBack')}
@@ -408,7 +430,7 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
           {currentStep < LAST_STEP && (
             <Button
               type="button"
-              className="flex-grow sm:flex-grow-0 rounded-md md:rounded-lg px-6 text-sm"
+              className="flex-1 sm:flex-none px-8"
               onClick={handleContinue}
             >
               {autoConfigLoading ? t('accounts.autoConfiguring') : t('accounts.continue')}
@@ -418,7 +440,7 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
             <Button
               type="submit"
               form="account-register-form"
-              className="flex-grow sm:flex-grow-0 rounded-md text-sm px-7 md:rounded-lg"
+              className="flex-1 sm:flex-none px-10"
             >
               {isEdit ? t('accounts.saveChanges') : t('accounts.submit')}
             </Button>

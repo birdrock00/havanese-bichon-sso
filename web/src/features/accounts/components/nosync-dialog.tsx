@@ -28,12 +28,11 @@ import { AxiosError } from 'axios';
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { create_account, update_account } from '@/api/account/api';
+import { AccountModel, create_account, update_account } from '@/api/account/api';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2 } from 'lucide-react';
-import { AccountModel } from '../data/schema';
 import { useTranslation } from 'react-i18next';
 
 

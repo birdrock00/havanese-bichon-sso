@@ -138,6 +138,22 @@
         "systemVersion": "Systemversion"
     },
     "accounts": {
+        "beforeRelativeValue": "Synkronisera mejl från före {{value}} {{unit}} sedan",
+        "sinceRelativeValue": "Synkronisera mejl från de senaste {{value}} {{unit}}",
+        "syncBatchSize": "Batchstorlek för synk",
+        "syncBatchSizeDescription": "Antal meddelanden som hämtas per IMAP-förfrågan",
+        "incrementalSyncDescription": "Hur ofta inkrementell e-post-synkronisering utförs (i minuter)",
+        "syncScope": "Synkstrategi",
+        "syncScopeDescription": "Välj vilka e-postmeddelanden som ska indexeras och arkiveras.",
+        "selectMode": "Välj filterläge",
+        "syncAll": "Synkronisera alla mejl",
+        "sinceFixed": "Sedan ett specifikt datum",
+        "sinceRelative": "Synka endast nyligen inkomna mejl",
+        "beforeRelative": "Arkivera endast gamla mejl",
+        "duration": "Varaktighet",
+        "unit": "Enhet",
+        "accessControl": "Åtkomstkontroll",
+        "owner": "Skapad av",
         "access_control": {
             "title": "Tilldelning av kontotillgång",
             "description": "Tilldela roller och auktoriserade användare till {{email}}",

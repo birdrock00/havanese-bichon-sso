@@ -52,11 +52,9 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
-
-import { AccountModel } from '../data/schema'
 import { useRoles } from '@/hooks/use-roles'
 import { useMinimalUsers } from '@/hooks/use-minimal-users'
-import { access_assign } from '@/api/account/api'
+import { access_assign, AccountModel } from '@/api/account/api'
 
 interface Props {
     currentRow: AccountModel

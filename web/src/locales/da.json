@@ -138,6 +138,22 @@
         "systemVersion": "Systemversion"
     },
     "accounts": {
+        "beforeRelativeValue": "Synkroniser e-mails fra før {{value}} {{unit}} siden",
+        "sinceRelativeValue": "Synkroniser e-mails fra de seneste {{value}} {{unit}}",
+        "syncBatchSize": "Synkroniseringsbatchstørrelse",
+        "syncBatchSizeDescription": "Antal beskeder hentet per IMAP-forespørgsel",
+        "incrementalSyncDescription": "Hvor ofte inkrementel e-mail-synkronisering udføres (i minutter)",
+        "syncScope": "Synkroniseringsstrategi",
+        "syncScopeDescription": "Vælg hvilke e-mails der skal indekseres og arkiveres.",
+        "selectMode": "Vælg filtertilstand",
+        "syncAll": "Synkroniser alle e-mails",
+        "sinceFixed": "Siden en bestemt dato",
+        "sinceRelative": "Synkroniser kun nylige e-mails",
+        "beforeRelative": "Arkiver kun gamle e-mails",
+        "duration": "Varighed",
+        "unit": "Enhed",
+        "accessControl": "Adgangskontrol",
+        "owner": "Oprettet af",
         "access_control": {
             "title": "Tildeling af kontoadgang",
             "description": "Tildel roller og autoriserede brugere til {{email}}",

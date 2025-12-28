@@ -26,7 +26,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { AccountModel } from '../data/schema'
 import { Button } from '@/components/ui/button'
 import { get_oauth2_tokens } from '@/api/oauth2/api'
 import { useQuery } from '@tanstack/react-query'
@@ -44,6 +43,7 @@ import { ToastAction } from '@/components/ui/toast'
 import { useNavigate } from '@tanstack/react-router'
 import { dateFnsLocaleMap } from '@/lib/utils'
 import { enUS } from 'date-fns/locale'
+import { AccountModel } from '@/api/account/api'
 
 interface Props {
   currentRow: AccountModel

@@ -18,13 +18,12 @@
 
 
 import { Row } from '@tanstack/react-table'
-import { AccountModel } from '../data/schema'
 import { Switch } from '@/components/ui/switch'
 import { useState } from 'react'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { ToastAction } from '@/components/ui/toast'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { update_account } from '@/api/account/api'
+import { AccountModel, update_account } from '@/api/account/api'
 import { toast } from '@/hooks/use-toast'
 import { AxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'

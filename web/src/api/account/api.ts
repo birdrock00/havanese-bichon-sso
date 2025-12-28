@@ -18,7 +18,6 @@
 
 
 import axiosInstance from "@/api/axiosInstance";
-import { AccountModel } from "@/features/accounts/data/schema";
 import { PaginatedResponse } from "..";
 
 export interface MinimalAccount {
@@ -54,6 +53,59 @@ export interface AccountRunningState {
 export interface MailboxBatchProgress {
     total_batches: number;
     current_batch: number;
+}
+
+
+
+type Encryption = 'Ssl' | 'StartTls' | 'None';
+type AuthType = 'Password' | 'OAuth2';
+type Unit = 'Days' | 'Months' | 'Years';
+type AccountType = 'IMAP' | 'NoSync';
+// Interface definitions
+interface AuthConfig {
+    auth_type: AuthType;
+    password?: string;
+}
+
+export interface ImapConfig {
+    host: string;
+    port: number; // integer, 0-65535
+    encryption: Encryption;
+    auth: AuthConfig;
+    use_proxy?: number;
+}
+
+interface RelativeDate {
+    unit: Unit;
+    value: number; // integer, minimum 1
+}
+
+interface DateSelection {
+    fixed?: string; // format: "YYYY-MM-DD"
+    relative?: RelativeDate;
+}
+
+export interface AccountModel {
+    id: number;
+    account_type: AccountType;
+    imap?: ImapConfig;
+    enabled: boolean;
+    name?: string,
+    email: string;
+    capabilities?: string[];
+    date_since?: DateSelection;
+    date_before?: RelativeDate;
+    folder_limit?: number,
+    sync_folders: string[];
+    sync_interval_min?: number;
+    sync_batch_size?: number;
+    created_by: number;
+    created_user_name: string;
+    created_user_email: string;
+    created_at: number;
+    updated_at: number;
+    use_proxy?: number
+    use_dangerous: boolean
 }
 
 export const account_state = async (account_id: number) => {

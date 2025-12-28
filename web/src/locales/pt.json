@@ -138,6 +138,22 @@
         "systemVersion": "Versão do sistema"
     },
     "accounts": {
+        "beforeRelativeValue": "Sincronizar e-mails de antes de {{value}} {{unit}} atrás",
+        "sinceRelativeValue": "Sincronizar e-mails dos últimos {{value}} {{unit}}",
+        "syncBatchSize": "Tamanho do lote de sincronização",
+        "syncBatchSizeDescription": "Número de mensagens obtidas por solicitação IMAP",
+        "incrementalSyncDescription": "Frequência da sincronização incremental (em minutos)",
+        "syncScope": "Estratégia de sincronização",
+        "syncScopeDescription": "Escolha quais e-mails devem ser indexados e arquivados.",
+        "selectMode": "Selecionar modo de filtro",
+        "syncAll": "Sincronizar todos os e-mails",
+        "sinceFixed": "Desde uma data específica",
+        "sinceRelative": "Sincronizar apenas e-mails recentes",
+        "beforeRelative": "Arquivar apenas e-mails antigos",
+        "duration": "Duração",
+        "unit": "Unidade",
+        "accessControl": "Controle de acesso",
+        "owner": "Criador",
         "access_control": {
             "title": "Atribuição de Acesso à Conta",
             "description": "Atribuir funções e usuários autorizados a {{email}}",

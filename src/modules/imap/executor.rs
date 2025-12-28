@@ -16,9 +16,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::modules::account::migration::AccountModel;
 use crate::modules::account::state::AccountRunningState;
 use crate::modules::cache::imap::mailbox::MailBox;
-use crate::modules::cache::imap::sync::flow::{generate_uid_sequence_hashset, BATCH_SIZE};
+use crate::modules::cache::imap::sync::flow::{generate_uid_sequence_hashset, DEFAULT_BATCH_SIZE};
 use crate::modules::envelope::extractor::extract_envelope;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::indexer::manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER};
@@ -80,7 +81,7 @@ impl ImapExecutor {
 
     pub async fn fetch_new_mail(
         &self,
-        account_id: u64,
+        account: &AccountModel,
         mailbox: &MailBox,
         start_uid: u64,
     ) -> BichonResult<()> {
@@ -98,17 +99,21 @@ impl ImapExecutor {
         }
         info!(
             "[account {}][mailbox {}] {} envelopes need to be fetched",
-            account_id, mailbox.name, len
+            account.id, mailbox.name, len
         );
 
         let mut uid_vec: Vec<u32> = uid_list.into_iter().collect();
         uid_vec.sort();
-        let uid_batches = generate_uid_sequence_hashset(uid_vec, BATCH_SIZE as usize, false);
+        let uid_batches = generate_uid_sequence_hashset(
+            uid_vec,
+            account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE) as usize,
+            false,
+        );
 
-        let too_many = len as u32 > 10 * BATCH_SIZE;
+        let too_many = len as u32 > 5 * account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE);
         if too_many {
             AccountRunningState::set_initial_current_syncing_folder(
-                account_id,
+                account.id,
                 mailbox.name.clone(),
                 uid_batches.len() as u32,
             )
@@ -118,13 +123,13 @@ impl ImapExecutor {
         for (index, batch) in uid_batches.into_iter().enumerate() {
             if too_many {
                 AccountRunningState::set_current_sync_batch_number(
-                    account_id,
+                    account.id,
                     mailbox.name.clone(),
                     (index + 1) as u32,
                 )
                 .await?;
             }
-            self.uid_batch_retrieve_emails(account_id, mailbox.id, &batch, &mailbox.encoded_name())
+            self.uid_batch_retrieve_emails(account.id, mailbox.id, &batch, &mailbox.encoded_name())
                 .await?;
         }
         Ok(())

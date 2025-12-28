@@ -138,6 +138,22 @@
         "systemVersion": "إصدار النظام"
     },
     "accounts": {
+        "beforeRelativeValue": "مزامنة رسائل البريد الإلكتروني قبل {{value}} {{unit}} مضت",
+        "sinceRelativeValue": "مزامنة رسائل البريد الإلكتروني لآخر {{value}} {{unit}}",
+        "syncBatchSize": "حجم دفعة المزامنة",
+        "syncBatchSizeDescription": "عدد الرسائل التي يتم جلبها لكل طلب IMAP",
+        "incrementalSyncDescription": "عدد مرات إجراء مزامنة البريد الإلكتروني المتزايدة (بالدقائق)",
+        "syncScope": "استراتيجية المزامنة",
+        "syncScopeDescription": "اختر رسائل البريد الإلكتروني التي يجب فهرستها وأرشفتها.",
+        "selectMode": "حدد وضع التصفية",
+        "syncAll": "مزامنة جميع رسائل البريد الإلكتروني",
+        "sinceFixed": "منذ تاريخ محدد",
+        "sinceRelative": "مزامنة رسائل البريد الإلكتروني الحديثة فقط",
+        "beforeRelative": "أرشفة رسائل البريد الإلكتروني القديمة فقط",
+        "duration": "المدة",
+        "unit": "الوحدة",
+        "accessControl": "التحكم في الوصول",
+        "owner": "المنشئ",
         "access_control": {
             "title": "تخصيص الوصول للحساب",
             "description": "تعيين الأدوار والمستخدمين المفوضين لـ {{email}}",

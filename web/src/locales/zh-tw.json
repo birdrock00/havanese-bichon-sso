@@ -138,6 +138,22 @@
         "systemVersion": "系統版本"
     },
     "accounts": {
+        "beforeRelativeValue": "同步 {{value}} {{unit}} 之前的郵件",
+        "sinceRelativeValue": "同步最近 {{value}} {{unit}} 內的郵件",
+        "syncBatchSize": "批次同步數量",
+        "syncBatchSizeDescription": "每次 IMAP 請求獲取的郵件數量",
+        "incrementalSyncDescription": "執行增量郵件同步的頻率（分鐘）",
+        "syncScope": "同步策略",
+        "syncScopeDescription": "選擇哪些郵件需要被索引和歸檔。",
+        "selectMode": "選擇過濾模式",
+        "syncAll": "同步所有郵件",
+        "sinceFixed": "從特定日期開始 (至今)",
+        "sinceRelative": "僅同步最近的郵件",
+        "beforeRelative": "僅封存舊郵件",
+        "duration": "時長",
+        "unit": "單位",
+        "accessControl": "訪問控制",
+        "owner": "建立者",
         "access_control": {
             "title": "帳戶訪問分配",
             "description": "為 {{email}} 分配角色和授權用戶",

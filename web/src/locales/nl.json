@@ -138,6 +138,22 @@
         "systemVersion": "Systeemversie"
     },
     "accounts": {
+        "beforeRelativeValue": "Synchroniseer e-mails van vóór {{value}} {{unit}} geleden",
+        "sinceRelativeValue": "Synchroniseer e-mails van de afgelopen {{value}} {{unit}}",
+        "syncBatchSize": "Batchgrootte synchronisatie",
+        "syncBatchSizeDescription": "Aantal berichten opgehaald per IMAP-verzoek",
+        "incrementalSyncDescription": "Frequentie van incrementele synchronisatie (in minuten)",
+        "syncScope": "Synchronisatiestrategie",
+        "syncScopeDescription": "Kies welke e-mails geïndexeerd en gearchiveerd moeten worden.",
+        "selectMode": "Filtermodus selecteren",
+        "syncAll": "Alle e-mails synchroniseren",
+        "sinceFixed": "Sinds een specifieke datum",
+        "sinceRelative": "Alleen recente e-mails synchroniseren",
+        "beforeRelative": "Alleen oude e-mails archiveren",
+        "duration": "Duur",
+        "unit": "Eenheid",
+        "accessControl": "Toegangsbeheer",
+        "owner": "Maker",
         "access_control": {
             "title": "Toewijzing accounttoegang",
             "description": "Rollen en geautoriseerde gebruikers toewijzen aan {{email}}",
