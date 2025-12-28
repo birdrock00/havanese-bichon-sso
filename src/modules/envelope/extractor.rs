@@ -121,6 +121,8 @@ pub fn extract_envelope(fetch: &Fetch, account_id: u64, mailbox_id: u64) -> Bich
         thread_id,
         attachments,
         tags: None,
+        account_email: None,
+        mailbox_name: None,
     };
     Ok(envelope)
 }
@@ -214,6 +216,8 @@ pub fn extract_envelope_from_eml(
         thread_id,
         attachments,
         tags: None,
+        account_email: None,
+        mailbox_name: None,
     };
     Ok(envelope)
 }
