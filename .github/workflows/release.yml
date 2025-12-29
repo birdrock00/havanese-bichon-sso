@@ -39,7 +39,7 @@ jobs:
         run: |
           TAG_VERSION="${GITHUB_REF_NAME}"
 
-          CARGO_VERSION=$(grep '^version\s*=' Cargo.toml | head -n1 | sed -E 's/version\s*=\s*"([^"]+)"/\1/')
+          CARGO_VERSION=$(grep '^version' Cargo.toml | head -n1 | awk -F'[ "]+' '{print $2}')
 
           echo "Git tag version:    $TAG_VERSION"
           echo "Cargo.toml version: $CARGO_VERSION"
