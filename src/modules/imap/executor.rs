@@ -84,12 +84,19 @@ impl ImapExecutor {
         account: &AccountModel,
         mailbox: &MailBox,
         start_uid: u64,
+        before: Option<&str>
     ) -> BichonResult<()> {
         assert!(start_uid > 0, "start_uid must be greater than 0");
+
+        let query = match before {
+            Some(date) => format!("UID {start_uid}:* BEFORE {date}"),
+            None => format!("UID {start_uid}:*"),
+        };
+
         let uid_list = self
             .uid_search(
                 &mailbox.encoded_name(),
-                format!("UID {start_uid}:*").as_str(),
+                &query,
             )
             .await?;
 
