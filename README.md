@@ -52,49 +52,20 @@ Built in Rust, it requires no external dependencies and provides fast, efficient
 
 ## 🚀 Features
 
-### ⚡ Lightweight & Standalone
-- Pure Rust, single-machine application.  
-- No external database required.  
-- Includes **WebUI** for intuitive management.
+* **Lightweight & Standalone** — Pure Rust, no external database, with built-in WebUI
+* **Multi-Account Sync** — Download and manage emails from multiple accounts
+* **Flexible Fetching** — Sync by date range, email count, or specific mailboxes
+* **IMAP & OAuth2 Auth** — Password or OAuth2 login with automatic token refresh
+* **Proxy & Auto Config** — Supports network proxies and automatic IMAP discovery
+* **Unified Search** — Search across all accounts by sender, subject, body, date, size, attachments, and more
+* **Tags & Facets** — Organize emails using Tantivy facet-based tags
+* **Compressed Storage** — Transparent compression and deduplication for efficient storage
+* **Email Management** — Browse, view threads, bulk clean up, export EML or attachments
+* **Dashboard & Analytics** — Visual insights into email volume, trends, and top senders
+* **Internationalized WebUI** — Frontend available in 18 languages
+* **OpenAPI Access** — OpenAPI docs with access-token authentication
+* **Multi-User & Role-Based Access Control (RBAC)** — Supports multiple users with fine-grained, role-based permissions
 
-### 📬 Multi-Account Management
-- Synchronize and download emails from multiple accounts.  
-- Flexible selection: by **date range**, **number of emails**, or **specific mailboxes**.
-
-### 🔑 IMAP & OAuth2 Authentication
-- Supports **IMAP password** or **OAuth2** login.  
-- Built-in WebUI for **OAuth2 authorization**, including **automatic token refresh** (e.g., Gmail, Outlook).  
-- Supports **network proxy** for IMAP and OAuth2.  
-- Automatic IMAP server discovery and configuration.
-
-### 🔍 Unified Multi-Account Search
-- Powerful search across all accounts:  
-  **account**, **mailbox**, **sender**, **attachment name**, **has attachments**, **size**, **date**, **subject**, **body**.
-
-### 🏷️ Tags & Facets
-- Organize archived emails using **tags** backed by Tantivy **facets**.  
-- Efficiently filter and locate emails based on these facet-based tags.
-
-### 💾 Compressed & Deduplicated Storage
-- Store emails efficiently with **transparent compression** and **deduplication**—emails can be read directly without any extra steps.
-
-### 📂 Email Management & Viewing
-- Bulk cleanup of local archives.  
-- Download emails as **EML** or **attachments separately**.  
-- View and browse emails directly.
-- View the full **conversation thread** of any email.
-
-### 📊 Dashboard & Analytics
-- Visualize email statistics: **counts**, **time distribution**, **top senders**, **largest emails**, **account rankings**.
-
-### 🌐 Internationalization (i18n)
-* WebUI fully supports **17 languages** for all interface elements.
-* Backend responses (e.g., system messages, API data) are **not yet internationalized**.
-* Frontend is ready to support more languages in the future with minimal effort.
-
-### 🛠️ OpenAPI Support
-- Provides **OpenAPI documentation**.  
-- **Access token authentication** for programmatic access.
 
 ## 🐾 Why Create Bichon?
 
@@ -285,79 +256,53 @@ Extract and run:
 
 * If you are accessing Bichon from a proxy domain **mydomain** argument --bichon-cors-origins="https://mydomain" is required.
   
-## Setting the Bichon Encryption Password
+## 🔐 Setting the Bichon Encryption Password
 
-Bichon uses an encryption password to secure sensitive data. **You must set it before first use**, when no data exists.
+Please refer to the following documentation for detailed instructions on how to set the Bichon encryption password:
 
-Once set, it **cannot be changed**. Changing it later will make all encrypted data unreadable. To start over, you would need to **reinitialize Bichon and clear all emails and metadata**.
+👉 [https://github.com/rustmailer/bichon/wiki/Setting-the-Bichon-Encryption-Password](https://github.com/rustmailer/bichon/wiki/Setting-the-Bichon-Encryption-Password)
 
-### How to Set the Password
+All configuration methods, including command-line options, environment variables, and password file support (v0.2.0+), are documented there.
 
-You can set the password **via command-line or environment variable**:
+## 🔑 User Authentication & Admin Account
 
-### Command-Line
+Starting from **Bichon v0.2.0**, the authentication model has been updated.
 
-```bash
-bichon --bichon-encrypt-password "your-strong-password"
-```
+### Built-in Admin User (v0.2.0+)
 
-### Environment Variable
+* Bichon no longer uses the legacy single-account `root / root` login.
+* The system now ships with a built-in **admin** user by default.
+* **Default credentials:**
 
-```bash
-export BICHON_ENCRYPT_PASSWORD="your-strong-password"
-bichon
-```
+  * **Username:** `admin`
+  * **Password:** `admin@bichon`
 
-**Tip:** Use a strong, secure password and keep it safe, as it cannot be changed later.
+> The legacy `root` account and the `root / root` default credentials **no longer exist**.
 
-## 🔑 Root User Login Information
 
-**Bichon currently supports a single Root user login for system access and management.**
+### Mandatory Access Token Authentication
 
-### First Login and Enabling Access
+* From **v0.2.0 onward**, **access-token–based authentication is always enabled**.
+* The startup flag and environment variable
+  `--bichon-enable-access-token` / `BICHON_ENABLE_ACCESS_TOKEN`
+  are **deprecated and no longer used**.
+* No additional configuration is required to enable authentication.
 
-To enable the login feature, you must specify a command-line argument or set an environment variable when starting Bichon.
 
-#### 1\. Command-Line Argument
+### Managing Account Information
 
-Add the `--bichon-enable-access-token` flag to your startup command:
+After logging in, the admin user can manage their profile directly in the WebUI:
 
-```bash
-# Linux/macOS Binary Deployment Example
-./bichon --bichon-root-dir /tmp/bichon-data --bichon-enable-access-token
-```
+1. Log in to the WebUI using the default admin credentials.
+2. Navigate to **Settings → Profile**.
+3. Update:
 
-#### 2\. Environment Variable (Recommended for Docker)
+   * Username
+   * Password
+   * Avatar and other profile information
 
-Set the environment variable `BICHON_ENABLE_ACCESS_TOKEN` to `true`:
-
-```bash
-# Docker Deployment Example
-docker run -d \
-  --name bichon \
-  -p 15630:15630 \
-  -v $(pwd)/bichon-data:/data \
-  -e BICHON_LOG_LEVEL=info \
-  -e BICHON_ROOT_DIR=/data \
-  -e BICHON_ENABLE_ACCESS_TOKEN=true \
-  rustmailer/bichon:latest
-```
-
-### Default Credentials
-
-  * **Initial Login Account:** `root`
-  * **Initial Password:** `root`
-
-### Changing the Password
-
-**It is strongly recommended that you change the default password immediately after your first login.**
-
-You can change the password via the WebUI:
-
-1.  Log in to the WebUI.
-2.  Navigate to the **Settings** page.
-3.  Use the **Reset Root Password** option to modify your password.
-
+⚠️ **Security Notice:**
+For security reasons, you should **change the default admin password immediately after the first login**.
 
 ## 📖 Documentation
 
@@ -390,10 +335,9 @@ This data is provided solely as a **reference** for real-world usage. We encoura
 
 ## Roadmap
 
-* [ ] Multi-user support with account/password login
-
-  * System-level roles (admin / user)
-  * Per-mail-account permissions
+- ✓ Multi-user support with account/password login  
+  - System-level roles (admin / user)  
+  - Per-mail-account permissions
 
 * [ ] `bichon-cli` command-line tool
 
