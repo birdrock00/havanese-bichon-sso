@@ -34,8 +34,8 @@ use crate::{
         indexer::{
             envelope::Envelope,
             fields::{
-                F_ACCOUNT_ID, F_FROM, F_HAS_ATTACHMENT, F_INTERNAL_DATE, F_MAILBOX_ID, F_SIZE,
-                F_TAGS, F_THREAD_ID, F_UID,
+                F_ACCOUNT_ID, F_DATE, F_FROM, F_HAS_ATTACHMENT, F_MAILBOX_ID, F_SIZE, F_TAGS,
+                F_THREAD_ID, F_UID,
             },
             schema::SchemaTools,
         },
@@ -335,13 +335,13 @@ impl EnvelopeIndexManager {
         }
 
         let start_bound = if let Some(from) = filter.since {
-            Bound::Included(Term::from_field_i64(f.f_internal_date, from))
+            Bound::Included(Term::from_field_i64(f.f_date, from))
         } else {
             Bound::Unbounded
         };
 
         let end_bound = if let Some(to) = filter.before {
-            Bound::Included(Term::from_field_i64(f.f_internal_date, to))
+            Bound::Included(Term::from_field_i64(f.f_date, to))
         } else {
             Bound::Unbounded
         };
@@ -658,7 +658,7 @@ impl EnvelopeIndexManager {
                 &query,
                 &TopDocs::with_limit(page_size as usize)
                     .and_offset(offset as usize)
-                    .order_by_fast_field(F_INTERNAL_DATE, order),
+                    .order_by_fast_field(F_DATE, order),
             )
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         let mut result = Vec::new();
@@ -721,7 +721,7 @@ impl EnvelopeIndexManager {
                 query.as_ref(),
                 &TopDocs::with_limit(page_size as usize)
                     .and_offset(offset as usize)
-                    .order_by_fast_field(F_INTERNAL_DATE, order),
+                    .order_by_fast_field(F_DATE, order),
             )
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         let mut result = Vec::new();
@@ -786,7 +786,7 @@ impl EnvelopeIndexManager {
                 query.as_ref(),
                 &TopDocs::with_limit(page_size as usize)
                     .and_offset(offset as usize)
-                    .order_by_fast_field(F_INTERNAL_DATE, order),
+                    .order_by_fast_field(F_DATE, order),
             )
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         let mut result = Vec::new();
@@ -1006,7 +1006,7 @@ impl EnvelopeIndexManager {
             },
             "recent_30d_histogram": {
                 "histogram": {
-                    "field": F_INTERNAL_DATE,
+                    "field": F_DATE,
                     "interval": 86400000,
                     "hard_bounds": {
                         "min": week_ago_ms,

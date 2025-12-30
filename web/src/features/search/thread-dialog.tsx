@@ -113,13 +113,13 @@ export function MailThreadDialog({ open, onOpenChange }: MailThreadDialogProps) 
           )}
 
           {allMessages
-            .sort((a, b) => a.internal_date - b.internal_date)
+            .sort((a, b) => a.date - b.date)
             .map((msg) => {
               const isExpanded = expandedIds.has(msg.id);
               const preview =
                 msg.text?.slice(0, 120) +
                 (msg.text?.length > 120 ? '...' : '');
-              const date = new Date(msg.internal_date);
+              const date = new Date(msg.date);
               const formattedDate = isNaN(date.getTime())
                 ? t('search.thread.invalidDate')
                 : format(date, 'yyyy-MM-dd HH:mm:ss');

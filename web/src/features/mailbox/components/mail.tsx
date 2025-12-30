@@ -104,7 +104,7 @@ function CustomLabel({
                 alignItems: 'center',
             }}
         >
-            <FolderIcon className="mr-2"/>
+            <FolderIcon className="mr-2" />
             <span className="font-medium text-sm text-inherit">
                 {children}
             </span>
@@ -354,8 +354,8 @@ export function Mail({
                                     <MailList
                                         isLoading={isMessagesLoading}
                                         items={(envelopes?.items ?? []).sort((a, b) => {
-                                            const dateA = a.internal_date;
-                                            const dateB = b.internal_date;
+                                            const dateA = a.date;
+                                            const dateB = b.date;
                                             return dateB - dateA;
                                         })}
                                     />
