@@ -27,11 +27,16 @@ use tracing::info;
 use crate::{
     encrypt,
     modules::{
-        account::{entity::ImapConfig, since::DateSince, state::AccountRunningState},
+        account::{
+            entity::ImapConfig,
+            since::{DateSince, RelativeDate},
+            state::AccountRunningState,
+        },
         cache::imap::mailbox::MailBox,
-        database::{insert_impl, list_all_impl},
+        database::{list_all_impl, with_transaction},
         error::BichonResult,
         indexer::manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER},
+        users::{role::DEFAULT_ACCOUNT_MANAGER_ROLE_ID, UserModel, DEFAULT_ADMIN_USER_ID},
     },
     utc_now,
 };
@@ -52,10 +57,9 @@ use crate::modules::database::{
 use crate::modules::error::code::ErrorCode;
 use crate::modules::oauth2::token::OAuth2AccessToken;
 use crate::modules::rest::response::DataPage;
-use crate::modules::token::AccessToken;
 use crate::raise_error;
 
-pub type AccountModel = AccountV2;
+pub type AccountModel = AccountV3;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Enum)]
 pub enum AccountType {
@@ -121,8 +125,42 @@ impl AccountV2 {
     fn pk(&self) -> String {
         format!("{}_{}", self.created_at, self.id)
     }
+}
 
-    pub fn new(request: AccountCreateRequest) -> BichonResult<Self> {
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
+#[native_model(id = 4, version = 3, from = AccountV2)]
+#[native_db(primary_key(pk -> String))]
+pub struct AccountV3 {
+    #[secondary_key(unique)]
+    pub id: u64,
+    pub imap: Option<ImapConfig>,
+    pub enabled: bool,
+    #[oai(validator(custom = "crate::modules::common::validator::EmailValidator"))]
+    pub email: String,
+    pub name: Option<String>,
+    pub capabilities: Option<Vec<String>>,
+    pub date_since: Option<DateSince>,
+    pub date_before: Option<RelativeDate>,
+    pub folder_limit: Option<u32>,
+    pub sync_folders: Option<Vec<String>>,
+    pub account_type: AccountType,
+    pub sync_interval_min: Option<i64>,
+    pub sync_batch_size: Option<u32>,
+    pub known_folders: Option<BTreeSet<String>>,
+    pub created_at: i64,
+    pub updated_at: i64,
+    pub created_by: u64, //user id
+    pub use_proxy: Option<u64>,
+    pub use_dangerous: bool,
+    pub pgp_key: Option<String>,
+}
+
+impl AccountV3 {
+    fn pk(&self) -> String {
+        format!("{}_{}", self.created_at, self.id)
+    }
+
+    pub fn new(user_id: u64, request: AccountCreateRequest) -> BichonResult<Self> {
         Ok(Self {
             id: id!(64),
             email: request.email,
@@ -141,12 +179,15 @@ impl AccountV2 {
             folder_limit: request.folder_limit,
             use_dangerous: request.use_dangerous,
             pgp_key: request.pgp_key,
+            created_by: user_id,
+            sync_batch_size: request.sync_batch_size,
+            date_before: request.date_before,
         })
     }
 
     pub async fn check_account_exists(account_id: u64) -> BichonResult<AccountModel> {
         let account =
-            secondary_find_impl::<AccountModel>(DB_MANAGER.meta_db(), AccountV2Key::id, account_id)
+            secondary_find_impl::<AccountModel>(DB_MANAGER.meta_db(), AccountV3Key::id, account_id)
                 .await?
                 .ok_or_else(|| {
                     raise_error!(
@@ -176,24 +217,53 @@ impl AccountV2 {
     }
 
     pub async fn find(account_id: u64) -> BichonResult<Option<AccountModel>> {
-        secondary_find_impl::<AccountModel>(DB_MANAGER.meta_db(), AccountV2Key::id, account_id)
+        secondary_find_impl::<AccountModel>(DB_MANAGER.meta_db(), AccountV3Key::id, account_id)
             .await
     }
 
-    /// Saves the current `AccountEntity` by persisting it to storage.
-    pub async fn save(&self) -> BichonResult<()> {
-        insert_impl(DB_MANAGER.meta_db(), self.to_owned()).await
-    }
+    // /// Saves the current `AccountEntity` by persisting it to storage.
+    // pub async fn save(&self) -> BichonResult<()> {
+    //     insert_impl(DB_MANAGER.meta_db(), self.to_owned()).await
+    // }
 
-    pub async fn create_account(request: AccountCreateRequest) -> BichonResult<AccountModel> {
-        let entity = request.create_entity()?;
-        entity.save().await?;
-        if matches!(entity.account_type, AccountType::IMAP) {
+    pub async fn create_account(
+        user_id: u64,
+        request: AccountCreateRequest,
+    ) -> BichonResult<AccountModel> {
+        let entity = request.create_entity(user_id)?;
+        let cloned = entity.clone();
+        with_transaction(DB_MANAGER.meta_db(), move |rw| {
+            let account_id = entity.id;
+            rw.insert::<AccountModel>(entity)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            let user = rw
+                .get()
+                .primary::<UserModel>(user_id)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+                .ok_or_else(|| {
+                    raise_error!(
+                        format!("User with id={} not found.", user_id),
+                        ErrorCode::ResourceNotFound
+                    )
+                })?;
+
+            let mut updated = user.clone();
+            updated
+                .account_access_map
+                .insert(account_id, DEFAULT_ACCOUNT_MANAGER_ROLE_ID);
+            updated.updated_at = utc_now!();
+            rw.update(user, updated)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            Ok(())
+        })
+        .await?;
+
+        if matches!(cloned.account_type, AccountType::IMAP) {
             SYNC_CONTROLLER
-                .trigger_start(entity.id, entity.email.clone())
+                .trigger_start(cloned.id, cloned.email.clone())
                 .await;
         }
-        Ok(entity)
+        Ok(cloned)
     }
 
     pub async fn update(
@@ -230,7 +300,7 @@ impl AccountV2 {
 
     async fn delete_account(account_id: u64) -> BichonResult<()> {
         delete_impl(DB_MANAGER.meta_db(), move|rw|{
-            rw.get().secondary::<AccountModel>(AccountV2Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+            rw.get().secondary::<AccountModel>(AccountV3Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
             .ok_or_else(||raise_error!(format!("The account entity with id={account_id} that you want to delete was not found."), ErrorCode::ResourceNotFound))
         }).await
     }
@@ -242,7 +312,7 @@ impl AccountV2 {
             MAIL_CONTEXT.clean_account(account.id).await?;
         }
         OAuth2AccessToken::try_delete(account.id).await?;
-        AccessToken::cleanup_account(account.id).await?;
+        UserModel::cleanup_account(account.id).await?;
         MailBox::clean(account.id).await?;
         ENVELOPE_INDEX_MANAGER
             .delete_account_envelopes(account.id)
@@ -260,7 +330,7 @@ impl AccountV2 {
         sync_folders: Vec<String>,
     ) -> BichonResult<()> {
         update_impl(DB_MANAGER.meta_db(), move |rw| {
-            rw.get().secondary::<AccountModel>(AccountV2Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+            rw.get().secondary::<AccountModel>(AccountV3Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
             .ok_or_else(|| raise_error!(format!("When trying to update account sync_folders, the corresponding record was not found. account_id={}", account_id), ErrorCode::ResourceNotFound))
         }, |current|{
             let mut updated = current.clone();
@@ -275,7 +345,7 @@ impl AccountV2 {
         known_folders: BTreeSet<String>,
     ) -> BichonResult<()> {
         update_impl(DB_MANAGER.meta_db(), move |rw| {
-            rw.get().secondary::<AccountModel>(AccountV2Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+            rw.get().secondary::<AccountModel>(AccountV3Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
             .ok_or_else(|| raise_error!(format!("When trying to update account known_folders, the corresponding record was not found. account_id={}", account_id), ErrorCode::ResourceNotFound))
         }, |current|{
             let mut updated = current.clone();
@@ -290,7 +360,7 @@ impl AccountV2 {
         capabilities: Vec<String>,
     ) -> BichonResult<()> {
         update_impl(DB_MANAGER.meta_db(), move |rw| {
-            rw.get().secondary::<AccountModel>(AccountV2Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+            rw.get().secondary::<AccountModel>(AccountV3Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
             .ok_or_else(|| raise_error!(format!("When trying to update account capabilities, the corresponding record was not found. account_id={}", account_id), ErrorCode::ResourceNotFound))
         }, |current|{
             let mut updated = current.clone();
@@ -319,7 +389,7 @@ impl AccountV2 {
     }
 
     pub async fn count() -> BichonResult<usize> {
-        count_by_unique_secondary_key_impl::<AccountModel>(DB_MANAGER.meta_db(), AccountV2Key::id)
+        count_by_unique_secondary_key_impl::<AccountModel>(DB_MANAGER.meta_db(), AccountV3Key::id)
             .await
     }
 
@@ -342,6 +412,12 @@ impl AccountV2 {
 
         if let Some(date_since) = request.date_since {
             new.date_since = Some(date_since);
+            new.date_before = None;
+        }
+
+        if let Some(date_before) = request.date_before {
+            new.date_before = Some(date_before);
+            new.date_since = None;
         }
 
         if let Some(folder_limit) = request.folder_limit {
@@ -377,6 +453,11 @@ impl AccountV2 {
             if let Some(sync_interval_min) = &request.sync_interval_min {
                 new.sync_interval_min = Some(*sync_interval_min);
             }
+
+            if let Some(sync_batch_size) = &request.sync_batch_size {
+                new.sync_batch_size = Some(*sync_batch_size);
+            }
+
             if let Some(use_proxy) = request.use_proxy {
                 new.use_proxy = Some(use_proxy);
             }
@@ -447,6 +528,57 @@ impl From<AccountV2> for AccountV1 {
             created_at: value.created_at,
             updated_at: value.updated_at,
             use_proxy: value.use_proxy,
+        }
+    }
+}
+
+impl From<AccountV3> for AccountV2 {
+    fn from(value: AccountV3) -> Self {
+        Self {
+            id: value.id,
+            imap: value.imap,
+            enabled: value.enabled,
+            email: value.email,
+            name: value.name,
+            capabilities: value.capabilities,
+            date_since: value.date_since,
+            folder_limit: value.folder_limit,
+            sync_folders: value.sync_folders,
+            account_type: value.account_type,
+            sync_interval_min: value.sync_interval_min,
+            known_folders: value.known_folders,
+            created_at: value.created_at,
+            updated_at: value.updated_at,
+            use_proxy: value.use_proxy,
+            use_dangerous: value.use_dangerous,
+            pgp_key: value.pgp_key,
+        }
+    }
+}
+
+impl From<AccountV2> for AccountV3 {
+    fn from(value: AccountV2) -> Self {
+        Self {
+            id: value.id,
+            imap: value.imap,
+            enabled: value.enabled,
+            email: value.email,
+            name: value.name,
+            capabilities: value.capabilities,
+            date_since: value.date_since,
+            folder_limit: value.folder_limit,
+            sync_folders: value.sync_folders,
+            account_type: value.account_type,
+            sync_interval_min: value.sync_interval_min,
+            known_folders: value.known_folders,
+            created_at: value.created_at,
+            updated_at: value.updated_at,
+            created_by: DEFAULT_ADMIN_USER_ID,
+            use_proxy: value.use_proxy,
+            use_dangerous: value.use_dangerous,
+            pgp_key: value.pgp_key,
+            sync_batch_size: None,
+            date_before: None,
         }
     }
 }

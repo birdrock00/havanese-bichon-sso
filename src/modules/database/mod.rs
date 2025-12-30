@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::modules::account::migration::{AccountV1, AccountV2};
+use crate::modules::account::migration::{AccountV1, AccountV2, AccountV3};
 use crate::modules::autoconfig::CachedMailSettings;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::error::BichonResult;
@@ -25,7 +25,9 @@ use crate::modules::oauth2::pending::OAuth2PendingEntity;
 use crate::modules::oauth2::token::OAuth2AccessToken;
 use crate::modules::settings::proxy::Proxy;
 use crate::modules::settings::system::SystemSetting;
-use crate::modules::token::AccessToken;
+use crate::modules::token::AccessTokenModel;
+use crate::modules::users::role::UserRole;
+use crate::modules::users::{BichonUser, BichonUserV2};
 use crate::raise_error;
 use db_type::{KeyOptions, ToKeyDefinition};
 use itertools::Itertools;
@@ -58,15 +60,21 @@ impl ModelsAdapter {
     }
 
     pub fn register_metadata_models(&mut self) {
-        self.register_model::<AccessToken>();
+        //Starting from version 0.2.0, `AccessToken` is deprecated/no longer used, but its ID must not be reused, otherwise it may cause model errors.
+        //self.register_model::<AccessToken>();
         self.register_model::<SystemSetting>();
         self.register_model::<CachedMailSettings>();
         self.register_model::<AccountV1>();
         self.register_model::<AccountV2>();
+        self.register_model::<AccountV3>();
         self.register_model::<OAuth2>();
         self.register_model::<OAuth2PendingEntity>();
         self.register_model::<OAuth2AccessToken>();
         self.register_model::<Proxy>();
+        self.register_model::<UserRole>();
+        self.register_model::<BichonUser>();
+        self.register_model::<BichonUserV2>();
+        self.register_model::<AccessTokenModel>();
     }
 }
 
@@ -170,11 +178,11 @@ pub async fn update_impl<T: ToInput + Clone + std::fmt::Debug + Send + 'static>(
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         let current_item = current(&rw)?;
         let updated_item = updated(&current_item)?;
-        rw.update(current_item.clone(), updated_item)
+        rw.update(current_item, updated_item.clone())
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         rw.commit()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Ok(current_item)
+        Ok(updated_item)
     })
     .await
     .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
@@ -223,20 +231,20 @@ pub async fn async_find_impl<T: ToInput + Clone + Send + 'static>(
     .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
 }
 
-pub fn find_impl<T: ToInput + Clone + Send + 'static>(
-    database: &Arc<Database<'static>>,
-    key: &str,
-) -> BichonResult<Option<T>> {
-    let db = database.clone();
-    let r_transaction = db
-        .r_transaction()
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    let entity: Option<T> = r_transaction
-        .get()
-        .primary(key)
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    Ok(entity)
-}
+// pub fn find_impl<T: ToInput + Clone + Send + 'static>(
+//     database: &Arc<Database<'static>>,
+//     key: &str,
+// ) -> BichonResult<Option<T>> {
+//     let db = database.clone();
+//     let r_transaction = db
+//         .r_transaction()
+//         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+//     let entity: Option<T> = r_transaction
+//         .get()
+//         .primary(key)
+//         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+//     Ok(entity)
+// }
 
 pub async fn delete_impl<T: ToInput + Clone + Send + 'static>(
     database: &Arc<Database<'static>>,
@@ -302,6 +310,25 @@ pub async fn list_all_impl<T: ToInput + Clone + Send + 'static>(
             .try_collect()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         Ok(entities)
+    })
+    .await
+    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+}
+
+pub async fn with_transaction(
+    database: &Arc<Database<'static>>,
+    f: impl FnOnce(&RwTransaction) -> BichonResult<()> + Send + 'static,
+) -> BichonResult<()> {
+    let db: Arc<Database<'_>> = database.clone();
+    tokio::task::spawn_blocking(move || {
+        let rw_transaction = db
+            .rw_transaction()
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        f(&rw_transaction)?;
+        rw_transaction
+            .commit()
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        Ok(())
     })
     .await
     .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?

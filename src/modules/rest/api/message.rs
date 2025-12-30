@@ -31,12 +31,14 @@ use crate::modules::rest::api::ApiTags;
 use crate::modules::rest::response::DataPage;
 use crate::modules::rest::ApiResult;
 use crate::modules::rest::ErrorCode;
+use crate::modules::users::permissions::Permission;
 use crate::raise_error;
 use poem::Body;
 use poem_openapi::param::{Path, Query};
 use poem_openapi::payload::{Attachment, AttachmentType, Json};
 use poem_openapi::OpenApi;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use tantivy::schema::Facet;
 
 pub struct MessageApi;
@@ -57,7 +59,9 @@ impl MessageApi {
     ) -> ApiResult<()> {
         let request = payload.0;
         for account_id in request.keys() {
-            context.require_account_access(*account_id)?;
+            context
+                .require_permission(Some(*account_id), Permission::DATA_DELETE)
+                .await?;
         }
         Ok(delete_messages_impl(request).await?)
     }
@@ -80,7 +84,9 @@ impl MessageApi {
     ) -> ApiResult<Json<DataPage<Envelope>>> {
         let account_id = account_id.0;
         let mailbox_id = mailbox_id.0;
-        context.require_account_access(account_id)?;
+        context
+            .require_permission(Some(account_id), Permission::DATA_READ)
+            .await?;
         Ok(Json(
             list_messages_impl(account_id, mailbox_id, page.0, page_size.0).await?,
         ))
@@ -98,8 +104,15 @@ impl MessageApi {
         payload: Json<SearchRequest>,
         context: ClientContext,
     ) -> ApiResult<Json<DataPage<Envelope>>> {
-        context.require_root()?;
-        Ok(Json(search_messages_impl(payload.0).await?))
+        let authorized_ids: Option<HashSet<u64>> = if context
+            .has_permission(None, Permission::DATA_READ_ALL)
+            .await
+        {
+            None
+        } else {
+            Some(context.user.account_access_map.keys().cloned().collect())
+        };
+        Ok(Json(search_messages_impl(authorized_ids, payload.0).await?))
     }
 
     /// Retrieves all messages belonging to a specific thread. Requires `thread_id`, `page`, and `page_size` query parameters.
@@ -122,7 +135,9 @@ impl MessageApi {
     ) -> ApiResult<Json<DataPage<Envelope>>> {
         let account_id = account_id.0;
         let thread_id = thread_id.0;
-        context.require_account_access(account_id)?;
+        context
+            .require_permission(Some(account_id), Permission::DATA_READ)
+            .await?;
         Ok(Json(
             get_thread_messages(account_id, thread_id, page.0, page_size.0).await?,
         ))
@@ -143,7 +158,9 @@ impl MessageApi {
         context: ClientContext,
     ) -> ApiResult<Json<FullMessageContent>> {
         let account_id = account_id.0;
-        context.require_account_access(account_id)?;
+        context
+            .require_permission(Some(account_id), Permission::DATA_READ)
+            .await?;
         Ok(Json(retrieve_email_content(account_id, message_id.0).await?))
     }
 
@@ -194,9 +211,10 @@ impl MessageApi {
     ) -> ApiResult<Attachment<Body>> {
         let account_id = account_id.0;
         AccountModel::check_account_exists(account_id).await?;
-        context.require_account_access(account_id)?;
-        let message_id = message_id.0;
-        let reader = EML_INDEX_MANAGER.get_reader(account_id, message_id).await?;
+        context
+            .require_permission(Some(account_id), Permission::DATA_RAW_DOWNLOAD)
+            .await?;
+        let reader = EML_INDEX_MANAGER.get_reader(account_id, message_id.0).await?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
             .attachment_type(AttachmentType::Attachment)
@@ -222,11 +240,12 @@ impl MessageApi {
     ) -> ApiResult<Attachment<Body>> {
         let account_id = account_id.0;
         AccountModel::check_account_exists(account_id).await?;
-        context.require_account_access(account_id)?;
-        let message_id = message_id.0;
+        context
+            .require_permission(Some(account_id), Permission::DATA_READ)
+            .await?;
         let name = name.0.trim();
         let reader = EML_INDEX_MANAGER
-            .get_attachment(account_id, message_id, name)
+            .get_attachment(account_id, message_id.0, name)
             .await?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
@@ -236,8 +255,18 @@ impl MessageApi {
     }
     /// Returns all facets in the index along with their document counts.
     #[oai(path = "/all-tags", method = "get", operation_id = "get_all_tags")]
-    async fn get_all_tags(&self) -> ApiResult<Json<Vec<TagCount>>> {
-        Ok(Json(ENVELOPE_INDEX_MANAGER.get_all_tags().await?))
+    async fn get_all_tags(&self, context: ClientContext) -> ApiResult<Json<Vec<TagCount>>> {
+        let authorized_ids: Option<HashSet<u64>> = if context
+            .has_permission(None, Permission::DATA_READ_ALL)
+            .await
+        {
+            None
+        } else {
+            Some(context.user.account_access_map.keys().cloned().collect())
+        };
+        Ok(Json(
+            ENVELOPE_INDEX_MANAGER.get_all_tags(authorized_ids).await?,
+        ))
     }
 
     /// Adds or removes facet tags for multiple emails across accounts.
@@ -246,12 +275,23 @@ impl MessageApi {
         method = "post",
         operation_id = "update_envelope_tags"
     )]
-    async fn update_envelope_tags(&self, req: Json<UpdateTagsRequest>) -> ApiResult<()> {
+    async fn update_envelope_tags(
+        &self,
+        req: Json<UpdateTagsRequest>,
+        context: ClientContext,
+    ) -> ApiResult<()> {
         let req = req.0;
         for tag in &req.tags {
             Facet::from_text(tag)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
         }
+
+        for account_id in req.updates.keys() {
+            context
+                .require_permission(Some(*account_id), Permission::DATA_MANAGE)
+                .await?;
+        }
+
         ENVELOPE_INDEX_MANAGER
             .update_envelope_tags(req.updates, req.tags)
             .await?;

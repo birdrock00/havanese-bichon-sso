@@ -25,9 +25,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { AccountModel } from '../data/schema'
 import { useQuery } from '@tanstack/react-query'
-import { account_state } from '@/api/account/api'
+import { account_state, AccountModel } from '@/api/account/api'
 import { formatDistanceToNow, formatDuration, intervalToDuration } from 'date-fns'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -52,6 +51,7 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
     retry: 0,
     refetchOnWindowFocus: false,
     refetchInterval: 5000,
+    enabled: open && !!currentRow.id && currentRow.account_type != "NoSync",
   })
 
   const calculateDuration = (start?: number, end?: number) => {

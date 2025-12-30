@@ -33,8 +33,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/password-input'
 import { useMutation } from '@tanstack/react-query'
-import { login } from '@/api/access-tokens/api'
-import { setAccessToken } from '@/stores/authStore'
+import { setToken } from '@/stores/authStore'
 import { toast } from '@/hooks/use-toast'
 import { AxiosError } from 'axios'
 import { ToastAction } from '@/components/ui/toast'
@@ -42,20 +41,26 @@ import { useLocation, useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/button'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
+import { Loader2, LogIn } from 'lucide-react'
+import { login } from '@/api/users/api'
+import { useTheme } from '@/context/theme-context'
 
 type UserAuthFormProps = HTMLAttributes<HTMLDivElement>
 
-const getFormSchema = (t: (key: string, options?: Record<string, any>) => string) => z.object({
-  username: z
-    .string(),
-  password: z
-    .string()
-    .min(1, { message: t('validation.pleaseEnterPassword') })
-    .min(4, { message: t('validation.passwordMinLength', { min: 4 }) }),
-});
+const getFormSchema = (t: (key: string, options?: Record<string, any>) => string) =>
+  z.object({
+    username: z
+      .string()
+      .min(1, { message: t('validation.pleaseEnterUsernameOrEmail') }),
+    password: z
+      .string()
+      .min(1, { message: t('validation.pleaseEnterPassword') })
+      .min(4, { message: t('validation.passwordMinLength', { min: 4 }) }),
+  });
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const { setTheme } = useTheme();
   const navigate = useNavigate()
   const { t } = useTranslation()
 
@@ -66,24 +71,42 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: 'root',
+      username: '',
       password: '',
     },
   })
 
   const mutation = useMutation({
-    mutationFn: (password: string) => login(password),
+    mutationFn: (data: Record<string, any>) => login(data),
     retry: 0,
   });
 
   async function onSubmit(data: z.infer<typeof formSchema>) {
     setIsLoading(true)
 
-    mutation.mutate(data.password, {
-      onSuccess: (rootToken) => {
-        setAccessToken(rootToken);
+    mutation.mutate(data, {
+      onSuccess: (result) => {
+        if (result.success) {
+          setToken(result);
+
+          if (result.theme) {
+            setTheme(result.theme);
+          }
+          
+          if (result.language) {
+            i18n.changeLanguage(result.language);
+          }
+          
+          navigate({ to: redirect });
+        } else {
+          toast({
+            variant: "destructive",
+            title: t('auth.loginFailed'),
+            description: `${result.error_message!}`,
+            action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
+          })
+        }
         setIsLoading(false);
-        navigate({ to: redirect });
       },
       onError: (error) => {
         const { t } = i18n
@@ -119,7 +142,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                 <FormItem className='space-y-1'>
                   <FormLabel>{t('auth.username')}</FormLabel>
                   <FormControl>
-                    <Input disabled {...field} value={"root"} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -140,7 +163,8 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                 </FormItem>
               )}
             />
-            <Button className='mt-2' loading={isLoading}>
+            <Button className='mt-2' disabled={isLoading}>
+              {isLoading ? <Loader2 className='animate-spin' /> : <LogIn size={16} className='mr-2' />}
               {t('auth.login')}
             </Button>
           </div>

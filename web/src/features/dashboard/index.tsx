@@ -164,7 +164,7 @@ export default function MailArchiveDashboard() {
   return (
     <>
       <FixedHeader />
-      <Main higher>
+      <Main>
         <div className="flex-1 space-y-6 p-6 md:p-8">
           <div className="flex items-center justify-between">
             <div>

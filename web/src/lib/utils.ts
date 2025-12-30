@@ -172,3 +172,35 @@ export const dateFnsLocaleMap: Record<string, Locale> = {
   no: nb,
   'no-no': nb,
 };
+
+
+export function showNumbers(current: number, total: number) {
+  const max = 5
+  const result = []
+
+  if (total <= max) {
+    for (let i = 1; i <= total; i++) {
+      result.push(i)
+    }
+  } else {
+    result.push(1)
+    if (current <= 3) {
+      for (let i = 2; i <= 4; i++) {
+        result.push(i)
+      }
+      result.push('...', total)
+    } else if (current >= total - 2) {
+      result.push('...')
+      for (let i = total - 3; i <= total; i++) {
+        result.push(i)
+      }
+    } else {
+      result.push('...')
+      for (let i = current - 1; i <= current + 1; i++) {
+        result.push(i)
+      }
+      result.push('...', total)
+    }
+  }
+  return result
+}

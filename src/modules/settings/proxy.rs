@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use native_db::*;
 use native_model::{native_model, Model};
 use poem_openapi::Object;
@@ -132,10 +131,7 @@ mod tests {
 
     #[test]
     fn test_valid_proxy_urls() {
-        let urls = vec![
-            "socks5://127.0.0.1:1080",
-            "http://127.0.0.1:8080",
-        ];
+        let urls = vec!["socks5://127.0.0.1:1080", "http://127.0.0.1:8080"];
 
         for url in urls {
             let proxy = Proxy::new(url.to_string());

@@ -22,10 +22,11 @@ import { FixedHeader } from "./layout/fixed-header";
 import { Main } from "./layout/main";
 import Logo from '@/assets/logo.svg'
 import { useTranslation } from 'react-i18next'
+import { Separator } from "./ui/separator";
 
 export default function APIDocs() {
   const { t } = useTranslation()
-  
+
   const docsOptions = [
     { name: t('apiDocs.swaggerUI'), path: "/api-docs/swagger" },
     { name: t('apiDocs.reDoc'), path: "/api-docs/redoc" },
@@ -51,6 +52,7 @@ export default function APIDocs() {
             </p>
           </div>
         </div>
+        <Separator className='mt-2 mb-4 lg:mt-3 lg:mb-6' />
         <div className='-mx-4 flex-1 overflow-auto px-4 py-1 flex-row lg:space-x-12 space-y-0'>
           <div className='m-auto flex h-full w-full flex-col items-center justify-center gap-6 p-4'>
             <div className="grid w-full gap-4 sm:grid-cols-1 md:grid-cols-2 xl:max-w-4xl">

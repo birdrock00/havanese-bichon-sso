@@ -21,6 +21,7 @@ use crate::modules::import::BatchEmlResult;
 use crate::modules::import::{BatchEmlRequest, ImportEmls};
 use crate::modules::rest::api::ApiTags;
 use crate::modules::rest::ApiResult;
+use crate::modules::users::permissions::Permission;
 use poem_openapi::payload::Json;
 use poem_openapi::OpenApi;
 
@@ -43,7 +44,9 @@ impl ImportApi {
         payload: Json<BatchEmlRequest>,
         context: ClientContext,
     ) -> ApiResult<Json<BatchEmlResult>> {
-        context.require_root()?;
+        context
+            .require_permission(Some(payload.0.account_id), Permission::DATA_IMPORT_BATCH)
+            .await?;
         Ok(Json(ImportEmls::do_import(payload.0).await?))
     }
 }

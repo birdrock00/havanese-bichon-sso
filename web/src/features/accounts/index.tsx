@@ -30,9 +30,8 @@ import AccountProvider, {
 } from './context'
 import { MoreVertical, Plus } from 'lucide-react'
 import Logo from '@/assets/logo.svg'
-import { AccountModel } from './data/schema'
 import { AccountDetailDrawer } from './components/account-detail'
-import { list_accounts } from '@/api/account/api'
+import { AccountModel, list_accounts } from '@/api/account/api'
 import { TableSkeleton } from '@/components/table-skeleton'
 import { useQuery } from '@tanstack/react-query'
 import { OAuth2TokensDialog } from './components/oauth2-tokens'
@@ -42,6 +41,8 @@ import { SyncFoldersDialog } from './components/sync-folders'
 import { NoSyncAccountDialog } from './components/nosync-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useTranslation } from 'react-i18next'
+import { AccountAccessAssignmentDialog } from './components/access-assignment-dialog'
+import { useCurrentUser } from '@/hooks/use-current-user'
 
 export default function Accounts() {
   const { t } = useTranslation()
@@ -49,6 +50,7 @@ export default function Accounts() {
   // Dialog states
   const [currentRow, setCurrentRow] = useState<AccountModel | null>(null)
   const [open, setOpen] = useDialogState<AccountDialogType>(null)
+  const { require_any_permission } = useCurrentUser()
 
   const { data: accountList, isLoading } = useQuery({
     queryKey: ['account-list'],
@@ -63,7 +65,6 @@ export default function Accounts() {
 
       <Main>
         <div className="mx-auto w-full max-w-[88rem] px-4">
-          {/* Header Section */}
           <div className='mb-2 flex items-center justify-between flex-wrap gap-x-4 gap-y-2'>
             <div>
               <h2 className='text-2xl font-bold tracking-tight'>{t('accounts.title')}</h2>
@@ -71,7 +72,7 @@ export default function Accounts() {
                 {t('accounts.description')}
               </p>
             </div>
-            <div className="flex gap-2">
+            {require_any_permission(['system:root', 'account:create']) && <div className="flex gap-2">
               <div className="flex rounded-md shadow-sm">
                 <Button
                   onClick={() => setOpen("add-imap")}
@@ -98,10 +99,9 @@ export default function Accounts() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            </div>
+            </div>}
           </div>
 
-          {/* Table / Empty State Section */}
           <div className='flex-1 overflow-auto py-1 flex-row lg:space-x-12 space-y-0'>
             {isLoading ? (
               <TableSkeleton columns={columns.length} rows={10} />
@@ -168,7 +168,8 @@ export default function Accounts() {
             }}
             currentRow={currentRow}
           />
-          <RunningStateDialog
+
+          {require_any_permission(['system:root', 'account:read_details'], currentRow.id) && <RunningStateDialog
             key='running-state'
             open={open === 'running-state'}
             onOpenChange={() => {
@@ -178,7 +179,8 @@ export default function Accounts() {
               }, 500)
             }}
             currentRow={currentRow}
-          />
+          />}
+
           <AccountDeleteDialog
             key={`account-delete-${currentRow.id}`}
             open={open === 'delete'}
@@ -201,17 +203,27 @@ export default function Accounts() {
             }}
             currentRow={currentRow}
           />
+          {require_any_permission(['system:root', 'account:manage'], currentRow.id) && <AccountAccessAssignmentDialog
+            key={`access-assign-${currentRow.id}`}
+            open={open === 'access-assign'}
+            onOpenChange={() => {
+              setOpen('access-assign')
+              setTimeout(() => {
+                setCurrentRow(null)
+              }, 500)
+            }}
+            currentRow={currentRow}
+          />}
 
           <AccountDetailDrawer
             open={open === 'detail'}
             onOpenChange={() => setOpen('detail')}
             currentRow={currentRow}
           />
-
-          <OAuth2TokensDialog open={open === 'oauth2'}
+          {require_any_permission(['system:root', 'account:manage'], currentRow.id) && <OAuth2TokensDialog open={open === 'oauth2'}
             onOpenChange={() => setOpen('oauth2')}
             currentRow={currentRow}
-          />
+          />}
         </>
       )}
     </AccountProvider>

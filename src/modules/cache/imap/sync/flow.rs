@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::{
     modules::{
         account::{migration::AccountModel, state::AccountRunningState},
@@ -24,7 +23,7 @@ use crate::{
             imap::{
                 find_intersecting_mailboxes, find_missing_mailboxes,
                 mailbox::MailBox,
-                sync::rebuild::{rebuild_mailbox_cache, rebuild_mailbox_cache_since_date},
+                sync::rebuild::{rebuild_mailbox_cache, rebuild_mailbox_cache_by_date},
             },
             SEMAPHORE,
         },
@@ -37,17 +36,30 @@ use crate::{
 use std::time::Instant;
 use tracing::{debug, error, info, warn};
 
-pub const BATCH_SIZE: u32 = 50;
+pub const DEFAULT_BATCH_SIZE: u32 = 50;
 
-pub async fn fetch_and_save_since_date(
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum FetchDirection {
+    Since,
+    Before,
+}
+
+pub async fn fetch_and_save_by_date(
     account: &AccountModel,
     date: &str,
     mailbox: &MailBox,
+    direction: FetchDirection,
 ) -> BichonResult<usize> {
     let account_id = account.id;
     let executor = MAIL_CONTEXT.imap(account_id).await?;
+
+    let search_criteria = match direction {
+        FetchDirection::Since => format!("SINCE {date}"),
+        FetchDirection::Before => format!("BEFORE {date}"),
+    };
+
     let uid_list = executor
-        .uid_search(&mailbox.encoded_name(), format!("SINCE {date}").as_str())
+        .uid_search(&mailbox.encoded_name(), &search_criteria)
         .await?;
 
     let len = uid_list.len();
@@ -63,13 +75,23 @@ pub async fn fetch_and_save_since_date(
     if let Some(limit) = folder_limit {
         let limit = limit.max(100) as usize;
         if len > limit {
-            uid_vec = uid_vec.split_off(len - limit as usize);
+            uid_vec = match direction {
+                FetchDirection::Since => uid_vec.split_off(len - limit),
+                FetchDirection::Before => {
+                    uid_vec.truncate(limit);
+                    uid_vec
+                }
+            };
         }
     }
 
     // let semaphore = Arc::new(Semaphore::new(5));
 
-    let uid_batches = generate_uid_sequence_hashset(uid_vec, BATCH_SIZE as usize, false);
+    let uid_batches = generate_uid_sequence_hashset(
+        uid_vec,
+        account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE) as usize,
+        false,
+    );
     AccountRunningState::set_initial_current_syncing_folder(
         account_id,
         mailbox.name.clone(),
@@ -105,9 +127,11 @@ pub async fn fetch_and_save_full_mailbox(
         _ => total,
     };
     let page_size = if let Some(limit) = folder_limit {
-        limit.max(100).min(BATCH_SIZE as u32)
+        limit
+            .max(100)
+            .min(account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE))
     } else {
-        BATCH_SIZE as u32
+        account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE)
     };
 
     let total_batches = total_to_fetch.div_ceil(page_size);
@@ -251,17 +275,30 @@ pub async fn reconcile_mailboxes(
 
                 match &account.date_since {
                     Some(date_since) => {
-                        rebuild_mailbox_cache_since_date(
+                        rebuild_mailbox_cache_by_date(
                             account,
                             local_mailbox.id,
-                            date_since,
+                            &date_since.since_date()?,
                             remote_mailbox,
+                            FetchDirection::Since,
                         )
                         .await?;
                     }
-                    None => {
-                        rebuild_mailbox_cache(account, local_mailbox, remote_mailbox).await?;
-                    }
+                    None => match &account.date_before {
+                        Some(r) => {
+                            rebuild_mailbox_cache_by_date(
+                                account,
+                                local_mailbox.id,
+                                &r.calculate_date()?,
+                                remote_mailbox,
+                                FetchDirection::Before,
+                            )
+                            .await?;
+                        }
+                        None => {
+                            rebuild_mailbox_cache(account, local_mailbox, remote_mailbox).await?
+                        }
+                    },
                 }
             } else {
                 perform_incremental_sync(account, local_mailbox, remote_mailbox).await?;
@@ -305,14 +342,31 @@ pub async fn reconcile_mailboxes(
                                 let _permit = permit;
                                 match &account.date_since {
                                     Some(date_since) => {
-                                        rebuild_mailbox_cache_since_date(
-                                            &account, mailbox.id, date_since, &mailbox,
+                                        rebuild_mailbox_cache_by_date(
+                                            &account,
+                                            mailbox.id,
+                                            &date_since.since_date()?,
+                                            &mailbox,
+                                            FetchDirection::Since,
                                         )
                                         .await
                                     }
-                                    None => {
-                                        rebuild_mailbox_cache(&account, &mailbox, &mailbox).await
-                                    }
+                                    None => match &account.date_before {
+                                        Some(r) => {
+                                            rebuild_mailbox_cache_by_date(
+                                                &account,
+                                                mailbox.id,
+                                                &r.calculate_date()?,
+                                                &mailbox,
+                                                FetchDirection::Before,
+                                            )
+                                            .await
+                                        }
+                                        None => {
+                                            rebuild_mailbox_cache(&account, &mailbox, &mailbox)
+                                                .await
+                                        }
+                                    },
                                 }
                             });
                         handles.push(handle);
@@ -348,8 +402,14 @@ async fn perform_incremental_sync(
         match local_max_uid {
             Some(max_uid) => {
                 let executor = MAIL_CONTEXT.imap(account.id).await?;
+                let before_date = account
+                    .date_before
+                    .as_ref()
+                    .map(|r| r.calculate_date())
+                    .transpose()?;
+
                 executor
-                    .fetch_new_mail(account.id, local_mailbox, max_uid + 1)
+                    .fetch_new_mail(account, local_mailbox, max_uid + 1, before_date.as_deref())
                     .await?;
             }
             None => {
@@ -359,10 +419,11 @@ async fn perform_incremental_sync(
 
                 match &account.date_since {
                     Some(date_since) => {
-                        fetch_and_save_since_date(
+                        fetch_and_save_by_date(
                             account,
                             date_since.since_date()?.as_str(),
                             remote_mailbox,
+                            FetchDirection::Since,
                         )
                         .await?;
                     }

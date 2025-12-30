@@ -23,13 +23,13 @@ use crate::{
             migration::{AccountModel, AccountType},
             state::AccountRunningState,
         },
-        cache::imap::mailbox::MailBox,
+        cache::imap::{mailbox::MailBox, sync::flow::FetchDirection},
         error::BichonResult,
     },
     utc_now,
 };
 use flow::reconcile_mailboxes;
-use rebuild::{rebuild_cache, rebuild_cache_since_date};
+use rebuild::{rebuild_cache, rebuild_cache_by_date};
 use std::time::Instant;
 use sync_folders::get_sync_folders;
 use sync_type::{determine_sync_type, SyncType};
@@ -54,9 +54,26 @@ pub async fn execute_imap_sync(account: &AccountModel) -> BichonResult<()> {
         // AccountRunningState::set_initial_sync_start(account_id).await?;
         let result = match &account.date_since {
             Some(date_since) => {
-                rebuild_cache_since_date(account, &remote_mailboxes, date_since).await
+                rebuild_cache_by_date(
+                    account,
+                    &remote_mailboxes,
+                    &date_since.since_date()?,
+                    FetchDirection::Since,
+                )
+                .await
             }
-            None => rebuild_cache(account, &remote_mailboxes).await,
+            None => match &account.date_before {
+                Some(r) => {
+                    rebuild_cache_by_date(
+                        account,
+                        &remote_mailboxes,
+                        &r.calculate_date()?,
+                        FetchDirection::Before,
+                    )
+                    .await
+                }
+                None => rebuild_cache(account, &remote_mailboxes).await,
+            },
         };
         match result {
             Ok(_) => {

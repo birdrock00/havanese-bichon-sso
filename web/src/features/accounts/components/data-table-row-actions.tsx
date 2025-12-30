@@ -19,7 +19,7 @@
 
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Row } from '@tanstack/react-table'
-import { IconEdit, IconTrash } from '@tabler/icons-react'
+import { IconEdit, IconShieldLock, IconTrash } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -30,9 +30,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAccountContext } from '../context'
-import { AccountModel } from '../data/schema'
 import { Mailbox, MessageSquareMore } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useCurrentUser } from '@/hooks/use-current-user'
+import { AccountModel } from '@/api/account/api'
 
 interface DataTableRowActionsProps {
   row: Row<AccountModel>
@@ -43,11 +44,21 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const { setOpen, setCurrentRow } = useAccountContext()
 
   const account_type = row.original.account_type;
+  const { require_any_permission } = useCurrentUser()
+
+  const hasPermission = require_any_permission(['system:root', 'account:manage'], row.original.id);
+  const hasReadPermission = require_any_permission(['system:root', 'account:read_details'], row.original.id);
+
+
+  const canShowAnyAction =
+    (hasPermission) ||
+    (account_type === 'IMAP' && hasPermission) ||
+    (account_type === 'IMAP' && hasReadPermission);
 
   return (
     <>
       <DropdownMenu modal={false}>
-        <DropdownMenuTrigger asChild>
+        <DropdownMenuTrigger asChild disabled={!canShowAnyAction}>
           <Button
             variant='ghost'
             className='flex h-8 w-8 p-0 data-[state=open]:bg-muted'
@@ -57,7 +68,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end' className='w-[160px]'>
-          <DropdownMenuItem
+          {hasPermission && <DropdownMenuItem
             onClick={() => {
               setCurrentRow(row.original)
               if (account_type === "IMAP") {
@@ -72,8 +83,8 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             <DropdownMenuShortcut>
               <IconEdit size={16} />
             </DropdownMenuShortcut>
-          </DropdownMenuItem>
-          {account_type === "IMAP" && <DropdownMenuItem
+          </DropdownMenuItem>}
+          {account_type === "IMAP" && hasPermission && <DropdownMenuItem
             onClick={() => {
               setCurrentRow(row.original)
               setOpen('sync-folders')
@@ -84,7 +95,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
               <Mailbox size={16} />
             </DropdownMenuShortcut>
           </DropdownMenuItem>}
-          {account_type === "IMAP" && <DropdownMenuItem
+          {account_type === "IMAP" && hasReadPermission && <DropdownMenuItem
             onClick={() => {
               setCurrentRow(row.original)
               setOpen('detail')
@@ -95,8 +106,20 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
               <MessageSquareMore size={16} />
             </DropdownMenuShortcut>
           </DropdownMenuItem>}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
+          {hasPermission && <DropdownMenuSeparator />}
+          {hasPermission && <DropdownMenuItem
+            onClick={() => {
+              setCurrentRow(row.original)
+              setOpen('access-assign')
+            }}
+          >
+            <span>{t('accounts.accessControl')}</span>
+            <DropdownMenuShortcut>
+              <IconShieldLock size={16} />
+            </DropdownMenuShortcut>
+          </DropdownMenuItem>}
+          {hasPermission && <DropdownMenuSeparator />}
+          {hasPermission && <DropdownMenuItem
             onClick={() => {
               setCurrentRow(row.original)
               setOpen('delete')
@@ -107,7 +130,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             <DropdownMenuShortcut>
               <IconTrash size={16} />
             </DropdownMenuShortcut>
-          </DropdownMenuItem>
+          </DropdownMenuItem>}
         </DropdownMenuContent>
       </DropdownMenu>
     </>

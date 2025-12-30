@@ -19,7 +19,7 @@
 use clap::{builder::ValueParser, Parser, ValueEnum};
 use std::{collections::HashSet, env, fmt, path::PathBuf, sync::LazyLock};
 
-pub static SETTINGS: LazyLock<Settings> = LazyLock::new(Settings::parse);
+pub static SETTINGS: LazyLock<Settings> = LazyLock::new(Settings::init);
 
 #[derive(Debug, Parser)]
 #[clap(
@@ -132,11 +132,27 @@ pub struct Settings {
     /// bichon encryption password
     #[clap(
         long,
-        default_value = "change-this-default-password-now",
         env,
-        help = "Set the encryption password for bichon. ⚠️ Change this default in production!"
+        default_value = "change-this-default-password-now",
+        help = "Set the encryption password for bichon. Alternatively, you can use --bichon-encrypt-password-file. If both are set, this parameter takes precedence over the file."
     )]
-    pub bichon_encrypt_password: String,
+    pub bichon_encrypt_password: Option<String>,
+
+    #[clap(
+        long,
+        env,
+        help = "The file containing the encryption password. An alternative to --bichon-encrypt-password."
+    )]
+    pub bichon_encrypt_password_file: Option<String>,
+
+    /// WebUI token expiration time in seconds (default: 7 days)
+    #[clap(
+        long,
+        default_value = "168",
+        env,
+        help = "Set the WebUI token expiration time in hours"
+    )]
+    pub bichon_webui_token_expiration_hours: u32,
 
     #[clap(
         long,
@@ -174,19 +190,6 @@ pub struct Settings {
     )]
     pub bichon_envelope_cache_size: Option<usize>,
 
-    /// Enables or disables the access token mechanism for HTTP endpoints.
-    ///
-    /// When set to `true`, HTTP requests will be subject to access token validation.
-    /// If the `Authorization` header is missing or the token is invalid, the service will return a 401 Unauthorized response.
-    /// When set to `false`, access token validation will be skipped.
-    #[clap(
-        long,
-        default_value = "false",
-        env,
-        help = "Enables or disables the access token mechanism for HTTP endpoints."
-    )]
-    pub bichon_enable_access_token: bool,
-
     /// Enables or disables HTTPS for REST API endpoints.
     ///
     /// When set to `true`, the REST API will use HTTPS with a valid SSL/TLS certificate for secure communication.
@@ -215,6 +218,18 @@ pub struct Settings {
         value_parser = clap::value_parser!(u16).range(1..)
     )]
     pub bichon_sync_concurrency: Option<u16>,
+}
+
+impl Settings {
+    pub fn init() -> Self {
+        let s = Self::parse();
+        if s.bichon_encrypt_password.is_none() && s.bichon_encrypt_password_file.is_none() {
+            panic!(
+                "One of --bichon_encrypt_password or --bichon_encrypt_password_file has to be set"
+            );
+        }
+        s
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, ValueEnum)]

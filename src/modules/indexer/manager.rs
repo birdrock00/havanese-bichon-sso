@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use std::{
     collections::{HashMap, HashSet},
     ops::Bound,
@@ -35,8 +34,8 @@ use crate::{
         indexer::{
             envelope::Envelope,
             fields::{
-                F_ACCOUNT_ID, F_FROM, F_HAS_ATTACHMENT, F_INTERNAL_DATE, F_MAILBOX_ID, F_SIZE,
-                F_TAGS, F_THREAD_ID, F_UID,
+                F_ACCOUNT_ID, F_DATE, F_FROM, F_HAS_ATTACHMENT, F_MAILBOX_ID, F_SIZE, F_TAGS,
+                F_THREAD_ID, F_UID,
             },
             schema::SchemaTools,
         },
@@ -58,7 +57,7 @@ use tantivy::{
         AggregationCollector, Key,
     },
     collector::{Count, FacetCollector, TopDocs},
-    query::{AllQuery, BooleanQuery, Occur, Query, QueryParser, RangeQuery, TermQuery},
+    query::{AllQuery, BooleanQuery, EmptyQuery, Occur, Query, QueryParser, RangeQuery, TermQuery},
     schema::{Facet, IndexRecordOption, Value},
     store::{Compressor, ZstdCompressor},
     DocAddress, Index, IndexBuilder, IndexReader, IndexSettings, IndexWriter, Order,
@@ -194,9 +193,29 @@ impl EnvelopeIndexManager {
         }
     }
 
-    pub fn total_emails(&self) -> BichonResult<u64> {
+    pub fn total_emails(&self, accounts: &Option<HashSet<u64>>) -> BichonResult<u64> {
         let searcher = self.create_searcher()?;
-        Ok(searcher.num_docs())
+
+        match accounts {
+            Some(ref ids) if !ids.is_empty() => {
+                let mut subqueries = Vec::new();
+                for &id in ids {
+                    let term =
+                        Term::from_field_u64(SchemaTools::envelope_fields().f_account_id, id);
+                    subqueries.push((
+                        Occur::Should,
+                        Box::new(TermQuery::new(term, IndexRecordOption::Basic)) as Box<dyn Query>,
+                    ));
+                }
+                let query = Box::new(BooleanQuery::new(subqueries)) as Box<dyn Query>;
+                let count = searcher
+                    .search(&query, &Count)
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                Ok(count as u64)
+            }
+            Some(_) => Ok(0),
+            None => Ok(searcher.num_docs()),
+        }
     }
 
     fn account_query(&self, account_id: u64) -> Box<TermQuery> {
@@ -223,11 +242,35 @@ impl EnvelopeIndexManager {
 
     fn filter_query(
         &self,
+        accounts: Option<HashSet<u64>>,
         filter: SearchFilter,
         parser: QueryParser,
     ) -> BichonResult<Box<dyn Query>> {
         let f = SchemaTools::envelope_fields();
         let mut subqueries: Vec<(Occur, Box<dyn Query>)> = Vec::new();
+
+        if let Some(authorized_ids) = accounts {
+            if authorized_ids.is_empty() {
+                let term = Term::from_field_u64(f.f_account_id, u64::MAX);
+                subqueries.push((
+                    Occur::Must,
+                    Box::new(TermQuery::new(term, IndexRecordOption::Basic)),
+                ));
+            } else {
+                let mut account_must_queries = Vec::new();
+                for id in authorized_ids {
+                    let term = Term::from_field_u64(f.f_account_id, id);
+                    account_must_queries.push((
+                        Occur::Should,
+                        Box::new(TermQuery::new(term, IndexRecordOption::Basic)) as Box<dyn Query>,
+                    ));
+                }
+                subqueries.push((
+                    Occur::Must,
+                    Box::new(BooleanQuery::new(account_must_queries)),
+                ));
+            }
+        }
 
         if let Some(ref text) = filter.text {
             let query = parser
@@ -292,13 +335,13 @@ impl EnvelopeIndexManager {
         }
 
         let start_bound = if let Some(from) = filter.since {
-            Bound::Included(Term::from_field_i64(f.f_internal_date, from))
+            Bound::Included(Term::from_field_i64(f.f_date, from))
         } else {
             Bound::Unbounded
         };
 
         let end_bound = if let Some(to) = filter.before {
-            Bound::Included(Term::from_field_i64(f.f_internal_date, to))
+            Bound::Included(Term::from_field_i64(f.f_date, to))
         } else {
             Bound::Unbounded
         };
@@ -426,14 +469,16 @@ impl EnvelopeIndexManager {
     }
 
     fn collect_facets_recursive(
+        query: &dyn Query,
         searcher: &Searcher,
         parent_facet: &str,
         all_facets: &mut Vec<TagCount>,
     ) -> BichonResult<()> {
         let mut facet_collector = FacetCollector::for_field(F_TAGS);
         facet_collector.add_facet(parent_facet);
+
         let facet_counts = searcher
-            .search(&AllQuery, &facet_collector)
+            .search(query, &facet_collector)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         for (facet, count) in facet_counts.get(parent_facet) {
@@ -441,16 +486,37 @@ impl EnvelopeIndexManager {
                 tag: facet.to_string(),
                 count,
             });
-            Self::collect_facets_recursive(searcher, &facet.to_string(), all_facets)?;
+            Self::collect_facets_recursive(query, searcher, &facet.to_string(), all_facets)?;
         }
 
         Ok(())
     }
 
-    pub async fn get_all_tags(&self) -> BichonResult<Vec<TagCount>> {
+    pub async fn get_all_tags(
+        &self,
+        accounts: Option<HashSet<u64>>,
+    ) -> BichonResult<Vec<TagCount>> {
         let searcher = self.reader.searcher();
+
+        let query: Box<dyn Query> = match accounts {
+            Some(ref ids) if !ids.is_empty() => {
+                let mut subqueries = Vec::new();
+                for &id in ids {
+                    let term =
+                        Term::from_field_u64(SchemaTools::envelope_fields().f_account_id, id);
+                    subqueries.push((
+                        Occur::Should,
+                        Box::new(TermQuery::new(term, IndexRecordOption::Basic)) as Box<dyn Query>,
+                    ));
+                }
+                Box::new(BooleanQuery::new(subqueries))
+            }
+            Some(_) => Box::new(EmptyQuery),
+            None => Box::new(AllQuery),
+        };
+
         let mut all_facets = Vec::new();
-        Self::collect_facets_recursive(&searcher, "/", &mut all_facets)?;
+        Self::collect_facets_recursive(&query, &searcher, "/", &mut all_facets)?;
         Ok(all_facets)
     }
 
@@ -550,6 +616,7 @@ impl EnvelopeIndexManager {
 
     pub async fn search(
         &self,
+        accounts: Option<HashSet<u64>>,
         filter: SearchFilter,
         page: u64,
         page_size: u64,
@@ -557,7 +624,7 @@ impl EnvelopeIndexManager {
     ) -> BichonResult<DataPage<Envelope>> {
         assert!(page > 0, "Page number must be greater than 0");
         assert!(page_size > 0, "Page size must be greater than 0");
-        let query = self.filter_query(filter, self.query_parser.clone())?;
+        let query = self.filter_query(accounts, filter, self.query_parser.clone())?;
         let searcher = self.create_searcher()?;
         let total = searcher
             .search(&query, &Count)
@@ -591,7 +658,7 @@ impl EnvelopeIndexManager {
                 &query,
                 &TopDocs::with_limit(page_size as usize)
                     .and_offset(offset as usize)
-                    .order_by_fast_field(F_INTERNAL_DATE, order),
+                    .order_by_fast_field(F_DATE, order),
             )
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         let mut result = Vec::new();
@@ -654,7 +721,7 @@ impl EnvelopeIndexManager {
                 query.as_ref(),
                 &TopDocs::with_limit(page_size as usize)
                     .and_offset(offset as usize)
-                    .order_by_fast_field(F_INTERNAL_DATE, order),
+                    .order_by_fast_field(F_DATE, order),
             )
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         let mut result = Vec::new();
@@ -719,7 +786,7 @@ impl EnvelopeIndexManager {
                 query.as_ref(),
                 &TopDocs::with_limit(page_size as usize)
                     .and_offset(offset as usize)
-                    .order_by_fast_field(F_INTERNAL_DATE, order),
+                    .order_by_fast_field(F_DATE, order),
             )
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         let mut result = Vec::new();
@@ -782,15 +849,36 @@ impl EnvelopeIndexManager {
         }
     }
 
-    pub async fn top_10_largest_emails(&self) -> BichonResult<Vec<LargestEmail>> {
+
+    pub async fn top_10_largest_emails(
+        &self,
+        accounts: &Option<HashSet<u64>>,
+    ) -> BichonResult<Vec<LargestEmail>> {
         self.reader
             .reload()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         let searcher = self.reader.searcher();
 
+        let query: Box<dyn Query> = match accounts {
+            Some(ref ids) if !ids.is_empty() => {
+                let mut subqueries = Vec::new();
+                for &id in ids {
+                    let term =
+                        Term::from_field_u64(SchemaTools::envelope_fields().f_account_id, id);
+                    subqueries.push((
+                        Occur::Should,
+                        Box::new(TermQuery::new(term, IndexRecordOption::Basic)) as Box<dyn Query>,
+                    ));
+                }
+                Box::new(BooleanQuery::new(subqueries))
+            }
+            Some(_) => Box::new(EmptyQuery),
+            None => Box::new(AllQuery),
+        };
+
         let mailbox_docs: Vec<(u64, DocAddress)> = searcher
             .search(
-                &AllQuery,
+                &query,
                 &TopDocs::with_limit(10).order_by_fast_field(F_SIZE, Order::Desc),
             )
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
@@ -946,7 +1034,10 @@ impl EnvelopeIndexManager {
         Ok(self.reader.searcher())
     }
 
-    pub async fn get_dashboard_stats(&self) -> BichonResult<DashboardStats> {
+    pub async fn get_dashboard_stats(
+        &self,
+        accounts: &Option<HashSet<u64>>,
+    ) -> BichonResult<DashboardStats> {
         let searcher = self.create_searcher()?;
         let now_ms = utc_now!();
         let week_ago_ms = (Utc::now() - Duration::from_secs(60 * 60 * 24 * 30)).timestamp_millis();
@@ -957,7 +1048,7 @@ impl EnvelopeIndexManager {
             },
             "recent_30d_histogram": {
                 "histogram": {
-                    "field": F_INTERNAL_DATE,
+                    "field": F_DATE,
                     "interval": 86400000,
                     "hard_bounds": {
                         "min": week_ago_ms,
@@ -985,7 +1076,23 @@ impl EnvelopeIndexManager {
         }))
         .unwrap();
 
-        let query = AllQuery;
+        let query: Box<dyn Query> = match accounts {
+            Some(ref ids) if !ids.is_empty() => {
+                let mut subqueries = Vec::new();
+                for &id in ids {
+                    let term =
+                        Term::from_field_u64(SchemaTools::envelope_fields().f_account_id, id);
+                    subqueries.push((
+                        Occur::Should,
+                        Box::new(TermQuery::new(term, IndexRecordOption::Basic)) as Box<dyn Query>,
+                    ));
+                }
+                Box::new(BooleanQuery::new(subqueries))
+            }
+            Some(_) => Box::new(EmptyQuery),
+            None => Box::new(AllQuery),
+        };
+
         let agg_collector = AggregationCollector::from_aggs(aggregations, Default::default());
         let agg_results = searcher
             .search(&query, &agg_collector)

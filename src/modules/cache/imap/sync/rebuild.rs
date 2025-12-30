@@ -16,14 +16,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::{
     modules::{
-        account::{migration::AccountModel, since::DateSince},
+        account::migration::AccountModel,
         cache::{
             imap::{
                 mailbox::MailBox,
-                sync::flow::{fetch_and_save_full_mailbox, fetch_and_save_since_date},
+                sync::flow::{fetch_and_save_by_date, fetch_and_save_full_mailbox, FetchDirection},
             },
             SEMAPHORE,
         },
@@ -86,14 +85,14 @@ pub async fn rebuild_cache(
     Ok(())
 }
 
-pub async fn rebuild_cache_since_date(
+pub async fn rebuild_cache_by_date(
     account: &AccountModel,
     remote_mailboxes: &[MailBox],
-    date_since: &DateSince,
+    date: &str,
+    direction: FetchDirection,
 ) -> BichonResult<()> {
     let start_time = Instant::now();
     let mut total_inserted = 0;
-    let date = date_since.since_date()?;
     MailBox::batch_insert(remote_mailboxes).await?;
 
     let mut handles = Vec::new();
@@ -107,13 +106,14 @@ pub async fn rebuild_cache_since_date(
         }
         let account = account.clone();
         let mailbox = mailbox.clone();
-        let date = date.clone();
+        let date = date.to_string();
+        let direction = direction.clone();
         match SEMAPHORE.clone().acquire_owned().await {
             Ok(permit) => {
                 let handle: tokio::task::JoinHandle<Result<usize, BichonError>> =
                     tokio::spawn(async move {
                         let _permit = permit; // Ensure permit is released when task finishes
-                        fetch_and_save_since_date(&account, date.as_str(), &mailbox).await
+                        fetch_and_save_by_date(&account, date.as_str(), &mailbox, direction).await
                     });
                 handles.push(handle);
             }
@@ -132,10 +132,14 @@ pub async fn rebuild_cache_since_date(
         }
     }
     let elapsed_time = start_time.elapsed().as_secs();
+    let direction_desc = match direction {
+        FetchDirection::Since => "starting from the specified date",
+        FetchDirection::Before => "ending before the specified date",
+    };
     info!(
         "Rebuild account cache completed: {} envelopes inserted. {} secs elapsed. \
-        Data fetched from server starting from the specified date: {}.",
-        total_inserted, elapsed_time, date
+     Data fetched from server {}: {}.",
+        total_inserted, elapsed_time, direction_desc, date
     );
     Ok(())
 }
@@ -169,11 +173,12 @@ pub async fn rebuild_mailbox_cache(
     Ok(())
 }
 
-pub async fn rebuild_mailbox_cache_since_date(
+pub async fn rebuild_mailbox_cache_by_date(
     account: &AccountModel,
     local_mailbox_id: u64,
-    date_since: &DateSince,
+    date: &str,
     remote: &MailBox,
+    direction: FetchDirection,
 ) -> BichonResult<()> {
     ENVELOPE_INDEX_MANAGER
         .delete_mailbox_envelopes(account.id, vec![local_mailbox_id])
@@ -190,8 +195,7 @@ pub async fn rebuild_mailbox_cache_since_date(
         return Ok(()); // Skip if the mailbox has no emails
     }
 
-    let count =
-        fetch_and_save_since_date(account, date_since.since_date()?.as_str(), remote).await?;
+    let count = fetch_and_save_by_date(account, date, remote, direction).await?;
     info!(
         "Account {}: Successfully rebuild mailbox cache, inserted {} envelopes for mailbox '{}'.",
         account.id, count, &remote.name

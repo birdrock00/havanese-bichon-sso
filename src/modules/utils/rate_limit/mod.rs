@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use dashmap::DashMap;
 use governor::{
     clock::{QuantaClock, QuantaInstant},
@@ -30,14 +29,14 @@ use std::{
     time::Duration,
 };
 
-use crate::modules::token::RateLimit;
+use crate::modules::users::acl::RateLimit;
 
-pub static RATE_LIMITER_MANAGER: LazyLock<TokenRateLimiter> = LazyLock::new(TokenRateLimiter::new);
+pub static RATE_LIMITER_MANAGER: LazyLock<UserRateLimiter> = LazyLock::new(UserRateLimiter::new);
 
-pub struct TokenRateLimiter {
+pub struct UserRateLimiter {
     limiters: Arc<
         DashMap<
-            String,
+            u64,
             (
                 Arc<RateLimiter<NotKeyed, InMemoryState, QuantaClock, NoOpMiddleware>>,
                 RateLimit,
@@ -46,29 +45,29 @@ pub struct TokenRateLimiter {
     >,
 }
 
-impl TokenRateLimiter {
+impl UserRateLimiter {
     pub fn new() -> Self {
-        TokenRateLimiter {
+        UserRateLimiter {
             limiters: Arc::new(DashMap::new()),
         }
     }
 
     pub async fn check(
         &self,
-        token: &str,
+        user_id: u64,
         limit: RateLimit,
     ) -> Result<(), NotUntil<QuantaInstant>> {
-        let limiter = self.get_or_update_limiter(token, limit).await;
+        let limiter = self.get_or_update_limiter(user_id, limit).await;
         limiter.check()
     }
 
     async fn get_or_update_limiter(
         &self,
-        token: &str,
+        user_id: u64,
         limit: RateLimit,
     ) -> Arc<RateLimiter<NotKeyed, InMemoryState, QuantaClock, NoOpMiddleware>> {
         self.limiters
-            .entry(token.to_string())
+            .entry(user_id)
             .and_modify(|(existing_limiter, current_limit)| {
                 if current_limit.interval != limit.interval || current_limit.quota != limit.quota {
                     let quota = Quota::with_period(Duration::from_secs(limit.interval))

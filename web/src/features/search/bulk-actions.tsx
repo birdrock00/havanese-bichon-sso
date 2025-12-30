@@ -146,9 +146,6 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
                                 <span className="sr-only">{t('search.bulkActions.clear')}</span>
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent>
-                            {t('search.bulkActions.clearWithKey', { key: 'Escape' })}
-                        </TooltipContent>
                     </Tooltip>
 
                     <Separator orientation="vertical" className="h-5" />

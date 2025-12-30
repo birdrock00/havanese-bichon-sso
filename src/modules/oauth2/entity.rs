@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::{
     encrypt, id,
     modules::{
@@ -95,6 +94,27 @@ impl OAuth2 {
             updated_at: utc_now!(),
             use_proxy: request.use_proxy,
         })
+    }
+
+    pub fn scrub_sensitive_fields(&mut self) {
+        let mask = "********";
+        let notice =
+            " [REDACTED: You do not have permission to view sensitive configuration details]";
+
+        let original_desc = self
+            .description
+            .clone()
+            .unwrap_or_else(|| "OAuth2 Config".to_string());
+        self.description = Some(format!("{}{}", original_desc, notice));
+
+        self.client_id = mask.to_string();
+        self.client_secret = mask.to_string();
+        self.auth_url = mask.to_string();
+        self.token_url = mask.to_string();
+        self.redirect_uri = mask.to_string();
+
+        self.scopes = None;
+        self.extra_params = None;
     }
 
     pub async fn save(&self) -> BichonResult<()> {

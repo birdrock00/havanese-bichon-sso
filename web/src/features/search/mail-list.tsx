@@ -182,7 +182,6 @@ export function MailList({
                         <MailIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-12 gap-1 sm:gap-0">
 
-                            {/* LEFT AREA: From + Subject + Tags */}
                             <div className="col-span-1 sm:col-span-8 flex flex-col min-w-0 gap-0.5">
                                 <div className="flex items-center gap-1 min-w-0">
                                     <p className="text-sm font-medium truncate">{item.from}</p>
@@ -190,7 +189,11 @@ export function MailList({
                                         {item.subject}
                                     </h3>
                                 </div>
-
+                                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
+                                    <span className="truncate">{item.account_email}</span>
+                                    <span className="scale-75 opacity-50">•</span>
+                                    <span className="font-medium text-primary/70">{item.mailbox_name}</span>
+                                </div>
                                 <h3 className="text-sm text-muted-foreground truncate sm:hidden">
                                     {item.subject}
                                 </h3>
@@ -201,8 +204,6 @@ export function MailList({
                                     ))}
                                 </div>
                             </div>
-
-                            {/* RIGHT AREA – actions & meta */}
                             <div className="col-span-1 sm:col-span-4 flex items-center justify-end gap-1 text-xs text-muted-foreground">
 
                                 {hasAttachments && (

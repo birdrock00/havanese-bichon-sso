@@ -142,7 +142,6 @@ export function MailList({
                         />
                         <MailIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                         <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-12 gap-1 sm:gap-0">
-                            {/* LEFT AREA: From + Subject + Tags */}
                             <div className="col-span-1 sm:col-span-8 flex flex-col min-w-0 gap-1">
                                 <div className="flex items-center gap-1 min-w-0">
                                     <p className="text-sm font-medium truncate">{item.from}</p>
@@ -154,7 +153,6 @@ export function MailList({
                                     {item.subject}
                                 </h3>
 
-                                {/* TAGS BELOW SUBJECT */}
                                 <div className="flex flex-wrap gap-1 mt-0.25">
                                     {item.tags?.map((tag, i) => (
                                         <Badge
@@ -167,7 +165,6 @@ export function MailList({
                                 </div>
                             </div>
 
-                            {/* RIGHT AREA – actions & meta */}
                             <div className="col-span-1 sm:col-span-4 flex items-center justify-end gap-1 text-xs text-muted-foreground">
                                 {hasAttachments && (
                                     <div className="flex items-center gap-1">

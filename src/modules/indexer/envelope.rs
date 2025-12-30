@@ -16,7 +16,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
+use crate::modules::account::migration::AccountModel;
+use crate::modules::cache::imap::mailbox::MailBox;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::utils::create_hash;
 use crate::modules::{error::BichonResult, indexer::schema::SchemaTools};
@@ -31,7 +32,9 @@ pub struct Envelope {
     pub id: u64,
     pub message_id: String,
     pub account_id: u64,
+    pub account_email: Option<String>,
     pub mailbox_id: u64,
+    pub mailbox_name: Option<String>,
     pub uid: u32,
     pub subject: String,
     pub text: String,
@@ -169,11 +172,20 @@ impl Envelope {
             })
             .flatten()
             .collect();
+        let account_email = AccountModel::find(account_id).await?.map(|a| a.email);
+
+        let mailboxes = MailBox::list_all(account_id).await?;
+        let mailbox_name = mailboxes
+            .iter()
+            .find(|m| m.id == mailbox_id)
+            .map(|m| m.name.clone());
 
         let envelope = Envelope {
             id,
             account_id,
+            account_email,
             mailbox_id,
+            mailbox_name,
             message_id: extract_string_field(doc, fields.f_message_id)?,
             uid: extract_u64_field(doc, fields.f_uid)? as u32,
             subject: extract_string_field(doc, fields.f_subject)?,

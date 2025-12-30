@@ -3,6 +3,7 @@
         "submit": "إرسال",
         "cancel": "إلغاء",
         "save": "حفظ",
+        "save_changes": "حفظ التغييرات",
         "delete": "حذف",
         "edit": "تعديل",
         "search": "بحث",
@@ -15,20 +16,20 @@
         "yes": "نعم",
         "no": "لا",
         "ok": "موافق",
-        "loading": "جارٍ التحميل...",
+        "loading": "جاري التحميل...",
         "empty": "فارغ",
         "noData": "لا توجد بيانات",
         "table": {
-            "noResults": "لم يتم العثور على نتائج"
+            "noResults": "لا توجد نتائج."
         },
         "failed": "فشل",
-        "notFound": "لم يتم العثور عليه",
+        "notFound": "غير موجود",
         "back": "رجوع",
         "goBack": "العودة",
-        "backToHome": "العودة إلى الصفحة الرئيسية",
-        "tryAgain": "حاول مرة أخرى",
+        "backToHome": "العودة للرئيسية",
+        "tryAgain": "إعادة المحاولة",
         "more": "المزيد",
-        "actions": "الإجراءات",
+        "actions": "إجراءات",
         "filter": "تصفية",
         "reset": "إعادة تعيين",
         "clear": "مسح",
@@ -39,8 +40,14 @@
         "deselectAll": "إلغاء تحديد الكل",
         "all": "الكل",
         "none": "لا شيء",
-        "showLess": "إظهار أقل",
-        "showMore": "إظهار المزيد..."
+        "showLess": "عرض أقل",
+        "showMore": "عرض المزيد...",
+        "project_description": "Bichon هو مشروع مفتوح المصدر.",
+        "view_on_github_button": "عرض على GitHub",
+        "op_failed": "فشلت العملية",
+        "na": "غير متاح",
+        "retry": "إعادة محاولة",
+        "deleting": "جاري الحذف..."
     },
     "navigation": {
         "home": "الرئيسية",
@@ -53,7 +60,8 @@
         "apiDocs": "توثيق واجهة برمجة التطبيقات",
         "general": "عام",
         "auth": "المصادقة",
-        "other": "أخرى"
+        "other": "أخرى",
+        "users": "مستخدمو النظام"
     },
     "auth": {
         "welcome": "مرحبًا بك في بيشون",
@@ -130,6 +138,46 @@
         "systemVersion": "إصدار النظام"
     },
     "accounts": {
+        "beforeRelativeValue": "مزامنة رسائل البريد الإلكتروني قبل {{value}} {{unit}} مضت",
+        "sinceRelativeValue": "مزامنة رسائل البريد الإلكتروني لآخر {{value}} {{unit}}",
+        "syncBatchSize": "حجم دفعة المزامنة",
+        "syncBatchSizeDescription": "عدد الرسائل التي يتم جلبها لكل طلب IMAP",
+        "incrementalSyncDescription": "عدد مرات إجراء مزامنة البريد الإلكتروني المتزايدة (بالدقائق)",
+        "syncScope": "استراتيجية المزامنة",
+        "syncScopeDescription": "اختر رسائل البريد الإلكتروني التي يجب فهرستها وأرشفتها.",
+        "selectMode": "حدد وضع التصفية",
+        "syncAll": "مزامنة جميع رسائل البريد الإلكتروني",
+        "sinceFixed": "منذ تاريخ محدد",
+        "sinceRelative": "مزامنة رسائل البريد الإلكتروني الحديثة فقط",
+        "beforeRelative": "أرشفة رسائل البريد الإلكتروني القديمة فقط",
+        "duration": "المدة",
+        "unit": "الوحدة",
+        "accessControl": "التحكم في الوصول",
+        "owner": "المنشئ",
+        "access_control": {
+            "title": "تخصيص الوصول للحساب",
+            "description": "تعيين الأدوار والمستخدمين المفوضين لـ {{email}}",
+            "role_label": "دور الوصول",
+            "role_placeholder": "اختر دوراً",
+            "role_loading": "جاري تحميل الأدوار...",
+            "user_label": "اختر المستخدمين المفوضين",
+            "user_search_placeholder": "بحث باسم المستخدم أو البريد...",
+            "user_empty": "لم يتم العثور على مستخدمين",
+            "user_selected_count": "تم اختيار: {{count}} مستخدم",
+            "buttons": {
+                "cancel": "إلغاء",
+                "save": "حفظ التخصيص"
+            },
+            "validation": {
+                "user_required": "يرجى اختيار مستخدم واحد على الأقل",
+                "role_required": "يرجى اختيار دور للتعيين"
+            },
+            "toast": {
+                "success_title": "تم التخصيص بنجاح",
+                "success_desc": "تم تعيين الصلاحيات بنجاح لـ {{email}}",
+                "failed_title": "فشل التخصيص"
+            }
+        },
         "title": "حسابات البريد الإلكتروني",
         "description": "إدارة وتكوين حسابات البريد الإلكتروني الخاصة بك.",
         "addImap": "إضافة IMAP",
@@ -350,6 +398,13 @@
         }
     },
     "search": {
+        "size": "الحجم",
+        "any": "الكل",
+        "tiny": "صغير جدًا (<15 كيلوبايت)",
+        "small": "صغير (<2 ميغابايت)",
+        "medium": "متوسط (<20 ميغابايت)",
+        "large": "كبير (≥20 ميغابايت)",
+        "sizeDescription": "يشير الحجم إلى الحجم الإجمالي للبريد الإلكتروني، بما في ذلك المرفقات.",
         "title": "بحث",
         "searching": "جارٍ البحث، يرجى الانتظار...",
         "noEmailsFound": "لم يتم العثور على رسائل بريد إلكتروني",
@@ -423,6 +478,25 @@
             "noSubject": "(لا يوجد موضوع)",
             "loadingMore": "جارٍ التحميل...",
             "loadMore": "تحميل المزيد"
+        },
+        "bulkActions": {
+            "ariaLabel": "تم تحديد {{count}} رسائل. شريط الإجراءات",
+            "delete": "حذف",
+            "deleteDesc": "حذف الرسائل المحددة",
+            "selected": "تم تحديد {{count}}",
+            "clear": "مسح التحديد"
+        },
+        "delete": {
+            "title": "حذف الرسائل",
+            "confirmPrefix": "هل أنت متأكد من حذف",
+            "countLabel": "{{count}} رسائل؟",
+            "confirmDetail": "هذا الإجراء لا يمكن التراجع عنه.",
+            "confirmButton": "حذف",
+            "warningTitle": "تحذير",
+            "warningDesc": "سيتم حذف الرسائل نهائياً ولا يمكن استعادتها.",
+            "successTitle": "تم الحذف",
+            "successDesc": "تم حذف الرسائل بنجاح.",
+            "errorTitle": "فشل الحذف"
         }
     },
     "mail": {
@@ -644,6 +718,31 @@
         "interval": "الفاصل الزمني"
     },
     "settings": {
+        "appearance": {
+            "title": "المظهر",
+            "field": {
+                "language": "لغة الواجهة",
+                "theme": "سمة الواجهة"
+            },
+            "description": {
+                "language": "اختر اللغة المستخدمة في واجهة الويب.",
+                "theme": "اختر بين الوضع الفاتح أو الداكن."
+            },
+            "placeholder": {
+                "select_language": "اختر اللغة"
+            },
+            "command": {
+                "search": "بحث عن لغة...",
+                "no_results": "لم يتم العثور على لغة."
+            },
+            "theme": {
+                "light": "فاتح",
+                "dark": "داكن"
+            },
+            "button": {
+                "update": "تحديث التفضيلات"
+            }
+        },
         "title": "الإعدادات",
         "general": "عام",
         "proxy": "وكيل",
@@ -705,7 +804,60 @@
         "pleaseUseAnIpAddressForBetterReliability": "يرجى استخدام عنوان IP (مثال: 127.0.0.1) بدلاً من اسم المُضيف أو النطاق لتحسين الموثوقية.",
         "adding": "جارٍ الإضافة...",
         "yourProxyHasBeenSuccessfully": "تم {{action}} الوكيل الخاص بك بنجاح.",
-        "proxyUpdateOrAddFailed": "فشل {{action}}، يرجى المحاولة مرة أخرى لاحقًا"
+        "proxyUpdateOrAddFailed": "فشل {{action}}، يرجى المحاولة مرة أخرى لاحقًا",
+        "sidebar": {
+            "profile": "الملف الشخصي",
+            "apiTokens": "رموز API",
+            "proxy": "وكيل الشبكة",
+            "configurations": "تكوينات النظام"
+        },
+        "profile": {
+            "loadError": "فشل في تحميل معلومات المستخدم.",
+            "uploadTitle": "رفع الصورة الشخصية",
+            "maxSize": "حتى {{size}}",
+            "avatarAlt": "الصورة الشخصية",
+            "removeAvatar": "إزالة الصورة الشخصية",
+            "uploadError": "خطأ في رفع الملف",
+            "field": {
+                "username": "اسم المستخدم",
+                "email": "البريد الإلكتروني",
+                "password": "كلمة المرور"
+            },
+            "placeholder": {
+                "password_keep": "اتركه فارغًا للاحتفاظ بكلمة المرور الحالية"
+            },
+            "button": {
+                "update_profile": "تحديث الملف الشخصي",
+                "permissions": "الصلاحيات",
+                "view_global_permissions": "عرض الصلاحيات العامة"
+            },
+            "section": {
+                "roles": "الأدوار",
+                "accounts": "{{count}} حسابات مرتبطة"
+            },
+            "account": {
+                "id": "معرّف الحساب: {{id}}"
+            },
+            "toast": {
+                "updated": "تم تحديث الملف الشخصي بنجاح",
+                "update_failed": "فشل في تحديث الملف الشخصي"
+            },
+            "validation": {
+                "username": {
+                    "required": "اسم المستخدم مطلوب",
+                    "min": "يجب أن يكون اسم المستخدم 5 أحرف على الأقل",
+                    "max": "يجب ألا يزيد اسم المستخدم عن 32 حرفًا"
+                },
+                "email": {
+                    "required": "البريد الإلكتروني مطلوب",
+                    "invalid": "يرجى إدخال بريد إلكتروني صالح"
+                },
+                "password": {
+                    "min": "يجب أن تكون كلمة المرور 8 أحرف على الأقل",
+                    "max": "يجب ألا تزيد كلمة المرور عن 256 حرفًا"
+                }
+            }
+        }
     },
     "apiDocs": {
         "choosePreferredType": "اختر نوع توثيق واجهة برمجة التطبيقات المفضل لديك",
@@ -765,7 +917,8 @@
         "folderLimitMustBeNumber": "يجب أن يكون حد المجلد رقمًا",
         "folderLimitMustBeAtLeast100": "يجب أن يكون حد المجلد 100 على الأقل",
         "incrementalSyncMustBeNumber": "يجب أن يكون فاصل المزامنة التزايدية رقمًا",
-        "incrementalSyncMustBeAtLeast10": "يجب أن يكون فاصل المزامنة التزايدية 10 دقائق على الأقل"
+        "incrementalSyncMustBeAtLeast10": "يجب أن يكون فاصل المزامنة التزايدية 10 دقائق على الأقل",
+        "pleaseEnterUsernameOrEmail": "الرجاء إدخال اسم المستخدم أو البريد الإلكتروني الخاص بك"
     },
     "table": {
         "noResults": "لم يتم العثور على نتائج",
@@ -780,7 +933,17 @@
         "desc": "تنازلي",
         "hide": "إخفاء",
         "edit": "تعديل",
-        "delete": "حذف"
+        "delete": "حذف",
+        "pagination": {
+            "selected": "تم تحديد {{selected}} من أصل {{total}} صفوف.",
+            "fixed_page_size": "{{size}} صفوف في الصفحة.",
+            "rows_per_page": "عدد الصفوف في الصفحة",
+            "page_info": "صفحة {{page}} من {{total}}",
+            "first": "الصفحة الأولى",
+            "previous": "الصفحة السابقة",
+            "next": "الصفحة التالية",
+            "last": "الصفحة الأخيرة"
+        }
     },
     "proxyDelete": {
         "title": "حذف الوكيل",
@@ -797,5 +960,471 @@
         "warningTitle": "تحذير!",
         "warningDesc": "يرجى توخي الحذر، لا يمكن التراجع عن هذه العملية.",
         "deleteBtn": "حذف"
+    },
+    "systemConfig": {
+        "pageTitle": "تكوينات مستوى النظام",
+        "pageDescription": "يتم تهيئة هذه المعلمات عبر علامات CLI أو متغيرات البيئة. وهي حاليًا للقراءة فقط لضمان اتساق البيئة.",
+        "status": {
+            "enabled": "مفعل",
+            "disabled": "معطل",
+            "configured": "مكون",
+            "missing": "مفقود",
+            "auto": "تلقائي",
+            "notSet": "غير محدد"
+        },
+        "sections": {
+            "network": {
+                "title": "الشبكة",
+                "desc": "HTTP والوصول العام"
+            },
+            "cors": {
+                "title": "CORS",
+                "desc": "قواعد الوصول عبر الأصول"
+            },
+            "logging": {
+                "title": "التسجيل",
+                "desc": "سلوك إخراج السجلات"
+            },
+            "storage": {
+                "title": "التخزين والذاكرة المؤقتة",
+                "desc": "مسارات قاعدة البيانات والحدود"
+            },
+            "security": {
+                "title": "الأمان",
+                "desc": "المصادقة والتشفير"
+            },
+            "performance": {
+                "title": "الأداء",
+                "desc": "التزامن والضغط"
+            }
+        }
+    },
+    "apiTokens": {
+        "page": {
+            "loadError": "فشل تحميل رموز API.",
+            "emptyTitle": "لا توجد رموز API",
+            "emptyDescription": "لم تقم بإنشاء أي رموز API بعد. انقر أدناه لإنشاء واحد.",
+            "addBtn": "إضافة رمز"
+        },
+        "list": {
+            "unnamedToken": "رمز بدون اسم",
+            "statusActive": "نشط",
+            "statusExpired": "منتهي الصلاحية",
+            "neverExpires": "لا تنتهي صلاحيته أبدًا",
+            "expiresOnShort": "ينتهي في {{date}}",
+            "tokenLabel": "الرمز",
+            "createdLabel": "تم الإنشاء في",
+            "lastUsedLabel": "آخر استخدام",
+            "expiresOnLabel": "ينتهي في",
+            "neverUsed": "أبدًا",
+            "neverLabel": "أبدًا",
+            "deleteBtn": "حذف الرمز"
+        },
+        "dialog": {
+            "createTitle": "إنشاء رمز وصول",
+            "editTitle": "تعديل رمز الوصول",
+            "description": "انقر على حفظ عند الانتهاء.",
+            "save": "حفظ",
+            "saveChanges": "حفظ التغييرات"
+        },
+        "deleteDialog": {
+            "title": "حذف رمز الوصول؟",
+            "description": "لا يمكن التراجع عن هذا الإجراء. أي تطبيق يستخدم هذا الرمز سيفقد إمكانية الوصول على الفور.",
+            "cancel": "إلغاء",
+            "confirm": "حذف",
+            "deleting": "جاري الحذف..."
+        },
+        "form": {
+            "nameLabel": "الاسم",
+            "namePlaceholder": "أعطِ رمز الوصول هذا اسمًا قصيرًا",
+            "nameDescription": "اختياري · 32 حرفًا كحد أقصى",
+            "expirationLabel": "تنتهي الصلاحية",
+            "expirationPlaceholder": "حدد تاريخ الانتهاء",
+            "expirationDescription": "ستنتهي صلاحية الرموز تلقائيًا بعد الوقت المحدد.",
+            "never": "أبدًا",
+            "1day": "يوم واحد",
+            "7days": "7 أيام",
+            "30days": "30 يومًا",
+            "errorMax": "32 حرفًا كحد أقصى",
+            "errorNumber": "يجب أن يكون رقمًا",
+            "errorInt": "يجب أن يكون عددًا صحيحًا",
+            "errorPositive": "يجب أن يكون أكبر من 0"
+        },
+        "notifications": {
+            "createSuccess": "تم إنشاء رمز الوصول",
+            "createSuccessDesc": "تم إنشاء رمز الوصول بنجاح.",
+            "updateSuccess": "تم تحديث رمز الوصول",
+            "updateSuccessDesc": "تم تحديث رمز الوصول بنجاح.",
+            "createFailed": "فشل الإنشاء",
+            "updateFailed": "فشل التحديث",
+            "deleteSuccess": "تم حذف رمز الوصول بنجاح",
+            "deleteFailed": "فشل حذف رمز الوصول",
+            "copied": "تم النسخ إلى الحافظة",
+            "genericError": "فشلت العملية. يرجى المحاولة مرة أخرى.",
+            "close": "إغلاق",
+            "tryAgain": "إعادة المحاولة"
+        }
+    },
+    "permission": {
+        "scope": {
+            "global": "عام",
+            "account": "الحساب رقم {{id}}"
+        },
+        "dialog": {
+            "global_title": "الأذونات العامة",
+            "account_title": "أذونات الحساب",
+            "global_description": "أذونات على مستوى النظام ممنوحة لهذا المستخدم.",
+            "account_description": "أذونات مقيدة بالحساب المحدد."
+        },
+        "category": {
+            "system_identity": "النظام والهوية",
+            "global_data": "البيانات العامة (مسؤول)",
+            "account": "أذونات الحساب"
+        },
+        "system": {
+            "access": "الوصول الأساسي إلى النظام",
+            "root": "التحكم الكامل في النظام"
+        },
+        "user": {
+            "manage": "إدارة جميع المستخدمين",
+            "view": "عرض معلومات المستخدم الأساسية"
+        },
+        "token": {
+            "manage": "إدارة رموز الوصول"
+        },
+        "account": {
+            "create": "إنشاء حسابات البريد الإلكتروني",
+            "manage": "إدارة الحسابات المخصصة",
+            "manage_all": "إدارة جميع إعدادات الحساب",
+            "read_details": "عرض تفاصيل الحساب"
+        },
+        "data": {
+            "read": "قراءة بيانات البريد الإلكتروني المخصصة",
+            "read_all": "قراءة جميع بيانات البريد الإلكتروني",
+            "manage": "إدارة بيانات وصفية للبريد الإلكتروني المخصص",
+            "manage_all": "إدارة جميع البيانات الوصفية للبريد الإلكتروني",
+            "raw_download": "تنزيل رسائل البريد الإلكتروني الخام المخصصة",
+            "raw_download_all": "تنزيل جميع رسائل البريد الإلكتروني الخام",
+            "delete": "حذف رسائل البريد الإلكتروني المخصصة",
+            "delete_all": "حذف رسائل البريد الإلكتروني من جميع الحسابات",
+            "export_batch": "تصدير دفعي للبيانات المخصصة",
+            "export_batch_all": "تصدير دفعي لجميع البيانات",
+            "import_batch": "استيراد دفعي لبيانات البريد الإلكتروني"
+        }
+    },
+    "users": {
+        "columns": {
+            "id": "المعرف",
+            "avatar": "الصورة الرمزية",
+            "username": "اسم المستخدم",
+            "email": "البريد الإلكتروني",
+            "roles": "الأدوار والصلاحيات",
+            "created_at": "تاريخ الإنشاء",
+            "updated_at": "تاريخ التحديث",
+            "actions": "الإجراءات"
+        },
+        "buttons": {
+            "add": "إضافة مستخدم",
+            "add_new": "مستخدم جديد"
+        },
+        "empty": {
+            "title": "لم يتم العثور على مستخدمين",
+            "description": "انقر على الزر أدناه لإضافة المستخدم الأول."
+        },
+        "nav": {
+            "users": "المستخدمون",
+            "roles": "الأدوار",
+            "api_tokens": "رموز API"
+        },
+        "api_tokens": {
+            "empty": {
+                "title": "لم يتم العثور على رموز API",
+                "description": "لم يتم إنشاء أي رموز API في النظام بعد."
+            },
+            "button": {
+                "generate": "توليد رمز جديد"
+            },
+            "toolbar": {
+                "search_placeholder": "البحث بالاسم، المالك أو الرمز..."
+            },
+            "table": {
+                "name": "الاسم",
+                "type": "النوع",
+                "last_used": "آخر استخدام",
+                "expires_at": "تاريخ الانتهاء",
+                "owner": "المالك",
+                "created": "تم الإنشاء",
+                "api_key": "مفتاح API",
+                "web_ui": "واجهة الويب",
+                "never": "أبداً",
+                "permanent": "دائم",
+                "expired": "منتهي الصلاحية",
+                "unnamed": "رمز بدون اسم"
+            },
+            "unnamed": "رمز بدون اسم",
+            "delete": {
+                "title": "حذف رمز API",
+                "desc": "أنت على وشك حذف رمز API هذا نهائياً",
+                "prefix": "بادئة الرمز",
+                "irreversible": "هذا الإجراء لا يمكن التراجع عنه. ستفقد أي تطبيقات تستخدم هذا الرمز حق الوصول فوراً.",
+                "confirm_label": "للتأكيد، اكتب {{word}} أدناه:",
+                "confirm_placeholder": "اكتب \"{{word}}\" للتأكيد",
+                "warning_title": "تحذير",
+                "warning_desc": "ستفشل أي نصوص برمجية أو خدمات تستخدم هذا الرمز. تأكد من تحديث أنظمتك.",
+                "confirm_button": "حذف الرمز",
+                "deleting": "جاري الحذف..."
+            },
+            "toast": {
+                "deleted_title": "تم حذف رمز API",
+                "deleted_desc": "تمت إزالة الرمز \"{{name}}\" بنجاح.",
+                "delete_failed_title": "فشل الحذف",
+                "delete_failed": "تعذر حذف الرمز، يرجى المحاولة مرة أخرى."
+            }
+        },
+        "tokens": {
+            "schema": {
+                "name_max": "32 حرفاً كحد أقصى",
+                "expire_number": "يجب أن يكون رقماً",
+                "expire_int": "يجب أن يكون رقماً صحيحاً",
+                "expire_positive": "يجب أن يكون أكبر من 0"
+            },
+            "toast": {
+                "update_success_title": "تم تحديث الرمز",
+                "update_success_desc": "تم تحديث رمز الوصول بنجاح.",
+                "create_success_title": "تم إنشاء الرمز",
+                "create_success_desc": "تم إنشاء رمز الوصول بنجاح.",
+                "update_failed_title": "فشل التحديث",
+                "create_failed_title": "فشل الإنشاء"
+            },
+            "error": {
+                "fallback": "فشلت العملية، يرجى المحاولة لاحقاً."
+            },
+            "dialog": {
+                "edit_title": "تعديل رمز الوصول",
+                "create_title": "إنشاء رمز وصول",
+                "description": "انقر على حفظ عند الانتهاء."
+            },
+            "fields": {
+                "name_label": "الاسم",
+                "name_placeholder": "أعطِ الرمز اسماً قصيراً",
+                "name_hint": "اختياري · 32 حرفاً كحد أقصى",
+                "expire_label": "انتهاء الصلاحية",
+                "expire_placeholder": "اختر مدة الصلاحية",
+                "expire_hint": "سينتهي الرمز تلقائياً بعد الوقت المحدد."
+            },
+            "expire_options": {
+                "never": "لا ينتهي أبداً",
+                "1_day": "يوم واحد",
+                "7_days": "7 أيام",
+                "30_days": "30 يوماً"
+            }
+        },
+        "tokens_action": {
+            "dialog": {
+                "title": "رموز API",
+                "description": "إدارة رموز API لهذا المستخدم."
+            },
+            "empty": {
+                "title": "لا توجد رموز API",
+                "description": "هذا المستخدم ليس لديه أي رموز API حالياً."
+            },
+            "buttons": {
+                "add": "إضافة رمز"
+            },
+            "list": {
+                "unnamed_token": "رمز بدون اسم",
+                "status_expired": "منتهي الصلاحية",
+                "status_active": "نشط",
+                "expires_on_brief": "ينتهي في {{date}}",
+                "never_expires": "لا ينتهي أبداً",
+                "label_token": "الرمز",
+                "label_created": "تاريخ الإنشاء",
+                "label_last_used": "آخر استخدام",
+                "label_expires_at": "ينتهي في",
+                "never": "أبداً",
+                "button_delete": "حذف الرمز"
+            },
+            "delete_dialog": {
+                "title": "حذف رمز الوصول؟",
+                "description": "هذا الإجراء لا يمكن التراجع عنه."
+            }
+        },
+        "actions": {
+            "schema": {
+                "account_required": "يرجى اختيار حساب",
+                "role_required": "يرجى اختيار دور",
+                "username_required": "اسم المستخدم مطلوب",
+                "username_min": "5 أحرف على الأقل",
+                "username_max": "32 حرفاً كحد أقصى",
+                "email_required": "البريد الإلكتروني مطلوب",
+                "email_invalid": "يرجى إدخال بريد إلكتروني صالح",
+                "global_role_required": "تعيين دور عالمي واحد على الأقل",
+                "description_max": "الوصف 256 حرفاً كحد أقصى",
+                "ip_invalid": "تم اكتشاف عنوان IP غير صالح",
+                "password_required": "كلمة المرور مطلوبة",
+                "password_min": "8 أحرف على الأقل",
+                "password_max": "256 حرفاً كحد أقصى"
+            },
+            "toast": {
+                "updated": "تم تحديث المستخدم",
+                "created": "تم إنشاء المستخدم"
+            },
+            "dialog": {
+                "edit_title": "تعديل المستخدم: {{name}}",
+                "create_title": "إنشاء مستخدم جديد",
+                "subtitle": "تكوين الهوية ومستويات الوصول وسياسات الأمان."
+            },
+            "tabs": {
+                "general": "عام",
+                "permissions": "صلاحيات الحساب",
+                "security": "الأمان و ACL"
+            },
+            "sections": {
+                "basic": "الهوية الأساسية",
+                "global": "الصلاحيات العالمية",
+                "mail_access": "التحكم في الوصول إلى البريد",
+                "mail_access_subtitle": "حسابات البريد الإلكتروني التي يمكن لهذا المستخدم إدارتها.",
+                "policy": "السياسات"
+            },
+            "fields": {
+                "username": "اسم المستخدم",
+                "username_hint": "معرف فريد لتسجيل الدخول.",
+                "email": "البريد الإلكتروني",
+                "email_hint": "جهة الاتصال الرئيسية والإشعارات.",
+                "password": "كلمة المرور",
+                "password_placeholder_create": "8 أحرف على الأقل",
+                "password_placeholder_edit": "اتركه فارغاً للاحتفاظ بالحالية",
+                "password_hint_create": "كلمة مرور آمنة للإعداد الأولي.",
+                "password_hint_edit": "أدخلها فقط إذا كنت ترغب في التغيير.",
+                "global_roles_hint": "تعيين صلاحيات النظام.",
+                "description": "الوصف (اختياري)",
+                "description_placeholder": "ملاحظات حول هذا المستخدم...",
+                "description_hint": "ملاحظات داخلية (256 حرفاً كحد أقصى).",
+                "select_account": "اختر حساباً",
+                "assign_role": "تعيين دور",
+                "ip_whitelist": "القائمة البيضاء لـ IP",
+                "ip_whitelist_hint": "قصر تسجيل الدخول على عناوين IP هذه (واحد في كل سطر).",
+                "rate_quota": "حصة المعدل",
+                "burst_interval": "فاصل الانفجار (ثانية)"
+            },
+            "buttons": {
+                "add_account": "إضافة حساب",
+                "update": "تحديث المستخدم",
+                "create": "إنشاء مستخدم"
+            },
+            "states": {
+                "full_access": "وضع الوصول الكامل",
+                "full_access_desc": "المسؤولون لديهم حق الوصول الكامل لجميع الحسابات افتراضياً.",
+                "no_accounts": "لم يتم تعيين حسابات محددة.",
+                "security_disabled": "سياسات الأمان معطلة."
+            },
+            "api_tokens": "رموز API",
+            "placeholder": {
+                "filter": "بحث عن مستخدمين..."
+            },
+            "delete": {
+                "title": "حذف المستخدم",
+                "confirm_msg": "أنت تقوم بحذف المستخدم {{name}} (المعرف: {{id}}) نهائياً.",
+                "irreversible": "هذا الإجراء غير قابل للإلغاء.",
+                "input_label": "اكتب معرف المستخدم للتأكيد:",
+                "placeholder": "اكتب \"{{id}}\"",
+                "alert_title": "تحذير: إجراء دائم.",
+                "alert_desc": "سيتم حذف المستخدم وجميع البيانات المرتبطة به.",
+                "button_confirm": "حذف المستخدم",
+                "button_deleting": "جاري الحذف...",
+                "toast": {
+                    "success_title": "تم حذف المستخدم",
+                    "success_desc": "تمت إزالة المستخدم \"{{name}}\" بنجاح.",
+                    "failed_title": "فشل الحذف",
+                    "failed_fallback": "تعذر حذف المستخدم."
+                }
+            }
+        }
+    },
+    "roles": {
+        "title": {
+            "create": "إنشاء دور جديد",
+            "edit": "تعديل الدور: {{name}}"
+        },
+        "description_hint": "تحديد نطاق الوصول والصلاحيات.",
+        "form": {
+            "name_label": "اسم الدور",
+            "type_label": "نوع الدور",
+            "desc_label": "الوصف",
+            "matrix_label": "مصفوفة الصلاحيات ({{type}})",
+            "builtin_badge": "دور مدمج",
+            "builtin_desc": "هذا الدور محدد مسبقاً وهو للقراءة فقط."
+        },
+        "types": {
+            "Global": "عالمي",
+            "Account": "حساب"
+        },
+        "categories": {
+            "identity": "الهوية والإدارة",
+            "global_data": "الوصول إلى البيانات العالمية",
+            "account_resource": "الوصول إلى موارد الحساب"
+        },
+        "actions": {
+            "cancel": "إلغاء",
+            "submit_create": "إنشاء الدور",
+            "submit_update": "تحديث الدور",
+            "success_create": "تم إنشاء الدور بنجاح",
+            "success_update": "تم تحديث الدور بنجاح",
+            "failed": "فشلت العملية",
+            "close": "إغلاق",
+            "retry": "إعادة المحاولة",
+            "add": "إضافة دور"
+        },
+        "validation": {
+            "name_required": "اسم الدور مطلوب",
+            "perm_required": "يرجى اختيار صلاحية واحدة على الأقل"
+        },
+        "columns": {
+            "id": "المعرف",
+            "name": "الاسم",
+            "role_type": "نوع الدور",
+            "permissions": "الصلاحيات",
+            "created_at": "تاريخ الإنشاء",
+            "updated_at": "تاريخ التحديث"
+        },
+        "placeholder": {
+            "filter": "بحث عن أدوار..."
+        },
+        "delete": {
+            "dialog_title": "حذف الدور",
+            "warning_text": "أنت تقوم بحذف الدور {{name}} (المعرف: {{id}}) نهائياً.",
+            "irreversible": "هذا الإجراء لا يمكن التراجع عنه.",
+            "confirm_label": "اكتب معرف الدور للتأكيد:",
+            "placeholder": "اكتب \"{{id}}\"",
+            "alert_title": "تحذير: إجراء دائم.",
+            "alert_desc": "سيؤدي حذف هذا الدور إلى إزالته من جميع المستخدمين المعينين له.",
+            "confirm_btn": "حذف الدور",
+            "deleting": "جاري الحذف...",
+            "success_title": "تم حذف الدور",
+            "success_desc": "تمت إزالة الدور \"{{name}}\".",
+            "error_title": "فشل الحذف",
+            "error_fallback": "تعذر حذف الدور."
+        },
+        "details": {
+            "title": "الصلاحيات: {{name}}",
+            "unknown": "دور غير معروف",
+            "role_badge": "دور {{type}}",
+            "desc_global": "الإدارة العالمية والوصول إلى النظام.",
+            "desc_account": "الوصول وإجراءات البيانات للحسابات الفردية.",
+            "close_btn": "إغلاق",
+            "view_permissions": "عرض التفاصيل"
+        },
+        "empty": {
+            "title": "لم يتم العثور على أدوار",
+            "desc": "لم تقم بإنشاء أي أدوار مخصصة بعد."
+        }
+    },
+    "profile": {
+        "avatar_alt": "الصورة الشخصية",
+        "menu": {
+            "profile": "الملف الشخصي",
+            "settings": "الإعدادات",
+            "sign_out": "تسجيل الخروج"
+        }
     }
 }

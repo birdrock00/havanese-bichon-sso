@@ -16,23 +16,25 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::collections::BTreeSet;
+use std::collections::{HashMap, HashSet};
 
+use crate::modules::account::grant::BatchAccountRoleRequest;
 use crate::modules::account::migration::AccountModel;
 use crate::modules::account::payload::{
     filter_accessible_accounts, AccountCreateRequest, AccountUpdateRequest, MinimalAccount,
 };
 use crate::modules::account::state::AccountRunningState;
+use crate::modules::account::view::AccountResp;
 use crate::modules::common::auth::ClientContext;
 use crate::modules::common::paginated::paginate_vec;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::rest::api::ApiTags;
 use crate::modules::rest::response::DataPage;
 use crate::modules::rest::ApiResult;
-use crate::modules::token::{AccessToken, AccountInfo};
+use crate::modules::users::permissions::Permission;
+use crate::modules::users::UserModel;
 use crate::raise_error;
-use poem::web::Path;
-use poem_openapi::param::Query;
+use poem_openapi::param::{Path, Query};
 use poem_openapi::payload::Json;
 use poem_openapi::OpenApi;
 
@@ -53,7 +55,9 @@ impl AccountApi {
         context: ClientContext,
     ) -> ApiResult<Json<AccountModel>> {
         let account_id = account_id.0;
-        context.require_account_access(account_id)?;
+        context
+            .require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)
+            .await?;
         Ok(Json(AccountModel::get(account_id).await?))
     }
 
@@ -70,7 +74,9 @@ impl AccountApi {
         context: ClientContext,
     ) -> ApiResult<()> {
         let account_id = account_id.0;
-        context.require_account_access(account_id)?;
+        context
+            .require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)
+            .await?;
         Ok(AccountModel::delete(account_id).await?)
     }
 
@@ -82,14 +88,10 @@ impl AccountApi {
         payload: Json<AccountCreateRequest>,
         context: ClientContext,
     ) -> ApiResult<Json<AccountModel>> {
-        let account = AccountModel::create_account(payload.0).await?;
-        if let Some(access_token) = &context.access_token {
-            let account_info = AccountInfo {
-                id: account.id,
-                email: account.email.clone(),
-            };
-            AccessToken::grant_account_access(&access_token.token, account_info).await?;
-        }
+        context
+            .require_permission(None, Permission::ACCOUNT_CREATE)
+            .await?;
+        let account = AccountModel::create_account(context.user.id, payload.0).await?;
         Ok(Json(account))
     }
 
@@ -108,7 +110,9 @@ impl AccountApi {
         context: ClientContext,
     ) -> ApiResult<()> {
         let account_id = account_id.0;
-        context.require_account_access(account_id)?;
+        context
+            .require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)
+            .await?;
         Ok(AccountModel::update(account_id, payload.0, true).await?)
     }
 
@@ -123,35 +127,61 @@ impl AccountApi {
         /// Optional. Whether to sort the list in descending order.
         desc: Query<Option<bool>>,
         context: ClientContext,
-    ) -> ApiResult<Json<DataPage<AccountModel>>> {
-        let accessible_accounts = context.accessible_accounts()?;
+    ) -> ApiResult<Json<DataPage<AccountResp>>> {
+        let is_admin = context.user.is_admin().await;
+        let sort_desc = desc.0.unwrap_or(true);
 
-        if accessible_accounts.is_none() {
-            return Ok(Json(
-                AccountModel::paginate_list(page.0, page_size.0, desc.0).await?,
-            ));
-        }
-
-        let all_accounts = AccountModel::list_all().await?;
-        let allowed_ids: BTreeSet<u64> =
-            accessible_accounts.unwrap().iter().map(|a| a.id).collect();
-
-        let mut filtered_accounts: Vec<AccountModel> = all_accounts
+        let user_map: HashMap<u64, UserModel> = UserModel::list_all()
+            .await?
             .into_iter()
-            .filter(|acct| allowed_ids.contains(&acct.id))
+            .map(|u| (u.id, u))
+            .collect();
+        let page_data: DataPage<AccountModel> = if is_admin {
+            AccountModel::paginate_list(page.0, page_size.0, desc.0).await?
+        } else {
+            let authorized_ids: HashSet<u64> =
+                context.user.account_access_map.keys().cloned().collect();
+
+            if authorized_ids.is_empty() {
+                return Ok(Json(DataPage {
+                    current_page: page.0,
+                    page_size: page_size.0,
+                    total_items: 0,
+                    items: vec![],
+                    total_pages: Some(0),
+                }));
+            }
+
+            let mut accounts: Vec<AccountModel> = AccountModel::list_all()
+                .await?
+                .into_iter()
+                .filter(|acct| authorized_ids.contains(&acct.id))
+                .collect();
+
+            accounts.sort_by(|a, b| {
+                if sort_desc {
+                    b.created_at.cmp(&a.created_at)
+                } else {
+                    a.created_at.cmp(&b.created_at)
+                }
+            });
+
+            paginate_vec(&accounts, page.0, page_size.0).map(DataPage::from)?
+        };
+
+        let items = page_data
+            .items
+            .into_iter()
+            .map(|account| AccountResp::from_model(account, &user_map))
             .collect();
 
-        let sort_desc = desc.0.unwrap_or(true);
-        filtered_accounts.sort_by(|a, b| {
-            if sort_desc {
-                b.created_at.cmp(&a.created_at)
-            } else {
-                a.created_at.cmp(&b.created_at)
-            }
-        });
-        let page_data =
-            paginate_vec(&filtered_accounts, page.0, page_size.0).map(DataPage::from)?;
-        Ok(Json(page_data))
+        Ok(Json(DataPage {
+            current_page: page_data.current_page,
+            page_size: page_data.page_size,
+            total_items: page_data.total_items,
+            total_pages: page_data.total_pages,
+            items,
+        }))
     }
 
     /// Get the running state of an account
@@ -168,7 +198,9 @@ impl AccountApi {
     ) -> ApiResult<Json<AccountRunningState>> {
         let account_id = account_id.0;
         AccountModel::check_account_exists(account_id).await?;
-        context.require_account_access(account_id)?;
+        context
+            .require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)
+            .await?;
         let state = AccountRunningState::get(account_id).await?.ok_or_else(|| {
             raise_error!(
                 "account running state is not found".into(),
@@ -191,13 +223,25 @@ impl AccountApi {
         &self,
         context: ClientContext,
     ) -> ApiResult<Json<Vec<MinimalAccount>>> {
-        let accessible_accounts = context.accessible_accounts()?;
-
+        let is_admin = context.user.is_admin().await;
         let minimal_list = AccountModel::minimal_list().await?;
-        let result = match accessible_accounts {
-            Some(set) => filter_accessible_accounts(&minimal_list, set),
-            None => minimal_list,
-        };
+        if is_admin {
+            return Ok(Json(minimal_list));
+        }
+
+        let authorized_ids: Vec<u64> = context.user.account_access_map.keys().cloned().collect();
+        let result = filter_accessible_accounts(&minimal_list, &authorized_ids);
         Ok(Json(result))
+    }
+
+    #[oai(path = "/accounts/access/assignments", method = "post")]
+    async fn batch_assign_account_role(
+        &self,
+        req: Json<BatchAccountRoleRequest>,
+        context: ClientContext,
+    ) -> ApiResult<()> {
+        req.validate_existence().await?;
+        req.0.do_assign(&context).await?;
+        Ok(())
     }
 }

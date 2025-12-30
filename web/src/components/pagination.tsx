@@ -20,6 +20,8 @@
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
+  DoubleArrowLeftIcon,
+  DoubleArrowRightIcon,
 } from '@radix-ui/react-icons'
 import { Button } from '@/components/ui/button'
 import {
@@ -30,6 +32,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useTranslation } from 'react-i18next'
+import { showNumbers } from '@/lib/utils'
 
 interface PaginationProps {
   totalItems: number
@@ -66,6 +69,9 @@ export function EnvelopeListPagination({
     setPageIndex(newPageIndex)
   }
 
+  const currentPage = pageIndex + 1;
+  const pageNumbers = showNumbers(currentPage, pageCount)
+
   return (
     <div className='flex items-center justify-between space-x-2 overflow-auto px-2'>
       <div className='hidden flex-1 text-sm text-muted-foreground sm:block'>
@@ -96,6 +102,14 @@ export function EnvelopeListPagination({
         <div className='flex items-center space-x-2'>
           <Button
             variant='outline'
+            className='size-8 p-0 @max-md/content:hidden'
+            onClick={() => setPageIndex(0)}
+            disabled={pageIndex === 0}
+          >
+            <DoubleArrowLeftIcon className='h-4 w-4' />
+          </Button>
+          <Button
+            variant='outline'
             className='h-8 w-8 p-0'
             onClick={goToPreviousPage}
             disabled={pageIndex === 0}
@@ -103,6 +117,22 @@ export function EnvelopeListPagination({
             <span className='sr-only'>{t("table.prevPage")}</span>
             <ChevronLeftIcon className='h-4 w-4' />
           </Button>
+
+          {pageNumbers.map((pageNumber, index) => (
+            <div key={`${pageNumber}-${index}`} className='flex items-center'>
+              {pageNumber === '...' ? (
+                <span className='px-1 text-sm text-muted-foreground'>...</span>
+              ) : (
+                <Button
+                  variant={currentPage === pageNumber ? 'default' : 'outline'}
+                  className='h-8 min-w-8 px-2'
+                  onClick={() => setPageIndex((pageNumber as number) - 1)}
+                >
+                  {pageNumber}
+                </Button>
+              )}
+            </div>
+          ))}
           <Button
             variant='outline'
             className='h-8 w-8 p-0'
@@ -111,6 +141,14 @@ export function EnvelopeListPagination({
           >
             <span className='sr-only'>{t("table.nextPage")}</span>
             <ChevronRightIcon className='h-4 w-4' />
+          </Button>
+          <Button
+            variant='outline'
+            className='size-8 p-0 @max-md/content:hidden'
+            onClick={() => setPageIndex(pageCount - 1)}
+            disabled={!hasNextPage()}
+          >
+            <DoubleArrowRightIcon className='h-4 w-4' />
           </Button>
         </div>
       </div>

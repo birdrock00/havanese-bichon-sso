@@ -3,6 +3,7 @@
         "submit": "Send inn",
         "cancel": "Avbryt",
         "save": "Lagre",
+        "save_changes": "Lagre endringer",
         "delete": "Slett",
         "edit": "Rediger",
         "search": "Søk",
@@ -15,32 +16,38 @@
         "yes": "Ja",
         "no": "Nei",
         "ok": "OK",
-        "loading": "Laster inn...",
+        "loading": "Laster...",
         "empty": "Tom",
         "noData": "Ingen data",
         "table": {
-            "noResults": "Ingen resultater funnet"
+            "noResults": "Ingen resultater."
         },
-        "failed": "mislyktes",
+        "failed": "Mislyktes",
         "notFound": "Ikke funnet",
         "back": "Tilbake",
         "goBack": "Gå tilbake",
-        "backToHome": "Tilbake til startsiden",
+        "backToHome": "Tilbake til hjem",
         "tryAgain": "Prøv igjen",
         "more": "Mer",
         "actions": "Handlinger",
-        "filter": "Filter",
-        "reset": "Tilbakestill",
+        "filter": "Filtrer",
+        "reset": "Nullstill",
         "clear": "Tøm",
         "error": "Feil",
         "apply": "Bruk",
         "select": "Velg",
         "selectAll": "Velg alle",
-        "deselectAll": "Fravelg alle",
+        "deselectAll": "Velg bort alle",
         "all": "Alle",
         "none": "Ingen",
-        "showLess": "vis mindre",
-        "showMore": "vis mer..."
+        "showLess": "Vis mindre",
+        "showMore": "Vis mer...",
+        "project_description": "Bichon er et open-source-prosjekt.",
+        "view_on_github_button": "Vis på GitHub",
+        "op_failed": "Operasjonen mislyktes",
+        "na": "N/A",
+        "retry": "Prøv igjen",
+        "deleting": "Sletter..."
     },
     "navigation": {
         "home": "Hjem",
@@ -53,7 +60,8 @@
         "apiDocs": "API-dokumentasjon",
         "general": "Generelt",
         "auth": "Autentisering",
-        "other": "Annet"
+        "other": "Annet",
+        "users": "Systembrukere"
     },
     "auth": {
         "welcome": "Velkommen til Bichon",
@@ -130,6 +138,46 @@
         "systemVersion": "Systemversjon"
     },
     "accounts": {
+        "beforeRelativeValue": "Synkroniser e-poster fra før {{value}} {{unit}} siden",
+        "sinceRelativeValue": "Synkroniser e-poster fra de siste {{value}} {{unit}}",
+        "syncBatchSize": "Synkroniserings-batchstørrelse",
+        "syncBatchSizeDescription": "Antall meldinger hentet per IMAP-forespørsel",
+        "incrementalSyncDescription": "Hvor ofte inkrementell e-post-synkronisering utføres (i minutter)",
+        "syncScope": "Synkroniseringsstrategi",
+        "syncScopeDescription": "Velg hvilke e-poster som skal indekseres og arkiveres.",
+        "selectMode": "Velg filtermodus",
+        "syncAll": "Synkroniser alle e-poster",
+        "sinceFixed": "Siden spesifikk dato",
+        "sinceRelative": "Synkroniser kun nylige e-poster",
+        "beforeRelative": "Arkiver kun gamle e-poster",
+        "duration": "Varighet",
+        "unit": "Enhet",
+        "accessControl": "Tilgangskontroll",
+        "owner": "Opprettet av",
+        "access_control": {
+            "title": "Tildeling av kontotilgang",
+            "description": "Tildel roller og autoriserte brukere til {{email}}",
+            "role_label": "Tilgangsrolle",
+            "role_placeholder": "Velg en rolle",
+            "role_loading": "Laster roller...",
+            "user_label": "Velg autoriserte brukere",
+            "user_search_placeholder": "Søk etter brukernavn eller e-post...",
+            "user_empty": "Ingen brukere funnet",
+            "user_selected_count": "Valgt: {{count}} bruker(e)",
+            "buttons": {
+                "cancel": "Avbryt",
+                "save": "Lagre tildeling"
+            },
+            "validation": {
+                "user_required": "Vennligst velg minst én bruker",
+                "role_required": "Vennligst velg en rolle å tildele"
+            },
+            "toast": {
+                "success_title": "Tildeling vellykket",
+                "success_desc": "Rettigheter er tildelt {{email}}",
+                "failed_title": "Tildeling mislyktes"
+            }
+        },
         "title": "E-postkontoer",
         "description": "Administrer og konfigurer e-postkontoene dine.",
         "addImap": "Legg til IMAP",
@@ -350,6 +398,13 @@
         }
     },
     "search": {
+        "size": "Størrelse",
+        "any": "Alle",
+        "tiny": "Svært liten (<15 KB)",
+        "small": "Liten (<2 MB)",
+        "medium": "Middels (<20 MB)",
+        "large": "Stor (≥20 MB)",
+        "sizeDescription": "Størrelsen viser til e-postens totale størrelse, inkludert vedlegg.",
         "title": "Søk",
         "searching": "Søker, vennligst vent…",
         "noEmailsFound": "Ingen e-poster funnet",
@@ -423,6 +478,25 @@
             "noSubject": "(Uten emne)",
             "loadingMore": "Laster...",
             "loadMore": "Last mer"
+        },
+        "bulkActions": {
+            "ariaLabel": "{{count}} meldinger valgt. Verktøylinje",
+            "delete": "Slett",
+            "deleteDesc": "Slett valgte meldinger",
+            "selected": "{{count}} valgt",
+            "clear": "Fjern valg"
+        },
+        "delete": {
+            "title": "Slett meldinger",
+            "confirmPrefix": "Er du sikker på at du vil slette",
+            "countLabel": "{{count}} melding(er)?",
+            "confirmDetail": "Denne handlingen kan ikke angres.",
+            "confirmButton": "Slett",
+            "warningTitle": "Advarsel",
+            "warningDesc": "Meldinger slettes permanent.",
+            "successTitle": "Slettet",
+            "successDesc": "Meldingene ble slettet.",
+            "errorTitle": "Sletting mislyktes"
         }
     },
     "mail": {
@@ -644,6 +718,39 @@
         "interval": "Intervall"
     },
     "settings": {
+        "appearance": {
+            "title": "Utseende",
+            "field": {
+                "language": "Grensesnittspråk",
+                "theme": "Grensesnittema"
+            },
+            "description": {
+                "language": "Velg språket som skal brukes i webgrensesnittet.",
+                "theme": "Velg mellom lys eller mørk modus for grensesnittet."
+            },
+            "placeholder": {
+                "select_language": "Velg språk"
+            },
+            "command": {
+                "search": "Søk etter språk...",
+                "no_results": "Fant ingen språk."
+            },
+            "theme": {
+                "light": "Lys",
+                "dark": "Mørk"
+            },
+            "button": {
+                "update": "Oppdater innstillinger"
+            },
+            "validation": {
+                "language": {
+                    "required": "Vennligst velg et språk."
+                },
+                "theme": {
+                    "required": "Vennligst velg et tema."
+                }
+            }
+        },
         "title": "Innstillinger",
         "general": "Generelt",
         "proxy": "Proxy",
@@ -705,7 +812,60 @@
         "pleaseUseAnIpAddressForBetterReliability": "Vennligst bruk en IP-adresse (f.eks. 127.0.0.1) heller enn et vertsnavn eller domene for bedre pålitelighet.",
         "adding": "Legger til...",
         "yourProxyHasBeenSuccessfully": "Din proxy har blitt {{action}}.",
-        "proxyUpdateOrAddFailed": "{{action}} mislyktes, vennligst prøv igjen senere"
+        "proxyUpdateOrAddFailed": "{{action}} mislyktes, vennligst prøv igjen senere",
+        "sidebar": {
+            "profile": "Profil",
+            "apiTokens": "API-tokener",
+            "proxy": "Nettverksproxy",
+            "configurations": "Systemkonfigurasjoner"
+        },
+        "profile": {
+            "loadError": "Kunne ikke laste inn brukerinformasjon.",
+            "uploadTitle": "Last opp avatar",
+            "maxSize": "Opptil {{size}}",
+            "avatarAlt": "Avatar",
+            "removeAvatar": "Fjern avatar",
+            "uploadError": "Feil ved opplasting av fil",
+            "field": {
+                "username": "Brukernavn",
+                "email": "E-post",
+                "password": "Passord"
+            },
+            "placeholder": {
+                "password_keep": "La stå tomt for å beholde nåværende passord"
+            },
+            "button": {
+                "update_profile": "Oppdater profil",
+                "permissions": "Tillatelser",
+                "view_global_permissions": "Vis globale tillatelser"
+            },
+            "section": {
+                "roles": "Roller",
+                "accounts": "{{count}} tilknyttede kontoer"
+            },
+            "account": {
+                "id": "Konto-ID: {{id}}"
+            },
+            "toast": {
+                "updated": "Profilen ble oppdatert",
+                "update_failed": "Kunne ikke oppdatere profilen"
+            },
+            "validation": {
+                "username": {
+                    "required": "Brukernavn er påkrevd",
+                    "min": "Brukernavnet må være minst 5 tegn",
+                    "max": "Brukernavnet kan være maks 32 tegn"
+                },
+                "email": {
+                    "required": "E-post er påkrevd",
+                    "invalid": "Skriv inn en gyldig e-postadresse"
+                },
+                "password": {
+                    "min": "Passordet må være minst 8 tegn",
+                    "max": "Passordet kan være maks 256 tegn"
+                }
+            }
+        }
     },
     "apiDocs": {
         "choosePreferredType": "Velg foretrukket API-dokumentasjonstype",
@@ -765,7 +925,8 @@
         "folderLimitMustBeNumber": "Mappegrense må være et tall",
         "folderLimitMustBeAtLeast100": "Mappegrense må være minst 100",
         "incrementalSyncMustBeNumber": "Intervall for inkrementell synkronisering må være et tall",
-        "incrementalSyncMustBeAtLeast10": "Intervall for inkrementell synkronisering må være minst 10 minutter"
+        "incrementalSyncMustBeAtLeast10": "Intervall for inkrementell synkronisering må være minst 10 minutter",
+        "pleaseEnterUsernameOrEmail": "Skriv inn brukernavn eller e-postadresse"
     },
     "table": {
         "noResults": "Ingen resultater funnet",
@@ -780,7 +941,17 @@
         "desc": "Synkende",
         "hide": "Skjul",
         "edit": "Rediger",
-        "delete": "Slett"
+        "delete": "Slett",
+        "pagination": {
+            "selected": "{{selected}} av {{total}} rader valgt.",
+            "fixed_page_size": "{{size}} rader per side.",
+            "rows_per_page": "Rader per side",
+            "page_info": "Side {{page}} av {{total}}",
+            "first": "Gå til første side",
+            "previous": "Forrige side",
+            "next": "Neste side",
+            "last": "Gå til siste side"
+        }
     },
     "proxyDelete": {
         "title": "Slett Proxy",
@@ -797,5 +968,471 @@
         "warningTitle": "Advarsel!",
         "warningDesc": "Vennligst vær forsiktig, denne operasjonen kan ikke angres.",
         "deleteBtn": "Slett"
+    },
+    "systemConfig": {
+        "pageTitle": "Systemkonfigurasjoner",
+        "pageDescription": "Disse parametrene initialiseres via CLI-flagg eller miljøvariabler. De er skrivebeskyttede.",
+        "status": {
+            "enabled": "Aktivert",
+            "disabled": "Deaktivert",
+            "configured": "Konfigurert",
+            "missing": "Mangler",
+            "auto": "Auto",
+            "notSet": "Ikke satt"
+        },
+        "sections": {
+            "network": {
+                "title": "Nettverk",
+                "desc": "HTTP og offentlig tilgang"
+            },
+            "cors": {
+                "title": "CORS",
+                "desc": "Tilgangsregler for cross-origin"
+            },
+            "logging": {
+                "title": "Logging",
+                "desc": "Loggutdata-oppførsel"
+            },
+            "storage": {
+                "title": "Lagring og cache",
+                "desc": "Databasestier og grenser"
+            },
+            "security": {
+                "title": "Sikkerhet",
+                "desc": "Autentisering og kryptering"
+            },
+            "performance": {
+                "title": "Ytelse",
+                "desc": "Samtidighet og komprimering"
+            }
+        }
+    },
+    "apiTokens": {
+        "page": {
+            "loadError": "Kunne ikke laste API-tokener.",
+            "emptyTitle": "Ingen API-tokener",
+            "emptyDescription": "Du har ikke opprettet noen API-tokener ennå. Klikk nedenfor for å opprette en.",
+            "addBtn": "Legg til token"
+        },
+        "list": {
+            "unnamedToken": "Navnløs token",
+            "statusActive": "Aktiv",
+            "statusExpired": "Utløpt",
+            "neverExpires": "Utløper aldri",
+            "expiresOnShort": "Utløper {{date}}",
+            "tokenLabel": "Token",
+            "createdLabel": "Opprettet",
+            "lastUsedLabel": "Sist brukt",
+            "expiresOnLabel": "Utløper den",
+            "neverUsed": "Aldri",
+            "neverLabel": "Aldri",
+            "deleteBtn": "Slett token"
+        },
+        "dialog": {
+            "createTitle": "Opprett tilgangstoken",
+            "editTitle": "Rediger tilgangstoken",
+            "description": "Klikk på lagre når du er ferdig.",
+            "save": "Lagre",
+            "saveChanges": "Lagre endringer"
+        },
+        "deleteDialog": {
+            "title": "Slett tilgangstoken?",
+            "description": "Denne handlingen kan ikke angres. Enhver applikasjon som bruker denne tokenen vil umiddelbart miste tilgangen.",
+            "cancel": "Avbryt",
+            "confirm": "Slett",
+            "deleting": "Sletter..."
+        },
+        "form": {
+            "nameLabel": "Navn",
+            "namePlaceholder": "Gi denne tokenen et kort navn",
+            "nameDescription": "Valgfritt · Maks 32 tegn",
+            "expirationLabel": "Utløp",
+            "expirationPlaceholder": "Velg utløp",
+            "expirationDescription": "Tokener utløper automatisk etter valgt tid.",
+            "never": "Aldri",
+            "1day": "1 dag",
+            "7days": "7 dager",
+            "30days": "30 dager",
+            "errorMax": "Maks 32 tegn",
+            "errorNumber": "Må være et tall",
+            "errorInt": "Må være et heltall",
+            "errorPositive": "Må være større enn 0"
+        },
+        "notifications": {
+            "createSuccess": "Tilgangstoken opprettet",
+            "createSuccessDesc": "Tilgangstokenet ble opprettet.",
+            "updateSuccess": "Tilgangstoken oppdatert",
+            "updateSuccessDesc": "Tilgangstokenet ble oppdatert.",
+            "createFailed": "Oppretting feilet",
+            "updateFailed": "Oppdatering feilet",
+            "deleteSuccess": "Token slettet",
+            "deleteFailed": "Kunne ikke slette token",
+            "copied": "Kopiert til utklippstavle",
+            "genericError": "Handlingen feilet. Prøv igjen.",
+            "close": "Lukk",
+            "tryAgain": "Prøv igjen"
+        }
+    },
+    "permission": {
+        "scope": {
+            "global": "Global",
+            "account": "Konto #{{id}}"
+        },
+        "dialog": {
+            "global_title": "Globale tillatelser",
+            "account_title": "Kontotillatelser",
+            "global_description": "Systemomfattende tillatelser gitt til denne brukeren.",
+            "account_description": "Tillatelser som er begrenset til den valgte kontoen."
+        },
+        "category": {
+            "system_identity": "System og identitet",
+            "global_data": "Globale data (Administrator)",
+            "account": "Kontotillatelser"
+        },
+        "system": {
+            "access": "Grunnleggende systemtilgang",
+            "root": "Full systemkontroll"
+        },
+        "user": {
+            "manage": "Administrere alle brukere",
+            "view": "Vise grunnleggende brukernavn"
+        },
+        "token": {
+            "manage": "Administrere tilgangstokener"
+        },
+        "account": {
+            "create": "Opprette e-postkontoer",
+            "manage": "Administrere tildelte kontoer",
+            "manage_all": "Administrere alle kontoinnstillinger",
+            "read_details": "Vise kontodetaljer"
+        },
+        "data": {
+            "read": "Lese tildelte e-postdata",
+            "read_all": "Lese alle e-postdata",
+            "manage": "Administrere tildelte e-postmetadata",
+            "manage_all": "Administrere all e-postmetadata",
+            "raw_download": "Laste ned tildelte rå e-poster",
+            "raw_download_all": "Laste ned alle rå e-poster",
+            "delete": "Slette tildelte e-poster",
+            "delete_all": "Slette e-poster fra alle kontoer",
+            "export_batch": "Batch-eksportere tildelte data",
+            "export_batch_all": "Batch-eksportere alle data",
+            "import_batch": "Batch-importere e-postdata"
+        }
+    },
+    "users": {
+        "columns": {
+            "id": "ID",
+            "avatar": "Avatar",
+            "username": "Brukernavn",
+            "email": "E-postadresse",
+            "roles": "Roller og tillatelser",
+            "created_at": "Opprettet",
+            "updated_at": "Oppdatert",
+            "actions": "Handlinger"
+        },
+        "buttons": {
+            "add": "Legg til bruker",
+            "add_new": "Ny bruker"
+        },
+        "empty": {
+            "title": "Ingen brukere funnet",
+            "description": "Klikk på knappen nedenfor for å legge til din første bruker."
+        },
+        "nav": {
+            "users": "Brukere",
+            "roles": "Roller",
+            "api_tokens": "API-tokens"
+        },
+        "api_tokens": {
+            "empty": {
+                "title": "Ingen API-tokens funnet",
+                "description": "Det er ennå ikke generert noen API-tokens i systemet."
+            },
+            "button": {
+                "generate": "Generer nytt token"
+            },
+            "toolbar": {
+                "search_placeholder": "Søk etter navn, eier eller token..."
+            },
+            "table": {
+                "name": "Navn",
+                "type": "Type",
+                "last_used": "Sist brukt",
+                "expires_at": "Utløper",
+                "owner": "Eier",
+                "created": "Opprettet",
+                "api_key": "API-nøkkel",
+                "web_ui": "Web-grensesnitt",
+                "never": "Aldri",
+                "permanent": "Permanent",
+                "expired": "Utløpt",
+                "unnamed": "Navnløst token"
+            },
+            "unnamed": "Navnløst token",
+            "delete": {
+                "title": "Slett API-token",
+                "desc": "Du er i ferd med å slette dette API-tokenet permanent",
+                "prefix": "Token-prefiks",
+                "irreversible": "Denne handlingen kan ikke angres. Applikasjoner som bruker dette tokenet vil miste tilgangen umiddelbart.",
+                "confirm_label": "Skriv {{word}} nedenfor for å bekrefte:",
+                "confirm_placeholder": "Skriv \"{{word}}\" for å bekrefte",
+                "warning_title": "Advarsel",
+                "warning_desc": "Skript eller tjenester som bruker dette tokenet vil slutte å fungere. Sørg for at du har oppdatert systemene dine.",
+                "confirm_button": "Slett token",
+                "deleting": "Sletter..."
+            },
+            "toast": {
+                "deleted_title": "API-token slettet",
+                "deleted_desc": "Tokenet \"{{name}}\" ble fjernet.",
+                "delete_failed_title": "Sletting mislyktes",
+                "delete_failed": "Kunne ikke slette tokenet, vennligst prøv igjen."
+            }
+        },
+        "tokens": {
+            "schema": {
+                "name_max": "Maks 32 tegn",
+                "expire_number": "Må være et tall",
+                "expire_int": "Må være et heltall",
+                "expire_positive": "Må være større enn 0"
+            },
+            "toast": {
+                "update_success_title": "Token oppdatert",
+                "update_success_desc": "Tilgangstoken ble oppdatert.",
+                "create_success_title": "Token opprettet",
+                "create_success_desc": "Tilgangstoken ble opprettet.",
+                "update_failed_title": "Oppdatering mislyktes",
+                "create_failed_title": "Opprettelse mislyktes"
+            },
+            "error": {
+                "fallback": "Handlingen mislyktes, vennligst prøv igjen senere."
+            },
+            "dialog": {
+                "edit_title": "Rediger tilgangstoken",
+                "create_title": "Opprett tilgangstoken",
+                "description": "Klikk på lagre når du er ferdig."
+            },
+            "fields": {
+                "name_label": "Navn",
+                "name_placeholder": "Gi tokenet et kort navn",
+                "name_hint": "Valgfritt · Maks 32 tegn",
+                "expire_label": "Utløp",
+                "expire_placeholder": "Velg utløpstid",
+                "expire_hint": "Tokenet utløper automatisk etter den valgte tiden."
+            },
+            "expire_options": {
+                "never": "Utløper aldri",
+                "1_day": "1 dag",
+                "7_days": "7 dager",
+                "30_days": "30 dager"
+            }
+        },
+        "tokens_action": {
+            "dialog": {
+                "title": "API-tokens",
+                "description": "Administrer API-tokens for denne brukeren."
+            },
+            "empty": {
+                "title": "Ingen API-tokens",
+                "description": "Denne brukeren har ingen API-tokens for øyeblikket."
+            },
+            "buttons": {
+                "add": "Legg til token"
+            },
+            "list": {
+                "unnamed_token": "Navnløst token",
+                "status_expired": "Utløpt",
+                "status_active": "Aktiv",
+                "expires_on_brief": "Utløper {{date}}",
+                "never_expires": "Utløper aldri",
+                "label_token": "Token",
+                "label_created": "Opprettet",
+                "label_last_used": "Sist brukt",
+                "label_expires_at": "Utløpsdato",
+                "never": "Aldri",
+                "button_delete": "Slett token"
+            },
+            "delete_dialog": {
+                "title": "Slette tilgangstoken?",
+                "description": "Denne handlingen kan ikke angres."
+            }
+        },
+        "actions": {
+            "schema": {
+                "account_required": "Vennligst velg en konto",
+                "role_required": "Vennligst velg en rolle",
+                "username_required": "Brukernavn er påkrevd",
+                "username_min": "Minst 5 tegn",
+                "username_max": "Maks 32 tegn",
+                "email_required": "E-post er påkrevd",
+                "email_invalid": "Oppgi en gyldig e-postadresse",
+                "global_role_required": "Tildel minst én global rolle",
+                "description_max": "Beskrivelse maks 256 tegn",
+                "ip_invalid": "Ugyldig IP-adresse",
+                "password_required": "Passord er påkrevd",
+                "password_min": "Minst 8 tegn",
+                "password_max": "Maks 256 tegn"
+            },
+            "toast": {
+                "updated": "Bruker oppdatert",
+                "created": "Bruker opprettet"
+            },
+            "dialog": {
+                "edit_title": "Rediger bruker: {{name}}",
+                "create_title": "Opprett ny bruker",
+                "subtitle": "Konfigurer identitet, tilgangsnivåer og sikkerhet."
+            },
+            "tabs": {
+                "general": "Generelt",
+                "permissions": "Kontorettigheter",
+                "security": "Sikkerhet og ACL"
+            },
+            "sections": {
+                "basic": "Grunnleggende identitet",
+                "global": "Globale rettigheter",
+                "mail_access": "E-post tilgangskontroll",
+                "mail_access_subtitle": "E-postkontoer som denne brukeren kan administrere.",
+                "policy": "Retningslinjer"
+            },
+            "fields": {
+                "username": "Brukernavn",
+                "username_hint": "Unik identifikator for innlogging.",
+                "email": "E-postadresse",
+                "email_hint": "Primær kontakt og varslinger.",
+                "password": "Passord",
+                "password_placeholder_create": "Minst 8 tegn",
+                "password_placeholder_edit": "La stå tom for å beholde nåværende",
+                "password_hint_create": "Sikkert passord for første oppsett.",
+                "password_hint_edit": "Skriv inn nytt passord kun hvis du vil endre det.",
+                "global_roles_hint": "Tildel systemrettigheter.",
+                "description": "Beskrivelse (valgfritt)",
+                "description_placeholder": "Notater om brukeren...",
+                "description_hint": "Interne notater (maks 256 tegn).",
+                "select_account": "Velg konto",
+                "assign_role": "Tildel rolle",
+                "ip_whitelist": "IP-hviteliste",
+                "ip_whitelist_hint": "Begrens pålogging til disse IP-ene (én per linje).",
+                "rate_quota": "Hastighetskvote",
+                "burst_interval": "Burst-intervall (sek)"
+            },
+            "buttons": {
+                "add_account": "Legg til konto",
+                "update": "Oppdater bruker",
+                "create": "Opprett bruker"
+            },
+            "states": {
+                "full_access": "Full tilgangsmodus",
+                "full_access_desc": "Administratorer har tilgang til alle kontoer som standard.",
+                "no_accounts": "Ingen spesifikke kontoer tildelt.",
+                "security_disabled": "Sikkerhetsregler er deaktivert."
+            },
+            "api_tokens": "API-tokens",
+            "placeholder": {
+                "filter": "Søk etter brukere..."
+            },
+            "delete": {
+                "title": "Slett bruker",
+                "confirm_msg": "Du sletter brukeren {{name}} (ID: {{id}}) permanent.",
+                "irreversible": "Denne handlingen kan ikke angres.",
+                "input_label": "Skriv bruker-ID for å bekrefte:",
+                "placeholder": "Skriv \"{{id}}\"",
+                "alert_title": "Advarsel: Permanent handling.",
+                "alert_desc": "Brukeren og alle tilhørende data vil bli slettet.",
+                "button_confirm": "Slett bruker",
+                "button_deleting": "Sletter...",
+                "toast": {
+                    "success_title": "Bruker slettet",
+                    "success_desc": "Brukeren \"{{name}}\" ble fjernet.",
+                    "failed_title": "Sletting mislyktes",
+                    "failed_fallback": "Kunne ikke slette brukeren."
+                }
+            }
+        }
+    },
+    "roles": {
+        "title": {
+            "create": "Opprett ny rolle",
+            "edit": "Rediger rolle: {{name}}"
+        },
+        "description_hint": "Definer tilgangsomfang og tillatelser.",
+        "form": {
+            "name_label": "Rollenavn",
+            "type_label": "Rolletype",
+            "desc_label": "Beskrivelse",
+            "matrix_label": "Rettighetsmatrise ({{type}})",
+            "builtin_badge": "Innebygd rolle",
+            "builtin_desc": "Denne rollen er forhåndsdefinert og kan ikke endres."
+        },
+        "types": {
+            "Global": "Global",
+            "Account": "Konto"
+        },
+        "categories": {
+            "identity": "Identitet og administrasjon",
+            "global_data": "Global datatilgang",
+            "account_resource": "Kontoresurs-tilgang"
+        },
+        "actions": {
+            "cancel": "Avbryt",
+            "submit_create": "Opprett rolle",
+            "submit_update": "Oppdater rolle",
+            "success_create": "Rollen ble opprettet",
+            "success_update": "Rollen ble oppdatert",
+            "failed": "Handlingen mislyktes",
+            "close": "Lukk",
+            "retry": "Prøv igjen",
+            "add": "Legg til rolle"
+        },
+        "validation": {
+            "name_required": "Rollenavn er påkrevd",
+            "perm_required": "Velg minst én tillatelse"
+        },
+        "columns": {
+            "id": "ID",
+            "name": "Navn",
+            "role_type": "Type",
+            "permissions": "Tillatelser",
+            "created_at": "Opprettet",
+            "updated_at": "Oppdatert"
+        },
+        "placeholder": {
+            "filter": "Søk etter roller..."
+        },
+        "delete": {
+            "dialog_title": "Slett rolle",
+            "warning_text": "Du sletter rollen {{name}} (ID: {{id}}) permanent.",
+            "irreversible": "Denne handlingen kan ikke angres.",
+            "confirm_label": "Skriv rolle-ID for å bekrefte:",
+            "placeholder": "Skriv \"{{id}}\"",
+            "alert_title": "Advarsel: Permanent handling.",
+            "alert_desc": "Sletting av denne rollen vil fjerne den fra alle tildelte brukere.",
+            "confirm_btn": "Slett rolle",
+            "deleting": "Sletter...",
+            "success_title": "Rolle slettet",
+            "success_desc": "Rollen \"{{name}}\" ble fjernet.",
+            "error_title": "Sletting mislyktes",
+            "error_fallback": "Kunne ikke slette rollen."
+        },
+        "details": {
+            "title": "Tillatelser: {{name}}",
+            "unknown": "Ukjent rolle",
+            "role_badge": "{{type}}-rolle",
+            "desc_global": "Global administrasjon og systemtilgang.",
+            "desc_account": "Tilgang og datahandlinger for individuelle kontoer.",
+            "close_btn": "Lukk",
+            "view_permissions": "Se detaljer"
+        },
+        "empty": {
+            "title": "Ingen roller funnet",
+            "desc": "Du har ikke opprettet noen egendefinerte roller ennå."
+        }
+    },
+    "profile": {
+        "avatar_alt": "Avatar",
+        "menu": {
+            "profile": "Profil",
+            "settings": "Innstillinger",
+            "sign_out": "Logg ut"
+        }
     }
 }

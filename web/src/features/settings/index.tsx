@@ -18,38 +18,52 @@
 
 
 import { Outlet } from '@tanstack/react-router'
-import { Separator } from '@/components/ui/separator'
 import { Main } from '@/components/layout/main'
 import SidebarNav from './components/sidebar-nav'
-import { ShieldEllipsis, Waypoints } from 'lucide-react'
+import { KeyRound, Palette, SettingsIcon, UserCog, Waypoints } from 'lucide-react'
 import { FixedHeader } from '@/components/layout/fixed-header'
+import { useCurrentUser } from '@/hooks/use-current-user'
 import { useTranslation } from 'react-i18next'
 
 export default function Settings() {
   const { t } = useTranslation()
+  const { require_any_permission, canGlobal } = useCurrentUser()
+
 
   const sidebarNavItems = [
     {
-      title: t('settings.root', 'Root'),
-      icon: <ShieldEllipsis size={18} />,
-      href: '/settings/root',
+      title: t('settings.sidebar.profile'),
+      href: '/settings/profile',
+      icon: <UserCog size={18} />,
     },
     {
-      title: t('settings.proxy', 'Proxy'),
+      title: t('settings.appearance.title'),
+      href: '/settings/appearance',
+      icon: <Palette size={18} />,
+    },
+    {
+      title: t('settings.sidebar.apiTokens'),
+      href: '/settings/api-tokens',
+      icon: <KeyRound size={18} />,
+    },
+    {
+      title: t('settings.sidebar.proxy'),
       icon: <Waypoints size={18} />,
       href: '/settings/proxy',
-    }
-  ]
+      visible: require_any_permission(['system:root', 'account:create']),
+    },
+    {
+      title: t('settings.sidebar.configurations'),
+      icon: <SettingsIcon size={18} />,
+      href: '/settings/configurations',
+      visible: canGlobal('system:root'),
+    },
+  ].filter(item => item.visible !== false)
 
   return (
     <>
       <FixedHeader />
-
-      <Main fixed>
-        <h1 className='text-2xl font-bold tracking-tight md:text-3xl'>
-          {t('settings.title', 'Settings')}
-        </h1>
-        <Separator className='my-4 lg:my-6' />
+      <Main>
         <div className='flex flex-1 flex-col space-y-2 md:space-y-2 overflow-hidden lg:flex-row lg:space-x-12 lg:space-y-0'>
           <aside className='top-0 lg:sticky lg:w-1/5'>
             <SidebarNav items={sidebarNavItems} />

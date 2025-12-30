@@ -3,6 +3,7 @@
         "submit": "送信",
         "cancel": "キャンセル",
         "save": "保存",
+        "save_changes": "変更を保存",
         "delete": "削除",
         "edit": "編集",
         "search": "検索",
@@ -19,16 +20,16 @@
         "empty": "空",
         "noData": "データなし",
         "table": {
-            "noResults": "結果が見つかりませんでした"
+            "noResults": "結果が見つかりません。"
         },
-        "failed": "失敗しました",
+        "failed": "失敗",
         "notFound": "見つかりません",
         "back": "戻る",
         "goBack": "戻る",
         "backToHome": "ホームに戻る",
         "tryAgain": "再試行",
         "more": "詳細",
-        "actions": "アクション",
+        "actions": "操作",
         "filter": "フィルター",
         "reset": "リセット",
         "clear": "クリア",
@@ -36,11 +37,17 @@
         "apply": "適用",
         "select": "選択",
         "selectAll": "すべて選択",
-        "deselectAll": "すべて解除",
+        "deselectAll": "選択を解除",
         "all": "すべて",
         "none": "なし",
-        "showLess": "少なく表示",
-        "showMore": "さらに表示..."
+        "showLess": "表示を減らす",
+        "showMore": "もっと見る...",
+        "project_description": "Bichonはオープンソースプロジェクトです。",
+        "view_on_github_button": "GitHubで表示",
+        "op_failed": "操作に失敗しました",
+        "na": "なし",
+        "retry": "再試行",
+        "deleting": "削除中..."
     },
     "navigation": {
         "home": "ホーム",
@@ -53,7 +60,8 @@
         "apiDocs": "APIドキュメント",
         "general": "一般",
         "auth": "認証",
-        "other": "その他"
+        "other": "その他",
+        "users": "システムユーザー"
     },
     "auth": {
         "welcome": "Bichon へようこそ",
@@ -130,6 +138,46 @@
         "systemVersion": "システムバージョン"
     },
     "accounts": {
+        "beforeRelativeValue": "{{value}} {{unit}} 前より前のメールを同期",
+        "sinceRelativeValue": "過去 {{value}} {{unit}} 分のメールを同期",
+        "syncBatchSize": "同期バッチサイズ",
+        "syncBatchSizeDescription": "1回のIMAPリクエストで取得するメッセージ数",
+        "incrementalSyncDescription": "増分メール同期の実行頻度（分単位）",
+        "syncScope": "同期戦略",
+        "syncScopeDescription": "インデックスを作成し、アーカイブするメールを選択します。",
+        "selectMode": "フィルタモードを選択",
+        "syncAll": "すべてのメールを同期",
+        "sinceFixed": "指定した日付以降",
+        "sinceRelative": "最近のメールのみ同期",
+        "beforeRelative": "古いメールのみアーカイブ",
+        "duration": "期間",
+        "unit": "単位",
+        "accessControl": "アクセス制御",
+        "owner": "作成者",
+        "access_control": {
+            "title": "アカウントアクセス割り当て",
+            "description": "{{email}} にロールと権限ユーザーを割り当てます",
+            "role_label": "アクセスロール",
+            "role_placeholder": "ロールを選択",
+            "role_loading": "ロールを読み込み中...",
+            "user_label": "権限ユーザーを選択",
+            "user_search_placeholder": "ユーザー名またはメールで検索...",
+            "user_empty": "ユーザーが見つかりません",
+            "user_selected_count": "選択済み: {{count}} 名",
+            "buttons": {
+                "cancel": "キャンセル",
+                "save": "割り当てを保存"
+            },
+            "validation": {
+                "user_required": "少なくとも1人のユーザーを選択してください",
+                "role_required": "割り当てるロールを選択してください"
+            },
+            "toast": {
+                "success_title": "割り当て完了",
+                "success_desc": "{{email}} に権限が正常に割り当てられました",
+                "failed_title": "割り当て失敗"
+            }
+        },
         "title": "メールアカウント",
         "description": "メールアカウントを管理・設定します。",
         "addImap": "IMAPアカウントを追加",
@@ -350,6 +398,13 @@
         }
     },
     "search": {
+        "size": "サイズ",
+        "any": "指定なし",
+        "tiny": "極小（15 KB 未満）",
+        "small": "小（2 MB 未満）",
+        "medium": "中（20 MB 未満）",
+        "large": "大（20 MB 以上）",
+        "sizeDescription": "サイズは添付ファイルを含むメール全体の容量を指します。",
         "title": "検索",
         "searching": "検索中です。お待ちください…",
         "noEmailsFound": "メールが見つかりませんでした",
@@ -423,6 +478,25 @@
             "noSubject": "(件名なし)",
             "loadingMore": "読み込み中...",
             "loadMore": "さらに読み込む"
+        },
+        "bulkActions": {
+            "ariaLabel": "{{count}} 件のメッセージを選択中。一括操作ツールバー",
+            "delete": "削除",
+            "deleteDesc": "選択したメッセージを削除",
+            "selected": "{{count}} 件選択済み",
+            "clear": "選択を解除"
+        },
+        "delete": {
+            "title": "メッセージを削除",
+            "confirmPrefix": "本当に",
+            "countLabel": "{{count}} 件のメッセージを削除しますか？",
+            "confirmDetail": "この操作は取り消しできません。",
+            "confirmButton": "削除",
+            "warningTitle": "警告",
+            "warningDesc": "削除されたメッセージは完全に削除され、復元することはできません。",
+            "successTitle": "削除完了",
+            "successDesc": "選択したメッセージは正常に削除されました。",
+            "errorTitle": "削除に失敗しました"
         }
     },
     "mail": {
@@ -644,6 +718,31 @@
         "interval": "間隔"
     },
     "settings": {
+        "appearance": {
+            "title": "外観",
+            "field": {
+                "language": "表示言語",
+                "theme": "インターフェーステーマ"
+            },
+            "description": {
+                "language": "Web UIで使用する言語を選択します。",
+                "theme": "ライトモードまたはダークモードを選択します。"
+            },
+            "placeholder": {
+                "select_language": "言語を選択"
+            },
+            "command": {
+                "search": "言語を検索...",
+                "no_results": "言語が見つかりません。"
+            },
+            "theme": {
+                "light": "ライト",
+                "dark": "ダーク"
+            },
+            "button": {
+                "update": "設定を更新"
+            }
+        },
         "title": "設定",
         "general": "一般",
         "proxy": "プロキシ",
@@ -705,7 +804,60 @@
         "pleaseUseAnIpAddressForBetterReliability": "信頼性を高めるため、ホスト名やドメインではなくIPアドレス（例: 127.0.0.1）を使用してください。",
         "adding": "追加中...",
         "yourProxyHasBeenSuccessfully": "プロキシは正常に{{action}}されました。",
-        "proxyUpdateOrAddFailed": "{{action}}に失敗しました。しばらくしてからもう一度お試しください"
+        "proxyUpdateOrAddFailed": "{{action}}に失敗しました。しばらくしてからもう一度お試しください",
+        "sidebar": {
+            "profile": "プロフィール",
+            "apiTokens": "APIトークン",
+            "proxy": "ネットワークプロキシ",
+            "configurations": "システム設定"
+        },
+        "profile": {
+            "loadError": "ユーザー情報の読み込みに失敗しました。",
+            "uploadTitle": "アバターをアップロード",
+            "maxSize": "最大 {{size}}",
+            "avatarAlt": "アバター",
+            "removeAvatar": "アバターを削除",
+            "uploadError": "ファイルのアップロードエラー",
+            "field": {
+                "username": "ユーザー名",
+                "email": "メールアドレス",
+                "password": "パスワード"
+            },
+            "placeholder": {
+                "password_keep": "空欄のままにすると現在のパスワードを保持します"
+            },
+            "button": {
+                "update_profile": "プロフィールを更新",
+                "permissions": "権限",
+                "view_global_permissions": "グローバル権限を表示"
+            },
+            "section": {
+                "roles": "ロール",
+                "accounts": "連携アカウント {{count}} 件"
+            },
+            "account": {
+                "id": "アカウントID：{{id}}"
+            },
+            "toast": {
+                "updated": "プロフィールが正常に更新されました",
+                "update_failed": "プロフィールの更新に失敗しました"
+            },
+            "validation": {
+                "username": {
+                    "required": "ユーザー名は必須です",
+                    "min": "ユーザー名は5文字以上である必要があります",
+                    "max": "ユーザー名は32文字以内である必要があります"
+                },
+                "email": {
+                    "required": "メールアドレスは必須です",
+                    "invalid": "有効なメールアドレスを入力してください"
+                },
+                "password": {
+                    "min": "パスワードは8文字以上である必要があります",
+                    "max": "パスワードは256文字以内である必要があります"
+                }
+            }
+        }
     },
     "apiDocs": {
         "choosePreferredType": "ご希望のAPIドキュメントタイプを選択してください",
@@ -765,7 +917,8 @@
         "folderLimitMustBeNumber": "フォルダーの制限は数値である必要があります",
         "folderLimitMustBeAtLeast100": "フォルダーの制限は100以上である必要があります",
         "incrementalSyncMustBeNumber": "増分同期間隔は数値である必要があります",
-        "incrementalSyncMustBeAtLeast10": "増分同期間隔は10分以上である必要があります"
+        "incrementalSyncMustBeAtLeast10": "増分同期間隔は10分以上である必要があります",
+        "pleaseEnterUsernameOrEmail": "ユーザー名またはメールアドレスを入力してください"
     },
     "table": {
         "noResults": "結果が見つかりませんでした",
@@ -780,7 +933,17 @@
         "desc": "降順",
         "hide": "非表示",
         "edit": "編集",
-        "delete": "削除"
+        "delete": "削除",
+        "pagination": {
+            "selected": "{{selected}} / {{total}} 行を選択済み。",
+            "fixed_page_size": "1ページあたり {{size}} 行。",
+            "rows_per_page": "ページあたりの行数",
+            "page_info": "{{page}} / {{total}} ページ",
+            "first": "最初のページへ",
+            "previous": "前のページ",
+            "next": "次のページ",
+            "last": "最後のページへ"
+        }
     },
     "proxyDelete": {
         "title": "プロキシを削除",
@@ -797,5 +960,471 @@
         "warningTitle": "警告！",
         "warningDesc": "ご注意ください。この操作は元に戻せません。",
         "deleteBtn": "削除"
+    },
+    "systemConfig": {
+        "pageTitle": "システムレベルの設定",
+        "pageDescription": "これらのパラメータは、CLIフラグまたは環境変数を介して初期化されます。環境の一貫性を確保するため、現在は読み取り専用です。",
+        "status": {
+            "enabled": "有効",
+            "disabled": "無効",
+            "configured": "設定済み",
+            "missing": "未設定",
+            "auto": "自動",
+            "notSet": "未設定"
+        },
+        "sections": {
+            "network": {
+                "title": "ネットワーク",
+                "desc": "HTTPおよびパブリックアクセス"
+            },
+            "cors": {
+                "title": "CORS",
+                "desc": "クロスオリジンアクセスのルール"
+            },
+            "logging": {
+                "title": "ロギング",
+                "desc": "ログ出力の動作"
+            },
+            "storage": {
+                "title": "ストレージとキャッシュ",
+                "desc": "データベースのパスと制限"
+            },
+            "security": {
+                "title": "セキュリティ",
+                "desc": "認証と暗号化"
+            },
+            "performance": {
+                "title": "パフォーマンス",
+                "desc": "並行性と圧縮"
+            }
+        }
+    },
+    "apiTokens": {
+        "page": {
+            "loadError": "APIトークンの読み込みに失敗しました。",
+            "emptyTitle": "APIトークンがありません",
+            "emptyDescription": "APIトークンはまだ作成されていません。作成するには以下をクリックしてください。",
+            "addBtn": "トークンを追加"
+        },
+        "list": {
+            "unnamedToken": "無名のトークン",
+            "statusActive": "有効",
+            "statusExpired": "期限切れ",
+            "neverExpires": "無期限",
+            "expiresOnShort": "有効期限: {{date}}",
+            "tokenLabel": "トークン",
+            "createdLabel": "作成日",
+            "lastUsedLabel": "最終使用日",
+            "expiresOnLabel": "有効期限",
+            "neverUsed": "未使用",
+            "neverLabel": "なし",
+            "deleteBtn": "トークンを削除"
+        },
+        "dialog": {
+            "createTitle": "アクセストークンの作成",
+            "editTitle": "アクセストークンの編集",
+            "description": "完了したら保存をクリックしてください。",
+            "save": "保存",
+            "saveChanges": "変更を保存"
+        },
+        "deleteDialog": {
+            "title": "アクセストークンを削除しますか？",
+            "description": "この操作は取り消せません。このトークンを使用しているアプリケーションは直ちにアクセスできなくなります。",
+            "cancel": "キャンセル",
+            "confirm": "削除",
+            "deleting": "削除中..."
+        },
+        "form": {
+            "nameLabel": "名前",
+            "namePlaceholder": "トークンの短い名前を入力してください",
+            "nameDescription": "任意 · 最大32文字",
+            "expirationLabel": "有効期限",
+            "expirationPlaceholder": "期限を選択",
+            "expirationDescription": "トークンは選択した期間後に自動的に期限切れになります。",
+            "never": "無期限",
+            "1day": "1日",
+            "7days": "7日間",
+            "30days": "30日間",
+            "errorMax": "最大32文字まで",
+            "errorNumber": "数値である必要があります",
+            "errorInt": "整数である必要があります",
+            "errorPositive": "0より大きい必要があります"
+        },
+        "notifications": {
+            "createSuccess": "アクセストークンを作成しました",
+            "createSuccessDesc": "アクセストークンが正常に作成されました。",
+            "updateSuccess": "アクセストークンを更新しました",
+            "updateSuccessDesc": "アクセストークンが正常に更新されました。",
+            "createFailed": "作成失敗",
+            "updateFailed": "更新失敗",
+            "deleteSuccess": "トークンを削除しました",
+            "deleteFailed": "削除に失敗しました",
+            "copied": "クリップボードにコピーしました",
+            "genericError": "操作に失敗しました。もう一度お試しください。",
+            "close": "閉じる",
+            "tryAgain": "再試行"
+        }
+    },
+    "permission": {
+        "scope": {
+            "global": "グローバル",
+            "account": "アカウント #{{id}}"
+        },
+        "dialog": {
+            "global_title": "グローバル権限",
+            "account_title": "アカウント権限",
+            "global_description": "このユーザーに付与されたシステム全体の権限。",
+            "account_description": "選択されたアカウントに限定された権限。"
+        },
+        "category": {
+            "system_identity": "システムと認証",
+            "global_data": "グローバルデータ（管理者）",
+            "account": "アカウント権限"
+        },
+        "system": {
+            "access": "基本システムアクセス",
+            "root": "システム完全制御"
+        },
+        "user": {
+            "manage": "すべてのユーザーを管理",
+            "view": "基本ユーザー名を閲覧"
+        },
+        "token": {
+            "manage": "アクセストークン管理"
+        },
+        "account": {
+            "create": "メールアカウント作成",
+            "manage": "割り当てられたアカウントを管理",
+            "manage_all": "すべてのアカウント設定を管理",
+            "read_details": "アカウント詳細を閲覧"
+        },
+        "data": {
+            "read": "割り当てられたメールデータを閲覧",
+            "read_all": "すべてのメールデータを閲覧",
+            "manage": "割り当てられたメールメタデータを管理",
+            "manage_all": "すべてのメールメタデータを管理",
+            "raw_download": "割り当てられた生メールをダウンロード",
+            "raw_download_all": "すべての生メールをダウンロード",
+            "delete": "割り当てられたメールを削除",
+            "delete_all": "すべてのアカウントのメールを削除",
+            "export_batch": "割り当てデータを一括エクスポート",
+            "export_batch_all": "すべてのデータを一括エクスポート",
+            "import_batch": "メールデータを一括インポート"
+        }
+    },
+    "users": {
+        "columns": {
+            "id": "ID",
+            "avatar": "アバター",
+            "username": "ユーザー名",
+            "email": "メールアドレス",
+            "roles": "ロールと権限",
+            "created_at": "作成日時",
+            "updated_at": "更新日時",
+            "actions": "操作"
+        },
+        "buttons": {
+            "add": "ユーザーを追加",
+            "add_new": "新規ユーザー追加"
+        },
+        "empty": {
+            "title": "ユーザーが見つかりません",
+            "description": "下のボタンをクリックして、最初のユーザーを追加してください。"
+        },
+        "nav": {
+            "users": "ユーザー",
+            "roles": "ロール",
+            "api_tokens": "API トークン"
+        },
+        "api_tokens": {
+            "empty": {
+                "title": "API トークンが見つかりません",
+                "description": "システム内に API トークンがまだ生成されていません。"
+            },
+            "button": {
+                "generate": "新規トークン生成"
+            },
+            "toolbar": {
+                "search_placeholder": "名前、所有者、またはトークンで検索..."
+            },
+            "table": {
+                "name": "名前",
+                "type": "タイプ",
+                "last_used": "最終使用",
+                "expires_at": "有効期限",
+                "owner": "所有者",
+                "created": "作成日",
+                "api_key": "API キー",
+                "web_ui": "Web UI",
+                "never": "なし",
+                "permanent": "無期限",
+                "expired": "期限切れ",
+                "unnamed": "未命名トークン"
+            },
+            "unnamed": "未命名トークン",
+            "delete": {
+                "title": "API トークンの削除",
+                "desc": "この API トークンを完全に削除しようとしています",
+                "prefix": "トークン接頭辞",
+                "irreversible": "この操作は取り消せません。このトークンを使用しているすべてのアプリケーションは、直ちにアクセスできなくなります。",
+                "confirm_label": "確認のため、下に {{word}} と入力してください：",
+                "confirm_placeholder": "確認のために「{{word}}」と入力",
+                "warning_title": "警告",
+                "warning_desc": "このトークンを使用しているスクリプト、サービス、または統合は失敗します。続行する前にシステムが更新されていることを確認してください。",
+                "confirm_button": "トークンを削除",
+                "deleting": "削除中..."
+            },
+            "toast": {
+                "deleted_title": "API トークンを削除しました",
+                "deleted_desc": "トークン「{{name}}」が正常に削除されました。",
+                "delete_failed_title": "削除に失敗しました",
+                "delete_failed": "トークンの削除に失敗しました。もう一度お試しください。"
+            }
+        },
+        "tokens": {
+            "schema": {
+                "name_max": "最大 32 文字",
+                "expire_number": "数字である必要があります",
+                "expire_int": "整数である必要があります",
+                "expire_positive": "0 より大きい必要があります"
+            },
+            "toast": {
+                "update_success_title": "アクセストークンを更新しました",
+                "update_success_desc": "アクセストークンが正常に更新されました。",
+                "create_success_title": "アクセストークンを作成しました",
+                "create_success_desc": "アクセストークンが正常に作成されました。",
+                "update_failed_title": "更新失敗",
+                "create_failed_title": "作成失敗"
+            },
+            "error": {
+                "fallback": "操作に失敗しました。後でもう一度お試しください。"
+            },
+            "dialog": {
+                "edit_title": "アクセストークンの編集",
+                "create_title": "アクセストークンの作成",
+                "description": "完了したら保存をクリックしてください。"
+            },
+            "fields": {
+                "name_label": "名前",
+                "name_placeholder": "このトークンに短い名前を付けてください",
+                "name_hint": "任意 · 最大 32 文字",
+                "expire_label": "有効期限",
+                "expire_placeholder": "期限を選択",
+                "expire_hint": "トークンは選択した時間の経過後に自動的に失効します。"
+            },
+            "expire_options": {
+                "never": "無期限",
+                "1_day": "1 日",
+                "7_days": "7 日",
+                "30_days": "30 日"
+            }
+        },
+        "tokens_action": {
+            "dialog": {
+                "title": "API トークン",
+                "description": "このユーザーの API トークンを管理します。"
+            },
+            "empty": {
+                "title": "API トークンなし",
+                "description": "このユーザーには現在 API トークンがありません。"
+            },
+            "buttons": {
+                "add": "トークンを追加"
+            },
+            "list": {
+                "unnamed_token": "未命名トークン",
+                "status_expired": "期限切れ",
+                "status_active": "アクティブ",
+                "expires_on_brief": "{{date}} に期限切れ",
+                "never_expires": "無期限",
+                "label_token": "トークン",
+                "label_created": "作成日",
+                "label_last_used": "最終使用",
+                "label_expires_at": "有効期限",
+                "never": "なし",
+                "button_delete": "トークンを削除"
+            },
+            "delete_dialog": {
+                "title": "アクセストークンを削除しますか？",
+                "description": "この操作は取り消せません。"
+            }
+        },
+        "actions": {
+            "schema": {
+                "account_required": "アカウントを選択してください",
+                "role_required": "ロールを選択してください",
+                "username_required": "ユーザー名は必須です",
+                "username_min": "ユーザー名は 5 文字以上である必要があります",
+                "username_max": "ユーザー名は 32 文字以内である必要があります",
+                "email_required": "メールアドレスは必須です",
+                "email_invalid": "有効なメールアドレスを入力してください",
+                "global_role_required": "少なくとも 1 つのグローバルロールを割り当ててください",
+                "description_max": "説明は 256 文字以内である必要があります",
+                "ip_invalid": "無効な IP アドレスが検出されました",
+                "password_required": "パスワードは必須です",
+                "password_min": "パスワードは 8 文字以上である必要があります",
+                "password_max": "パスワードは 256 文字以内である必要があります"
+            },
+            "toast": {
+                "updated": "ユーザーを更新しました",
+                "created": "ユーザーを作成しました"
+            },
+            "dialog": {
+                "edit_title": "ユーザー編集: {{name}}",
+                "create_title": "新規ユーザー作成",
+                "subtitle": "ID、アクセスレベル、およびセキュリティポリシーを設定します。"
+            },
+            "tabs": {
+                "general": "基本情報",
+                "permissions": "アカウント権限",
+                "security": "セキュリティと ACL"
+            },
+            "sections": {
+                "basic": "基本設定",
+                "global": "グローバル権限",
+                "mail_access": "メールアクセス制御",
+                "mail_access_subtitle": "このユーザーが管理できるメールアカウントを定義します。",
+                "policy": "ポリシー切り替え"
+            },
+            "fields": {
+                "username": "ユーザー名",
+                "username_hint": "ログインに使用する一意識別子。",
+                "email": "メールアドレス",
+                "email_hint": "主要な連絡先および通知用アドレス。",
+                "password": "パスワード",
+                "password_placeholder_create": "8 文字以上",
+                "password_placeholder_edit": "現在のパスワードを維持する場合は空白",
+                "password_hint_create": "初期設定用の安全なパスワード。",
+                "password_hint_edit": "パスワードを変更する場合のみ入力してください。",
+                "global_roles_hint": "高度なシステム権限を割り当てます。",
+                "description": "説明 (任意)",
+                "description_placeholder": "ユーザーに関するメモを追加...",
+                "description_hint": "内部用の説明（最大 256 文字）。",
+                "select_account": "アカウントを選択",
+                "assign_role": "ロールを割り当て",
+                "ip_whitelist": "IP ホワイトリスト",
+                "ip_whitelist_hint": "ログインを制限する IP アドレス（1 行に 1 つ）。",
+                "rate_quota": "レート制限",
+                "burst_interval": "バースト間隔 (秒)"
+            },
+            "buttons": {
+                "add_account": "アカウントを追加",
+                "update": "ユーザーを更新",
+                "create": "ユーザーを作成"
+            },
+            "states": {
+                "full_access": "フルアクセスモード",
+                "full_access_desc": "システム管理者ロールを持つユーザーは、手動の割り当てなしですべてのアカウントにアクセスできます。",
+                "no_accounts": "特定のアカウントは割り当てられていません。",
+                "security_disabled": "現在、高度なセキュリティポリシーは無効です。"
+            },
+            "api_tokens": "API トークン",
+            "placeholder": {
+                "filter": "ユーザーを検索..."
+            },
+            "delete": {
+                "title": "ユーザー削除",
+                "confirm_msg": "ユーザー {{name}} (ID: {{id}}) を完全に削除しようとしています。",
+                "irreversible": "この操作は取り消せません。",
+                "input_label": "確認のため、下にユーザー ID を入力してください：",
+                "placeholder": "確認のために「{{id}}」と入力",
+                "alert_title": "警告：この操作は永続的です。",
+                "alert_desc": "削除すると、ユーザーと関連データはすべて直ちに消去されます。",
+                "button_confirm": "ユーザーを削除",
+                "button_deleting": "削除中...",
+                "toast": {
+                    "success_title": "ユーザーを削除しました",
+                    "success_desc": "ユーザー「{{name}}」が正常に削除されました。",
+                    "failed_title": "削除失敗",
+                    "failed_fallback": "ユーザーの削除に失敗しました。"
+                }
+            }
+        }
+    },
+    "roles": {
+        "title": {
+            "create": "新規ロール作成",
+            "edit": "ロール編集: {{name}}"
+        },
+        "description_hint": "アクセス範囲と機能権限を定義します。",
+        "form": {
+            "name_label": "ロール名",
+            "type_label": "ロールタイプ",
+            "desc_label": "説明",
+            "matrix_label": "{{type}} 権限マトリックス",
+            "builtin_badge": "組み込みロール",
+            "builtin_desc": "このロールはシステムによって事前定義されており、読み取り専用です。"
+        },
+        "types": {
+            "Global": "グローバル",
+            "Account": "アカウント"
+        },
+        "categories": {
+            "identity": "ID と管理",
+            "global_data": "グローバルデータアクセス",
+            "account_resource": "アカウントリソースアクセス"
+        },
+        "actions": {
+            "cancel": "キャンセル",
+            "submit_create": "ロールを作成",
+            "submit_update": "ロールを更新",
+            "success_create": "ロールを作成しました",
+            "success_update": "ロールを更新しました",
+            "failed": "操作失敗",
+            "close": "閉じる",
+            "retry": "再試行",
+            "add": "ロールを追加"
+        },
+        "validation": {
+            "name_required": "ロール名は必須です",
+            "perm_required": "少なくとも 1 つの権限を選択してください"
+        },
+        "columns": {
+            "id": "ID",
+            "name": "名前",
+            "role_type": "ロールタイプ",
+            "permissions": "権限",
+            "created_at": "作成日時",
+            "updated_at": "更新日時"
+        },
+        "placeholder": {
+            "filter": "ロールを検索..."
+        },
+        "delete": {
+            "dialog_title": "ロール削除",
+            "warning_text": "ロール {{name}} (ID: {{id}}) を完全に削除しようとしています。",
+            "irreversible": "この操作は取り消せません。",
+            "confirm_label": "確認のため、ロール ID を入力してください：",
+            "placeholder": "「{{id}}」と入力",
+            "alert_title": "警告：永続的な操作です。",
+            "alert_desc": "このロールを削除すると、割り当てられているすべてのユーザーから削除されます。",
+            "confirm_btn": "ロールを削除",
+            "deleting": "削除中...",
+            "success_title": "ロールを削除しました",
+            "success_desc": "ロール「{{name}}」が正常に削除されました。",
+            "error_title": "削除失敗",
+            "error_fallback": "ロールを削除できませんでした。"
+        },
+        "details": {
+            "title": "ロール権限: {{name}}",
+            "unknown": "不明なロール",
+            "role_badge": "{{type}} ロール",
+            "desc_global": "グローバル管理およびシステムレベルのアクセス権限。",
+            "desc_account": "単一アカウントのアクセスおよびデータ操作権限。",
+            "close_btn": "詳細を閉じる",
+            "view_permissions": "権限の詳細"
+        },
+        "empty": {
+            "title": "ロールが見つかりません",
+            "desc": "カスタムロールがまだ作成されていません。"
+        }
+    },
+    "profile": {
+        "avatar_alt": "アバター",
+        "menu": {
+            "profile": "プロフィール",
+            "settings": "設定",
+            "sign_out": "ログアウト"
+        }
     }
 }

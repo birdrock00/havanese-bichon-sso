@@ -104,7 +104,7 @@ function CustomLabel({
                 alignItems: 'center',
             }}
         >
-            <FolderIcon className="mr-2"/>
+            <FolderIcon className="mr-2" />
             <span className="font-medium text-sm text-inherit">
                 {children}
             </span>
@@ -330,18 +330,6 @@ export function Mail({
                                     ))}
                                 </div>
                             ) : (
-                                // <TreeView
-                                //     data={buildTree(mailboxes ?? [])}
-                                //     clickRowToSelect={true}
-                                //     onSelectChange={(item) => {
-                                //         if (item) {
-                                //             setSelectedMailbox(mailboxes?.find(m => m.id === parseInt(item.id, 10)))
-                                //             setPage(0);
-                                //         } else {
-                                //             setSelectedMailbox(undefined)
-                                //         }
-                                //     }}
-                                // />
                                 <RichTreeView
                                     //checkboxSelection
                                     items={tree}
@@ -366,8 +354,8 @@ export function Mail({
                                     <MailList
                                         isLoading={isMessagesLoading}
                                         items={(envelopes?.items ?? []).sort((a, b) => {
-                                            const dateA = a.internal_date;
-                                            const dateB = b.internal_date;
+                                            const dateA = a.date;
+                                            const dateB = b.date;
                                             return dateB - dateA;
                                         })}
                                     />

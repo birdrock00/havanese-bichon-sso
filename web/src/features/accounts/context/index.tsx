@@ -17,10 +17,20 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import { AccountModel } from '@/api/account/api';
 import React from 'react'
-import { AccountModel } from '../data/schema'
 
-export type AccountDialogType = 'add-imap' | 'add-nosync' | 'edit-imap' | 'edit-nosync' | 'delete' | 'detail' | 'oauth2' | 'running-state' | 'sync-folders'
+export type AccountDialogType =
+  | 'add-imap'
+  | 'add-nosync'
+  | 'edit-imap'
+  | 'edit-nosync'
+  | 'delete'
+  | 'detail'
+  | 'oauth2'
+  | 'running-state'
+  | 'sync-folders'
+  | 'access-assign';
 
 interface AccountContextType {
   open: AccountDialogType | null

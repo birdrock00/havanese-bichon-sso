@@ -28,6 +28,7 @@ import { toast } from '@/hooks/use-toast';
 import { EmailEnvelope } from '@/api';
 import { validateTag } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface Props {
     open: boolean
@@ -37,6 +38,7 @@ interface Props {
 
 export function EditTagsDialog({ open, onOpenChange, currentEnvelope }: Props) {
     const { tags: availableTags } = useAvailableTags();
+    const queryClient = useQueryClient();
     const { mutate, isPending } = useUpdateTags();
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [inputValue, setInputValue] = useState('');
@@ -74,6 +76,26 @@ export function EditTagsDialog({ open, onOpenChange, currentEnvelope }: Props) {
     };
 
     const handleSave = () => {
+        if (inputValue.trim()) {
+            const normalized = inputValue.toLowerCase().trim();
+            const result = validateTag(normalized);
+
+            if (!result.valid) {
+                toast({
+                    title: t('search.addTags.invalidTitle'),
+                    description: result.error,
+                    variant: 'destructive',
+                });
+                return;
+            }
+
+            if (!selectedTags.includes(normalized)) {
+                setSelectedTags(prev => [...prev, normalized]);
+            }
+
+            setInputValue('');
+        }
+
         const updates = {
             [currentEnvelope.account_id]: [currentEnvelope.id],
         };
@@ -81,7 +103,9 @@ export function EditTagsDialog({ open, onOpenChange, currentEnvelope }: Props) {
         mutate(
             {
                 updates,
-                tags: selectedTags
+                tags: inputValue.trim()
+                    ? [...selectedTags, inputValue.toLowerCase().trim()]
+                    : selectedTags,
             },
             {
                 onSuccess: () => {
@@ -94,6 +118,7 @@ export function EditTagsDialog({ open, onOpenChange, currentEnvelope }: Props) {
                             </div>
                         ),
                     });
+                    queryClient.invalidateQueries({ queryKey: ['all-tags'] });
                     onOpenChange(false);
                 },
                 onError: (error: any) => {

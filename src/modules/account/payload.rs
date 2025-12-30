@@ -16,14 +16,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::collections::BTreeSet;
-
 use crate::modules::account::entity::ImapConfig;
 use crate::modules::account::migration::{AccountModel, AccountType};
-use crate::modules::account::since::DateSince;
+use crate::modules::account::since::{DateSince, RelativeDate};
 use crate::modules::error::code::ErrorCode;
 use crate::modules::error::BichonResult;
-use crate::modules::token::AccountInfo;
 use crate::{raise_error, validate_email};
 use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
@@ -36,21 +33,37 @@ pub struct AccountCreateRequest {
     pub imap: Option<ImapConfig>,
     pub enabled: bool,
     pub date_since: Option<DateSince>,
+    pub date_before: Option<RelativeDate>,
     pub account_type: AccountType,
     #[oai(validator(minimum(value = "100")))]
     pub folder_limit: Option<u32>,
     #[oai(validator(minimum(value = "10"), maximum(value = "480")))]
     pub sync_interval_min: Option<i64>,
+    #[oai(validator(minimum(value = "30"), maximum(value = "200")))]
+    pub sync_batch_size: Option<u32>,
     pub use_proxy: Option<u64>,
     pub use_dangerous: bool,
     pub pgp_key: Option<String>,
 }
 
 impl AccountCreateRequest {
-    pub fn create_entity(self) -> BichonResult<AccountModel> {
+    pub fn create_entity(self, user_id: u64) -> BichonResult<AccountModel> {
+        if self.date_before.is_some() && self.date_since.is_some() {
+            return Err(raise_error!(
+                "date_before and date_since are mutually exclusive; specify only one time boundary"
+                    .into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+
         if let Some(date_since) = self.date_since.as_ref() {
             date_since.validate()?;
         }
+
+        if let Some(date_before) = self.date_before.as_ref() {
+            date_before.validate_date()?;
+        }
+
         match self.account_type {
             AccountType::IMAP => {
                 match &self.imap {
@@ -71,7 +84,7 @@ impl AccountCreateRequest {
             }
             AccountType::NoSync => {}
         }
-        Ok(AccountModel::new(self)?)
+        Ok(AccountModel::new(user_id, self)?)
     }
 
     fn validate_request(imap: &ImapConfig, email: &str) -> BichonResult<()> {
@@ -107,6 +120,7 @@ pub struct AccountUpdateRequest {
     /// - First-time sync optimization for large accounts
     /// - Reducing server load during resyncs
     pub date_since: Option<DateSince>,
+    pub date_before: Option<RelativeDate>,
     /// Max emails to sync for this folder.  
     /// If not set, sync all emails.  
     /// otherwise sync up to `n` most recent emails (min 10).
@@ -129,6 +143,8 @@ pub struct AccountUpdateRequest {
     /// Incremental sync interval (seconds)
     #[oai(validator(minimum(value = "10"), maximum(value = "480")))]
     pub sync_interval_min: Option<i64>,
+    #[oai(validator(minimum(value = "30"), maximum(value = "200")))]
+    pub sync_batch_size: Option<u32>,
     /// Optional proxy ID for establishing the connection to external APIs (e.g., Gmail, Outlook).
     /// - If `None` or not provided, the client will connect directly to the API server.
     /// - If `Some(proxy_id)`, the client will use the pre-configured proxy with the given ID for API requests.
@@ -141,9 +157,22 @@ pub struct AccountUpdateRequest {
 
 impl AccountUpdateRequest {
     pub fn validate_update_request(&self, account: &AccountModel) -> BichonResult<()> {
+        if self.date_before.is_some() && self.date_since.is_some() {
+            return Err(raise_error!(
+                "date_before and date_since are mutually exclusive; specify only one time boundary"
+                    .into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+
         if let Some(date_since) = self.date_since.as_ref() {
             date_since.validate()?;
         }
+
+        if let Some(date_before) = self.date_before.as_ref() {
+            date_before.validate_date()?;
+        }
+
         if matches!(account.account_type, AccountType::IMAP) {
             if let Some(mailboxes) = self.sync_folders.as_ref() {
                 if mailboxes.is_empty() {
@@ -167,11 +196,11 @@ pub struct MinimalAccount {
 
 pub fn filter_accessible_accounts<'a>(
     all_accounts: &'a [MinimalAccount],
-    allowed: &BTreeSet<AccountInfo>,
+    allowed: &Vec<u64>,
 ) -> Vec<MinimalAccount> {
     all_accounts
         .iter()
-        .filter(|acct| allowed.iter().any(|a| a.id == acct.id))
+        .filter(|acct| allowed.contains(&acct.id))
         .cloned()
         .collect()
 }

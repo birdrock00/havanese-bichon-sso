@@ -20,16 +20,18 @@
 import {
   IconHelp,
   IconLayoutDashboard,
-  IconLockAccess,
   IconSettings
 } from '@tabler/icons-react'
-import { IdCard, Inbox, Mailbox, Search } from 'lucide-react'
+import { IdCard, Inbox, Mailbox, Search, Users2 } from 'lucide-react'
 import { type SidebarData } from '../types'
 import { useTranslation } from 'react-i18next'
+import { useCurrentUser } from '@/hooks/use-current-user'
 
 export function useSidebarData(): SidebarData {
   const { t } = useTranslation()
-  
+
+  const { require_any_permission } = useCurrentUser()
+
   return {
     navGroups: [
       {
@@ -69,11 +71,18 @@ export function useSidebarData(): SidebarData {
             title: t('navigation.oauth2'),
             url: '/oauth2',
             icon: IdCard,
-          },
+            visible: require_any_permission(['system:root', 'account:create']),
+          }
+        ]
+      },
+      {
+        title: t('navigation.users'),
+        items: [
           {
-            title: t('navigation.accessTokens'),
-            url: '/access-tokens',
-            icon: IconLockAccess,
+            title: t('navigation.users'),
+            url: '/users',
+            icon: Users2,
+            visible: require_any_permission(['system:root', 'user:manage']),
           }
         ]
       },

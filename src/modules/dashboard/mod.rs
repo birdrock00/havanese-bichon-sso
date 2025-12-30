@@ -16,14 +16,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::modules::users::permissions::Permission;
 use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use tantivy::{schema::Value, TantivyDocument};
 
 use crate::{
     bichon_version,
     modules::{
         account::migration::AccountModel,
+        common::auth::ClientContext,
         error::{code::ErrorCode, BichonResult},
         indexer::{manager::ENVELOPE_INDEX_MANAGER, schema::SchemaTools},
         settings::dir::DATA_DIR_MANAGER,
@@ -50,17 +53,47 @@ pub struct DashboardStats {
 }
 
 impl DashboardStats {
-    pub async fn get() -> BichonResult<Self> {
-        let mut stat = ENVELOPE_INDEX_MANAGER.get_dashboard_stats().await?;
-        stat.top_largest_emails = ENVELOPE_INDEX_MANAGER.top_10_largest_emails().await?;
-        stat.email_count = ENVELOPE_INDEX_MANAGER.total_emails()?;
-        stat.account_count = AccountModel::count().await?;
-        stat.storage_usage_bytes = get_total_size(&DATA_DIR_MANAGER.eml_dir)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        stat.index_usage_bytes = get_total_size(&DATA_DIR_MANAGER.envelope_dir)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+    pub async fn get(context: ClientContext) -> BichonResult<Self> {
+        let has_all_accounts = context
+            .has_permission(None, Permission::ACCOUNT_MANAGE_ALL)
+            .await;
+
+        let authorized_ids: Option<HashSet<u64>> = if has_all_accounts {
+            None
+        } else {
+            Some(context.user.account_access_map.keys().cloned().collect())
+        };
+
+        let mut stat = ENVELOPE_INDEX_MANAGER
+            .get_dashboard_stats(&authorized_ids)
+            .await?;
+
+        stat.top_largest_emails = ENVELOPE_INDEX_MANAGER
+            .top_10_largest_emails(&authorized_ids)
+            .await?;
+
+        stat.account_count = if has_all_accounts {
+            AccountModel::count().await?
+        } else {
+            authorized_ids.as_ref().map(|ids| ids.len()).unwrap_or(0)
+        };
+
+        stat.email_count = ENVELOPE_INDEX_MANAGER.total_emails(&authorized_ids)?;
+
+        if has_all_accounts {
+            stat.storage_usage_bytes = get_total_size(&DATA_DIR_MANAGER.eml_dir)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+            stat.index_usage_bytes = get_total_size(&DATA_DIR_MANAGER.envelope_dir)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        } else {
+            stat.storage_usage_bytes = 0;
+            stat.index_usage_bytes = 0;
+        }
+
         stat.system_version = bichon_version!().to_string();
         stat.commit_hash = env!("GIT_HASH").to_string();
+
         Ok(stat)
     }
 }

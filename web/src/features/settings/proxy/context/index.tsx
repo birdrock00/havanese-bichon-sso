@@ -18,7 +18,7 @@
 
 
 import React from 'react'
-import { Proxy } from '../data/schema'
+import { Proxy } from '@/api/system/api'
 
 export type ProxyDialogType = 'add' | 'edit' | 'delete'
 
