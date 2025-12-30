@@ -741,6 +741,14 @@
       },
       "button": {
         "update": "Aktualizuj preferencje"
+      },
+      "validation": {
+        "language": {
+          "required": "Proszę wybrać język."
+        },
+        "theme": {
+          "required": "Proszę wybrać motyw."
+        }
       }
     },
     "title": "Ustawienia",
@@ -1426,5 +1434,10 @@
       "settings": "Ustawienia",
       "sign_out": "Wyloguj się"
     }
+  },
+  "sign_out": {
+    "title": "Wyloguj się",
+    "desc": "Czy na pewno chcesz się wylogować? Aby uzyskać dostęp do konta, będziesz musiał zalogować się ponownie.",
+    "confirm": "Wyloguj się"
   }
 }

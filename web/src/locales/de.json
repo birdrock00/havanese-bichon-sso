@@ -741,6 +741,14 @@
             },
             "button": {
                 "update": "Einstellungen aktualisieren"
+            },
+            "validation": {
+                "language": {
+                    "required": "Bitte wählen Sie eine Sprache aus."
+                },
+                "theme": {
+                    "required": "Bitte wählen Sie ein Thema aus."
+                }
             }
         },
         "title": "Einstellungen",
@@ -1426,5 +1434,10 @@
             "settings": "Einstellungen",
             "sign_out": "Abmelden"
         }
+    },
+    "sign_out": {
+        "title": "Abmelden",
+        "desc": "Möchten Sie sich wirklich abmelden? Sie müssen sich erneut anmelden, um auf Ihr Konto zuzugreifen.",
+        "confirm": "Abmelden"
     }
 }

@@ -741,6 +741,14 @@
             },
             "button": {
                 "update": "설정 업데이트"
+            },
+            "validation": {
+                "language": {
+                    "required": "언어를 선택해주세요."
+                },
+                "theme": {
+                    "required": "테마를 선택해주세요."
+                }
             }
         },
         "title": "설정",
@@ -1426,5 +1434,10 @@
             "settings": "설정",
             "sign_out": "로그아웃"
         }
+    },
+    "sign_out": {
+        "title": "로그아웃",
+        "desc": "로그아웃하시겠습니까? 계정에 접근하려면 다시 로그인해야 합니다.",
+        "confirm": "로그아웃"
     }
 }

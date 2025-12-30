@@ -741,6 +741,14 @@
             },
             "button": {
                 "update": "Actualizar preferencias"
+            },
+            "validation": {
+                "language": {
+                    "required": "Por favor, seleccione un idioma."
+                },
+                "theme": {
+                    "required": "Por favor, seleccione un tema."
+                }
             }
         },
         "title": "Configuración",
@@ -1426,5 +1434,10 @@
             "settings": "Configuración",
             "sign_out": "Cerrar sesión"
         }
+    },
+    "sign_out": {
+        "title": "Cerrar sesión",
+        "desc": "¿Está seguro de que desea cerrar sesión? Necesitará iniciar sesión nuevamente para acceder a su cuenta.",
+        "confirm": "Cerrar sesión"
     }
 }

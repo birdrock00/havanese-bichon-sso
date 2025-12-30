@@ -741,6 +741,14 @@
             },
             "button": {
                 "update": "Atualizar preferências"
+            },
+            "validation": {
+                "language": {
+                    "required": "Por favor, selecione um idioma."
+                },
+                "theme": {
+                    "required": "Por favor, selecione um tema."
+                }
             }
         },
         "title": "Configurações",
@@ -1426,5 +1434,10 @@
             "settings": "Configurações",
             "sign_out": "Sair"
         }
+    },
+    "sign_out": {
+        "title": "Sair",
+        "desc": "Tem certeza de que deseja sair? Você precisará entrar novamente para acessar sua conta.",
+        "confirm": "Sair"
     }
 }

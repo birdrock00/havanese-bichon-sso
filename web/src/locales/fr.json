@@ -741,6 +741,14 @@
             },
             "button": {
                 "update": "Mettre à jour les préférences"
+            },
+            "validation": {
+                "language": {
+                    "required": "Veuillez sélectionner une langue."
+                },
+                "theme": {
+                    "required": "Veuillez sélectionner un thème."
+                }
             }
         },
         "title": "Paramètres",
@@ -1426,5 +1434,10 @@
             "settings": "Paramètres",
             "sign_out": "Se déconnecter"
         }
+    },
+    "sign_out": {
+        "title": "Déconnexion",
+        "desc": "Êtes-vous sûr de vouloir vous déconnecter ? Vous devrez vous reconnecter pour accéder à votre compte.",
+        "confirm": "Déconnexion"
     }
 }

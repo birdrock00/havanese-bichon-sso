@@ -1434,5 +1434,10 @@
             "settings": "Instellingen",
             "sign_out": "Uitloggen"
         }
+    },
+    "sign_out": {
+        "title": "Uitloggen",
+        "desc": "Weet je zeker dat je wilt uitloggen? Je moet opnieuw inloggen om toegang te krijgen tot je account.",
+        "confirm": "Uitloggen"
     }
 }

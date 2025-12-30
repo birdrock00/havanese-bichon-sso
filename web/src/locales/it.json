@@ -741,6 +741,14 @@
             },
             "button": {
                 "update": "Aggiorna preferenze"
+            },
+            "validation": {
+                "language": {
+                    "required": "Seleziona una lingua."
+                },
+                "theme": {
+                    "required": "Seleziona un tema."
+                }
             }
         },
         "title": "Impostazioni",
@@ -1426,5 +1434,10 @@
             "settings": "Impostazioni",
             "sign_out": "Disconnetti"
         }
+    },
+    "sign_out": {
+        "title": "Disconnetti",
+        "desc": "Sei sicuro di voler disconnetterti? Dovrai accedere di nuovo per usare il tuo account.",
+        "confirm": "Disconnetti"
     }
 }

@@ -1434,5 +1434,10 @@
             "settings": "Innstillinger",
             "sign_out": "Logg ut"
         }
+    },
+    "sign_out": {
+        "title": "Logg ut",
+        "desc": "Er du sikker på at du vil logge ut? Du må logge inn igjen for å få tilgang til kontoen din.",
+        "confirm": "Logg ut"
     }
 }

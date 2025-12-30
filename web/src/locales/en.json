@@ -1434,5 +1434,10 @@
       "settings": "Settings",
       "sign_out": "Sign out"
     }
+  },
+  "sign_out": {
+    "title": "Sign out",
+    "desc": "Are you sure you want to sign out? You will need to sign in again to access your account.",
+    "confirm": "Sign out"
   }
 }

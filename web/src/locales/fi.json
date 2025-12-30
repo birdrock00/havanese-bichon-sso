@@ -1434,5 +1434,10 @@
             "settings": "Asetukset",
             "sign_out": "Kirjaudu ulos"
         }
+    },
+    "sign_out": {
+        "title": "Kirjaudu ulos",
+        "desc": "Haluatko varmasti kirjautua ulos? Sinun täytyy kirjautua uudelleen päästäksesi tilillesi.",
+        "confirm": "Kirjaudu ulos"
     }
 }
