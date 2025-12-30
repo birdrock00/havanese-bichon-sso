@@ -161,7 +161,9 @@ impl MessageApi {
         context
             .require_permission(Some(account_id), Permission::DATA_READ)
             .await?;
-        Ok(Json(retrieve_email_content(account_id, message_id.0).await?))
+        Ok(Json(
+            retrieve_email_content(account_id, message_id.0).await?,
+        ))
     }
 
     /// Retrieves the envelope (metadata) of a specific message.
@@ -179,7 +181,9 @@ impl MessageApi {
         context: ClientContext,
     ) -> ApiResult<Json<Envelope>> {
         let account_id = account_id.0;
-        context.require_account_access(account_id)?;
+        context
+            .require_permission(Some(account_id), Permission::DATA_READ)
+            .await?;
         let envelope = ENVELOPE_INDEX_MANAGER
             .get_envelope_by_id(account_id, message_id.0)
             .await?
@@ -214,7 +218,8 @@ impl MessageApi {
         context
             .require_permission(Some(account_id), Permission::DATA_RAW_DOWNLOAD)
             .await?;
-        let reader = EML_INDEX_MANAGER.get_reader(account_id, message_id.0).await?;
+        let message_id = message_id.0;
+        let reader = EML_INDEX_MANAGER.get_reader(account_id, message_id).await?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
             .attachment_type(AttachmentType::Attachment)
