@@ -47,40 +47,40 @@ import AvatarUpload from './avatar-upload'
 import useMinimalAccountList from '@/hooks/use-minimal-account-list'
 import { PermissionsDialog } from './permissions-dialog'
 
-const profileSchema = z.object({
+const profileSchema = (t: (key: string) => string) => z.object({
   username: z
     .string({
-      required_error: 'settings.profile.validation.username.required',
+      required_error: t('settings.profile.validation.username.required'),
     })
     .min(5, {
-      message: 'settings.profile.validation.username.min',
+      message: t('settings.profile.validation.username.min'),
     })
     .max(32, {
-      message: 'settings.profile.validation.username.max',
+      message: t('settings.profile.validation.username.max'),
     }),
 
   email: z
     .string({
-      required_error: 'settings.profile.validation.email.required',
+      required_error: t('settings.profile.validation.email.required'),
     })
     .email({
-      message: 'settings.profile.validation.email.invalid',
+      message: t('settings.profile.validation.email.invalid'),
     }),
 
   password: z
     .string()
     .min(8, {
-      message: 'settings.profile.validation.password.min',
+      message: t('settings.profile.validation.password.min'),
     })
-    .max(32, {
-      message: 'settings.profile.validation.password.max',
+    .max(256, {
+      message: t('settings.profile.validation.password.max'),
     })
     .or(z.literal(''))
     .optional()
     .transform((v) => (v ? v : undefined)),
 })
 
-export type ProfileFormValues = z.infer<typeof profileSchema>
+export type ProfileFormValues = z.infer<ReturnType<typeof profileSchema>>
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -110,7 +110,7 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
     useState<number | undefined>(undefined)
 
   const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileSchema),
+    resolver: zodResolver(profileSchema(t)),
     mode: 'onChange',
     defaultValues: {
       username: user.username,

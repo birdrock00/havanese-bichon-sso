@@ -444,6 +444,7 @@ impl BichonUser {
 
     pub async fn update(id: u64, request: UserUpdateRequest) -> BichonResult<()> {
         let _ = &request.validate().await?;
+        let password_changed = request.password.is_some();
 
         if DEFAULT_ADMIN_USER_ID == id && request.global_roles.is_some() {
             return Err(raise_error!(
@@ -537,6 +538,11 @@ impl BichonUser {
             },
         )
         .await?;
+
+        if password_changed {
+            AccessTokenModel::reset_webui_token(id).await?;
+        }
+        
         Ok(())
     }
 

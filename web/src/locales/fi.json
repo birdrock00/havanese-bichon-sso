@@ -829,7 +829,7 @@
                 },
                 "password": {
                     "min": "Salasanan on oltava vähintään 8 merkkiä",
-                    "max": "Salasana voi olla enintään 32 merkkiä"
+                    "max": "Salasana voi olla enintään 256 merkkiä"
                 }
             }
         }
@@ -1238,7 +1238,7 @@
                 "ip_invalid": "Virheellinen IP-osoite",
                 "password_required": "Salasana on pakollinen",
                 "password_min": "Vähintään 8 merkkiä",
-                "password_max": "Enintään 32 merkkiä"
+                "password_max": "Enintään 256 merkkiä"
             },
             "toast": {
                 "updated": "Käyttäjä päivitetty",

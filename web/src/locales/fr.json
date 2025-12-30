@@ -829,7 +829,7 @@
                 },
                 "password": {
                     "min": "Le mot de passe doit contenir au moins 8 caractères",
-                    "max": "Le mot de passe doit contenir au maximum 32 caractères"
+                    "max": "Le mot de passe doit contenir au maximum 256 caractères"
                 }
             }
         }
@@ -1238,7 +1238,7 @@
                 "ip_invalid": "Adresse IP invalide détectée",
                 "password_required": "Le mot de passe est requis",
                 "password_min": "Le mot de passe doit contenir au moins 8 caractères",
-                "password_max": "Le mot de passe ne peut pas dépasser 32 caractères"
+                "password_max": "Le mot de passe ne peut pas dépasser 256 caractères"
             },
             "toast": {
                 "updated": "Utilisateur mis à jour",

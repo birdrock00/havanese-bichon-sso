@@ -829,7 +829,7 @@
                 },
                 "password": {
                     "min": "A senha deve ter pelo menos 8 caracteres",
-                    "max": "A senha deve ter no máximo 32 caracteres"
+                    "max": "A senha deve ter no máximo 256 caracteres"
                 }
             }
         }
@@ -1238,7 +1238,7 @@
                 "ip_invalid": "IP inválido detectado",
                 "password_required": "Senha é obrigatória",
                 "password_min": "Mínimo 8 caracteres",
-                "password_max": "Máximo 32 caracteres"
+                "password_max": "Máximo 256 caracteres"
             },
             "toast": {
                 "updated": "Usuário atualizado",

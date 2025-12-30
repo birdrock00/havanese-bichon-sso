@@ -829,7 +829,7 @@
                 },
                 "password": {
                     "min": "Adgangskoden skal være mindst 8 tegn",
-                    "max": "Adgangskoden må højst være 32 tegn"
+                    "max": "Adgangskoden må højst være 256 tegn"
                 }
             }
         }
@@ -1238,7 +1238,7 @@
                 "ip_invalid": "Ugyldig IP-adresse",
                 "password_required": "Adgangskode er påkrævet",
                 "password_min": "Mindst 8 tegn",
-                "password_max": "Højst 32 tegn"
+                "password_max": "Højst 256 tegn"
             },
             "toast": {
                 "updated": "Bruger opdateret",

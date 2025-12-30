@@ -829,7 +829,7 @@
         },
         "password": {
           "min": "密码长度至少为 8 个字符",
-          "max": "密码长度不能超过 32 个字符"
+          "max": "密码长度不能超过 256 个字符"
         }
       }
     }
@@ -1238,7 +1238,7 @@
         "ip_invalid": "发现无效的 IP 地址",
         "password_required": "密码不能为空",
         "password_min": "密码长度至少为 8 个字符",
-        "password_max": "密码长度不能超过 32 个字符"
+        "password_max": "密码长度不能超过 256 个字符"
       },
       "toast": {
         "updated": "用户已更新",

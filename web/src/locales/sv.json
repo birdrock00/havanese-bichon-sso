@@ -829,7 +829,7 @@
                 },
                 "password": {
                     "min": "Lösenordet måste vara minst 8 tecken",
-                    "max": "Lösenordet får vara högst 32 tecken"
+                    "max": "Lösenordet får vara högst 256 tecken"
                 }
             }
         }
@@ -1238,7 +1238,7 @@
                 "ip_invalid": "Ogiltig IP-adress upptäckt",
                 "password_required": "Lösenord krävs",
                 "password_min": "Lösenordet måste vara minst 8 tecken",
-                "password_max": "Lösenordet får vara max 32 tecken"
+                "password_max": "Lösenordet får vara max 256 tecken"
             },
             "toast": {
                 "updated": "Användaren uppdaterad",

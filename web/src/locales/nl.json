@@ -829,7 +829,7 @@
                 },
                 "password": {
                     "min": "Wachtwoord moet minimaal 8 tekens bevatten",
-                    "max": "Wachtwoord mag maximaal 32 tekens bevatten"
+                    "max": "Wachtwoord mag maximaal 256 tekens bevatten"
                 }
             }
         }
@@ -1238,7 +1238,7 @@
                 "ip_invalid": "Ongeldig IP-adres gedetecteerd",
                 "password_required": "Wachtwoord is verplicht",
                 "password_min": "Minimaal 8 tekens",
-                "password_max": "Maximaal 32 tekens"
+                "password_max": "Maximaal 256 tekens"
             },
             "toast": {
                 "updated": "Gebruiker bijgewerkt",

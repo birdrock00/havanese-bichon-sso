@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::modules::account::migration::{AccountModel, AccountType};
 use crate::modules::cache::imap::mailbox::{Attribute, AttributeEnum, MailBox};
 use crate::modules::context::executors::MAIL_CONTEXT;
@@ -64,7 +63,14 @@ pub async fn convert_names_to_mailboxes(
     for name in names.into_iter() {
         // Convert the name into a MailBox structure
         let mailbox_name = name.name().to_string();
+
         let mut mailbox: MailBox = name.into();
+
+        tracing::debug!(
+            raw = &mailbox_name,
+            decoded = &mailbox.name,
+            "mailbox name comparison"
+        );
 
         if contains_no_select(&mailbox.attributes) {
             continue;

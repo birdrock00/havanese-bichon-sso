@@ -829,7 +829,7 @@
                 },
                 "password": {
                     "min": "La password deve contenere almeno 8 caratteri",
-                    "max": "La password deve contenere al massimo 32 caratteri"
+                    "max": "La password deve contenere al massimo 256 caratteri"
                 }
             }
         }
@@ -1238,7 +1238,7 @@
                 "ip_invalid": "Indirizzo IP non valido",
                 "password_required": "La password è obbligatoria",
                 "password_min": "Minimo 8 caratteri",
-                "password_max": "Massimo 32 caratteri"
+                "password_max": "Massimo 256 caratteri"
             },
             "toast": {
                 "updated": "Utente aggiornato",

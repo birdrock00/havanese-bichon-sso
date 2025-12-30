@@ -111,14 +111,14 @@ const createUserSchema = (t: any) => z.object({
   password: z.string()
     .min(1, t('users.actions.schema.password_required'))
     .min(8, t('users.actions.schema.password_min'))
-    .max(32, t('users.actions.schema.password_max')),
+    .max(256, t('users.actions.schema.password_max')),
 });
 
 const updateUserSchema = (t: any) => z.object({
   ...baseUserSchema(t),
   password: z.string()
     .min(8, t('users.actions.schema.password_min'))
-    .max(32, t('users.actions.schema.password_max'))
+    .max(256, t('users.actions.schema.password_max'))
     .or(z.literal(''))
     .optional()
     .transform(v => v || undefined),

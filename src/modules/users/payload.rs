@@ -204,9 +204,9 @@ impl UserCreateRequest {
                 ErrorCode::InvalidParameter
             ));
         }
-        if password_len > 32 {
+        if password_len > 256 {
             return Err(raise_error!(
-                "Password cannot exceed 32 characters.".into(),
+                "Password cannot exceed 256 characters.".into(),
                 ErrorCode::InvalidParameter
             ));
         }
@@ -317,9 +317,9 @@ impl UserUpdateRequest {
 
         if let Some(password) = &self.password {
             let len = password.len();
-            if len < 8 || len > 32 {
+            if len < 8 || len > 256 {
                 return Err(raise_error!(
-                    "Password must be 8-32 characters.".into(),
+                    "Password must be 8-256 characters.".into(),
                     ErrorCode::InvalidParameter
                 ));
             }

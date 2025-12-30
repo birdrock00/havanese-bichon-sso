@@ -829,7 +829,7 @@
         },
         "password": {
           "min": "Hasło musi mieć co najmniej 8 znaków",
-          "max": "Hasło może mieć maksymalnie 32 znaki"
+          "max": "Hasło może mieć maksymalnie 256 znaki"
         }
       }
     }
@@ -1238,7 +1238,7 @@
         "ip_invalid": "Wykryto niepoprawny adres IP",
         "password_required": "Hasło jest wymagane",
         "password_min": "Min. 8 znaków",
-        "password_max": "Maks. 32 znaki"
+        "password_max": "Maks. 256 znaki"
       },
       "toast": {
         "updated": "Użytkownik zaktualizowany",
