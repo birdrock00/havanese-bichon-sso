@@ -19,7 +19,7 @@
 use crate::modules::{
     context::Initialize,
     error::BichonResult,
-    users::{role::UserRole, BichonUser},
+    users::{role::UserRole, UserModel},
 };
 
 pub struct UserManager;
@@ -27,6 +27,6 @@ pub struct UserManager;
 impl Initialize for UserManager {
     async fn initialize() -> BichonResult<()> {
         UserRole::ensure_default_roles_exists().await?;
-        BichonUser::ensure_default_admin_exists().await
+        UserModel::ensure_default_admin_exists().await
     }
 }
