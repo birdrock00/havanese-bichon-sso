@@ -498,12 +498,15 @@ impl BichonUserV2 {
     pub async fn update(id: u64, request: UserUpdateRequest) -> BichonResult<()> {
         let _ = &request.validate().await?;
         let password_changed = request.password.is_some();
+        //
+        let is_default_admin = id == DEFAULT_ADMIN_USER_ID;
+        let is_valid_admin_roles = matches!(
+            request.global_roles.as_deref(),
+            Some([role]) if *role == DEFAULT_ADMIN_ROLE_ID
+        );
 
-        if DEFAULT_ADMIN_USER_ID == id && request.global_roles.is_some() {
-            return Err(raise_error!(
-                format!("The role assignments for default admin (id={}) are immutable to ensure system accessibility.", id),
-                ErrorCode::Forbidden
-            ));
+        if is_default_admin && !is_valid_admin_roles {
+            return Err(raise_error!(format!("The role assignments for default admin (id={}) are immutable to ensure system accessibility.", id), ErrorCode::Forbidden));
         }
 
         if let Some(username) = &request.username {
