@@ -121,6 +121,7 @@ pub struct AccountUpdateRequest {
     /// - Reducing server load during resyncs
     pub date_since: Option<DateSince>,
     pub date_before: Option<RelativeDate>,
+    pub clear_date_range: Option<bool>,
     /// Max emails to sync for this folder.  
     /// If not set, sync all emails.  
     /// otherwise sync up to `n` most recent emails (min 10).
@@ -161,6 +162,15 @@ impl AccountUpdateRequest {
             return Err(raise_error!(
                 "date_before and date_since are mutually exclusive; specify only one time boundary"
                     .into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+
+        if self.clear_date_range == Some(true)
+            && (self.date_since.is_some() || self.date_before.is_some())
+        {
+            return Err(raise_error!(
+                "clear_date_range cannot be combined with date_since or date_before".into(),
                 ErrorCode::InvalidParameter
             ));
         }

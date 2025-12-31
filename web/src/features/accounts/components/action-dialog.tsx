@@ -290,7 +290,11 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
         sync_batch_size: data.sync_batch_size,
       };
       if (isEdit) {
-        updateMutation.mutate(commonData);
+        const isAllMode = !data.date_since && !data.date_before;
+        updateMutation.mutate({
+          ...commonData,
+          ...(isAllMode ? { clear_date_range: true } : {})
+        });
       } else {
         createMutation.mutate({ ...commonData, account_type: "IMAP" });
       }

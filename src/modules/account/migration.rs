@@ -195,13 +195,6 @@ impl AccountV3 {
                         ErrorCode::ResourceNotFound
                     )
                 })?;
-
-        // if !account.enabled {
-        //     return Err(raise_error!(
-        //         format!("Account id='{account_id}' is disabled"),
-        //         ErrorCode::AccountDisabled
-        //     ));
-        // }
         Ok(account)
     }
 
@@ -220,11 +213,6 @@ impl AccountV3 {
         secondary_find_impl::<AccountModel>(DB_MANAGER.meta_db(), AccountV3Key::id, account_id)
             .await
     }
-
-    // /// Saves the current `AccountEntity` by persisting it to storage.
-    // pub async fn save(&self) -> BichonResult<()> {
-    //     insert_impl(DB_MANAGER.meta_db(), self.to_owned()).await
-    // }
 
     pub async fn create_account(
         user_id: u64,
@@ -418,6 +406,13 @@ impl AccountV3 {
         if let Some(date_before) = request.date_before {
             new.date_before = Some(date_before);
             new.date_since = None;
+        }
+
+        if let Some(clear_date_range) = request.clear_date_range {
+            if clear_date_range {
+                new.date_since = None;
+                new.date_before = None;
+            }
         }
 
         if let Some(folder_limit) = request.folder_limit {
