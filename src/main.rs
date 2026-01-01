@@ -16,22 +16,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use mimalloc::MiMalloc;
-use modules::{
-    common::rustls::RustMailerTls,
-    context::{executors::EmailClientExecutors, Initialize},
-    error::BichonResult,
-    logger,
-    rest::start_http_server,
-    tasks::PeriodicTasks,
+use bichon::{
+    bichon_version,
+    modules::{
+        common::rustls::RustMailerTls,
+        context::{executors::EmailClientExecutors, Initialize},
+        error::BichonResult,
+        logger,
+        rest::start_http_server,
+        tasks::PeriodicTasks,
+    },
 };
+use mimalloc::MiMalloc;
 use tracing::info;
 
-use crate::modules::{
+use bichon::modules::{
     common::signal::SignalManager, settings::dir::DataDirManager, users::manager::UserManager,
 };
-
-mod modules;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;

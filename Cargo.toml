@@ -1,12 +1,15 @@
 [package]
 name = "bichon"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2021"
 
 [[bin]]
 name = "bichon"
 path = "src/main.rs"
 
+[[bin]]
+name = "bichon-cli"
+path = "src/bin/bichon_cli.rs"
 
 [features]
 default = []

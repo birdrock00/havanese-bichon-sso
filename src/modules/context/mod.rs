@@ -16,13 +16,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::modules::error::BichonResult;
 
 pub mod controller;
 pub mod executors;
 pub mod status;
 
+#[allow(async_fn_in_trait)]
 pub trait Initialize {
     async fn initialize() -> BichonResult<()>;
 }

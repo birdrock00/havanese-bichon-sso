@@ -469,7 +469,7 @@ impl BichonUserV2 {
 
         delete_impl(DB_MANAGER.meta_db(), move |rw| {
             rw.get()
-                .primary::<BichonUser>(id)
+                .primary::<UserModel>(id)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
                 .ok_or_else(|| {
                     raise_error!(

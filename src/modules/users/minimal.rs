@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use crate::modules::{
     database::{list_all_impl, manager::DB_MANAGER},
     error::BichonResult,
-    users::BichonUser,
+    users::UserModel,
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, Object)]
@@ -34,7 +34,7 @@ pub struct MinimalUser {
 
 impl MinimalUser {
     pub async fn list_all() -> BichonResult<Vec<MinimalUser>> {
-        let all_users = list_all_impl::<BichonUser>(DB_MANAGER.meta_db()).await?;
+        let all_users = list_all_impl::<UserModel>(DB_MANAGER.meta_db()).await?;
         let minimal_list = all_users
             .into_iter()
             .map(|user| MinimalUser {
