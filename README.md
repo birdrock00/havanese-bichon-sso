@@ -65,7 +65,7 @@ Built in Rust, it requires no external dependencies and provides fast, efficient
 * **Internationalized WebUI** — Frontend available in 18 languages
 * **OpenAPI Access** — OpenAPI docs with access-token authentication
 * **Multi-User & Role-Based Access Control (RBAC)** — Supports multiple users with fine-grained, role-based permissions
-
+* **Email Import (EML & MBOX)** — Import existing mail archives via the bichonctl CLI
 
 ## 🐾 Why Create Bichon?
 
@@ -335,13 +335,15 @@ This data is provided solely as a **reference** for real-world usage. We encoura
 
 ## Roadmap
 
-- ✓ Multi-user support with account/password login  
-  - System-level roles (admin / user)  
-  - Per-mail-account permissions
+* [x] Multi-user support with account/password login  
+  * [x] System-level roles (admin / user)  
+  * [x] Per-mail-account permissions
 
-* [ ] `bichon-cli` command-line tool
+* [x] `bichonctl` command-line tool
 
-  * Import emails from `eml`, `mbox`, `msg`, `pst`
+  * [x] Import emails from `eml`, `mbox`
+  * [ ] Import emails from `msg`, `pst`
+
 
 * [ ] Manual sync controls
 
