@@ -457,9 +457,13 @@ This project is licensed under [AGPLv3](LICENSE).
 
 ## 💖 Support & Promotion
 
-If this project has been helpful to you and you’d like to support its development, you can consider making a small donation or helping spread the word.
-Financial support is optional but deeply appreciated — it helps me dedicate more time and resources to building new features and improving the overall experience.
+Bichon is an open-source email platform focused on privacy, local ownership, and long-term stability.
 
-You can also support the project by sharing it with others, writing about your experience, or recommending it within relevant communities. Every bit of visibility helps more people benefit from the tool!
+The project is freely available and fully functional for everyone.
+
+Some members of the community choose to support the project financially. This support helps sustain ongoing development and long-term maintenance, while keeping the project independent and user-driven.
+
+Support is always optional. You can also contribute by sharing feedback, reporting issues, or recommending Bichon to others.
 
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20the%20Project-FFDD00?logo=buy-me-a-coffee)](https://buymeacoffee.com/rustmailer)
+
