@@ -82,7 +82,7 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
   const { toast } = useToast();
 
   const form = useForm<NoSyncAccount>({
-    mode: "all",
+    mode: "onChange",
     defaultValues: isEdit ? mapCurrentRowToFormValues(currentRow) : defaultValues,
     resolver: zodResolver(accountSchema(t)),
   });

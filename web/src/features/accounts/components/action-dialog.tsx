@@ -128,6 +128,7 @@ const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
       .number({ invalid_type_error: t('validation.folderLimitMustBeNumber') })
       .int()
       .min(100, { message: t('validation.folderLimitMustBeAtLeast100') })
+      .nullable()
       .optional(),
     sync_interval_min: z.number({ invalid_type_error: t('validation.incrementalSyncMustBeNumber') }).int().min(10, { message: t('validation.incrementalSyncMustBeAtLeast10') }),
     sync_batch_size: z
@@ -221,7 +222,7 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
 
   const accountSchema = getAccountSchema(isEdit, t);
   const form = useForm<Account>({
-    mode: "all",
+    mode: "onChange",
     defaultValues: isEdit ? mapCurrentRowToFormValues(currentRow) : defaultValues,
     resolver: zodResolver(accountSchema),
   });
@@ -291,9 +292,11 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
       };
       if (isEdit) {
         const isAllMode = !data.date_since && !data.date_before;
+        const clear_folder_limit = !data.folder_limit;
         updateMutation.mutate({
           ...commonData,
-          ...(isAllMode ? { clear_date_range: true } : {})
+          ...(isAllMode ? { clear_date_range: true } : {}),
+          ...(clear_folder_limit ? { clear_folder_limit: true } : {})
         });
       } else {
         createMutation.mutate({ ...commonData, account_type: "IMAP" });

@@ -178,7 +178,6 @@ export default function Step3() {
                                                 onSelect={(date) => field.onChange(date?.toLocaleDateString('en-CA'))}
                                                 disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                                                 locale={dateLocale}
-                                                initialFocus
                                             />
                                         </PopoverContent>
                                     </Popover>
@@ -244,8 +243,11 @@ export default function Step3() {
                             <Input
                                 type="number"
                                 placeholder={t('accounts.folderLimitPlaceholder')}
-                                {...field}
-                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value, 10) : undefined)}
+                                value={field.value ?? ''}
+                                onChange={(e) => {
+                                    const value = e.target.value;
+                                    field.onChange(value === '' ? null : Number(value));
+                                }}
                             />
                         </FormControl>
                         <FormMessage />

@@ -148,7 +148,7 @@ export function Oauth2Table({ columns, data }: DataTableProps) {
           </TableBody>
         </Table>
       </div>
-      <DataTablePagination table={table} showSelected={true} showPageSizeSelector={true} />
+      <DataTablePagination table={table} showPageSizeSelector={true} />
     </div>
   )
 }

@@ -421,6 +421,12 @@ impl AccountV3 {
             new.folder_limit = Some(folder_limit);
         }
 
+        if let Some(clear_folder_limit) = request.clear_folder_limit {
+            if clear_folder_limit {
+                new.folder_limit = None;
+            }
+        }
+
         if let Some(name) = &request.name {
             if name.trim().is_empty() {
                 new.name = None;

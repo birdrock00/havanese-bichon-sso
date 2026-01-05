@@ -116,11 +116,11 @@ export function useColumns(): ColumnDef<AccountModel>[] {
       cell: ({ row }) => {
         const { created_user_name, created_user_email } = row.original;
         return (
-          <div className="flex flex-col py-1 text-center">
-            <span className="text-sm font-medium text-foreground">
+          <div className="flex flex-col items-center leading-[1.1]">
+            <span className="text-[13px] font-medium text-foreground leading-none">
               {created_user_name}
             </span>
-            <span className="text-[11px] text-muted-foreground font-mono">
+            <span className="text-[11px] text-muted-foreground font-mono leading-none">
               {created_user_email}
             </span>
           </div>

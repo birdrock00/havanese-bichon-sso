@@ -127,6 +127,7 @@ pub struct AccountUpdateRequest {
     /// otherwise sync up to `n` most recent emails (min 10).
     #[oai(validator(minimum(value = "100")))]
     pub folder_limit: Option<u32>,
+    pub clear_folder_limit: Option<bool>,
     /// Configuration for selective folder (mailbox/label) synchronization
     ///
     /// - For IMAP/SMTP accounts:
@@ -162,6 +163,13 @@ impl AccountUpdateRequest {
             return Err(raise_error!(
                 "date_before and date_since are mutually exclusive; specify only one time boundary"
                     .into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+
+        if self.clear_folder_limit == Some(true) && self.folder_limit.is_some() {
+            return Err(raise_error!(
+                "clear_folder_limit cannot be combined with folder_limit".into(),
                 ErrorCode::InvalidParameter
             ));
         }
