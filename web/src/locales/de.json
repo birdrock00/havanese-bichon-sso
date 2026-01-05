@@ -358,6 +358,16 @@
         "useDangerousDescription": "Aktivieren Sie diese Option nur, wenn Sie sich mit einem IMAP‑Server verbinden, der ein öffentliches CA‑Zertifikat oder ein selbstsigniertes Zertifikat verwendet, das Ihr System möglicherweise nicht erkennt. Diese Einstellung umgeht die Standard‑Zertifikatsprüfung und kann Sie für Man‑in‑the‑Middle‑Angriffe anfällig machen – aktivieren Sie nur, wenn Sie die Risiken verstehen."
     },
     "mailbox": {
+        "deleteMailboxDialog": {
+            "title": "Postfachordner löschen",
+            "desc": "Sind Sie sicher, dass Sie diesen Postfachordner löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+            "warningTitle": "Warnung",
+            "warningDesc": "Das Löschen dieses Ordners entfernt auch dauerhaft alle darin enthaltenen archivierten E-Mails und Unterordner.",
+            "confirm": "Dauerhaft löschen",
+            "successTitle": "Erfolgreich gelöscht",
+            "successDesc": "Der Postfachordner und sein Inhalt wurden erfolgreich entfernt.",
+            "errorTitle": "Löschen fehlgeschlagen"
+        },
         "title": "Postfach",
         "folders": "Ordner",
         "messages": "Nachrichten",

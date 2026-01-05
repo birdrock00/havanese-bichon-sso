@@ -18,6 +18,7 @@
 
 use crate::modules::cache::imap::mailbox::MailBox;
 use crate::modules::common::auth::ClientContext;
+use crate::modules::mailbox::delete::delete_mailbox_impl;
 use crate::modules::mailbox::list::get_account_mailboxes;
 use crate::modules::rest::api::ApiTags;
 use crate::modules::rest::ApiResult;
@@ -57,5 +58,33 @@ impl MailBoxApi {
             .await?;
         let remote = remote.0.unwrap_or(false);
         Ok(Json(get_account_mailboxes(account_id, remote).await?))
+    }
+
+    /// Deletes a mailbox for the specified account.
+    ///
+    /// Requires `DATA_DELETE` permission on the target account.
+    ///
+    /// # Parameters
+    /// - `account_id`: Account identifier.
+    /// - `mailbox_id`: Mailbox identifier.
+    ///
+    #[oai(
+        path = "/delete-mailbox/:account_id/:mailbox_id",
+        method = "delete",
+        operation_id = "delete_mailbox"
+    )]
+    async fn delete_mailbox(
+        &self,
+        /// The unique identifier of the account.
+        account_id: Path<u64>,
+        mailbox_id: Path<u64>,
+        context: ClientContext,
+    ) -> ApiResult<()> {
+        let account_id = account_id.0;
+        let mailbox_id = mailbox_id.0;
+        context
+            .require_permission(Some(account_id), Permission::DATA_DELETE)
+            .await?;
+        Ok(delete_mailbox_impl(account_id, mailbox_id).await?)
     }
 }

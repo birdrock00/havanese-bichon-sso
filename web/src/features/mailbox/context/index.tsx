@@ -21,7 +21,7 @@ import React from 'react'
 import { MailboxData } from '@/api/mailbox/api'
 import { EmailEnvelope } from '@/api'
 
-export type MailboxDialogType = 'mailbox' | 'display' | 'move-to-trash' | 'filters' | 'restore'
+export type MailboxDialogType = 'mailbox' | 'display' | 'move-to-trash' | 'filters' | 'restore' | 'delete'
 
 interface MailboxContextType {
   open: MailboxDialogType | null
@@ -30,6 +30,8 @@ interface MailboxContextType {
   currentMailbox: MailboxData | undefined
   currentEnvelope: EmailEnvelope | undefined
   setCurrentMailbox: React.Dispatch<React.SetStateAction<MailboxData | undefined>>
+  deleteMailboxId: string | undefined,
+  setDeleteMailboxId: React.Dispatch<React.SetStateAction<string | undefined>>
   setCurrentEnvelope: React.Dispatch<React.SetStateAction<EmailEnvelope | undefined>>
   deleteIds: Set<number>
   setDeleteIds: React.Dispatch<React.SetStateAction<Set<number>>>

@@ -358,6 +358,16 @@
         "useDangerousDescription": "Activa esta opción solo si te estás conectando a un servidor IMAP que utiliza un certificado público o auto‑firmado, el cual puede no ser reconocido por tu sistema. Esta opción omite la validación estándar del certificado y puede exponerte a ataques de tipo “man‑in‑the‑middle” — actívala solo si entiendes los riesgos."
     },
     "mailbox": {
+        "deleteMailboxDialog": {
+            "title": "Eliminar carpeta de correo",
+            "desc": "¿Está seguro de que desea eliminar esta carpeta de correo? Esta acción no se puede deshacer.",
+            "warningTitle": "Advertencia",
+            "warningDesc": "Eliminar esta carpeta también eliminará permanentemente todos los correos electrónicos archivados y las subcarpetas que contenga.",
+            "confirm": "Eliminar permanentemente",
+            "successTitle": "Eliminado con éxito",
+            "successDesc": "La carpeta de correo y su contenido han sido eliminados correctamente.",
+            "errorTitle": "Error al eliminar"
+        },
         "title": "Buzón",
         "folders": "Carpetas",
         "messages": "Mensajes",

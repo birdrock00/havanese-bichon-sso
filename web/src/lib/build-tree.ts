@@ -34,10 +34,8 @@ export function buildTree(items: MailboxData[]): TreeViewBaseItem<ExtendedTreeIt
 
     for (const mb of items) {
         if (!mb.name) continue;
-
         const delimiter = mb.delimiter ?? '/';
         const parts = mb.name.split(delimiter);
-
         let currentFullName = '';
 
         for (let i = 0; i < parts.length; i++) {

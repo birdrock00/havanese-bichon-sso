@@ -358,6 +358,16 @@
         "useDangerousDescription": "Aktivera detta alternativ endast om IMAP‑servern använder ett offentligt eller självsignerat certifikat som inte är betrott av ditt system. Denna inställning kringgår standardverifiering av certifikat, vilket kan utsätta dig för man‑i‑mitten‑attacker — slå på endast om du förstår riskerna."
     },
     "mailbox": {
+        "deleteMailboxDialog": {
+            "title": "Ta bort brevlådemapp",
+            "desc": "Är du säker på att du vill ta bort den här mappen? Denna åtgärd kan inte ångras.",
+            "warningTitle": "Varning",
+            "warningDesc": "Om du tar bort den här mappen raderas även alla arkiverade e-postmeddelanden och undermappar i den permanent.",
+            "confirm": "Ta bort permanent",
+            "successTitle": "Borttagen",
+            "successDesc": "Brevlådemappen och dess innehåll har raderats.",
+            "errorTitle": "Kunde inte ta bort"
+        },
         "title": "Brevlåda",
         "folders": "Mappar",
         "messages": "Meddelanden",

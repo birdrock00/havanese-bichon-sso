@@ -358,6 +358,16 @@
         "useDangerousDescription": "Aktiver dette alternativet kun hvis IMAP‑serveren bruker et offentlig CA‑sertifikat eller et selvsignert sertifikat som systemet ditt ikke gjenkjenner. Innstillingen hopper over vanlig sertifikatvalidering, noe som kan utsette deg for man‑in‑the‑middle‑angrep – bruk kun hvis du forstår risikoen."
     },
     "mailbox": {
+        "deleteMailboxDialog": {
+            "title": "Slett postkassemappe",
+            "desc": "Er du sikker på at du vil slette denne postkassemappen? Denne handlingen kan ikke angres.",
+            "warningTitle": "Advarsel",
+            "warningDesc": "Sletting av denne mappen vil også fjerne alle arkiverte e-poster og undermapper i den permanent.",
+            "confirm": "Slett permanent",
+            "successTitle": "Sletting fullført",
+            "successDesc": "Postkassemappen og innholdet er fjernet.",
+            "errorTitle": "Sletting mislyktes"
+        },
         "title": "Postkasse",
         "folders": "Mapper",
         "messages": "Meldinger",

@@ -358,6 +358,16 @@
         "useDangerousDescription": "Ative esta opção apenas se estiver a conectar a um servidor IMAP que use um certificado público ou autoassinado que o seu sistema possa não reconhecer. Esta opção ignora a verificação normal de certificados e pode expor a ligação a ataques man‑in‑the‑middle — ative apenas se compreender os riscos."
     },
     "mailbox": {
+        "deleteMailboxDialog": {
+            "title": "Excluir pasta de correio",
+            "desc": "Tem certeza de que deseja excluir esta pasta de correio? Esta ação não pode ser desfeita.",
+            "warningTitle": "Aviso",
+            "warningDesc": "A exclusão desta pasta também removerá permanentemente todos os e-mails arquivados e subpastas nela contidos.",
+            "confirm": "Excluir permanentemente",
+            "successTitle": "Excluído com sucesso",
+            "successDesc": "A pasta de correio e seu conteúdo foram removidos com sucesso.",
+            "errorTitle": "Falha ao excluir"
+        },
         "title": "Caixa de Entrada",
         "folders": "Pastas",
         "messages": "Mensagens",

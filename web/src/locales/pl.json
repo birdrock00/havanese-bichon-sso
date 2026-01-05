@@ -358,6 +358,16 @@
     "useDangerousDescription": "Włącz tę opcję tylko wtedy, gdy łączysz się z serwerem IMAP z certyfikatem publicznym lub samopodpisanym, który może nie być rozpoznawany przez Twój system. Użycie tego ustawienia pomija standardową walidację certyfikatu, co może narażać na ataki typu man-in-the-middle. Włącz tę opcję tylko wtedy, gdy rozumiesz związane z tym ryzyko."
   },
   "mailbox": {
+    "deleteMailboxDialog": {
+      "title": "Usuń folder skrzynki",
+      "desc": "Czy na pewno chcesz usunąć ten folder skrzynki? Tej operacji nie można cofnąć.",
+      "warningTitle": "Ostrzeżenie",
+      "warningDesc": "Usunięcie tego folderu spowoduje również trwałe usunięcie wszystkich zarchiwizowanych wiadomości e-mail i podfolderów w nim zawartych.",
+      "confirm": "Usuń na stałe",
+      "successTitle": "Usunięto pomyślnie",
+      "successDesc": "Folder skrzynki i jego zawartość zostały pomyślnie usunięte.",
+      "errorTitle": "Błąd usuwania"
+    },
     "title": "Skrzynka pocztowa",
     "folders": "Foldery",
     "messages": "Wiadomości",

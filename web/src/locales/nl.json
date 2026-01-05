@@ -358,6 +358,16 @@
         "useDangerousDescription": "Schakel deze optie alleen in als je verbinding maakt met een IMAP‑server die een openbaar CA‑ of een self‑signed certificaat gebruikt dat door je systeem mogelijk niet wordt vertrouwd. Deze instelling omzeilt standaard certificaatverificatie en kan je blootstellen aan man‑in‑the‑middle‑aanvallen — activeer alleen als je de risico’s begrijpt."
     },
     "mailbox": {
+        "deleteMailboxDialog": {
+            "title": "Postvakmap verwijderen",
+            "desc": "Weet u zeker dat u deze postvakmap wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+            "warningTitle": "Waarschuwing",
+            "warningDesc": "Het verwijderen van deze map zal ook permanent alle gearchiveerde e-mails und submappen erin verwijderen.",
+            "confirm": "Permanent verwijderen",
+            "successTitle": "Succesvol verwijderd",
+            "successDesc": "De postvakmap en de inhoud ervan zijn succesvol verwijderd.",
+            "errorTitle": "Verwijderen mislukt"
+        },
         "title": "Postvak In",
         "folders": "Mappen",
         "messages": "Berichten",

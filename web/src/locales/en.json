@@ -358,6 +358,16 @@
     "useDangerousDescription": "Enable this option only if you are connecting to an IMAP server with a public or self-signed certificate that may not be recognized by your system. Using this setting bypasses standard certificate validation, which can expose you to man-in-the-middle attacks. Only enable if you understand the risks."
   },
   "mailbox": {
+    "deleteMailboxDialog": {
+      "title": "Delete Mailbox Folder",
+      "desc": "Are you sure you want to delete this mailbox folder? This action cannot be undone.",
+      "warningTitle": "Warning",
+      "warningDesc": "Deleting this folder will also permanently remove all archived emails and subfolders contained within it.",
+      "confirm": "Delete Permanently",
+      "successTitle": "Deleted successfully",
+      "successDesc": "The mailbox folder and its contents have been successfully removed.",
+      "errorTitle": "Delete failed"
+    },
     "title": "Mailbox",
     "folders": "Folders",
     "messages": "Messages",

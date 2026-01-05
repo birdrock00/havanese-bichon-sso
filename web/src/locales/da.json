@@ -358,6 +358,16 @@
         "useDangerousDescription": "Aktivér denne indstilling kun hvis du opretter forbindelse til en IMAP‑server, der bruger et offentligt CA‑certifikat eller et selvsigneret certifikat, som dit system måske ikke genkender. Denne indstilling omgår standard certificeringsvalidering og kan gøre dig sårbar over for man‑in‑the‑middle‑angreb — aktiver kun hvis du forstår risikoen."
     },
     "mailbox": {
+        "deleteMailboxDialog": {
+            "title": "Slet postkassemappe",
+            "desc": "Er du sikker på, at du vil slette denne postkassemappe? Denne handling kan ikke fortrydes.",
+            "warningTitle": "Advarsel",
+            "warningDesc": "Sletning af denne mappe vil også permanent fjerne alle arkiverede e-mails og undermapper i den.",
+            "confirm": "Slet permanent",
+            "successTitle": "Sletning lykkedes",
+            "successDesc": "Postkassemappen og dens indhold er blevet fjernet.",
+            "errorTitle": "Sletning mislykkedes"
+        },
         "title": "Mailboks",
         "folders": "Mapper",
         "messages": "Meddelelser",

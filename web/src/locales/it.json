@@ -358,6 +358,16 @@
         "useDangerousDescription": "Abilita questa opzione solo se ti connetti a un server IMAP che utilizza un certificato pubblico o auto‑firmato che il tuo sistema potrebbe non riconoscere. Questa impostazione salta la verifica standard del certificato e può esporre la connessione ad attacchi “man‑in‑the‑middle” — attivala solo se comprendi i rischi."
     },
     "mailbox": {
+        "deleteMailboxDialog": {
+            "title": "Elimina cartella casella postale",
+            "desc": "Sei sicuro di voler eliminare questa cartella? L'azione non può essere annullata.",
+            "warningTitle": "Avvertimento",
+            "warningDesc": "L'eliminazione di questa cartella rimuoverà permanentemente anche tutte le e-mail archiviate e le sottocartelle in essa contenute.",
+            "confirm": "Elimina permanentemente",
+            "successTitle": "Eliminazione completata",
+            "successDesc": "La cartella e il suo contenuto sono stati rimossi con successo.",
+            "errorTitle": "Eliminazione fallita"
+        },
         "title": "Posta in arrivo",
         "folders": "Cartelle",
         "messages": "Messaggi",

@@ -358,6 +358,16 @@
     "useDangerousDescription": "如果你连接的 IMAP 服务器使用公开 CA 或者自签证书，而系统不认可该证书时，启用此选项可绕过标准证书校验。但请注意，这样可能使你的连接容易受到中间人攻击 —— 仅当你完全理解风险时才启用。"
   },
   "mailbox": {
+    "deleteMailboxDialog": {
+      "title": "删除邮箱文件夹",
+      "desc": "您确定要删除此邮箱文件夹吗？此操作无法撤销。",
+      "warningTitle": "警告",
+      "warningDesc": "删除此文件夹将永久移除其中包含的所有归档邮件及子文件夹。",
+      "confirm": "永久删除",
+      "successTitle": "删除成功",
+      "successDesc": "邮箱文件夹及其内容已被成功移除。",
+      "errorTitle": "删除失败"
+    },
     "title": "邮箱",
     "folders": "文件夹",
     "messages": "消息",

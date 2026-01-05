@@ -35,3 +35,9 @@ export const list_mailboxes = async (accountId: number, remote: boolean) => {
     const response = await axiosInstance.get<MailboxData[]>(`/api/v1/list-mailboxes/${accountId}?remote=${remote}`);
     return response.data;
 };
+
+
+export const delete_mailbox = async (accountId: number, mailboxId: string) => {
+    const response = await axiosInstance.delete(`/api/v1/delete-mailbox/${accountId}/${mailboxId}`);
+    return response.data;
+};

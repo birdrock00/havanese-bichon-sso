@@ -49,8 +49,12 @@ import { styled } from "@mui/material/styles"
 import { animated, useSpring } from "@react-spring/web"
 import { TransitionProps } from "@mui/material/transitions"
 import Collapse from "@mui/material/Collapse"
-import { FolderIcon } from "lucide-react"
+import { FolderIcon, MoreVertical, Trash2 } from "lucide-react"
 import { RestoreMessageDialog } from "./restore-message-dialog"
+import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useTranslation } from "react-i18next"
+import { MailBoxDeleteDialog } from "./delete-mailbox-dialog"
 
 
 interface MailProps {
@@ -79,15 +83,14 @@ const useListMessages = ({ accountId, mailboxId, page, page_size }: ListMessages
     });
 };
 
-
-
-
 interface CustomLabelProps {
     exists?: number;
     attributes?: { attr: string; extension: string | null }[],
     children: React.ReactNode;
+    id: string;
     icon?: React.ElementType;
     expandable?: boolean;
+    onDelete: (id: string) => void;
 }
 
 function CustomLabel({
@@ -95,8 +98,11 @@ function CustomLabel({
     exists,
     attributes,
     children,
+    id,
+    onDelete,
     ...other
 }: CustomLabelProps) {
+    const { t } = useTranslation()
     return (
         <TreeItemLabel
             {...other}
@@ -109,27 +115,39 @@ function CustomLabel({
             <span className="font-medium text-sm text-inherit">
                 {children}
             </span>
-            {/* <div className="flex gap-2 ml-auto mr-3 opacity-70 text-xs">
-                {attributes?.map((attr) => {
-                    const text =
-                        attr.attr === 'Extension'
-                            ? attr.extension
-                            : attr.attr;
-
-                    return (
-                        <span key={attr.attr} className="text-inherit">
-                            {text}
-                        </span>
-                    );
-                })}
+            <div className="ml-auto flex items-center">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 p-0 hover:bg-muted rounded-md"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                            }}
+                        >
+                            <MoreVertical className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-20">
+                        <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                            }}
+                            onSelect={(e) => {
+                                e.preventDefault();
+                                onDelete(id);
+                            }}
+                        >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>{t('common.delete')}</span>
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
-            {exists !== undefined && (
-                <span
-                    className="text-sm opacity-60 min-w-[40px] text-right text-inherit"
-                >
-                    {exists}
-                </span>
-            )} */}
         </TreeItemLabel>
     );
 }
@@ -172,6 +190,8 @@ export function Mail({
     const [pageSize, setPageSize] = React.useState(30);
     const [deleteIds, setDeleteIds] = React.useState<Set<number>>(() => new Set());
     const [selected, setSelected] = React.useState<Set<number>>(() => new Set());
+    const [deleteMailboxId, setDeleteMailboxId] = React.useState<string | undefined>(undefined);
+
     const { theme } = useTheme()
 
     const { data: mailboxes, isLoading: isMailboxesLoading } = useQuery({
@@ -225,6 +245,11 @@ export function Mail({
         }
     };
 
+    const handleDeleteClick = (id: string) => {
+        setDeleteMailboxId(id);
+        setOpen('delete');
+    };
+
     const CustomTreeItem = React.useMemo(() => {
         return React.forwardRef(function CustomTreeItem(
             props: CustomTreeItemProps,
@@ -257,6 +282,8 @@ export function Mail({
                             <CustomLabel
                                 {...getLabelProps({
                                     exists: item.exists,
+                                    id: item.id,
+                                    onDelete: handleDeleteClick,
                                     attributes: item.attributes,
                                     expandable: status.expandable && status.expanded,
                                 })}
@@ -270,11 +297,22 @@ export function Mail({
         });
     }, [theme]);
 
-
-
-
     return (
-        <MailboxProvider value={{ open, setOpen, currentMailbox: selectedMailbox, selectedAccountId, setCurrentMailbox: setSelectedMailbox, currentEnvelope: selectedEvelope, setCurrentEnvelope: setSelectedEvelope, deleteIds, setDeleteIds, selected, setSelected }}>
+        <MailboxProvider value={{
+            open,
+            setOpen,
+            currentMailbox: selectedMailbox,
+            selectedAccountId,
+            setCurrentMailbox: setSelectedMailbox,
+            currentEnvelope: selectedEvelope,
+            setCurrentEnvelope: setSelectedEvelope,
+            deleteIds,
+            setDeleteIds,
+            selected,
+            setSelected,
+            deleteMailboxId,
+            setDeleteMailboxId
+        }}>
             <TooltipProvider delayDuration={0}>
                 <ResizablePanelGroup
                     direction="horizontal"
@@ -408,6 +446,11 @@ export function Mail({
                 key='envelope-restore'
                 open={open === 'restore'}
                 onOpenChange={() => setOpen('restore')}
+            />
+            <MailBoxDeleteDialog
+                key='mailbox-delete'
+                open={open === 'delete'}
+                onOpenChange={() => setOpen('delete')}
             />
 
         </MailboxProvider >

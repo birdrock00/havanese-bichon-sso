@@ -16,13 +16,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::{
     decode_mailbox_name, encode_mailbox_name,
     modules::{
         database::{
-            batch_delete_impl, batch_insert_impl, batch_upsert_impl, filter_by_secondary_key_impl,
-            manager::DB_MANAGER,
+            async_find_impl, batch_delete_impl, batch_insert_impl, batch_upsert_impl, delete_impl,
+            filter_by_secondary_key_impl, manager::DB_MANAGER,
         },
         error::{code::ErrorCode, BichonResult},
     },
@@ -90,25 +89,25 @@ impl MailBox {
     //     Ok(())
     // }
 
-    // pub async fn get(id: u64) -> RustMailerResult<MailBox> {
-    //     let result = async_find_impl::<MailBox>(DB_MANAGER.envelope_db(), id).await?;
-    //     Ok(result.ok_or_else(|| {
-    //         raise_error!(
-    //             format!("mailbox {} not found", id),
-    //             ErrorCode::InternalError
-    //         )
-    //     })?)
-    // }
+    pub async fn get(id: u64) -> BichonResult<MailBox> {
+        let result = async_find_impl::<MailBox>(DB_MANAGER.envelope_db(), id).await?;
+        Ok(result.ok_or_else(|| {
+            raise_error!(
+                format!("mailbox {} not found", id),
+                ErrorCode::InternalError
+            )
+        })?)
+    }
 
-    // pub async fn delete(id: u64) -> BichonResult<()> {
-    //     delete_impl(DB_MANAGER.envelope_db(), move |rw| {
-    //         rw.get()
-    //             .primary::<MailBox>(id)
-    //             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-    //             .ok_or_else(|| raise_error!("mailbox missing".into(), ErrorCode::InternalError))
-    //     })
-    //     .await
-    // }
+    pub async fn delete(id: u64) -> BichonResult<()> {
+        delete_impl(DB_MANAGER.envelope_db(), move |rw| {
+            rw.get()
+                .primary::<MailBox>(id)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+                .ok_or_else(|| raise_error!("mailbox missing".into(), ErrorCode::InternalError))
+        })
+        .await
+    }
 
     pub async fn list_all(account_id: u64) -> BichonResult<Vec<MailBox>> {
         filter_by_secondary_key_impl(DB_MANAGER.envelope_db(), MailBoxKey::account_id, account_id)

@@ -358,6 +358,16 @@
         "useDangerousDescription": "Ota tämä vaihtoehto käyttöön vain, jos IMAP-palvelin käyttää julkista CA:ta tai itse allekirjoitettua sertifikaattia, jonka järjestelmä ei tunnista. Tämä ohittaa normaalin sertifikaattitarkistuksen, ja voi altistaa Man-in-the-Middle -hyökkäyksille. Käytä vain, jos ymmärrät riskin."
     },
     "mailbox": {
+        "deleteMailboxDialog": {
+            "title": "Poista postilaatikon kansio",
+            "desc": "Oletko varma, että haluat poistaa tämän postilaatikon kansion? Tätä toimintoa ei voi peruuttaa.",
+            "warningTitle": "Varoitus",
+            "warningDesc": "Tämän kansion poistaminen poistaa pysyvästi myös kaikki sen sisältämät arkistoidut sähköpostit ja alikansiot.",
+            "confirm": "Poista pysyvästi",
+            "successTitle": "Poisto onnistui",
+            "successDesc": "Postilaatikon kansio ja sen sisältö on poistettu onnistuneesti.",
+            "errorTitle": "Poisto epäonnistui"
+        },
         "title": "Sähköposti",
         "folders": "Kansiot",
         "messages": "Viestit",

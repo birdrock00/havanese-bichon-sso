@@ -358,6 +358,16 @@
         "useDangerousDescription": "Activez cette option seulement si vous vous connectez à un serveur IMAP utilisant un certificat public ou auto‑signé que votre système pourrait ne pas reconnaître. Cette option contourne la vérification standard des certificats, ce qui peut vous exposer à des attaques de type homme‑du‑milieu — n’activez que si vous comprenez les risques."
     },
     "mailbox": {
+        "deleteMailboxDialog": {
+            "title": "Supprimer le dossier de messagerie",
+            "desc": "Êtes-vous sûr de vouloir supprimer ce dossier de messagerie ? Cette action est irréversible.",
+            "warningTitle": "Avertissement",
+            "warningDesc": "La suppression de ce dossier supprimera également de façon permanente tous les e-mails archivés et sous-dossiers qu'il contient.",
+            "confirm": "Supprimer définitivement",
+            "successTitle": "Suppression réussie",
+            "successDesc": "Le dossier de messagerie et son contenu ont été supprimés avec succès.",
+            "errorTitle": "Échec de la suppression"
+        },
         "title": "Boîte aux lettres",
         "folders": "Dossiers",
         "messages": "Messages",

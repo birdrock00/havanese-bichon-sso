@@ -358,6 +358,16 @@
         "useDangerousDescription": "僅當你連線的 IMAP 伺服器使用公開根憑證或自簽憑證，且系統無法驗證該憑證時才啟用此選項。本選項會略過標準憑證驗證流程，可能導致中間人攻擊等安全風險 — 請確認你了解並接受這些風險後再啟用。"
     },
     "mailbox": {
+        "deleteMailboxDialog": {
+            "title": "刪除郵箱資料夾",
+            "desc": "您確定要刪除此郵箱資料夾嗎？此操作無法撤銷。",
+            "warningTitle": "警告",
+            "warningDesc": "刪除此資料夾將永久移除其中包含的所有歸檔郵件及子資料夾。",
+            "confirm": "永久刪除",
+            "successTitle": "刪除成功",
+            "successDesc": "郵箱資料夾及其內容已被成功移除。",
+            "errorTitle": "刪除失敗"
+        },
         "title": "信箱",
         "folders": "資料夾",
         "messages": "訊息",

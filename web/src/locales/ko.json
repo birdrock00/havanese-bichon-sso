@@ -358,6 +358,16 @@
         "useDangerousDescription": "공개 CA 인증서 또는 자체 서명 인증서를 사용하는 IMAP 서버에 연결할 때, 시스템에서 인증서를 신뢰하지 않아도 이 옵션을 켜면 무시할 수 있습니다. 하지만 표준 인증서 검증을 무시하기 때문에 중간자 공격에 노출될 수 있습니다 — 위험을 이해한 경우에만 사용하세요"
     },
     "mailbox": {
+        "deleteMailboxDialog": {
+            "title": "메일함 폴더 삭제",
+            "desc": "이 메일함 폴더를 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.",
+            "warningTitle": "경고",
+            "warningDesc": "이 폴더를 삭제하면 그 안에 포함된 모든 아카이브된 이메일과 하위 폴더도 영구적으로 삭제됩니다.",
+            "confirm": "영구 삭제",
+            "successTitle": "삭제 성공",
+            "successDesc": "메일함 폴더와 그 내용이 성공적으로 제거되었습니다.",
+            "errorTitle": "삭제 실패"
+        },
         "title": "받은 편지함",
         "folders": "폴더",
         "messages": "메시지",
