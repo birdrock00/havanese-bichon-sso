@@ -27,6 +27,7 @@ import {
 import { NavGroup } from '@/components/layout/nav-group'
 import Logo from '@/assets/logo.svg'
 import { useSidebarData } from './data/sidebar-data'
+import { Link } from '@tanstack/react-router';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { open } = useSidebar();
@@ -36,22 +37,25 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenuButton
           size='lg'
+          asChild
           className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
         >
-          <div className='flex aspect-square size-16 items-center justify-center rounded-lg text-sidebar-primary-foreground'>
-            <img
-              className={open ? "relative ml-[12px] mr-[12px]" : "mr-[30px]"}
-              src={Logo}
-              width={open ? 60 : 40}
-              height={open ? 60 : 40}
-              alt='Logo'
-            />
-          </div>
-          <div className='grid flex-1 text-left text-lg leading-tight'>
-            <span className='truncate font-semibold'>
-              Bichon
-            </span>
-          </div>
+          <Link to="/">
+            <div className='flex aspect-square size-16 items-center justify-center rounded-lg text-sidebar-primary-foreground'>
+              <img
+                className={open ? "relative ml-[12px] mr-[12px]" : "mr-[30px]"}
+                src={Logo}
+                width={open ? 60 : 40}
+                height={open ? 60 : 40}
+                alt='Logo'
+              />
+            </div>
+            <div className='grid flex-1 text-left text-lg leading-tight'>
+              <span className='truncate font-semibold'>
+                Bichon
+              </span>
+            </div>
+          </Link>
         </SidebarMenuButton>
       </SidebarHeader>
       <SidebarContent>
