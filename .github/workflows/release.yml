@@ -6,6 +6,7 @@ on:
       - '[0-9]+.[0-9]+.[0-9]+'
 env:
   BINARY_NAME: bichon
+  BINARY_CTL: bichonctl
 
 permissions:
   contents: write
@@ -91,6 +92,7 @@ jobs:
         if: matrix.os != 'windows-latest' && matrix.target != 'aarch64-unknown-linux-gnu'
         run: |
           strip target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}
+          strip target/${{ matrix.target }}/release/${{ env.BINARY_CTL }}
 
       - name: Pack artifact (Linux/macOS)
         if: matrix.os != 'windows-latest'
@@ -99,7 +101,8 @@ jobs:
           mkdir -p release
           BINARY="target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}"
           cp README.md LICENSE release/
-          cp "$BINARY" release/
+          cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} release/
+          cp target/${{ matrix.target }}/release/${{ env.BINARY_CTL }} release/
           tar -czvf "${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz" -C release .
           mv "${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz" release/
 
@@ -115,10 +118,13 @@ jobs:
         shell: pwsh
         run: |
           mkdir -p release
-          $BINARY = "target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe"
-          Copy-Item -Path $BINARY -Destination release/
+
+          Copy-Item "target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe" release/
+          Copy-Item "target/${{ matrix.target }}/release/${{ env.BINARY_CTL }}.exe" release/
+
           Copy-Item -Path README.md -Destination release/
           Copy-Item -Path LICENSE -Destination release/
+          
           Compress-Archive -Path release\* -DestinationPath "release/${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.zip" -Force
 
       - name: Upload build artifact
