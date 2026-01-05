@@ -363,11 +363,13 @@ impl AccountV3 {
         list_all_impl(DB_MANAGER.meta_db()).await
     }
 
-    pub async fn minimal_list() -> BichonResult<Vec<MinimalAccount>> {
+    pub async fn minimal_list(only_nosync: bool) -> BichonResult<Vec<MinimalAccount>> {
         let result = list_all_impl(DB_MANAGER.meta_db())
             .await?
             .into_iter()
-            //.filter(|a: &AccountModel| a.enabled)
+            .filter(|account: &AccountModel| {
+                !only_nosync || matches!(account.account_type, AccountType::NoSync)
+            })
             .map(|account: AccountModel| MinimalAccount {
                 id: account.id,
                 email: account.email,

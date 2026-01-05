@@ -221,10 +221,13 @@ impl AccountApi {
     )]
     async fn minimal_accounts_list(
         &self,
+        only_nosync: Query<Option<bool>>,
         context: ClientContext,
     ) -> ApiResult<Json<Vec<MinimalAccount>>> {
         let is_admin = context.user.is_admin().await;
-        let minimal_list = AccountModel::minimal_list().await?;
+        let only_nosync = only_nosync.0.unwrap_or_default();
+
+        let minimal_list = AccountModel::minimal_list(only_nosync).await?;
         if is_admin {
             return Ok(Json(minimal_list));
         }
