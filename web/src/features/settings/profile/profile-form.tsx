@@ -273,7 +273,7 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
                   })}
                 </h2>
 
-                <ScrollArea className="h-[32rem] pr-4">
+                <ScrollArea className="h-[calc(100vh-16rem)] pr-4">
                   <div className="grid grid-cols-1 gap-3">
                     {accessibleAccountIds.map((accountId) => {
                       const email = getEmailById(accountId)

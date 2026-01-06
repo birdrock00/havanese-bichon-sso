@@ -147,7 +147,7 @@ export function MailList({
                     />
                     <span className="text-xs text-muted-foreground">
                         {totalSelected > 0
-                            ? `${totalSelected} ${t('common.selected')}`
+                            ? `${t('search.bulkActions.selected', { count: totalSelected })}`
                             : t('common.selectAll')}
                     </span>
                 </div>

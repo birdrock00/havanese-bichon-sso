@@ -91,7 +91,7 @@ export function APITokens() {
             </Button>
           </div>
 
-          <ScrollArea className="h-[40rem] w-full pr-4 -mr-4 py-1">
+          <ScrollArea className="h-[calc(100vh-16rem)] w-full pr-4 -mr-4 py-1">
             <TokenCardList tokens={tokens} userId={user.id} />
           </ScrollArea>
         </>

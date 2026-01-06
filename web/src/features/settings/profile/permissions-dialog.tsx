@@ -132,7 +132,7 @@ export function PermissionsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl w-[90vw] overflow-hidden flex flex-col max-h-[90vh]">
+      <DialogContent className="max-w-4xl w-[90vw] overflow-hidden flex flex-col max-h-[90vh]">
         <DialogHeader className="pb-4 border-b">
           <div className="flex items-center gap-3">
             <DialogTitle>{title}</DialogTitle>

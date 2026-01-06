@@ -340,7 +340,7 @@ export function Mail({
                         )}
                     >
                         <Separator className="mb-2" />
-                        <ScrollArea className='h-[50rem] w-full pr-4 -mr-4 py-1'>
+                        <ScrollArea className='h-[calc(100vh-8rem)] w-full pr-4 -mr-4 py-1'>
                             <div>
                                 <AccountSwitcher onAccountSelect={(accountId) => {
                                     localStorage.setItem('mailbox:selectedAccountId', `${accountId}`);
@@ -389,7 +389,7 @@ export function Mail({
                             </div>
                             <Separator />
                             <div className="mt-2">
-                                <ScrollArea className='h-[40rem] w-full pr-4 -mr-4 py-1'>
+                                <ScrollArea className='h-[calc(100vh-14rem)] w-full pr-4 -mr-4 py-1'>
                                     <MailList
                                         isLoading={isMessagesLoading}
                                         items={(envelopes?.items ?? []).sort((a, b) => {

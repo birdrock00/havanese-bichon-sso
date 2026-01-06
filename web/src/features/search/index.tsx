@@ -151,7 +151,7 @@ export default function Search() {
                     </p>
                   </div>
                 </div>}
-                {total > 0 && <ScrollArea className='h-[40rem] w-full pr-4 -mr-4 py-1'>
+                {total > 0 && <ScrollArea className='h-[calc(100vh-14rem)] w-full pr-4 -mr-4 py-1'>
                   <MailList
                     isLoading={isLoading}
                     items={emails}

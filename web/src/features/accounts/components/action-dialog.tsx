@@ -358,7 +358,7 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
         onOpenChange(state);
       }}
     >
-      <DialogContent className="max-w-[95vw] md:max-w-5xl w-full p-0 overflow-hidden flex flex-col h-[90vh]">
+      <DialogContent className="max-w-[95vw] md:max-w-5xl w-full p-0 overflow-hidden flex flex-col h-[50rem]">
         <div className="p-6 pb-2 flex-shrink-0">
           <DialogHeader className="text-left">
             <DialogTitle>{isEdit ? t('accounts.updateAccount') : t('accounts.addAccount')}</DialogTitle>

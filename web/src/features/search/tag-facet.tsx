@@ -83,7 +83,7 @@ export function EnvelopeTags({ selectedTags, onTagToggle }: EnvelopeTagsProps) {
         {sortedTags.length === 0 ? (
           <p className="py-2 pl-2 text-sm text-muted-foreground">{t('mail.noTagsYet')}</p>
         ) : (
-          <ScrollArea className="h-[45rem] w-full pr-4 -mr-4">
+          <ScrollArea className="h-[calc(100vh-12rem)] w-full pr-4 -mr-4">
             {sortedTags.map(({ tag: facet, count }) => {
               const checked = selectedTags.includes(facet);
               const id = `tag-${facet}`;

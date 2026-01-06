@@ -85,7 +85,7 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
             <span className="text-blue-500 font-medium truncate">{currentRow.email}</span>
           </DialogTitle>
         </DialogHeader>
-        <ScrollArea className="max-h-[85vh] px-4 sm:px-6 pb-6">
+        <ScrollArea className="max-h-[55rem] px-4 sm:px-6 pb-6">
           {isLoading && (
             <div className="space-y-4 py-6">
               <Skeleton className="h-6 w-1/2" />

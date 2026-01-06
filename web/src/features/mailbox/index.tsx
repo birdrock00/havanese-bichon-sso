@@ -32,7 +32,6 @@ export default function Mailboxes() {
 
     return (
         <>
-            {/* ===== Top Heading ===== */}
             <FixedHeader />
             <Main>
                 <Mail
