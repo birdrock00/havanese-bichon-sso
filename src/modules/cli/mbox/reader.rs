@@ -180,7 +180,7 @@ mod tests {
     #[test]
     fn many_small_mails() {
         let mut data = Vec::new();
-        for i in 0..1000 {
+        for _ in 0..1000 {
             data.extend_from_slice(b"From a\nx\n");
         }
         let e = collect_entries(&data);
@@ -203,8 +203,6 @@ mod tests {
                 determine_folder(labels)
             )
 
-
-            
         }
     }
 }

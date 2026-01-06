@@ -100,6 +100,12 @@ pub fn extract_envelope(fetch: &Fetch, account_id: u64, mailbox_id: u64) -> Bich
 
     let attachments: Vec<String> = message
         .attachments()
+        .filter(|att| {
+            let disp = att.content_disposition();
+            let is_inline = disp.map(|d| d.is_inline()).unwrap_or(false);
+            let has_filename = att.attachment_name().is_some();
+            has_filename && !is_inline
+        })
         .filter_map(|att| att.attachment_name())
         .map(|name| name.to_string())
         .collect();
@@ -195,6 +201,12 @@ pub fn extract_envelope_from_eml(
 
     let attachments: Vec<String> = message
         .attachments()
+        .filter(|att| {
+            let disp = att.content_disposition();
+            let is_inline = disp.map(|d| d.is_inline()).unwrap_or(false);
+            let has_filename = att.attachment_name().is_some();
+            has_filename && !is_inline
+        })
         .filter_map(|att| att.attachment_name())
         .map(|name| name.to_string())
         .collect();

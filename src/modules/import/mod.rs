@@ -100,7 +100,6 @@ impl ImportEmls {
 
         let total = request.emls.len();
         for (index, eml_base64) in request.emls.into_iter().enumerate() {
-            // 1. Decode Base64
             let decoded = match base64_decode_url_safe!(eml_base64.as_bytes()) {
                 Ok(bytes) => bytes,
                 Err(e) => {
