@@ -19,7 +19,7 @@
 
 import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Loader, Download, Trash2, MessageSquareMore } from 'lucide-react';
+import { Loader, Download, Trash2, MessageSquareMore, FileText, FileImage, FileAudio, FileVideo, FileSpreadsheet, FileArchive, FileCode, FileIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -81,6 +81,35 @@ const Multilines: React.FC<{ title: string; lines: string[] }> = ({ title, lines
       </div>
     </div>
   );
+};
+
+
+const getFileConfig = (mimeType: string) => {
+  const type = mimeType.toLowerCase();
+  if (type.includes('pdf')) {
+    return { icon: <FileText className="h-4 w-4" />, color: 'text-red-600 bg-red-50 border-red-100' };
+  }
+  if (type.includes('image/')) {
+    return { icon: <FileImage className="h-4 w-4" />, color: 'text-blue-600 bg-blue-50 border-blue-100' };
+  }
+  if (type.includes('audio/')) {
+    return { icon: <FileAudio className="h-4 w-4" />, color: 'text-purple-600 bg-purple-50 border-purple-100' };
+  }
+
+  if (type.includes('video/')) {
+    return { icon: <FileVideo className="h-4 w-4" />, color: 'text-indigo-600 bg-indigo-50 border-indigo-100' };
+  }
+  if (type.includes('spreadsheet') || type.includes('excel') || type.includes('csv')) {
+    return { icon: <FileSpreadsheet className="h-4 w-4" />, color: 'text-green-600 bg-green-50 border-green-100' };
+  }
+  if (type.includes('zip') || type.includes('compressed') || type.includes('archive')) {
+    return { icon: <FileArchive className="h-4 w-4" />, color: 'text-orange-600 bg-orange-50 border-orange-100' };
+  }
+  if (type.includes('text/') || type.includes('json') || type.includes('javascript')) {
+    return { icon: <FileCode className="h-4 w-4" />, color: 'text-slate-600 bg-slate-50 border-slate-100' };
+  }
+
+  return { icon: <FileIcon className="h-4 w-4" />, color: 'text-gray-600 bg-gray-50 border-gray-100' };
 };
 
 export function MailMessageView({
@@ -245,11 +274,24 @@ export function MailMessageView({
               const nonInline = attachments.filter((a) => !a.inline);
               return nonInline.length > 0 ? (
                 <div className="space-y-2">
-                  {nonInline.map((attachment, i) => (
-                    <div key={i} className="flex items-center">
-                      <div className="flex items-center space-x-8">
-                        <span className="truncate text-xs">{attachment.filename}</span>
-                        <span className="text-xs px-2 py-1 rounded">[{attachment.file_type}]</span>
+                  {nonInline.map((attachment, i) => {
+                    const { icon, color } = getFileConfig(attachment.file_type);
+                    return <div key={i} className="flex items-center">
+                      <div className="group flex items-center gap-2 p-1 hover:bg-muted/60 rounded transition-colors min-w-0 w-full">
+                        <div className={`flex-shrink-0 ${color}`}>
+                          {icon}
+                        </div>
+                        <div className="flex items-center justify-between min-w-0 flex-1 gap-2">
+                          <span
+                            className="truncate text-xs font-medium text-foreground/90"
+                            title={attachment.filename}
+                          >
+                            {attachment.filename}
+                          </span>
+                          <span className="flex-shrink-0 text-[9px] font-bold text-muted-foreground/60 bg-muted px-1 py-0.5 rounded uppercase tracking-tighter group-hover:text-foreground transition-colors">
+                            {attachment.file_type.split('/').pop()?.toUpperCase()}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex items-center space-x-4 ml-auto">
                         <span className="text-gray-500 text-xs shrink-0">
@@ -268,7 +310,7 @@ export function MailMessageView({
                         )}
                       </div>
                     </div>
-                  ))}
+                  })}
                 </div>
               ) : (
                 <span className="text-gray-500 text-xs italic">

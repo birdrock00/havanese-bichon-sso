@@ -164,7 +164,7 @@ export default function MailArchiveDashboard() {
   return (
     <>
       <FixedHeader />
-      <Main>
+      <Main higher>
         <div className="flex-1 space-y-6 p-6 md:p-8">
           <div className="flex items-center justify-between">
             <div>
@@ -304,7 +304,6 @@ export default function MailArchiveDashboard() {
               </Card>
             </TabsContent>
 
-            {/* Attachments */}
             <TabsContent value="attachment" className="space-y-4">
               <Card>
                 <CardHeader>
@@ -459,7 +458,6 @@ export default function MailArchiveDashboard() {
           </Tabs>
         </div>
 
-        {/* Footer / Copyright - New Addition */}
         <div className="p-6 md:p-8 pt-0 text-center text-xs text-muted-foreground">
           © 2025 <a href="https://rustmailer.com" target="_blank" rel="noopener noreferrer" className="hover:underline">rustmailer.com</a> - Bichon Email Archiving Project
         </div>
