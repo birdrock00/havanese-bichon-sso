@@ -20,7 +20,7 @@ import React from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2, ShieldCheck, Users, Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -52,9 +52,8 @@ import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 import { useToast } from '@/hooks/use-toast'
-import { useRoles } from '@/hooks/use-roles'
-import { useMinimalUsers } from '@/hooks/use-minimal-users'
 import { access_assign, AccountModel } from '@/api/account/api'
+import { list_account_roles, list_minimal_users, MinimalUser, UserRole } from '@/api/users/api'
 
 interface Props {
     currentRow: AccountModel
@@ -71,12 +70,23 @@ export function AccountAccessAssignmentDialog({
     const { toast } = useToast()
     const queryClient = useQueryClient()
 
-    const { accountRoles, isLoading: isLoadingRoles } = useRoles()
-    const { users, isLoading: isLoadingUsers } = useMinimalUsers()
+    const { data: roles, isLoading: isLoadingRoles } = useQuery<UserRole[]>({
+        queryKey: ['account-role-list'],
+        queryFn: list_account_roles,
+        staleTime: 5 * 60 * 1000,
+        enabled: open,
+    });
+
+
+    const { data: users, isLoading: isLoadingUsers } = useQuery<MinimalUser[]>({
+        queryKey: ['minimal-user-list'],
+        queryFn: list_minimal_users,
+        staleTime: 5 * 60 * 1000,
+        enabled: open,
+    });
 
     const [keyword, setKeyword] = React.useState('')
 
-    // 1. 定义校验 Schema (集成国际化错误提示)
     const assignmentSchema = z.object({
         account_ids: z.array(z.number()),
         user_ids: z.array(z.number()).min(1, {
@@ -101,7 +111,7 @@ export function AccountAccessAssignmentDialog({
     const filteredUsers = React.useMemo(() => {
         if (!keyword.trim()) return users
         const lowerKeyword = keyword.toLowerCase()
-        return users.filter(
+        return users!.filter(
             (user) =>
                 user.username.toLowerCase().includes(lowerKeyword) ||
                 user.email.toLowerCase().includes(lowerKeyword)
@@ -170,7 +180,7 @@ export function AccountAccessAssignmentDialog({
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
-                                                {accountRoles.map((role) => (
+                                                {roles && roles.map((role) => (
                                                     <SelectItem key={role.id} value={role.id.toString()}>
                                                         {role.name}
                                                     </SelectItem>
@@ -206,12 +216,12 @@ export function AccountAccessAssignmentDialog({
                                             </div>
                                         ) : (
                                             <div className="p-3 space-y-1">
-                                                {filteredUsers.length === 0 ? (
+                                                {filteredUsers && (filteredUsers.length === 0 ? (
                                                     <div className="text-center py-8 text-sm text-muted-foreground">
                                                         {t('accounts.access_control.user_empty')}
                                                     </div>
                                                 ) : (
-                                                    filteredUsers.map((user) => (
+                                                    filteredUsers!.map((user) => (
                                                         <FormField
                                                             key={user.id}
                                                             control={form.control}
@@ -242,7 +252,7 @@ export function AccountAccessAssignmentDialog({
                                                             )}
                                                         />
                                                     ))
-                                                )}
+                                                ))}
                                             </div>
                                         )}
                                     </ScrollArea>

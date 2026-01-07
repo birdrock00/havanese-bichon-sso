@@ -53,7 +53,8 @@ impl Permission {
     /// Create, modify, and delete all users and their roles (Admin only).
     pub const USER_MANAGE: &str = "user:manage";
 
-    /// View the minimal user list and basic profiles (Managers and Admins).
+    /// View the minimal user list, basic user profiles,
+    /// including visibility into account-level roles (Managers and Admins).
     pub const USER_VIEW: &str = "user:view";
 
     /// View and revoke all access tokens in the system.

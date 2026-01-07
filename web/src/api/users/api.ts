@@ -180,6 +180,11 @@ export const list_minimal_users = async () => {
     return response.data;
 };
 
+export const list_account_roles = async () => {
+    const response = await axiosInstance.get<UserRole[]>("/api/v1/list-account-roles");
+    return response.data;
+};
+
 export const remove_user = async (id: number) => {
     const response = await axiosInstance.delete(`/api/v1/users/${id}`);
     return response.data;

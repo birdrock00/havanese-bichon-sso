@@ -27,7 +27,7 @@ use crate::modules::users::payload::{
     RoleCreateRequest, RoleUpdateRequest, UserCreateRequest, UserUpdateRequest,
 };
 use crate::modules::users::permissions::Permission;
-use crate::modules::users::role::UserRole;
+use crate::modules::users::role::{RoleType, UserRole};
 use crate::modules::users::view::UserView;
 use crate::modules::users::UserModel;
 use poem::web::Path;
@@ -101,10 +101,7 @@ impl UsersApi {
         let roles = UserRole::list_all().await?;
         let role_lookup: BTreeMap<u64, UserRole> = roles.into_iter().map(|r| (r.id, r)).collect();
         let users = UserModel::list_all().await?;
-        let users = users
-            .into_iter()
-            .map(|u| u.to_view(&role_lookup))
-            .collect();
+        let users = users.into_iter().map(|u| u.to_view(&role_lookup)).collect();
         Ok(Json(users))
     }
 
@@ -213,5 +210,22 @@ impl UsersApi {
             .await?;
 
         Ok(Json(minimal_list))
+    }
+
+    #[oai(
+        path = "/list-account-roles",
+        method = "get",
+        operation_id = "list_account_roles"
+    )]
+    async fn list_account_roles(&self, context: ClientContext) -> ApiResult<Json<Vec<UserRole>>> {
+        context
+            .require_permission(None, Permission::USER_VIEW)
+            .await?;
+        let all = UserRole::list_all().await?;
+        Ok(Json(
+            all.into_iter()
+                .filter(|r| matches!(r.role_type, RoleType::Account))
+                .collect(),
+        ))
     }
 }
