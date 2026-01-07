@@ -39,6 +39,14 @@ import { EditTagsDialog } from './add-tag-dialog';
 import { useTranslation } from 'react-i18next';
 import Logo from '@/assets/logo.svg'
 import { RestoreMessageDialog } from './restore-message-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 export default function Search() {
   const { t } = useTranslation()
@@ -56,8 +64,10 @@ export default function Search() {
     isFetching,
     page,
     pageSize,
+    sortBy,
     setPage,
     setPageSize,
+    setSortBy,
     onSubmit,
     reset,
     filter
@@ -121,10 +131,27 @@ export default function Search() {
                 </div>
               </aside>
               <div className="flex-1 min-w-0 space-y-4">
-                <Button size="sm" onClick={() => setOpen("search-form")}>
-                  <SearchIcon className="mr-2 h-4 w-4" />
-                  {t('common.search')}
-                </Button>
+                <div className="flex flex-row gap-4 items-end">
+                  <Button size="sm" onClick={() => setOpen("search-form")}>
+                    <SearchIcon className="mr-2 h-4 w-4" />
+                    {t('common.search')}
+                  </Button>
+                  <Label className="">
+                    {t('search.sortBy')}
+                    <Select
+                      value={sortBy}
+                      onValueChange={(value: "date" | "size") => setSortBy(value)}
+                    >
+                      <SelectTrigger className='h-8 mt-2'>
+                        <SelectValue placeholder="Placeholder" />
+                      </SelectTrigger>
+                      <SelectContent side='top'>
+                        <SelectItem value="date">{t('search.date')}</SelectItem>
+                        <SelectItem value="size">{t('search.size')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </Label>
+                </div>
                 {isLoading && (
                   <Card>
                     <CardContent className="py-12">

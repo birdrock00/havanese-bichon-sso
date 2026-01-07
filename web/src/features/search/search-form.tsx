@@ -67,7 +67,7 @@ const getSearchFilterSchema = (t: (key: string) => string) => z.object({
     before: z.date().optional(),
     account_id: z.number().optional().or(z.literal("")),
     mailbox_id: z.number().optional().or(z.literal("")),
-    size_preset: z.enum(['any', 'tiny', 'small', 'medium', 'large']).optional(),
+    size_preset: z.enum(['any', 'tiny', 'small', 'medium', 'large', 'huge']).optional(),
     message_id: z.string().optional().or(z.literal("")),
 });
 
@@ -107,8 +107,10 @@ function withSizePreset(values: Record<string, any>) {
         case 'small':
             return { ...rest, max_size: 2 * 1024 * 1024 };
         case 'medium':
-            return { ...rest, max_size: 20 * 1024 * 1024 };
+            return { ...rest, min_size: 2 * 1024 * 1024, max_size: 10 * 1024 * 1024 };
         case 'large':
+            return { ...rest, min_size: 10 * 1024 * 1024, max_size: 20 * 1024 * 1024 };
+        case 'huge':
             return { ...rest, min_size: 20 * 1024 * 1024 };
         default:
             return rest;

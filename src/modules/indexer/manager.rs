@@ -621,6 +621,7 @@ impl EnvelopeIndexManager {
         page: u64,
         page_size: u64,
         desc: bool,
+        sort_by: String
     ) -> BichonResult<DataPage<Envelope>> {
         assert!(page > 0, "Page number must be greater than 0");
         assert!(page_size > 0, "Page size must be greater than 0");
@@ -653,7 +654,20 @@ impl EnvelopeIndexManager {
         }
 
         let order = if desc { Order::Desc } else { Order::Asc };
-        let mailbox_docs: Vec<(i64, DocAddress)> = searcher
+        let mailbox_docs: Vec<DocAddress>;
+
+        if sort_by == "size" {
+            let size_docs: Vec<(u64, DocAddress)> = searcher
+            .search(
+                &query,
+                &TopDocs::with_limit(page_size as usize)
+                    .and_offset(offset as usize)
+                    .order_by_fast_field(F_SIZE, order),
+            )
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            mailbox_docs = size_docs.into_iter().map(|(_, addr)| addr).collect();
+        } else {
+            let date_docs: Vec<(i64, DocAddress)> = searcher
             .search(
                 &query,
                 &TopDocs::with_limit(page_size as usize)
@@ -661,9 +675,12 @@ impl EnvelopeIndexManager {
                     .order_by_fast_field(F_DATE, order),
             )
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            mailbox_docs = date_docs.into_iter().map(|(_, addr)| addr).collect();
+        }
+
         let mut result = Vec::new();
 
-        for (_, doc_address) in mailbox_docs {
+        for doc_address in mailbox_docs {
             let doc: TantivyDocument = searcher
                 .doc_async(doc_address)
                 .await

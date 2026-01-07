@@ -54,6 +54,7 @@ pub struct SearchRequest {
     filter: SearchFilter,
     page: u64,
     page_size: u64,
+    sort_by: String
 }
 impl SearchRequest {
     pub fn validate(&self) -> BichonResult<()> {
@@ -85,6 +86,7 @@ pub async fn search_messages_impl(
             request.page,
             request.page_size,
             true,
+            request.sort_by
         )
         .await
 }
