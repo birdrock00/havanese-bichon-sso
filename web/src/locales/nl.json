@@ -414,6 +414,8 @@
         "small": "Klein (<2 MB)",
         "medium": "Middelgroot (2 - 10 MB)",
         "large": "Groot (10 - 20 MB)",
+        "huge": "Zeer groot (≥20 MB)",
+        "sort": "Sorteren",
         "sizeDescription": "De grootte verwijst naar de totale e-mailgrootte, inclusief bijlagen.",
         "title": "Zoeken",
         "searching": "Bezig met zoeken, even geduld alstublieft…",

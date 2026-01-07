@@ -29,7 +29,8 @@ export function useSearchMessages() {
     const [filter, setFilter] = useState<Record<string, any>>({});
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(30);
-    const [sortBy, setSortBy] = useState<"date" | "size">("date");
+    const [sortBy, setSortBy] = useState<"DATE" | "SIZE">("DATE");
+    const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
     const onSubmit = (cleaned: Record<string, any>) => {
         if ('has_attachment' in cleaned && cleaned.has_attachment === false) {
@@ -60,13 +61,14 @@ export function useSearchMessages() {
         error,
         isFetching,
     } = useQuery<PaginatedResponse<EmailEnvelope>>({
-        queryKey: ['search-messages', filter, page, pageSize, sortBy],
+        queryKey: ['search-messages', filter, page, pageSize, sortBy, sortOrder],
         queryFn: () =>
             search_messages({
                 filter: filter,
                 page,
                 page_size: pageSize,
-                sort_by: sortBy
+                sort_by: sortBy,
+                desc: sortOrder === "desc"
             }),
         staleTime: 1000,
         retry: false,
@@ -80,6 +82,8 @@ export function useSearchMessages() {
         setPageSize,
         sortBy,
         setSortBy,
+        sortOrder,
+        setSortOrder,
         isLoading,
         isError,
         error: error as Error | null,

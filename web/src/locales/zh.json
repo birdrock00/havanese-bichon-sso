@@ -414,6 +414,8 @@
     "small": "小（<2 MB）",
     "medium": "中（2 - 10 MB）",
     "large": "大（10 - 20 MB）",
+    "huge": "极大 (≥20 MB)",
+    "sort": "排序",
     "sizeDescription": "大小指的是邮件整体大小，包含附件。",
     "title": "搜索",
     "searching": "搜索中，请稍候…",

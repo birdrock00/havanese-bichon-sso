@@ -18,7 +18,7 @@
 
 use std::collections::HashSet;
 
-use poem_openapi::Object;
+use poem_openapi::{Enum, Object};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -49,12 +49,20 @@ pub struct SearchFilter {
     pub tags: Option<Vec<String>>,
 }
 
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, Enum)]
+pub enum SortBy {
+    #[default]
+    DATE,
+    SIZE,
+}
+
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, Object)]
 pub struct SearchRequest {
     filter: SearchFilter,
     page: u64,
     page_size: u64,
-    sort_by: String
+    sort_by: Option<SortBy>,
+    desc: Option<bool>,
 }
 impl SearchRequest {
     pub fn validate(&self) -> BichonResult<()> {
@@ -85,8 +93,8 @@ pub async fn search_messages_impl(
             request.filter,
             request.page,
             request.page_size,
-            true,
-            request.sort_by
+            request.desc.unwrap_or(true),
+            request.sort_by.unwrap_or(SortBy::DATE),
         )
         .await
 }

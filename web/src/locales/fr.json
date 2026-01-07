@@ -414,6 +414,8 @@
         "small": "Petite (<2 MB)",
         "medium": "Moyenne (2 - 10 MB)",
         "large": "Grande (10 - 20 MB)",
+        "huge": "Énorme (≥20 Mo)",
+        "sort": "Trier",
         "sizeDescription": "La taille correspond à la taille totale de l’e-mail, pièces jointes incluses.",
         "title": "Recherche",
         "searching": "Recherche en cours, veuillez patienter...",

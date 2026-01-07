@@ -457,6 +457,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                                             <SelectItem value="small">{t('search.small')}</SelectItem>
                                                             <SelectItem value="medium">{t('search.medium')}</SelectItem>
                                                             <SelectItem value="large">{t('search.large')}</SelectItem>
+                                                            <SelectItem value="huge">{t('search.huge')}</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                     <FormMessage />

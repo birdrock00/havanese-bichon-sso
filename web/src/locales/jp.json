@@ -414,6 +414,8 @@
         "small": "小（2 MB 未満）",
         "medium": "中（2 - 10 MB）",
         "large": "大（10 - 20 MB）",
+        "huge": "巨大 (≥20 MB)",
+        "sort": "並べ替え",
         "sizeDescription": "サイズは添付ファイルを含むメール全体の容量を指します。",
         "title": "検索",
         "searching": "検索中です。お待ちください…",

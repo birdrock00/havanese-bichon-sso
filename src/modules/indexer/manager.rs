@@ -24,7 +24,7 @@ use std::{
     time::Duration,
 };
 
-use crate::modules::message::tags::TagCount;
+use crate::modules::message::{search::SortBy, tags::TagCount};
 use crate::{
     modules::{
         account::migration::AccountModel,
@@ -621,7 +621,7 @@ impl EnvelopeIndexManager {
         page: u64,
         page_size: u64,
         desc: bool,
-        sort_by: String
+        sort_by: SortBy,
     ) -> BichonResult<DataPage<Envelope>> {
         assert!(page > 0, "Page number must be greater than 0");
         assert!(page_size > 0, "Page size must be greater than 0");
@@ -656,26 +656,29 @@ impl EnvelopeIndexManager {
         let order = if desc { Order::Desc } else { Order::Asc };
         let mailbox_docs: Vec<DocAddress>;
 
-        if sort_by == "size" {
-            let size_docs: Vec<(u64, DocAddress)> = searcher
-            .search(
-                &query,
-                &TopDocs::with_limit(page_size as usize)
-                    .and_offset(offset as usize)
-                    .order_by_fast_field(F_SIZE, order),
-            )
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-            mailbox_docs = size_docs.into_iter().map(|(_, addr)| addr).collect();
-        } else {
-            let date_docs: Vec<(i64, DocAddress)> = searcher
-            .search(
-                &query,
-                &TopDocs::with_limit(page_size as usize)
-                    .and_offset(offset as usize)
-                    .order_by_fast_field(F_DATE, order),
-            )
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-            mailbox_docs = date_docs.into_iter().map(|(_, addr)| addr).collect();
+        match sort_by {
+            SortBy::DATE => {
+                let date_docs: Vec<(i64, DocAddress)> = searcher
+                    .search(
+                        &query,
+                        &TopDocs::with_limit(page_size as usize)
+                            .and_offset(offset as usize)
+                            .order_by_fast_field(F_DATE, order),
+                    )
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                mailbox_docs = date_docs.into_iter().map(|(_, addr)| addr).collect();
+            }
+            SortBy::SIZE => {
+                let size_docs: Vec<(u64, DocAddress)> = searcher
+                    .search(
+                        &query,
+                        &TopDocs::with_limit(page_size as usize)
+                            .and_offset(offset as usize)
+                            .order_by_fast_field(F_SIZE, order),
+                    )
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                mailbox_docs = size_docs.into_iter().map(|(_, addr)| addr).collect();
+            }
         }
 
         let mut result = Vec::new();
@@ -865,7 +868,6 @@ impl EnvelopeIndexManager {
             Ok(None)
         }
     }
-
 
     pub async fn top_10_largest_emails(
         &self,

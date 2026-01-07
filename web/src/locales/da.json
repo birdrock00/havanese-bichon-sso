@@ -414,6 +414,8 @@
         "small": "Lille (<2 MB)",
         "medium": "Mellem (2 - 10 MB)",
         "large": "Stor (10 - 20 MB)",
+        "huge": "Kæmpestor (≥20 MB)",
+        "sort": "Sortér",
         "sizeDescription": "Størrelsen henviser til den samlede e-mailstørrelse, inklusive vedhæftede filer.",
         "title": "Søg",
         "searching": "Søger, vent venligst...",

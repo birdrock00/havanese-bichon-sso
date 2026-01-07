@@ -415,7 +415,7 @@
         "medium": "Keskikokoinen (2 - 10 MB)",
         "large": "Suuri (10 - 20 MB)",
         "huge": "Valtava (≥20 MB)",
-        "sortBy": "Lajittele",
+        "sort": "Lajittele",
         "sizeDescription": "Koko tarkoittaa sähköpostin kokonaiskokoa, liitteet mukaan lukien.",
         "title": "Hae",
         "searching": "Haetaan, odota hetki...",

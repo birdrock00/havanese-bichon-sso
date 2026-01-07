@@ -414,6 +414,8 @@
         "small": "Liten (<2 MB)",
         "medium": "Medelstor (2 - 10 MB)",
         "large": "Stor (10 - 20 MB)",
+        "huge": "Mycket stor (≥20 MB)",
+        "sort": "Sortera",
         "sizeDescription": "Storleken avser e-postens totala storlek, inklusive bilagor.",
         "title": "Sök",
         "searching": "Söker, vänligen vänta…",

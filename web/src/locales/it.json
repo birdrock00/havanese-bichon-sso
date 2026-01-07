@@ -414,6 +414,8 @@
         "small": "Piccolo (<2 MB)",
         "medium": "Medio (2 - 10 MB)",
         "large": "Grande (10 - 20 MB)",
+        "huge": "Enorme (≥20 MB)",
+        "sort": "Ordina",
         "sizeDescription": "La dimensione indica la dimensione totale dell’email, inclusi gli allegati.",
         "title": "Cerca",
         "searching": "Ricerca in corso, attendere prego...",

@@ -414,6 +414,8 @@
         "small": "Pequeño (<2 MB)",
         "medium": "Mediano (2 - 10 MB)",
         "large": "Grande (10 - 20 MB)",
+        "huge": "Muy grande (≥20 MB)",
+        "sort": "Ordenar",
         "sizeDescription": "El tamaño se refiere al tamaño total del correo electrónico, incluidos los archivos adjuntos.",
         "title": "Buscar",
         "searching": "Buscando, por favor espera...",

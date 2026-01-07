@@ -415,7 +415,7 @@
     "medium": "Medium (2 - 10 MB)",
     "large": "Large (10 - 20 MB)",
     "huge": "Huge (≥20 MB)",
-    "sortBy": "Sort by",
+    "sort": "Sort",
     "sizeDescription": "The size refers to the total email size, including attachments.",
     "title": "Search",
     "searching": "Searching, please wait…",

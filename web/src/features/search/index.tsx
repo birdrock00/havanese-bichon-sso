@@ -26,7 +26,7 @@ import { EnvelopeListPagination } from '@/components/pagination';
 import { MailList } from './mail-list';
 import React from 'react';
 import { EmailEnvelope } from '@/api';
-import { Filter, SearchIcon } from 'lucide-react';
+import { ArrowDownWideNarrow, ArrowUpWideNarrow, Filter, SearchIcon } from 'lucide-react';
 import { MailDisplayDrawer } from './mail-display-dialog';
 import { EnvelopeDeleteDialog } from './delete-dialog';
 import SearchProvider, { SearchDialogType } from './context';
@@ -39,14 +39,8 @@ import { EditTagsDialog } from './add-tag-dialog';
 import { useTranslation } from 'react-i18next';
 import Logo from '@/assets/logo.svg'
 import { RestoreMessageDialog } from './restore-message-dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export default function Search() {
   const { t } = useTranslation()
@@ -65,9 +59,11 @@ export default function Search() {
     page,
     pageSize,
     sortBy,
+    sortOrder,
     setPage,
     setPageSize,
     setSortBy,
+    setSortOrder,
     onSubmit,
     reset,
     filter
@@ -131,26 +127,56 @@ export default function Search() {
                 </div>
               </aside>
               <div className="flex-1 min-w-0 space-y-4">
-                <div className="flex flex-row gap-4 items-end">
-                  <Button size="sm" onClick={() => setOpen("search-form")}>
+                <div className="flex flex-row items-center justify-between w-full border-b pb-4">
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => setOpen("search-form")}
+                    className="px-4 shadow-sm"
+                  >
                     <SearchIcon className="mr-2 h-4 w-4" />
                     {t('common.search')}
                   </Button>
-                  <Label className="">
-                    {t('search.sortBy')}
-                    <Select
+                  <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg border">
+                    <span className="text-xs font-medium text-muted-foreground px-2">
+                      {t('search.sort')}
+                    </span>
+                    <Separator orientation="vertical" className="h-4" />
+                    <ToggleGroup
+                      type="single"
                       value={sortBy}
-                      onValueChange={(value: "date" | "size") => setSortBy(value)}
+                      onValueChange={(value) => value && setSortBy(value as "DATE" | "SIZE")}
+                      className="gap-1"
                     >
-                      <SelectTrigger className='h-8 mt-2'>
-                        <SelectValue placeholder="Placeholder" />
-                      </SelectTrigger>
-                      <SelectContent side='top'>
-                        <SelectItem value="date">{t('search.date')}</SelectItem>
-                        <SelectItem value="size">{t('search.size')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </Label>
+                      <ToggleGroupItem
+                        value="DATE"
+                        size="sm"
+                        className="h-7 px-3 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm"
+                      >
+                        {t('search.date')}
+                      </ToggleGroupItem>
+                      <ToggleGroupItem
+                        value="SIZE"
+                        size="sm"
+                        className="h-7 px-3 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm"
+                      >
+                        {t('search.size')}
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                    <Separator orientation="vertical" className="h-4" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 hover:bg-background"
+                      onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                    >
+                      {sortOrder === "asc" ? (
+                        <ArrowUpWideNarrow className="h-4 w-4 text-primary" />
+                      ) : (
+                        <ArrowDownWideNarrow className="h-4 w-4 text-primary" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
                 {isLoading && (
                   <Card>
