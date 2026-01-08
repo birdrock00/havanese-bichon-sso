@@ -304,6 +304,20 @@ After logging in, the admin user can manage their profile directly in the WebUI:
 ⚠️ **Security Notice:**
 For security reasons, you should **change the default admin password immediately after the first login**.
 
+## 📦 Import Existing Mail Archives
+
+If you already have existing emails stored as **EML** or **MBOX** files, you can import them into Bichon using the `bichonctl` CLI.
+
+This allows you to:
+
+- Index historical emails
+- Perform full-text search immediately
+- Manage imported data just like synced IMAP emails
+
+📖 **Full documentation:**  
+👉 https://github.com/rustmailer/bichon/wiki/Using-Bichonctl-For-Email-Import
+
+
 ## 📖 Documentation
 
 > Under construction. Documentation will be available soon.
