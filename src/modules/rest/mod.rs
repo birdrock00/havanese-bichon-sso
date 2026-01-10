@@ -51,7 +51,7 @@ pub type ApiResult<T, E = ApiErrorResponse> = std::result::Result<T, E>;
 
 pub async fn start_http_server() -> BichonResult<()> {
     let listener = TcpListener::bind((
-        SETTINGS.bichon_bind_ip.clone().unwrap_or("0.0.0.0".into()),
+        SETTINGS.bichon_bind_ip.clone().unwrap_or("::".into()),
         SETTINGS.bichon_http_port as u16,
     ));
 
