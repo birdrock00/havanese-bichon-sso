@@ -24,6 +24,7 @@ import {
   DoubleArrowRightIcon,
 } from '@radix-ui/react-icons'
 import { Button } from '@/components/ui/button'
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -33,6 +34,7 @@ import {
 } from '@/components/ui/select'
 import { useTranslation } from 'react-i18next'
 import { showNumbers } from '@/lib/utils'
+import { useEffect, useState } from 'react';
 
 interface PaginationProps {
   totalItems: number
@@ -52,7 +54,12 @@ export function EnvelopeListPagination({
   setPageSize,
 }: PaginationProps) {
   const { t } = useTranslation()
+  const [pageInput, setPageInput] = useState(pageIndex + 1);
   const pageCount = Math.ceil(totalItems / pageSize)
+
+  useEffect(() => {
+    setPageInput(pageIndex + 1)
+  }, [pageIndex])
 
   const handlePageSizeChange = (value: string) => {
     const newPageSize = Number(value)
@@ -97,7 +104,16 @@ export function EnvelopeListPagination({
           </Select>
         </div>
         <div className='flex items-center justify-center text-sm font-medium'>
-          {t("table.page")} {pageIndex + 1} {t("table.of")} {pageCount}
+          {t("table.page")}
+          <Input type="number" value={pageInput} onBlur={() => {
+            if (Number.isNaN(pageInput)) return;
+            if (pageInput > 0) setPageIndex(pageInput - 1);
+            else setPageIndex(0);
+          }}
+          onChange={(e) => setPageInput(Number(e.target.value))}
+          className='mx-2 w-20'
+          />
+          {t("table.of")} {pageCount}
         </div>
         <div className='flex items-center space-x-2'>
           <Button

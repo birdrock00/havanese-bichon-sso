@@ -47,7 +47,8 @@
     "op_failed": "Operation failed",
     "na": "N/A",
     "retry": "Retry",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "columns": "Columns"
   },
   "navigation": {
     "home": "Home",

@@ -23,10 +23,9 @@ import { Main } from '@/components/layout/main';
 import { useSearchMessages } from '@/hooks/use-search-messages';
 import { SearchFormDialog } from './search-form';
 import { EnvelopeListPagination } from '@/components/pagination';
-import { MailList } from './mail-list';
 import React from 'react';
 import { EmailEnvelope } from '@/api';
-import { ArrowDownWideNarrow, ArrowUpWideNarrow, Filter, SearchIcon } from 'lucide-react';
+import { Filter, SearchIcon, SquarePen } from 'lucide-react';
 import { MailDisplayDrawer } from './mail-display-dialog';
 import { EnvelopeDeleteDialog } from './delete-dialog';
 import SearchProvider, { SearchDialogType } from './context';
@@ -39,8 +38,9 @@ import { EditTagsDialog } from './add-tag-dialog';
 import { useTranslation } from 'react-i18next';
 import Logo from '@/assets/logo.svg'
 import { RestoreMessageDialog } from './restore-message-dialog';
-import { Separator } from '@/components/ui/separator';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { ColumnsDialog } from './columns-dialog';
+import { MailListTable } from './mail-list-table';
+import { SortingState, VisibilityState } from '@tanstack/react-table';
 
 export default function Search() {
   const { t } = useTranslation()
@@ -49,6 +49,11 @@ export default function Search() {
   const [toDelete, setToDelete] = React.useState<Map<number, Set<number>>>(new Map());
   const [selected, setSelected] = React.useState<Map<number, Set<number>>>(new Map());
   const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
+  const [sorting, setSorting] = React.useState<SortingState>([{ id: "date", desc: true }]);
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(localStorage.getItem("searchTableColumns")
+    ? JSON.parse(localStorage.getItem("searchTableColumns") as string) as Record<string, boolean>
+    : {}
+  )
 
   const {
     emails,
@@ -58,8 +63,6 @@ export default function Search() {
     isFetching,
     page,
     pageSize,
-    sortBy,
-    sortOrder,
     setPage,
     setPageSize,
     setSortBy,
@@ -92,7 +95,23 @@ export default function Search() {
     <>
       <FixedHeader />
       <Main>
-        <SearchProvider value={{ open, setOpen, currentEnvelope: selectedEnvelope, selectedTags, setCurrentEnvelope: setSelectedEnvelope, toDelete, setToDelete, selected, setSelected }}>
+        <SearchProvider
+          value={{ 
+            open,
+            setOpen,
+            currentEnvelope: selectedEnvelope,
+            selectedTags,
+            setCurrentEnvelope: setSelectedEnvelope,
+            toDelete,
+            setToDelete,
+            selected,
+            setSelected,
+            sorting,
+            setSorting,
+            columnVisibility,
+            setColumnVisibility
+          }}
+        >
           <div className="mx-auto w-full px-4">
             <div className="mb-4 lg:hidden">
               <Sheet>
@@ -127,7 +146,7 @@ export default function Search() {
                 </div>
               </aside>
               <div className="flex-1 min-w-0 space-y-4">
-                <div className="flex flex-row items-center justify-between w-full border-b pb-4">
+                <div className="flex flex-row gap-4 items-end">
                   <Button
                     size="sm"
                     variant="default"
@@ -137,46 +156,15 @@ export default function Search() {
                     <SearchIcon className="mr-2 h-4 w-4" />
                     {t('common.search')}
                   </Button>
-                  <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg border">
-                    <span className="text-xs font-medium text-muted-foreground px-2">
-                      {t('search.sort')}
-                    </span>
-                    <Separator orientation="vertical" className="h-4" />
-                    <ToggleGroup
-                      type="single"
-                      value={sortBy}
-                      onValueChange={(value) => value && setSortBy(value as "DATE" | "SIZE")}
-                      className="gap-1"
-                    >
-                      <ToggleGroupItem
-                        value="DATE"
-                        size="sm"
-                        className="h-7 px-3 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm"
-                      >
-                        {t('search.date')}
-                      </ToggleGroupItem>
-                      <ToggleGroupItem
-                        value="SIZE"
-                        size="sm"
-                        className="h-7 px-3 text-xs data-[state=on]:bg-background data-[state=on]:shadow-sm"
-                      >
-                        {t('search.size')}
-                      </ToggleGroupItem>
-                    </ToggleGroup>
-                    <Separator orientation="vertical" className="h-4" />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 hover:bg-background"
-                      onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                    >
-                      {sortOrder === "asc" ? (
-                        <ArrowUpWideNarrow className="h-4 w-4 text-primary" />
-                      ) : (
-                        <ArrowDownWideNarrow className="h-4 w-4 text-primary" />
-                      )}
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    onClick={() => setOpen("columns")}
+                    className="px-4 shadow-sm"
+                  >
+                    <SquarePen className="mr-2 h-4 w-4" />
+                    {t('common.columns')}
+                  </Button>
                 </div>
                 {isLoading && (
                   <Card>
@@ -204,14 +192,16 @@ export default function Search() {
                     </p>
                   </div>
                 </div>}
-                {total > 0 && <ScrollArea className='h-[calc(100vh-14rem)] w-full pr-4 -mr-4 py-1'>
-                  <MailList
+                {total > 0 && <ScrollArea className='h-[calc(100vh-14rem)] w-full pr-4 -mr-4 py-1' orientation='both'>
+                  <MailListTable
                     isLoading={isLoading}
                     items={emails}
                     onEnvelopeChanged={(envelope) => {
                       setOpen('display');
                       setSelectedEnvelope(envelope);
                     }}
+                    setSortBy={setSortBy}
+                    setSortOrder={setSortOrder}
                   />
                 </ScrollArea>}
                 {total > 0 && <EnvelopeListPagination
@@ -256,7 +246,14 @@ export default function Search() {
             open={open === 'restore'}
             onOpenChange={() => setOpen('restore')}
           />
-        </SearchProvider>
+
+          <ColumnsDialog
+            key='columns-dialog'
+            open={open === 'columns'}
+            onOpenChange={() => setOpen('columns')}
+          />
+
+       </SearchProvider>
       </Main>
     </>
   );
