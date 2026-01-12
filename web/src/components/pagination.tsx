@@ -24,7 +24,7 @@ import {
   DoubleArrowRightIcon,
 } from '@radix-ui/react-icons'
 import { Button } from '@/components/ui/button'
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
@@ -34,15 +34,15 @@ import {
 } from '@/components/ui/select'
 import { useTranslation } from 'react-i18next'
 import { showNumbers } from '@/lib/utils'
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'
 
 interface PaginationProps {
   totalItems: number
-  pageIndex: number,
-  pageSize: number,
-  hasNextPage: () => boolean,
-  setPageIndex: (pageIndex: number) => void,
-  setPageSize: (pageSize: number) => void,
+  pageIndex: number
+  pageSize: number
+  hasNextPage: () => boolean
+  setPageIndex: (pageIndex: number) => void
+  setPageSize: (pageSize: number) => void
 }
 
 export function EnvelopeListPagination({
@@ -54,7 +54,7 @@ export function EnvelopeListPagination({
   setPageSize,
 }: PaginationProps) {
   const { t } = useTranslation()
-  const [pageInput, setPageInput] = useState(pageIndex + 1);
+  const [pageInput, setPageInput] = useState(pageIndex + 1)
   const pageCount = Math.ceil(totalItems / pageSize)
 
   useEffect(() => {
@@ -76,7 +76,7 @@ export function EnvelopeListPagination({
     setPageIndex(newPageIndex)
   }
 
-  const currentPage = pageIndex + 1;
+  const currentPage = pageIndex + 1
   const pageNumbers = showNumbers(currentPage, pageCount)
 
   return (
@@ -106,9 +106,9 @@ export function EnvelopeListPagination({
         <div className='flex items-center justify-center text-sm font-medium'>
           {t("table.page")}
           <Input type="number" value={pageInput} onBlur={() => {
-            if (Number.isNaN(pageInput)) return;
-            if (pageInput > 0) setPageIndex(pageInput - 1);
-            else setPageIndex(0);
+            if (Number.isNaN(pageInput)) return
+            if (pageInput > 0) setPageIndex(pageInput - 1)
+            else setPageIndex(0)
           }}
           onChange={(e) => setPageInput(Number(e.target.value))}
           className='mx-2 w-20'

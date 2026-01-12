@@ -17,13 +17,13 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import { useTranslation } from 'react-i18next'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { SquarePen } from 'lucide-react'
 import { Button } from '@/components/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useState } from 'react'
-import { useSearchContext } from './context';
-import { Label } from '@/components/ui/label';
+import { useSearchContext } from './context'
+import { Label } from '@/components/ui/label'
 
 interface Props {
   open: boolean
@@ -71,19 +71,19 @@ export function ColumnsDialog({ open, onOpenChange }: Props) {
   const columns = defaultColumns(t)
 
   const [selected, setSelected] = useState(() => {
-    const _columns = localStorage.getItem("searchTableColumns") 
+    const _columns = localStorage.getItem("searchTableColumns")
       ? JSON.parse(localStorage.getItem("searchTableColumns") as string) as Record<string, boolean>
-      : undefined;
+      : undefined
 
-      if (_columns) return new Map(Object.entries(_columns).map(([key, value]) => [key, value]));
+      if (_columns) return new Map(Object.entries(_columns).map(([key, value]) => [key, value]))
       return new Map(columns.map((col) => [col.value, true]))
   })
 
   const handleSave = () => {
-    const _selected = Object.fromEntries(selected);
+    const _selected = Object.fromEntries(selected)
     setColumnVisibility(_selected)
-    localStorage.setItem("searchTableColumns", JSON.stringify(_selected));
-    onOpenChange(false);
+    localStorage.setItem("searchTableColumns", JSON.stringify(_selected))
+    onOpenChange(false)
   }
 
   const toggleSelected = (column: string) => {
@@ -96,49 +96,48 @@ export function ColumnsDialog({ open, onOpenChange }: Props) {
         value.set(column, true)
       }
 
-      return value;
-    });
+      return value
+    })
   }
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <SquarePen className="h-5 w-5" />
-                        {t('common.columns')}
-                    </DialogTitle>
-                </DialogHeader>
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <SquarePen className="h-5 w-5" />
+              {t('common.columns')}
+          </DialogTitle>
+        </DialogHeader>
 
-                <div className="space-y-5 py-4">
-                    <div className="flex flex-wrap flex-col gap-2">
-                        {columns.map(col => (
-                            <div key={col.value} className="flex flex-row gap-2 items-center">
-                                  <Checkbox
-                                    id={col.value}
-                                    checked={selected.get(col.value)}
-                                    onCheckedChange={() => toggleSelected(col.value)}
-                                  />
-                                  <Label htmlFor={col.value} className="cursor-pointer text-sm font-normal">
-                                    {col.label}
-                                  </Label>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+        <div className="space-y-5 py-4">
+          <div className="flex flex-wrap flex-col gap-2">
+            {columns.map(col => (
+              <div key={col.value} className="flex flex-row gap-2 items-center">
+                <Checkbox
+                  id={col.value}
+                  checked={selected.get(col.value)}
+                  onCheckedChange={() => toggleSelected(col.value)}
+                />
+                <Label htmlFor={col.value} className="cursor-pointer text-sm font-normal">
+                  {col.label}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </div>
 
-                <div className="flex justify-between items-center">
-                    &nbsp;
-                    <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => onOpenChange(false)}>
-                            {t('search.addTags.cancel')}
-                        </Button>
-                        <Button onClick={handleSave}>
-                            {t('search.addTags.save')}
-                        </Button>
-                    </div>
-                </div>
-            </DialogContent>
-        </Dialog>
-    );
+        <div className="flex justify-end items-center">
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              {t('search.addTags.cancel')}
+            </Button>
+            <Button onClick={handleSave}>
+              {t('search.addTags.save')}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
 }

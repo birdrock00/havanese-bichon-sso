@@ -32,7 +32,7 @@ import LongText from "@/components/long-text"
 import { DataTableColumnHeader } from "./table/data-table-column-header"
 import { SearchTable } from "./table/table"
 import { DataTableRowActions } from "./table/data-table-row-actions"
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 interface MailListProps {
     items: EmailEnvelope[]
@@ -51,7 +51,7 @@ export function MailListTable({
 }: MailListProps) {
     const { t, i18n } = useTranslation()
 
-    const locale = dateFnsLocaleMap[i18n.language.toLowerCase()] ?? enUS;
+    const locale = dateFnsLocaleMap[i18n.language.toLowerCase()] ?? enUS
     const { selected, setSelected } = useSearchContext()
 
     const columns: ColumnDef<EmailEnvelope>[] = [
@@ -141,8 +141,8 @@ export function MailListTable({
           <DataTableColumnHeader column={column} title={t('search.date')} />
         ),
         cell: ({ row }) => {
-          const date = new Date(row.original.date);
-          const title = format(date, 'yyyy-MM-dd HH:mm:ss');
+          const date = new Date(row.original.date)
+          const title = format(date, 'yyyy-MM-dd HH:mm:ss')
           return (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -167,46 +167,43 @@ export function MailListTable({
     ]
 
     const handleToggleAll = () => {
-        const total = Array.from(selected.values())
-            .reduce((sum, set) => sum + set.size, 0);
+      const total = Array.from(selected.values()).reduce((sum, set) => sum + set.size, 0)
 
-        if (total === items.length && items.length > 0) {
-            setSelected(new Map());
-        } else {
-            setSelected(prev => {
-                const next = new Map(prev);
-                for (const item of items) {
-                    const set = new Set(next.get(item.account_id) || []);
-                    set.add(item.id);
-                    next.set(item.account_id, set);
-                }
-                return next;
-            });
-        }
+      if (total === items.length && items.length > 0) {
+        setSelected(new Map())
+      } else {
+        setSelected(prev => {
+          const next = new Map(prev)
+          for (const item of items) {
+            const set = new Set(next.get(item.account_id) || [])
+            set.add(item.id)
+            next.set(item.account_id, set)
+          }
+          return next
+        })
+      }
     }
 
     const toggleSelected = (accountId: number, mailId: number) => {
-        setSelected(prev => {
-            const next = new Map(prev);
-            const set = new Set(next.get(accountId) || []);
+      setSelected(prev => {
+        const next = new Map(prev)
+        const set = new Set(next.get(accountId) || [])
 
-            if (set.has(mailId)) {
-                set.delete(mailId);
-                if (set.size === 0) next.delete(accountId);
-                else next.set(accountId, set);
-            } else {
-                set.add(mailId);
-                next.set(accountId, set);
-            }
-
-            return next;
-        });
+        if (set.has(mailId)) {
+          set.delete(mailId)
+          if (set.size === 0) next.delete(accountId)
+          else next.set(accountId, set)
+        } else {
+          set.add(mailId)
+          next.set(accountId, set)
+        }
+        return next
+      })
     }
 
-    const totalSelected = Array.from(selected.values())
-        .reduce((sum, set) => sum + set.size, 0);
+    const totalSelected = Array.from(selected.values()).reduce((sum, set) => sum + set.size, 0)
 
-    const hasSelected = (accountId: number, mailId: number) => selected.get(accountId)?.has(mailId) ?? false;
+    const hasSelected = (accountId: number, mailId: number) => selected.get(accountId)?.has(mailId) ?? false
 
     if (isLoading) {
         return (

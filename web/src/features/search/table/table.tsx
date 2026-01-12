@@ -54,7 +54,7 @@ declare module '@tanstack/react-table' {
 interface DataTableProps {
   columns: ColumnDef<EmailEnvelope>[]
   data: EmailEnvelope[]
-  onRowClick: (e: ReactMouseEvent<HTMLTableRowElement, MouseEvent>, row: Row<EmailEnvelope>) => void;
+  onRowClick: (e: ReactMouseEvent<HTMLTableRowElement, MouseEvent>, row: Row<EmailEnvelope>) => void
   setSortBy: (sortBy: "DATE" | "SIZE") => void
   setSortOrder: (value: "desc" | "asc") => void
 }
@@ -66,9 +66,9 @@ export function SearchTable({ columns, data, onRowClick, setSortBy, setSortOrder
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
   useEffect(() => {
-    const [value] = sorting;
-    setSortBy(value.id.toUpperCase() as "DATE" | "SIZE");
-    setSortOrder(value.desc ? "desc" : "asc");
+    const [value] = sorting
+    setSortBy(value.id.toUpperCase() as "DATE" | "SIZE")
+    setSortOrder(value.desc ? "desc" : "asc")
   }, [sorting])
 
   const table = useReactTable({

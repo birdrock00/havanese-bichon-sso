@@ -42,24 +42,23 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
 
   const toggleToDelete = (accountId: number, mailId: number) => {
     setToDelete(prev => {
-      const next = new Map(prev);
-      const set = new Set(next.get(accountId) || []);
+      const next = new Map(prev)
+      const set = new Set(next.get(accountId) || [])
 
       if (set.has(mailId)) {
-        set.delete(mailId);
-        if (set.size === 0) next.delete(accountId);
-        else next.set(accountId, set);
+        set.delete(mailId)
+        if (set.size === 0) next.delete(accountId)
+        else next.set(accountId, set)
       } else {
-        set.add(mailId);
-        next.set(accountId, set);
+        set.add(mailId)
+        next.set(accountId, set)
       }
-
-      return next;
-    });
-  };
+      return next
+    })
+  }
 
   const handleDelete = (envelope: EmailEnvelope) => {
-    setToDelete(new Map());
+    setToDelete(new Map())
     toggleToDelete(envelope.account_id, envelope.id)
     setOpen("delete")
   }
@@ -79,9 +78,9 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         <DropdownMenuContent align='end' className='w-[160px]'>
           <DropdownMenuItem
             onClick={(e) => {
-              e.stopPropagation();  
-              setCurrentEnvelope(row.original);
-              setOpen("edit-tags");
+              e.stopPropagation()
+              setCurrentEnvelope(row.original)
+              setOpen("edit-tags")
             }}
           >
             {t('search.editTag')}
@@ -92,9 +91,9 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={(e) => {
-              e.stopPropagation();
-              setCurrentEnvelope(row.original);
-              setOpen("restore");
+              e.stopPropagation()
+              setCurrentEnvelope(row.original)
+              setOpen("restore")
             }}
           >
             {t('restore_message.restore_to_imap', 'Restore Mail')}
@@ -105,10 +104,8 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(row.original);
-              //setCurrentRow(row.original)
-              //setOpen('delete')
+              e.stopPropagation()
+              handleDelete(row.original)
             }}
             className='!text-red-500'
           >
