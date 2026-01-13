@@ -1274,7 +1274,7 @@
                 "account_required": "Vennligst velg en konto",
                 "role_required": "Vennligst velg en rolle",
                 "username_required": "Brukernavn er påkrevd",
-                "username_min": "Minst 5 tegn",
+                "username_min": "Minst 3 tegn",
                 "username_max": "Maks 32 tegn",
                 "email_required": "E-post er påkrevd",
                 "email_invalid": "Oppgi en gyldig e-postadresse",

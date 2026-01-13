@@ -1274,7 +1274,7 @@
         "account_required": "请选择一个账户",
         "role_required": "请选择一个角色",
         "username_required": "用户名不能为空",
-        "username_min": "用户名长度至少为 5 个字符",
+        "username_min": "用户名长度至少为 3 个字符",
         "username_max": "用户名长度不能超过 32 个字符",
         "email_required": "邮箱地址不能为空",
         "email_invalid": "请输入有效的邮箱地址",

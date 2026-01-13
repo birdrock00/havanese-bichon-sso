@@ -1274,7 +1274,7 @@
                 "account_required": "Valitse tili",
                 "role_required": "Valitse rooli",
                 "username_required": "Käyttäjänimi on pakollinen",
-                "username_min": "Vähintään 5 merkkiä",
+                "username_min": "Vähintään 3 merkkiä",
                 "username_max": "Enintään 32 merkkiä",
                 "email_required": "Sähköposti on pakollinen",
                 "email_invalid": "Anna kelvollinen sähköpostiosoite",

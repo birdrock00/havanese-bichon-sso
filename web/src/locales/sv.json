@@ -1274,7 +1274,7 @@
                 "account_required": "Välj ett konto",
                 "role_required": "Välj en roll",
                 "username_required": "Användarnamn krävs",
-                "username_min": "Användarnamnet måste vara minst 5 tecken",
+                "username_min": "Användarnamnet måste vara minst 3 tecken",
                 "username_max": "Användarnamnet får inte överstiga 32 tecken",
                 "email_required": "E-postadress krävs",
                 "email_invalid": "Ange en giltig e-postadress",

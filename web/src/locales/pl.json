@@ -1274,7 +1274,7 @@
         "account_required": "Wybierz konto",
         "role_required": "Wybierz rolę",
         "username_required": "Nazwa użytkownika jest wymagana",
-        "username_min": "Min. 5 znaków",
+        "username_min": "Min. 3 znaków",
         "username_max": "Maks. 32 znaki",
         "email_required": "E-mail jest wymagany",
         "email_invalid": "Wprowadź poprawny adres e-mail",

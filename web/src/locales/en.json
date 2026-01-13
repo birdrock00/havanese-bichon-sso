@@ -1274,7 +1274,7 @@
         "account_required": "Please select an account",
         "role_required": "Please select a role",
         "username_required": "Username is required",
-        "username_min": "Username must be at least 5 characters",
+        "username_min": "Username must be at least 3 characters",
         "username_max": "Username cannot exceed 32 characters",
         "email_required": "Email address is required",
         "email_invalid": "Please enter a valid email address",

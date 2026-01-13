@@ -1274,7 +1274,7 @@
                 "account_required": "Выберите аккаунт",
                 "role_required": "Выберите роль",
                 "username_required": "Имя пользователя обязательно",
-                "username_min": "Минимум 5 символов",
+                "username_min": "Минимум 3 символов",
                 "username_max": "Максимум 32 символа",
                 "email_required": "Эл. почта обязательна",
                 "email_invalid": "Введите корректный адрес эл. почты",

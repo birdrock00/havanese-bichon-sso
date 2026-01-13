@@ -1274,7 +1274,7 @@
                 "account_required": "アカウントを選択してください",
                 "role_required": "ロールを選択してください",
                 "username_required": "ユーザー名は必須です",
-                "username_min": "ユーザー名は 5 文字以上である必要があります",
+                "username_min": "ユーザー名は 3 文字以上である必要があります",
                 "username_max": "ユーザー名は 32 文字以内である必要があります",
                 "email_required": "メールアドレスは必須です",
                 "email_invalid": "有効なメールアドレスを入力してください",

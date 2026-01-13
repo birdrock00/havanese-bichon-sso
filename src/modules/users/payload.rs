@@ -222,9 +222,9 @@ impl UserCreateRequest {
         let username_len = self.username.len();
 
         // 1. Username constraints
-        if username_len < 5 {
+        if username_len < 3 {
             return Err(raise_error!(
-                "Username must be at least 5 characters long.".into(),
+                "Username must be at least 3 characters long.".into(),
                 ErrorCode::InvalidParameter
             ));
         }
@@ -351,9 +351,9 @@ impl UserUpdateRequest {
     pub async fn validate(&self) -> BichonResult<()> {
         if let Some(username) = &self.username {
             let len = username.len();
-            if len < 5 || len > 32 {
+            if len < 3 || len > 32 {
                 return Err(raise_error!(
-                    "Username must be 5-32 characters.".into(),
+                    "Username must be 3-32 characters.".into(),
                     ErrorCode::InvalidParameter
                 ));
             }

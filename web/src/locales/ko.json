@@ -1274,7 +1274,7 @@
                 "account_required": "계정을 선택하세요",
                 "role_required": "역할을 선택하세요",
                 "username_required": "사용자 이름은 필수입니다",
-                "username_min": "사용자 이름은 5자 이상이어야 합니다",
+                "username_min": "사용자 이름은 3자 이상이어야 합니다",
                 "username_max": "사용자 이름은 32자를 초과할 수 없습니다",
                 "email_required": "이메일 주소는 필수입니다",
                 "email_invalid": "유효한 이메일 주소를 입력하세요",

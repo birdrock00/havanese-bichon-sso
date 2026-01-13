@@ -71,7 +71,7 @@ const accountAccessEntry = (t: any) => z.object({
 const baseUserSchema = (t: any) => ({
   username: z.string()
     .min(1, t('users.actions.schema.username_required'))
-    .min(5, t('users.actions.schema.username_min'))
+    .min(3, t('users.actions.schema.username_min'))
     .max(32, t('users.actions.schema.username_max')),
   email: z.string()
     .min(1, t('users.actions.schema.email_required'))

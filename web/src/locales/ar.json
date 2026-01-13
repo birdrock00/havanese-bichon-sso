@@ -1274,7 +1274,7 @@
                 "account_required": "يرجى اختيار حساب",
                 "role_required": "يرجى اختيار دور",
                 "username_required": "اسم المستخدم مطلوب",
-                "username_min": "5 أحرف على الأقل",
+                "username_min": "3 أحرف على الأقل",
                 "username_max": "32 حرفاً كحد أقصى",
                 "email_required": "البريد الإلكتروني مطلوب",
                 "email_invalid": "يرجى إدخال بريد إلكتروني صالح",

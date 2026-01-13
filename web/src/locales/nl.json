@@ -1274,7 +1274,7 @@
                 "account_required": "Selecteer een account",
                 "role_required": "Selecteer een rol",
                 "username_required": "Gebruikersnaam is verplicht",
-                "username_min": "Minimaal 5 tekens",
+                "username_min": "Minimaal 3 tekens",
                 "username_max": "Maximaal 32 tekens",
                 "email_required": "E-mail is verplicht",
                 "email_invalid": "Voer een geldig e-mailadres in",

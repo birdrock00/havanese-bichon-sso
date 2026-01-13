@@ -1274,7 +1274,7 @@
                 "account_required": "Selecione uma conta",
                 "role_required": "Selecione uma função",
                 "username_required": "Nome de usuário é obrigatório",
-                "username_min": "Mínimo 5 caracteres",
+                "username_min": "Mínimo 3 caracteres",
                 "username_max": "Máximo 32 caracteres",
                 "email_required": "E-mail é obrigatório",
                 "email_invalid": "Insira um e-mail válido",
