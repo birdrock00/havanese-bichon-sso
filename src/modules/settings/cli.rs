@@ -46,16 +46,16 @@ pub struct Settings {
     )]
     pub bichon_http_port: i32,
 
-    /// The IP address that the node binds to, in IPv4 format (e.g., 192.168.1.1).
+    /// The IP address that the node binds to, in IPv4 or IPv6 format (e.g., 192.168.1.1 or ::1).
     #[clap(
         long,
         env,
-        default_value = "0.0.0.0",
-        help = "The IP address that the node binds to, in IPv4 format (e.g., 192.168.1.1). Required in cluster mode.",
+        default_value = "::",
+        help = "The IP address that the node binds to, in IPv4 or IPv6 format (e.g., 192.168.1.1 or ::1). Required in cluster mode.",
         value_parser = ValueParser::new(|s: &str| {
-            // Ensure the input is a valid IPv4 address
-            if s.parse::<std::net::Ipv4Addr>().is_err() {
-                return Err("The bind IP address must be a valid IPv4 address.".to_string());
+            // Ensure the input is a valid IPv4 or IPv6 address
+            if s.parse::<std::net::Ipv4Addr>().is_err() && s.parse::<std::net::Ipv6Addr>().is_err() {
+                return Err("The bind IP address must be a valid IPv4 or IPv6 address.".to_string());
             }
 
             // If the address is valid, return it
