@@ -355,9 +355,8 @@ This data is provided solely as a **reference** for real-world usage. We encoura
 
 * [x] `bichonctl` command-line tool
 
-  * [x] Import emails from `eml`, `mbox`
-  * [ ] Import emails from `msg`, `pst`
-
+  * [x] Import emails from `eml`, `mbox`, `pst` (Single file)
+  * [ ] Import emails from `msg`
 
 * [ ] Manual sync controls
 
