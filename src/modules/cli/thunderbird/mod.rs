@@ -97,7 +97,6 @@ pub async fn handle_thunderbird_import(
         .interact()
         .unwrap()
     {
-        // 3. 执行导入
         for (mailbox_name, mbox_file) in mbox_tasks {
             println!("\n🚀 Importing: {}", style(&mailbox_name).cyan().bold());
             run_import(account_id, &mbox_file, config, Some(mailbox_name)).await;

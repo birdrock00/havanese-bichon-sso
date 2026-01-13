@@ -6,8 +6,10 @@ use crate::bichon_version;
 pub mod auth;
 pub mod eml;
 pub mod mbox;
+pub mod pst;
 pub mod sender;
 pub mod thunderbird;
+
 #[derive(Parser, Debug)]
 #[command(
     name = "bichonctl",

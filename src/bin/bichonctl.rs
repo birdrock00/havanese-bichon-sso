@@ -1,7 +1,5 @@
 use bichon::modules::cli::{
-    auth::verify_user_and_get_account, eml::handle_eml_directory_import,
-    mbox::handle_mbox_single_file_import, thunderbird::handle_thunderbird_import, BichonCli,
-    BichonCtlConfig,
+    BichonCli, BichonCtlConfig, auth::verify_user_and_get_account, eml::handle_eml_directory_import, mbox::handle_mbox_single_file_import, pst::handle_pst_import, thunderbird::handle_thunderbird_import
 };
 use clap::Parser;
 use console::style;
@@ -77,6 +75,7 @@ async fn main() {
         "EML: Scan directory recursively (Maintains folder structure)",
         "MBOX: Single archive file (Stream from one file)",
         "Thunderbird: Import from local profile directory",
+        "PST: Outlook Personal Storage (Single .pst file)",
     ];
 
     let mode_idx = Select::with_theme(&theme)
@@ -90,6 +89,7 @@ async fn main() {
         0 => handle_eml_directory_import(&final_config, target_account_id, &theme).await,
         1 => handle_mbox_single_file_import(&final_config, target_account_id, &theme).await,
         2 => handle_thunderbird_import(&final_config, target_account_id, &theme).await,
+        3 => handle_pst_import(&final_config, target_account_id, &theme).await,
         _ => unreachable!(),
     }
 }
