@@ -50,8 +50,8 @@ pub struct Settings {
     #[clap(
         long,
         env,
-        default_value = "::",
-        help = "The IP address that the node binds to, in IPv4 or IPv6 format (e.g., 192.168.1.1 or ::1). Required in cluster mode.",
+        default_value = "0.0.0.0",
+        help = "The IP address that the node binds to, in IPv4 or IPv6 format (e.g., 192.168.1.1 or ::1).",
         value_parser = ValueParser::new(|s: &str| {
             // Ensure the input is a valid IPv4 or IPv6 address
             if s.parse::<std::net::Ipv4Addr>().is_err() && s.parse::<std::net::Ipv6Addr>().is_err() {
