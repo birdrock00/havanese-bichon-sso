@@ -102,7 +102,13 @@ pub async fn run_import(
     target_folder: Option<String>,
 ) {
     let client = Client::new();
-    let mbox = MboxFile::from_file(mbox_path).unwrap();
+    let mbox = match MboxFile::from_file(mbox_path) {
+        Ok(mbox) => mbox,
+        Err(err) => {
+            println!("Skipping invalid MBOX: {} ({})", mbox_path.display(), err);
+            return;
+        }
+    };
 
     let mut folder_buffers: HashMap<String, Vec<String>> = HashMap::new();
     let batch_limit = 50;
