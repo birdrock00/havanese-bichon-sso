@@ -32,46 +32,42 @@ import { VirtualizedSelect } from "@/components/virtualized-select";
 import useMinimalAccountList from "@/hooks/use-minimal-account-list";
 import { useNavigate } from "@tanstack/react-router";
 import { list_mailboxes, MailboxData } from "@/api/mailbox/api";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 import { useSearchContext } from "./context";
 import { toast } from "@/hooks/use-toast";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useTranslation } from "react-i18next";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const getSearchFilterSchema = (t: (key: string) => string) => z.object({
+const searchFilterSchema = z.object({
     text: z.string().optional().or(z.literal("")),
     from: z
         .string()
-        .email({ message: t('validation.invalidEmail') })
         .optional()
         .or(z.literal("")),
     to: z
         .string()
-        .email({ message: t('validation.invalidEmail') })
         .optional()
         .or(z.literal("")),
     cc: z
         .string()
-        .email({ message: t('validation.invalidEmail') })
         .optional()
         .or(z.literal("")),
     bcc: z
         .string()
-        .email({ message: t('validation.invalidEmail') })
         .optional()
         .or(z.literal("")),
     has_attachment: z.boolean().optional(),
     attachment_name: z.string().optional().or(z.literal("")),
     since: z.date().optional(),
     before: z.date().optional(),
-    account_id: z.number().optional().or(z.literal("")),
-    mailbox_id: z.number().optional().or(z.literal("")),
+    account_ids: z.array(z.number()),
+    mailbox_ids: z.array(z.number()),
     size_preset: z.enum(['any', 'tiny', 'small', 'medium', 'large', 'huge']).optional(),
     message_id: z.string().optional().or(z.literal("")),
 });
 
-type SearchFilterForm = z.infer<ReturnType<typeof getSearchFilterSchema>>;
+type SearchFilterForm = z.infer<typeof searchFilterSchema>;
 
 
 interface Props {
@@ -89,6 +85,7 @@ const isEmptyValue = (value: any): boolean => {
     if (typeof value === 'number' && isNaN(value)) return true;
     if (value === false) return true;
     if (value === 0) return true;
+    if (Array.isArray(value) && value.length === 0) return true;
     return false;
 };
 
@@ -120,11 +117,10 @@ function withSizePreset(values: Record<string, any>) {
 export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChange }: Props) {
     const { t } = useTranslation()
     const [showAdvanced, setShowAdvanced] = useState(false);
-    const [selectedAccountId, setSelectedAccountId] = useState<number | undefined>(undefined);
+    const [selectedAccountIds, setSelectedAccountIds] = useState<number[]>([]);
     const { accountsOptions, isLoading: accountsIsLoading } = useMinimalAccountList();
     const { selectedTags } = useSearchContext();
 
-    const searchFilterSchema = getSearchFilterSchema(t)
     const form = useForm<SearchFilterForm>({
         resolver: zodResolver(searchFilterSchema),
         defaultValues: {
@@ -139,30 +135,35 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
             has_attachment: false,
             since: undefined,
             before: undefined,
-            account_id: undefined,
-            mailbox_id: undefined,
+            account_ids: [],
+            mailbox_ids: [],
         },
         mode: "onChange",
     });
 
     const navigate = useNavigate();
-    const { data: mailboxes, isLoading: isMailboxesLoading } = useQuery({
-        queryKey: ['search-account-mailboxes', `${selectedAccountId}`],
-        queryFn: () => list_mailboxes(selectedAccountId!, false),
-        enabled: !!selectedAccountId,
+
+    const { mailboxes, isMailboxesLoading } = useQueries({
+        queries: selectedAccountIds.map((id) => ({
+            queryKey: ['search-account-mailboxes', id],
+            queryFn: () => list_mailboxes(id!, false),
+        })),
+        combine: (results) => ({
+            mailboxes: results.flatMap((result) => result.data?.sort((a, b) => a.name.localeCompare(b.name))),
+            isMailboxesLoading: results.some((result) => result.isLoading),
+        }),
     })
 
-
-    const mailboxesOptions = mailboxes?.map((mailbox: MailboxData) => ({
+    const mailboxesOptions = mailboxes?.filter((item) => !!item).map((mailbox: MailboxData) => ({
         value: mailbox.id.toString(),
         label: mailbox.name,
+        description: accountsOptions.find((item) => Number(item.value) === mailbox.account_id)!.label
     })) || [];
 
 
     const handleSubmit = (values: Record<string, any>) => {
         let cleaned = cleanEmpty(values);
         const payload = withSizePreset(cleaned);
-
 
         const finalPayload =
             selectedTags.length > 0
@@ -189,12 +190,12 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
             attachment_name: "",
             since: undefined,
             before: undefined,
-            account_id: undefined,
-            mailbox_id: undefined,
+            account_ids: [],
+            mailbox_ids: [],
             size_preset: 'any',
             message_id: "",
         });
-        setSelectedAccountId(undefined);
+        setSelectedAccountIds([]);
     }
 
     return (<Sheet
@@ -218,21 +219,21 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <FormField
                                 control={form.control}
-                                name="account_id"
+                                name="account_ids"
                                 render={({ field }) => (
                                     <FormItem className="min-w-[180px]">
-                                        <div className="flex items-center gap-2">
-                                            <FormLabel className="text-xs whitespace-nowrap">{t('search.account')}:</FormLabel>
+                                        <div className="flex flex-col gap-2">
+                                            <FormLabel className="text-xs whitespace-nowrap">{t('search.account')}</FormLabel>
                                             <FormControl className="flex-1">
                                                 <VirtualizedSelect
                                                     options={accountsOptions}
                                                     isLoading={accountsIsLoading}
                                                     onSelectOption={(values) => {
-                                                        const account_id = parseInt(values[0], 10);
-                                                        setSelectedAccountId(account_id);
-                                                        field.onChange(account_id);
+                                                        const ids = values.map((id) => parseInt(id, 10)).sort()
+                                                        setSelectedAccountIds(ids)
+                                                        field.onChange(ids)
                                                     }}
-                                                    value={field.value?.toString() ?? ""}
+                                                    value={field.value.map(String)}
                                                     placeholder={t('search.selectAccount')}
                                                     className="h-10 w-full"
                                                     noItemsComponent={
@@ -247,6 +248,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                                             </Button>
                                                         </div>
                                                     }
+                                                    multiple
                                                 />
                                             </FormControl>
                                         </div>
@@ -256,17 +258,19 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                             />
                             <FormField
                                 control={form.control}
-                                name="mailbox_id"
+                                name="mailbox_ids"
                                 render={({ field }) => (
                                     <FormItem className="min-w-[180px]">
-                                        <div className="flex items-center gap-2">
-                                            <FormLabel className="text-xs whitespace-nowrap">{t('search.mailbox')}:</FormLabel>
+                                        <div className="flex flex-col gap-2">
+                                            <FormLabel className="text-xs whitespace-nowrap">{t('search.mailbox')}</FormLabel>
                                             <FormControl className="flex-1">
                                                 <VirtualizedSelect
                                                     options={mailboxesOptions}
                                                     isLoading={isMailboxesLoading}
-                                                    onSelectOption={(values) => field.onChange(parseInt(values[0], 10))}
-                                                    value={field.value?.toString() ?? ""}
+                                                    onSelectOption={(values) => {
+                                                        field.onChange(values.map((id) => parseInt(id, 10)))
+                                                    }}
+                                                    value={field.value.map(String)}
                                                     placeholder={t('search.selectMailbox')}
                                                     className="h-10 w-full"
                                                     noItemsComponent={
@@ -276,6 +280,7 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
                                                             </p>
                                                         </div>
                                                     }
+                                                    multiple
                                                 />
                                             </FormControl>
                                         </div>

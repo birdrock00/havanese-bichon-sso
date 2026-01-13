@@ -273,7 +273,7 @@ export function VirtualizedSelect({
       .filter(Boolean);
 
     if (selectedLabels.length === 0) return placeholder;
-    return `${selectedLabels[0]} +${selectedLabels.length - 1} more`;
+    return selectedLabels.join(", ");
   };
 
   return (
@@ -287,7 +287,7 @@ export function VirtualizedSelect({
             className={cn('justify-between', className)}
             disabled={isLoading || disabled}
           >
-            {getDisplayText()}
+            <span className='truncate'>{getDisplayText()}</span>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
