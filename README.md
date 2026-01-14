@@ -65,7 +65,7 @@ Built in Rust, it requires no external dependencies and provides fast, efficient
 * **Internationalized WebUI** — Frontend available in 18 languages
 * **OpenAPI Access** — OpenAPI docs with access-token authentication
 * **Multi-User & Role-Based Access Control (RBAC)** — Supports multiple users with fine-grained, role-based permissions
-* **Email Import (EML & MBOX)** — Import existing mail archives via the bichonctl CLI
+* **Email Import (EML, MBOX & PST)** — Import existing mail archives via the bichonctl CLI
 
 ## 🐾 Why Create Bichon?
 
