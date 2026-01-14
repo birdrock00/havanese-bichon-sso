@@ -21,6 +21,7 @@ import axiosInstance from "@/api/axiosInstance";
 
 
 export interface MailboxData {
+    account_id: number;
     attributes: { attr: string; extension: string | null }[];
     delimiter: string | null;
     exists: number;

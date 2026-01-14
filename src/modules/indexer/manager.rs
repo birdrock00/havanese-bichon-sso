@@ -57,7 +57,7 @@ use tantivy::{
         AggregationCollector, Key,
     },
     collector::{Count, FacetCollector, TopDocs},
-    query::{AllQuery, BooleanQuery, EmptyQuery, Occur, Query, QueryParser, RangeQuery, TermQuery},
+    query::{AllQuery, BooleanQuery, EmptyQuery, Occur, Query, QueryParser, RangeQuery, RegexQuery, TermQuery},
     schema::{Facet, IndexRecordOption, Value},
     store::{Compressor, ZstdCompressor},
     DocAddress, Index, IndexBuilder, IndexReader, IndexSettings, IndexWriter, Order,
@@ -306,11 +306,12 @@ impl EnvelopeIndexManager {
             (f.f_bcc, &filter.bcc),
         ] {
             if let Some(ref v) = opt_value {
-                let term = Term::from_field_text(field, v);
-                subqueries.push((
-                    Occur::Must,
-                    Box::new(TermQuery::new(term, IndexRecordOption::Basic)),
-                ));
+                if let Ok(query) = RegexQuery::from_pattern(v.as_str(), field) {
+                    subqueries.push((
+                        Occur::Must,
+                        Box::new(query),
+                    ));
+                }
             }
         }
 
@@ -327,11 +328,12 @@ impl EnvelopeIndexManager {
         }
 
         if let Some(ref name) = filter.attachment_name {
-            let term = Term::from_field_text(f.f_attachments, name);
-            subqueries.push((
-                Occur::Must,
-                Box::new(TermQuery::new(term, IndexRecordOption::Basic)),
-            ));
+            if let Ok(query) = RegexQuery::from_pattern(name.as_str(), f.f_attachments) {
+                subqueries.push((
+                    Occur::Must,
+                    Box::new(query),
+                ));
+            }
         }
 
         let start_bound = if let Some(from) = filter.since {
@@ -351,20 +353,28 @@ impl EnvelopeIndexManager {
             subqueries.push((Occur::Must, Box::new(q)));
         }
 
-        if let Some(account_id) = filter.account_id {
-            let term = Term::from_field_u64(f.f_account_id, account_id);
-            subqueries.push((
-                Occur::Must,
-                Box::new(TermQuery::new(term, IndexRecordOption::Basic)),
-            ));
+        if let Some(account_ids) = filter.account_ids {
+            let mut should_queries: Vec<(Occur, Box<dyn Query>)> = Vec::new();
+            for id in account_ids {
+                let term = Term::from_field_u64(f.f_account_id, id);
+                should_queries.push((
+                    Occur::Should,
+                    Box::new(TermQuery::new(term, IndexRecordOption::Basic)),
+                ));
+            }
+            subqueries.push((Occur::Must, Box::new(BooleanQuery::new(should_queries))));
         }
 
-        if let Some(mailbox_id) = filter.mailbox_id {
-            let term = Term::from_field_u64(f.f_mailbox_id, mailbox_id);
-            subqueries.push((
-                Occur::Must,
-                Box::new(TermQuery::new(term, IndexRecordOption::Basic)),
-            ));
+        if let Some(mailbox_ids) = filter.mailbox_ids {
+            let mut should_queries: Vec<(Occur, Box<dyn Query>)> = Vec::new();
+            for id in mailbox_ids {
+                let term = Term::from_field_u64(f.f_mailbox_id, id);
+                should_queries.push((
+                    Occur::Should,
+                    Box::new(TermQuery::new(term, IndexRecordOption::Basic)),
+                ));
+            }
+            subqueries.push((Occur::Must, Box::new(BooleanQuery::new(should_queries))));
         }
 
         let start_bound = if let Some(from) = filter.min_size {
