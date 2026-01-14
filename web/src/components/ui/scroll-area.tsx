@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 
 interface ScrollAreaProps
   extends React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> {
-  orientation?: 'horizontal' | 'vertical'
+  orientation?: 'horizontal' | 'vertical' | 'both'
 }
 
 const ScrollArea = React.forwardRef<
@@ -24,7 +24,12 @@ const ScrollArea = React.forwardRef<
     >
       {children}
     </ScrollAreaPrimitive.Viewport>
-    <ScrollBar orientation={orientation} />
+    {orientation === "both" ? (
+      <>
+        <ScrollBar orientation="vertical" />
+        <ScrollBar orientation="horizontal" />
+      </>
+    ) : <ScrollBar orientation={orientation} />}
     <ScrollAreaPrimitive.Corner />
   </ScrollAreaPrimitive.Root>
 ))
