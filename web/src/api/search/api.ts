@@ -30,7 +30,7 @@ export interface TagCount {
     count: number;
 }
 
-export const get_top_tags = async () => {
+export const get_tags = async () => {
     const response = await axiosInstance.get<TagCount[]>("/api/v1/all-tags");
     return response.data;
 }
@@ -39,5 +39,11 @@ export const update_tags = async (data: Record<string, any>) => {
     const response = await axiosInstance.post("/api/v1/update-tags", data);
     return response.data;
 };
+
+
+export const get_contacts = async () => {
+    const response = await axiosInstance.get<string[]>("/api/v1/all-contacts");
+    return response.data;
+}
 
 

@@ -25,12 +25,11 @@ import { SearchFormDialog } from './search-form';
 import { EnvelopeListPagination } from '@/components/pagination';
 import React from 'react';
 import { EmailEnvelope } from '@/api';
-import { Filter, SearchIcon, SquarePen } from 'lucide-react';
+import { Filter, SearchIcon } from 'lucide-react';
 import { MailDisplayDrawer } from './mail-display-dialog';
 import { EnvelopeDeleteDialog } from './delete-dialog';
 import SearchProvider, { SearchDialogType } from './context';
 import useDialogState from '@/hooks/use-dialog-state';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { EnvelopeTags } from './tag-facet';
@@ -38,9 +37,8 @@ import { EditTagsDialog } from './add-tag-dialog';
 import { useTranslation } from 'react-i18next';
 import Logo from '@/assets/logo.svg'
 import { RestoreMessageDialog } from './restore-message-dialog';
-import { ColumnsDialog } from './columns-dialog';
 import { MailListTable } from './mail-list-table';
-import { SortingState, VisibilityState } from '@tanstack/react-table';
+import { SortingState } from '@tanstack/react-table';
 
 export default function Search() {
   const { t } = useTranslation()
@@ -50,10 +48,6 @@ export default function Search() {
   const [selected, setSelected] = React.useState<Map<number, Set<number>>>(new Map());
   const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "date", desc: true }]);
-  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(localStorage.getItem("searchTableColumns")
-    ? JSON.parse(localStorage.getItem("searchTableColumns") as string) as Record<string, boolean>
-    : {}
-  )
 
   const {
     emails,
@@ -69,7 +63,8 @@ export default function Search() {
     setSortOrder,
     onSubmit,
     reset,
-    filter
+    filter,
+    setFilter
   } = useSearchMessages();
 
   const handleSetPageSize = (pageSize: number) => {
@@ -96,7 +91,7 @@ export default function Search() {
       <FixedHeader />
       <Main>
         <SearchProvider
-          value={{ 
+          value={{
             open,
             setOpen,
             currentEnvelope: selectedEnvelope,
@@ -108,64 +103,22 @@ export default function Search() {
             setSelected,
             sorting,
             setSorting,
-            columnVisibility,
-            setColumnVisibility
+            filter,
+            setFilter,
+            handleTagToggle
           }}
         >
           <div className="mx-auto w-full px-4">
-            <div className="mb-4 lg:hidden">
-              <Sheet>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Filter className="mr-2 h-4 w-4" />
-                    {t('search.tagFilter')}
-                    {selectedTags.length > 0 && ` (${selectedTags.length})`}
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="w-80">
-                  <SheetHeader>
-                    <SheetTitle>{t('search.tagFilter')}</SheetTitle>
-                  </SheetHeader>
-                  <div className="mt-6">
-                    <EnvelopeTags
-                      selectedTags={selectedTags}
-                      onTagToggle={handleTagToggle}
-                    />
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
-
             <div className="flex gap-6">
-              <aside className="hidden lg:block w-64 flex-shrink-0">
+              {/* <aside className="hidden lg:block w-64 flex-shrink-0">
                 <div className="rounded-lg border bg-card p-4">
                   <EnvelopeTags
                     selectedTags={selectedTags}
                     onTagToggle={handleTagToggle}
                   />
                 </div>
-              </aside>
+              </aside> */}
               <div className="flex-1 min-w-0 space-y-4">
-                <div className="flex flex-row gap-4 items-end">
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={() => setOpen("search-form")}
-                    className="px-4 shadow-sm"
-                  >
-                    <SearchIcon className="mr-2 h-4 w-4" />
-                    {t('common.search')}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={() => setOpen("columns")}
-                    className="px-4 shadow-sm"
-                  >
-                    <SquarePen className="mr-2 h-4 w-4" />
-                    {t('common.columns')}
-                  </Button>
-                </div>
                 {isLoading && (
                   <Card>
                     <CardContent className="py-12">
@@ -177,7 +130,7 @@ export default function Search() {
                   </Card>
                 )}
 
-                {total === 0 && <div className="flex h-[750px] shrink-0 items-center justify-center rounded-md border border-dashed">
+                {/* {!isLoading && total === 0 && <div className="flex h-[750px] shrink-0 items-center justify-center rounded-md border border-dashed">
                   <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
                     <img
                       src={Logo}
@@ -191,19 +144,17 @@ export default function Search() {
                         : t('search.adjustSearch')}
                     </p>
                   </div>
-                </div>}
-                {total > 0 && <ScrollArea className='h-[calc(100vh-14rem)] w-full pr-4 -mr-4 py-1' orientation='both'>
-                  <MailListTable
-                    isLoading={isLoading}
-                    items={emails}
-                    onEnvelopeChanged={(envelope) => {
-                      setOpen('display');
-                      setSelectedEnvelope(envelope);
-                    }}
-                    setSortBy={setSortBy}
-                    setSortOrder={setSortOrder}
-                  />
-                </ScrollArea>}
+                </div>} */}
+                <MailListTable
+                  isLoading={isLoading}
+                  items={emails}
+                  onEnvelopeChanged={(envelope) => {
+                    setOpen('display');
+                    setSelectedEnvelope(envelope);
+                  }}
+                  setSortBy={setSortBy}
+                  setSortOrder={setSortOrder}
+                />
                 {total > 0 && <EnvelopeListPagination
                   totalItems={total}
                   hasNextPage={() => page < totalPages}
@@ -246,14 +197,7 @@ export default function Search() {
             open={open === 'restore'}
             onOpenChange={() => setOpen('restore')}
           />
-
-          <ColumnsDialog
-            key='columns-dialog'
-            open={open === 'columns'}
-            onOpenChange={() => setOpen('columns')}
-          />
-
-       </SearchProvider>
+        </SearchProvider>
       </Main>
     </>
   );

@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::collections::HashSet;
+
 use crate::modules::account::migration::AccountModel;
 use crate::modules::cache::imap::mailbox::MailBox;
 use crate::modules::error::code::ErrorCode;
@@ -155,9 +157,9 @@ impl Envelope {
         let id = create_hash(account_id, &message_id);
         let full_text = extract_string_field(doc, fields.f_text)?;
 
-        // Take up to the first 120 characters as a preview;
-        let preview = if full_text.chars().count() > 120 {
-            full_text.chars().take(120).collect::<String>() + "..."
+        // Take up to the first 500 characters as a preview;
+        let preview = if full_text.chars().count() > 500 {
+            full_text.chars().take(500).collect::<String>() + "..."
         } else {
             full_text
         };
@@ -203,4 +205,29 @@ impl Envelope {
         };
         Ok(envelope)
     }
+}
+
+pub async fn extract_contacts(doc: &TantivyDocument) -> BichonResult<HashSet<String>> {
+    let fields = SchemaTools::envelope_fields();
+    let mut all_contacts = HashSet::new();
+
+    if let Ok(from_val) = extract_string_field(doc, fields.f_from) {
+        if !from_val.is_empty() {
+            all_contacts.insert(from_val);
+        }
+    }
+
+    let multi_fields = [fields.f_to, fields.f_cc, fields.f_bcc];
+
+    for field in multi_fields {
+        if let Ok(vals) = extract_vec_string_field(doc, field) {
+            for v in vals {
+                if !v.is_empty() {
+                    all_contacts.insert(v);
+                }
+            }
+        }
+    }
+
+    Ok(all_contacts)
 }

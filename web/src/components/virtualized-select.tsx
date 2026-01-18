@@ -224,6 +224,7 @@ interface VirtualizedSelectProps {
   defaultValue?: string | string[];
   noItemsComponent?: React.ReactNode;
   multiple?: boolean;
+  size?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
 export function VirtualizedSelect({
@@ -232,6 +233,7 @@ export function VirtualizedSelect({
   className,
   defaultValue,
   value,
+  size = 'default',
   isLoading,
   disabled = false,
   placeholder = 'Search items...',
@@ -281,6 +283,7 @@ export function VirtualizedSelect({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
+            size={size}
             variant="outline"
             role="combobox"
             aria-expanded={open}

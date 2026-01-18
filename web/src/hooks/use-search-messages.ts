@@ -92,6 +92,7 @@ export function useSearchMessages() {
         setPage,
         onSubmit,
         reset,
-        filter
+        filter,
+        setFilter
     };
 }

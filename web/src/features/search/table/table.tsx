@@ -31,8 +31,9 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
+import { type Table } from '@tanstack/react-table'
 import {
-  Table,
+  Table as ShadcnTable,
   TableBody,
   TableCell,
   TableHead,
@@ -43,6 +44,9 @@ import { useTranslation } from 'react-i18next'
 import { EmailEnvelope } from '@/api'
 import { cn } from '@/lib/utils'
 import { useSearchContext } from '../context'
+import { ScrollArea } from '@/components/ui/scroll-area'
+
+
 
 declare module '@tanstack/react-table' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -57,10 +61,11 @@ interface DataTableProps {
   onRowClick: (e: ReactMouseEvent<HTMLTableRowElement, MouseEvent>, row: Row<EmailEnvelope>) => void
   setSortBy: (sortBy: "DATE" | "SIZE") => void
   setSortOrder: (value: "desc" | "asc") => void
+  children?: (table: Table<EmailEnvelope>) => React.ReactNode
 }
 
-export function SearchTable({ columns, data, onRowClick, setSortBy, setSortOrder }: DataTableProps) {
-  const { sorting, setSorting, columnVisibility, setColumnVisibility } = useSearchContext()
+export function SearchTable({ columns, data, onRowClick, setSortBy, setSortOrder, children }: DataTableProps) {
+  const { sorting, setSorting } = useSearchContext()
   const { t } = useTranslation()
   const [rowSelection, setRowSelection] = useState({})
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
@@ -76,7 +81,6 @@ export function SearchTable({ columns, data, onRowClick, setSortBy, setSortOrder
     columns,
     state: {
       sorting,
-      columnVisibility,
       rowSelection,
       columnFilters,
     },
@@ -84,7 +88,6 @@ export function SearchTable({ columns, data, onRowClick, setSortBy, setSortOrder
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
-    onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -93,9 +96,10 @@ export function SearchTable({ columns, data, onRowClick, setSortBy, setSortOrder
   })
 
   return (
-    <div className='space-y-4'>
-      <div className='rounded-md border'>
-        <Table>
+    <div className="flex flex-1 flex-col gap-0.5">
+      {children && (<>{children(table)}</>)}
+      <ScrollArea className='h-[calc(100vh-13rem)] rounded-md border' orientation='both'>
+        <ShadcnTable>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className='group/row'>
@@ -131,7 +135,7 @@ export function SearchTable({ columns, data, onRowClick, setSortBy, setSortOrder
                     <TableCell
                       key={cell.id}
                       className={cell.column.columnDef.meta?.className ?? ''}
-                      style={{ 
+                      style={{
                         width: cell.column.columnDef.size,
                         minWidth: cell.column.columnDef.minSize,
                         maxWidth: cell.column.columnDef.maxSize
@@ -155,9 +159,10 @@ export function SearchTable({ columns, data, onRowClick, setSortBy, setSortOrder
                 </TableCell>
               </TableRow>
             )}
+
           </TableBody>
-        </Table>
-      </div>
+        </ShadcnTable>
+      </ScrollArea>
     </div>
   )
 }

@@ -323,4 +323,25 @@ impl MessageApi {
             .await?;
         Ok(())
     }
+
+    #[oai(
+        path = "/all-contacts",
+        method = "get",
+        operation_id = "get_all_contacts"
+    )]
+    async fn get_all_contacts(&self, context: ClientContext) -> ApiResult<Json<HashSet<String>>> {
+        let authorized_ids: Option<HashSet<u64>> = if context
+            .has_permission(None, Permission::DATA_READ_ALL)
+            .await
+        {
+            None
+        } else {
+            Some(context.user.account_access_map.keys().cloned().collect())
+        };
+        Ok(Json(
+            ENVELOPE_INDEX_MANAGER
+                .get_all_contacts(authorized_ids)
+                .await?,
+        ))
+    }
 }

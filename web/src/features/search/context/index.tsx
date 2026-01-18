@@ -19,9 +19,9 @@
 
 import React from 'react'
 import { EmailEnvelope } from '@/api'
-import { SortingState, VisibilityState } from '@tanstack/react-table'
+import { SortingState } from '@tanstack/react-table'
 
-export type SearchDialogType = 'mailbox' | 'display' | 'delete' | 'filters' | 'tags' | 'edit-tags' | 'search-form' | 'restore' | 'columns'
+export type SearchDialogType = 'mailbox' | 'display' | 'delete' | 'filters' | 'tags' | 'edit-tags' | 'search-form' | 'restore'
 
 interface SearchContextType {
   open: SearchDialogType | null
@@ -35,8 +35,9 @@ interface SearchContextType {
   selectedTags: string[]
   sorting: SortingState
   setSorting: React.Dispatch<React.SetStateAction<SortingState>>
-  columnVisibility: VisibilityState
-  setColumnVisibility: React.Dispatch<React.SetStateAction<VisibilityState>>
+  filter: Record<string, any>
+  setFilter: React.Dispatch<React.SetStateAction<Record<string, any>>>
+  handleTagToggle: (tag: string) => void
 }
 
 const SearchContext = React.createContext<SearchContextType | null>(null)

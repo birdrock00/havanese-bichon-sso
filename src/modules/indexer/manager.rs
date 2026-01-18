@@ -24,7 +24,10 @@ use std::{
     time::Duration,
 };
 
-use crate::modules::message::{search::SortBy, tags::TagCount};
+use crate::modules::{
+    indexer::envelope::extract_contacts,
+    message::{search::SortBy, tags::TagCount},
+};
 use crate::{
     modules::{
         account::migration::AccountModel,
@@ -57,7 +60,10 @@ use tantivy::{
         AggregationCollector, Key,
     },
     collector::{Count, FacetCollector, TopDocs},
-    query::{AllQuery, BooleanQuery, EmptyQuery, Occur, Query, QueryParser, RangeQuery, RegexQuery, TermQuery},
+    query::{
+        AllQuery, BooleanQuery, EmptyQuery, Occur, Query, QueryParser, RangeQuery, RegexQuery,
+        TermQuery,
+    },
     schema::{Facet, IndexRecordOption, Value},
     store::{Compressor, ZstdCompressor},
     DocAddress, Index, IndexBuilder, IndexReader, IndexSettings, IndexWriter, Order,
@@ -307,10 +313,7 @@ impl EnvelopeIndexManager {
         ] {
             if let Some(ref v) = opt_value {
                 if let Ok(query) = RegexQuery::from_pattern(v.as_str(), field) {
-                    subqueries.push((
-                        Occur::Must,
-                        Box::new(query),
-                    ));
+                    subqueries.push((Occur::Must, Box::new(query)));
                 }
             }
         }
@@ -329,10 +332,7 @@ impl EnvelopeIndexManager {
 
         if let Some(ref name) = filter.attachment_name {
             if let Ok(query) = RegexQuery::from_pattern(name.as_str(), f.f_attachments) {
-                subqueries.push((
-                    Occur::Must,
-                    Box::new(query),
-                ));
+                subqueries.push((Occur::Must, Box::new(query)));
             }
         }
 
@@ -528,6 +528,48 @@ impl EnvelopeIndexManager {
         let mut all_facets = Vec::new();
         Self::collect_facets_recursive(&query, &searcher, "/", &mut all_facets)?;
         Ok(all_facets)
+    }
+
+    pub async fn get_all_contacts(
+        &self,
+        accounts: Option<HashSet<u64>>,
+    ) -> BichonResult<HashSet<String>> {
+        let searcher = self.create_searcher()?;
+
+        let query: Box<dyn Query> = match accounts {
+            Some(ref ids) if !ids.is_empty() => {
+                let mut subqueries = Vec::new();
+                for &id in ids {
+                    let term =
+                        Term::from_field_u64(SchemaTools::envelope_fields().f_account_id, id);
+                    subqueries.push((
+                        Occur::Should,
+                        Box::new(TermQuery::new(term, IndexRecordOption::Basic)) as Box<dyn Query>,
+                    ));
+                }
+                Box::new(BooleanQuery::new(subqueries))
+            }
+            Some(_) => Box::new(EmptyQuery),
+            None => Box::new(AllQuery),
+        };
+
+        let mut contacts_set: HashSet<String> = HashSet::new();
+
+        let top_docs = searcher
+            .search(&query, &TopDocs::with_limit(1_000_000))
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        for (_score, doc_address) in top_docs {
+            let doc: TantivyDocument = searcher
+                .doc_async(doc_address)
+                .await
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            let contacts = extract_contacts(&doc).await?;
+            for value in contacts {
+                contacts_set.insert(value);
+            }
+        }
+        Ok(contacts_set)
     }
 
     pub async fn delete_envelopes_multi_account(

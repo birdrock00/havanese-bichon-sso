@@ -37,7 +37,7 @@ export function DatePicker({
           {selected ? (
             format(selected, 'PPP', { locale: dateLocale })
           ) : (
-            <span>{placeholder}</span>
+            <span className='text-xs'>{placeholder}</span>
           )}
           <CalendarIcon className='ms-auto h-4 w-4 opacity-50' />
         </Button>

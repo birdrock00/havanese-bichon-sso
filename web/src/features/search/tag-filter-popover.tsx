@@ -1,0 +1,193 @@
+import * as React from 'react'
+import { Tag, ChevronDown, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover'
+
+import { useAvailableTags } from '@/hooks/use-available-tags'
+import { cn } from '@/lib/utils'
+import { useSearchContext } from './context'
+
+export function TagFilterPopover() {
+    const { t } = useTranslation()
+    const [search, setSearch] = React.useState('')
+    const { filter, setFilter } = useSearchContext()
+
+    const selectedTags = (filter?.tags as string[]) || []
+    const {
+        tagsCount = [],
+        isLoading,
+    } = useAvailableTags()
+
+    const handleTagToggle = (tag: string) => {
+        setFilter(prev => {
+            const next = { ...prev }
+            const currentTags = (next.tags as string[]) || []
+            const isSelected = currentTags.includes(tag)
+
+            const nextTags = isSelected
+                ? currentTags.filter(t => t !== tag)
+                : [...currentTags, tag]
+
+            if (nextTags.length > 0) {
+                next.tags = nextTags
+            } else {
+                delete next.tags
+            }
+
+            return next
+        })
+    }
+
+    const clearAllTags = () => {
+        setFilter(prev => {
+            const next = { ...prev }
+            delete next.tags
+            return next
+        })
+    }
+
+    const filteredTags = React.useMemo(() => {
+        const q = search.toLowerCase()
+
+        return tagsCount
+            .filter(t =>
+                !q || t.tag.toLowerCase().includes(q)
+            )
+            .sort((a, b) => {
+                const aSelected = selectedTags.includes(a.tag)
+                const bSelected = selectedTags.includes(b.tag)
+                if (aSelected && !bSelected) return -1
+                if (!aSelected && bSelected) return 1
+                return b.count - a.count
+            })
+    }, [tagsCount, search, selectedTags])
+
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button
+                    size="sm"
+                    variant="outline"
+                    className={cn(
+                        'h-8 gap-1.5 px-3 rounded-none',
+                        selectedTags.length > 0 &&
+                        'bg-primary/10 border-primary text-primary'
+                    )}
+                >
+                    <Tag className="h-4 w-4" />
+                    {t('mail.tags')}
+                    {selectedTags.length > 0 && (
+                        <Badge
+                            variant="secondary"
+                            className="ml-1 h-5 px-1.5 text-xs"
+                        >
+                            {selectedTags.length}
+                        </Badge>
+                    )}
+                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                </Button>
+            </PopoverTrigger>
+
+            <PopoverContent
+                align="start"
+                className="w-96 p-1"
+            >
+                <div className="p-1 pb-2">
+                    <Input
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder={t('mail.searchTags')}
+                        className="h-8 text-sm"
+                        autoFocus
+                    />
+                </div>
+                <ScrollArea className="h-96 p-1">
+                    {!search && selectedTags.length > 0 && (
+                        <>
+                            <div
+                                onClick={clearAllTags}
+                                className="flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer text-destructive hover:bg-destructive/10 transition-colors"
+                            >
+                                <div className="flex h-4 w-4 items-center justify-center">
+                                    <X className="h-3 w-3" />
+                                </div>
+                                <span className="flex-1 text-xs font-medium">
+                                    {t('common.clear_all_tags')}
+                                </span>
+                                <span className="text-[10px] opacity-60">({selectedTags.length})</span>
+                            </div>
+                            <div className="my-1 h-px bg-border" />
+                        </>
+                    )}
+                    {isLoading ? (
+                        <div className="space-y-2 p-2">
+                            {Array.from({ length: 6 }).map((_, i) => (
+                                <div
+                                    key={i}
+                                    className="h-4 rounded bg-muted animate-pulse"
+                                />
+                            ))}
+                        </div>
+                    ) : filteredTags.length === 0 ? (
+                        <p className="px-3 py-2 text-xs text-muted-foreground">
+                            {t('mail.noTagsFound')}
+                        </p>
+                    ) : (
+                        filteredTags.map(({ tag, count }) => {
+                            const checked = selectedTags.includes(tag)
+                            const id = `tag-${tag}`
+
+                            return (
+                                <div
+                                    key={tag}
+                                    onClick={() => handleTagToggle(tag)}
+                                    className={cn(
+                                        'flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer',
+                                        'hover:bg-accent transition-colors'
+                                    )}
+                                >
+                                    <Checkbox
+                                        id={id}
+                                        checked={checked}
+                                        onCheckedChange={() =>
+                                            handleTagToggle(tag)
+                                        }
+                                        onClick={(e) =>
+                                            e.stopPropagation()
+                                        }
+                                    />
+
+                                    <Label
+                                        htmlFor={id}
+                                        className="flex-1 truncate text-xs cursor-pointer"
+                                        title={tag}
+                                    >
+                                        {tag}
+                                    </Label>
+
+                                    <Badge
+                                        variant="secondary"
+                                        className="h-5 px-1.5 text-xs"
+                                    >
+                                        {count}
+                                    </Badge>
+                                </div>
+                            )
+                        })
+                    )}
+                </ScrollArea>
+            </PopoverContent>
+        </Popover>
+    )
+}

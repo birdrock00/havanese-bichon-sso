@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import { get_top_tags } from '@/api/search/api';
+import { get_tags } from '@/api/search/api';
 import { useQuery } from '@tanstack/react-query';
 import React from 'react';
 
@@ -45,7 +45,7 @@ export function useAvailableTags(): UseAvailableTagsResult {
         refetch,
     } = useQuery<TagCount[]>({
         queryKey: ['all-tags'],
-        queryFn: get_top_tags,
+        queryFn: get_tags,
         staleTime: 60 * 1000,
         retry: false,
         refetchOnWindowFocus: false,

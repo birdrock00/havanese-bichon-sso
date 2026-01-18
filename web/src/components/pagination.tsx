@@ -95,7 +95,7 @@ export function EnvelopeListPagination({
               <SelectValue placeholder={pageSize} />
             </SelectTrigger>
             <SelectContent side='top'>
-              {[10, 20, 30, 40, 50, 100].map((size) => (
+              {[10, 20, 30, 40, 50, 100, 200].map((size) => (
                 <SelectItem key={size} value={`${size}`}>
                   {size}
                 </SelectItem>
@@ -103,15 +103,18 @@ export function EnvelopeListPagination({
             </SelectContent>
           </Select>
         </div>
-        <div className='flex items-center justify-center text-sm font-medium'>
+        <div className='hidden items-center justify-center text-sm font-medium sm:flex'>
           {t("table.page")}
-          <Input type="number" value={pageInput} onBlur={() => {
-            if (Number.isNaN(pageInput)) return
-            if (pageInput > 0) setPageIndex(pageInput - 1)
-            else setPageIndex(0)
-          }}
-          onChange={(e) => setPageInput(Number(e.target.value))}
-          className='mx-2 w-20'
+          <Input
+            type="number"
+            value={pageInput}
+            onBlur={() => {
+              if (Number.isNaN(pageInput)) return
+              if (pageInput > 0) setPageIndex(pageInput - 1)
+              else setPageIndex(0)
+            }}
+            onChange={(e) => setPageInput(Number(e.target.value))}
+            className='mx-2 h-8 w-20'
           />
           {t("table.of")} {pageCount}
         </div>

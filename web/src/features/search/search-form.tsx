@@ -388,7 +388,6 @@ export function SearchFormDialog({ onSubmit, isLoading, reset, open, onOpenChang
 
                     <div>
                         {showAdvanced && <Accordion type="multiple" className="space-y-3">
-                            {/* Sender & Recipients */}
                             <AccordionItem value="people">
                                 <AccordionTrigger className="text-sm">
                                     {t('search.sender')} / {t('search.recipient')}
