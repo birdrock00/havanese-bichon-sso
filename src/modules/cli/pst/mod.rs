@@ -254,7 +254,8 @@ fn build_eml_base64(message: Rc<dyn Message>) -> Option<String> {
     }
 
     let from = extract_string_property(properties, 0x5D01)
-        .or_else(|| extract_string_property(properties, 0x5D02));
+        .or_else(|| extract_string_property(properties, 0x5D02))
+        .or_else(|| extract_string_property(properties, 0x0C1F));
 
     if let Some(f) = from {
         builder = builder.from(f);
