@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::modules::context::Initialize;
 use crate::modules::settings::cli::SETTINGS;
 use crate::{
@@ -35,7 +34,6 @@ const LOG_DIR: &str = "logs";
 const TLS_CERT: &str = "cert.pem";
 const TLS_KEY: &str = "key.pem";
 
-
 pub static DATA_DIR_MANAGER: LazyLock<DataDirManager> =
     LazyLock::new(|| DataDirManager::new(PathBuf::from(&SETTINGS.bichon_root_dir)));
 
@@ -49,7 +47,7 @@ pub struct DataDirManager {
     pub tls_key: PathBuf,
     pub envelope_dir: PathBuf,
     pub eml_dir: PathBuf,
-    pub log_dir: PathBuf
+    pub log_dir: PathBuf,
 }
 
 impl Initialize for DataDirManager {
@@ -66,6 +64,18 @@ impl Initialize for DataDirManager {
 
 impl DataDirManager {
     pub fn new(root_dir: PathBuf) -> Self {
+        let envelope_dir = if let Some(ref index_dir) = SETTINGS.bichon_index_dir {
+            PathBuf::from(index_dir)
+        } else {
+            root_dir.join(ENVELOPE_DIR)
+        };
+
+        let eml_dir = if let Some(ref data_dir) = SETTINGS.bichon_data_dir {
+            PathBuf::from(data_dir)
+        } else {
+            root_dir.join(EML_DIR)
+        };
+
         Self {
             root_dir: root_dir.clone(),
             meta_db: root_dir.join(META_FILE),
@@ -73,9 +83,9 @@ impl DataDirManager {
             tls_key: root_dir.join(TLS_KEY),
             tls_cert: root_dir.join(TLS_CERT),
             log_dir: root_dir.join(LOG_DIR),
-            envelope_dir: root_dir.join(ENVELOPE_DIR),
+            envelope_dir,
             temp_dir: root_dir.join(TMP_DIR),
-            eml_dir: root_dir.join(EML_DIR),
+            eml_dir,
         }
     }
 }

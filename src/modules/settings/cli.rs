@@ -173,7 +173,44 @@ pub struct Settings {
         })
     )]
     pub bichon_root_dir: String,
-
+    #[clap(
+        long,
+        env,
+        help = "Set the file path for email index directory",
+        value_parser = ValueParser::new(|s: &str| {
+            let path = PathBuf::from(s);
+            if !path.is_absolute() {
+                return Err("Path must be an absolute directory path".to_string());
+            }
+            if !path.exists() {
+                return Err(format!("Path {:?} does not exist", path));
+            }
+            if !path.is_dir() {
+                return Err(format!("Path {:?} is not a directory", path));
+            }
+            Ok(s.to_string())
+        })
+    )]
+    pub bichon_index_dir: Option<String>,
+    #[clap(
+        long,
+        env,
+        help = "Set the file path for email data directory",
+        value_parser = ValueParser::new(|s: &str| {
+            let path = PathBuf::from(s);
+            if !path.is_absolute() {
+                return Err("Path must be an absolute directory path".to_string());
+            }
+            if !path.exists() {
+                return Err(format!("Path {:?} does not exist", path));
+            }
+            if !path.is_dir() {
+                return Err(format!("Path {:?} is not a directory", path));
+            }
+            Ok(s.to_string())
+        })
+    )]
+    pub bichon_data_dir: Option<String>,
     #[clap(
         long,
         env,
