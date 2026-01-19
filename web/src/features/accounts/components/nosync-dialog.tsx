@@ -164,7 +164,7 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
             {t('accounts.clickSaveWhenDone')}
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className='h-[23rem] w-full pr-4 -mr-4 py-1'>
+        <ScrollArea className='h-[13rem] w-full pr-4 -mr-4 py-1'>
           <Form {...form}>
             <form
               id='nosync-account-form'
