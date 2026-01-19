@@ -21,7 +21,7 @@ import React from 'react'
 import { EmailEnvelope } from '@/api'
 import { SortingState } from '@tanstack/react-table'
 
-export type SearchDialogType = 'mailbox' | 'display' | 'delete' | 'filters' | 'tags' | 'edit-tags' | 'search-form' | 'restore'
+export type SearchDialogType = 'mailbox' | 'display' | 'delete' | 'filters' | 'tags' | 'edit-tags' | 'restore'
 
 interface SearchContextType {
   open: SearchDialogType | null

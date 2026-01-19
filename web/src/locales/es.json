@@ -1461,5 +1461,91 @@
         "successDesc": "Los mensajes seleccionados se han restaurado correctamente en el servidor IMAP.",
         "failed": "Error al restaurar los mensajes",
         "failedTitle": "Error de restauración"
+    },
+    "time": {
+        "label": "Tiempo",
+        "since": "Desde",
+        "before": "Antes de",
+        "recent_range": "Rango reciente (desde...)",
+        "historical": "Rango histórico (antes de...)",
+        "absolute_range": "Rango de fechas absoluto",
+        "last_day": "Último 1 día",
+        "last_days": "Últimos {{count}} días",
+        "last_months": "Últimos {{count}} meses",
+        "over_years_ago": "Hace {{count}} {{unit}}",
+        "year": "año",
+        "years": "años",
+        "recent_prefix": "Reciente:",
+        "days_ago_to_now": "días atrás hasta ahora",
+        "apply": "Aplicar",
+        "start_date": "Fecha de inicio",
+        "end_date": "Fecha de fin",
+        "clear_filters": "Borrar filtros de tiempo",
+        "format": "yyyy-MM-dd"
+    },
+    "tag": {
+        "label": "Etiquetas",
+        "search_placeholder": "Buscar etiquetas...",
+        "clear_all": "Borrar todas las etiquetas",
+        "no_tags_found": "No se encontraron etiquetas"
+    },
+    "search_accounts": {
+        "label": "Cuentas de correo",
+        "search_placeholder": "Buscar cuentas de correo...",
+        "clear_accounts": "Borrar cuentas seleccionadas",
+        "no_accounts_found": "No se encontraron cuentas"
+    },
+    "search_mailbox": {
+        "label": "Buzones",
+        "search_placeholder": "Buscar buzones",
+        "clear_mailboxes": "Borrar carpetas seleccionadas",
+        "select_account_first": "Seleccione primero una cuenta de correo",
+        "no_mailbox_found": "No se encontró ningún buzón"
+    },
+    "search_contacts": {
+        "label": "Contactos",
+        "label_with_count": "Contactos ({{count}})",
+        "any": "Cualquiera",
+        "search_placeholder": "Buscar {{field}}...",
+        "reset_all": "Restablecer todos los contactos",
+        "no_contact_found": "No se encontraron contactos",
+        "loading": "Cargando...",
+        "showing_limit": "Mostrando solo los primeros 100 resultados • Total {{total}}"
+    },
+    "search_more": {
+        "trigger_label": "Avanzado",
+        "title": "Filtros avanzados",
+        "reset": "Restablecer",
+        "has_attachment": "Con archivo adjunto",
+        "attachment_name_label": "Nombre del archivo adjunto",
+        "attachment_name_placeholder": "Ej.: invoice.pdf",
+        "message_size_label": "Tamaño del mensaje",
+        "message_id_label": "Message-ID original",
+        "message_id_description": "Buscar usando el encabezado Message-ID del correo",
+        "apply": "Aplicar filtros",
+        "size_presets": {
+            "any": "Cualquier tamaño",
+            "tiny": "Muy pequeño (< 15 KB)",
+            "small": "Pequeño (< 2 MB)",
+            "medium": "Mediano (2 – 10 MB)",
+            "large": "Grande (10 – 20 MB)",
+            "huge": "Muy grande (> 20 MB)"
+        }
+    },
+    "search_view": {
+        "button_label": "Vista",
+        "menu_title": "Configuración de columnas"
+    },
+    "search_reset": {
+        "label": "Restablecer",
+        "tooltip": "Eliminar todos los filtros"
+    },
+    "search_input": {
+        "placeholder": "Buscar correos... (usa \"comillas\" para coincidencia exacta)",
+        "button": "Buscar",
+        "recent_title": "Búsquedas recientes",
+        "clear_history": "Borrar historial",
+        "no_history": "Sin historial de búsqueda",
+        "hint": "Ámbito de búsqueda predeterminado: asunto, contenido y nombres de archivos adjuntos"
     }
 }

@@ -20,17 +20,23 @@
 import { EmailEnvelope, PaginatedResponse } from '@/api';
 import { search_messages } from '@/api/search/api';
 import { useQuery } from '@tanstack/react-query';
+import React from 'react';
 import { useState } from 'react';
 
 
 
 export function useSearchMessages() {
     // const queryClient = useQueryClient();
-    const [filter, setFilter] = useState<Record<string, any>>({});
+    const [filter, _setFilter] = useState<Record<string, any>>({});
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(30);
     const [sortBy, setSortBy] = useState<"DATE" | "SIZE">("DATE");
     const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+
+    const setFilter = React.useCallback((val: any) => {
+        _setFilter(val);
+        setPage(1);
+    }, []);
 
     const onSubmit = (cleaned: Record<string, any>) => {
         if ('has_attachment' in cleaned && cleaned.has_attachment === false) {
@@ -51,7 +57,6 @@ export function useSearchMessages() {
 
     const reset = () => {
         setFilter({});
-        setPage(1);
     }
 
     const {

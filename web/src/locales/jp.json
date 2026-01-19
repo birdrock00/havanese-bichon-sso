@@ -1461,5 +1461,91 @@
         "successDesc": "選択したメッセージがIMAPサーバーに正常に復元されました。",
         "failed": "メッセージの復元に失敗しました",
         "failedTitle": "復元失敗"
+    },
+    "time": {
+        "label": "時間",
+        "since": "以降",
+        "before": "以前",
+        "recent_range": "最近の範囲（以降）",
+        "historical": "過去の範囲（以前）",
+        "absolute_range": "絶対日付範囲",
+        "last_day": "過去 1 日",
+        "last_days": "過去 {{count}} 日",
+        "last_months": "過去 {{count}} か月",
+        "over_years_ago": "{{count}}{{unit}}前",
+        "year": "年",
+        "years": "年",
+        "recent_prefix": "最近:",
+        "days_ago_to_now": "日前〜現在",
+        "apply": "適用",
+        "start_date": "開始日",
+        "end_date": "終了日",
+        "clear_filters": "時間フィルターをクリア",
+        "format": "yyyy-MM-dd"
+    },
+    "tag": {
+        "label": "タグ",
+        "search_placeholder": "タグを検索...",
+        "clear_all": "すべてのタグをクリア",
+        "no_tags_found": "タグが見つかりません"
+    },
+    "search_accounts": {
+        "label": "メールアカウント",
+        "search_placeholder": "アカウントを検索...",
+        "clear_accounts": "選択したアカウントをクリア",
+        "no_accounts_found": "アカウントが見つかりません"
+    },
+    "search_mailbox": {
+        "label": "メールボックス",
+        "search_placeholder": "メールボックスを検索",
+        "clear_mailboxes": "選択したフォルダをクリア",
+        "select_account_first": "先にアカウントを選択してください",
+        "no_mailbox_found": "フォルダが見つかりません"
+    },
+    "search_contacts": {
+        "label": "連絡先",
+        "label_with_count": "連絡先 ({{count}})",
+        "any": "指定なし",
+        "search_placeholder": "{{field}} を検索...",
+        "reset_all": "連絡先をリセット",
+        "no_contact_found": "連絡先が見つかりません",
+        "loading": "読み込み中...",
+        "showing_limit": "最初の100件のみ表示 • 合計 {{total}} 件"
+    },
+    "search_more": {
+        "trigger_label": "詳細",
+        "title": "詳細フィルター",
+        "reset": "リセット",
+        "has_attachment": "添付ファイルあり",
+        "attachment_name_label": "添付ファイル名",
+        "attachment_name_placeholder": "例: invoice.pdf",
+        "message_size_label": "メールサイズ",
+        "message_id_label": "Message-ID",
+        "message_id_description": "メールヘッダーの Message-ID で検索",
+        "apply": "適用",
+        "size_presets": {
+            "any": "指定なし",
+            "tiny": "極小 (< 15 KB)",
+            "small": "小 (< 2 MB)",
+            "medium": "中 (2 – 10 MB)",
+            "large": "大 (10 – 20 MB)",
+            "huge": "特大 (> 20 MB)"
+        }
+    },
+    "search_view": {
+        "button_label": "表示",
+        "menu_title": "列の設定"
+    },
+    "search_reset": {
+        "label": "リセット",
+        "tooltip": "すべての条件をクリア"
+    },
+    "search_input": {
+        "placeholder": "メールを検索…（\"引用符\"で完全一致）",
+        "button": "検索",
+        "recent_title": "最近の検索",
+        "clear_history": "履歴をクリア",
+        "no_history": "履歴なし",
+        "hint": "検索対象：件名・本文・添付ファイル名"
     }
 }

@@ -1461,5 +1461,91 @@
         "successDesc": "Les messages sélectionnés ont été restaurés avec succès sur le serveur IMAP.",
         "failed": "Échec de la restauration des messages",
         "failedTitle": "Échec de la restauration"
+    },
+    "time": {
+        "label": "Temps",
+        "since": "Depuis",
+        "before": "Avant",
+        "recent_range": "Période récente (depuis...)",
+        "historical": "Période historique (avant...)",
+        "absolute_range": "Plage de dates absolue",
+        "last_day": "Dernier jour",
+        "last_days": "Derniers {{count}} jours",
+        "last_months": "Derniers {{count}} mois",
+        "over_years_ago": "Il y a {{count}} {{unit}}",
+        "year": "an",
+        "years": "ans",
+        "recent_prefix": "Récent :",
+        "days_ago_to_now": "jours jusqu’à aujourd’hui",
+        "apply": "Appliquer",
+        "start_date": "Date de début",
+        "end_date": "Date de fin",
+        "clear_filters": "Effacer les filtres de temps",
+        "format": "yyyy-MM-dd"
+    },
+    "tag": {
+        "label": "Étiquettes",
+        "search_placeholder": "Rechercher des étiquettes...",
+        "clear_all": "Effacer toutes les étiquettes",
+        "no_tags_found": "Aucune étiquette trouvée"
+    },
+    "search_accounts": {
+        "label": "Comptes e-mail",
+        "search_placeholder": "Rechercher des comptes e-mail...",
+        "clear_accounts": "Effacer les comptes sélectionnés",
+        "no_accounts_found": "Aucun compte trouvé"
+    },
+    "search_mailbox": {
+        "label": "Boîtes mail",
+        "search_placeholder": "Rechercher des dossiers",
+        "clear_mailboxes": "Effacer les dossiers sélectionnés",
+        "select_account_first": "Veuillez d’abord sélectionner un compte e-mail",
+        "no_mailbox_found": "Aucun dossier trouvé"
+    },
+    "search_contacts": {
+        "label": "Contacts",
+        "label_with_count": "Contacts ({{count}})",
+        "any": "Tous",
+        "search_placeholder": "Rechercher {{field}}...",
+        "reset_all": "Réinitialiser tous les contacts",
+        "no_contact_found": "Aucun contact trouvé",
+        "loading": "Chargement...",
+        "showing_limit": "Affichage des 100 premiers résultats uniquement • Total {{total}}"
+    },
+    "search_more": {
+        "trigger_label": "Avancé",
+        "title": "Filtres avancés",
+        "reset": "Réinitialiser",
+        "has_attachment": "Contient une pièce jointe",
+        "attachment_name_label": "Nom de la pièce jointe",
+        "attachment_name_placeholder": "Ex. : invoice.pdf",
+        "message_size_label": "Taille du message",
+        "message_id_label": "Message-ID d’origine",
+        "message_id_description": "Recherche via l’en-tête Message-ID de l’e-mail",
+        "apply": "Appliquer les filtres",
+        "size_presets": {
+            "any": "Toutes tailles",
+            "tiny": "Très petite (< 15 Ko)",
+            "small": "Petite (< 2 Mo)",
+            "medium": "Moyenne (2 – 10 Mo)",
+            "large": "Grande (10 – 20 Mo)",
+            "huge": "Très grande (> 20 Mo)"
+        }
+    },
+    "search_view": {
+        "button_label": "Affichage",
+        "menu_title": "Paramètres des colonnes"
+    },
+    "search_reset": {
+        "label": "Réinitialiser",
+        "tooltip": "Effacer tous les filtres"
+    },
+    "search_input": {
+        "placeholder": "Rechercher des e-mails... (utilisez les \"guillemets\" pour une correspondance exacte)",
+        "button": "Rechercher",
+        "recent_title": "Recherches récentes",
+        "clear_history": "Effacer l’historique",
+        "no_history": "Aucun historique de recherche",
+        "hint": "Portée par défaut : objet, contenu et noms des pièces jointes"
     }
 }

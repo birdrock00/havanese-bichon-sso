@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { ChevronDown, Folders, X } from 'lucide-react'
 import { useQueries } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 
 import {
     Popover,
@@ -31,6 +32,7 @@ import useMinimalAccountList from '@/hooks/use-minimal-account-list'
 import { useSearchContext } from './context'
 
 export function MailboxPopover() {
+    const { t } = useTranslation()
     const { filter, setFilter } = useSearchContext()
     const { minimalList = [] } = useMinimalAccountList()
 
@@ -123,7 +125,7 @@ export function MailboxPopover() {
                     )}
                 >
                     <Folders className="h-4 w-4" />
-                    Mailbox
+                    {t('search_mailbox.label')}
                     {selectedMailboxIds.length > 0 && (
                         <span className="ml-1 text-xs opacity-70">
                             {selectedMailboxIds.length}
@@ -138,7 +140,7 @@ export function MailboxPopover() {
                     <Input
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        placeholder="Search mailbox"
+                        placeholder={t('search_mailbox.search_placeholder')}
                         className="h-8 text-sm"
                     />
                 </div>
@@ -151,14 +153,14 @@ export function MailboxPopover() {
                             className="h-7 w-full justify-start text-xs text-muted-foreground hover:text-destructive transition-colors"
                         >
                             <X className="mr-2 h-3.5 w-3.5" />
-                            Clear Mailboxes ({selectedMailboxIds.length})
+                            {t('search_mailbox.clear_mailboxes')} ({selectedMailboxIds.length})
                         </Button>
                     </div>
                 )}
                 <ScrollArea className="h-96 p-1">
                     {disabled ? (
                         <p className="px-3 py-2 text-xs text-muted-foreground">
-                            Please select account first
+                            {t('search_mailbox.select_account_first')}
                         </p>
                     ) : isLoading ? (
                         <div className="space-y-2 p-2">
@@ -171,7 +173,7 @@ export function MailboxPopover() {
                         </div>
                     ) : grouped.length === 0 ? (
                         <p className="px-3 py-2 text-xs text-muted-foreground">
-                            No mailbox found
+                            {t('search_mailbox.no_mailbox_found')}
                         </p>
                     ) : (
                         <Accordion

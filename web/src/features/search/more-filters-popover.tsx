@@ -94,7 +94,7 @@ export function MoreFiltersPopover() {
                     )}
                 >
                     <ListFilter className="h-3.5 w-3.5" />
-                    <span className="text-xs">Advanced</span>
+                    <span className="text-xs">{t('search_more.trigger_label')}</span>
                     {activeCount > 0 && (
                         <Badge className="ml-1 h-4 px-1 text-[10px] bg-primary text-primary-foreground border-none rounded-sm">
                             {activeCount}
@@ -105,7 +105,7 @@ export function MoreFiltersPopover() {
 
             <PopoverContent align="end" className="w-72 p-4 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-medium">Advanced Filters</h4>
+                    <h4 className="text-xs font-medium">{t('search_more.title')}</h4>
                     {activeCount > 0 && (
                         <Button
                             variant="ghost"
@@ -123,7 +123,7 @@ export function MoreFiltersPopover() {
                                 setOpen(false);
                             }}
                         >
-                            Reset
+                            {t('search_more.reset')}
                         </Button>
                     )}
                 </div>
@@ -140,22 +140,22 @@ export function MoreFiltersPopover() {
                         htmlFor="has_attachment"
                         className="text-xs font-normal cursor-pointer select-none"
                     >
-                        Has Attachments
+                        {t('search_more.has_attachment')}
                     </Label>
                 </div>
 
                 <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Attachment Name</Label>
+                    <Label className="text-xs text-muted-foreground">{t('search_more.attachment_name_label')}</Label>
                     <Input
                         className="h-8 text-xs"
                         value={localState.attachment_name}
                         onChange={(e) => setLocalState(prev => ({ ...prev, attachment_name: e.target.value }))}
-                        placeholder="e.g. invoice.pdf"
+                        placeholder={t('search_more.attachment_name_placeholder')}
                     />
                 </div>
 
                 <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Message Size</Label>
+                    <Label className="text-xs text-muted-foreground">{t('search_more.message_size_label')}</Label>
                     <Select
                         value={localState.size_preset}
                         onValueChange={(v) => setLocalState(prev => ({ ...prev, size_preset: v }))}
@@ -164,30 +164,29 @@ export function MoreFiltersPopover() {
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem className="text-xs" value="any">{t('search.any')}</SelectItem>
-                            <SelectItem className="text-xs" value="tiny">{t('search.tiny')}</SelectItem>
-                            <SelectItem className="text-xs" value="small">{t('search.small')}</SelectItem>
-                            <SelectItem className="text-xs" value="medium">{t('search.medium')}</SelectItem>
-                            <SelectItem className="text-xs" value="large">{t('search.large')}</SelectItem>
-                            <SelectItem className="text-xs" value="huge">{t('search.huge')}</SelectItem>
+                            {Object.keys(SIZES).concat('any').map((key) => (
+                                <SelectItem key={key} className="text-xs" value={key}>
+                                    {t(`search_more.size_presets.${key}`)}
+                                </SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                 </div>
 
                 <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Original Message ID</Label>
+                    <Label className="text-xs text-muted-foreground">{t('search_more.message_id_label')}</Label>
                     <Input
                         className="h-8 text-xs"
                         value={localState.message_id}
                         onChange={(e) => setLocalState(prev => ({ ...prev, message_id: e.target.value }))}
                     />
                     <p className="text-[10px] text-muted-foreground opacity-70 leading-tight">
-                        {t('search.originalMessageIdHeader')}
+                        {t('search_more.message_id_description')}
                     </p>
                 </div>
 
                 <Button size="sm" className="w-full h-8 text-xs mt-2" onClick={handleApply}>
-                    Apply Filters
+                    {t('search_more.apply')}
                 </Button>
             </PopoverContent>
         </Popover>

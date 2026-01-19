@@ -1461,5 +1461,91 @@
         "successDesc": "De valda meddelandena har återställts till IMAP-servern.",
         "failed": "Misslyckades med att återställa meddelanden",
         "failedTitle": "Återställning misslyckades"
+    },
+    "time": {
+        "label": "Tid",
+        "since": "Sedan",
+        "before": "Före",
+        "recent_range": "Senaste intervall (sedan...)",
+        "historical": "Historiskt intervall (före...)",
+        "absolute_range": "Absolut datumintervall",
+        "last_day": "Senaste 1 dagen",
+        "last_days": "Senaste {{count}} dagarna",
+        "last_months": "Senaste {{count}} månaderna",
+        "over_years_ago": "För {{count}} {{unit}} sedan",
+        "year": "år",
+        "years": "år",
+        "recent_prefix": "Senaste:",
+        "days_ago_to_now": "dagar sedan till nu",
+        "apply": "Använd",
+        "start_date": "Startdatum",
+        "end_date": "Slutdatum",
+        "clear_filters": "Rensa tidsfilter",
+        "format": "yyyy-MM-dd"
+    },
+    "tag": {
+        "label": "Taggar",
+        "search_placeholder": "Sök taggar...",
+        "clear_all": "Rensa alla taggar",
+        "no_tags_found": "Inga taggar hittades"
+    },
+    "search_accounts": {
+        "label": "E-postkonton",
+        "search_placeholder": "Sök e-postkonton...",
+        "clear_accounts": "Rensa valda konton",
+        "no_accounts_found": "Inga konton hittades"
+    },
+    "search_mailbox": {
+        "label": "E-postmappar",
+        "search_placeholder": "Sök mappar",
+        "clear_mailboxes": "Rensa valda mappar",
+        "select_account_first": "Välj först ett e-postkonto",
+        "no_mailbox_found": "Inga mappar hittades"
+    },
+    "search_contacts": {
+        "label": "Kontakter",
+        "label_with_count": "Kontakter ({{count}})",
+        "any": "Alla",
+        "search_placeholder": "Sök {{field}}...",
+        "reset_all": "Återställ alla kontakter",
+        "no_contact_found": "Inga kontakter hittades",
+        "loading": "Laddar...",
+        "showing_limit": "Visar endast de första 100 resultaten • Totalt {{total}}"
+    },
+    "search_more": {
+        "trigger_label": "Avancerat",
+        "title": "Avancerade filter",
+        "reset": "Återställ",
+        "has_attachment": "Har bilaga",
+        "attachment_name_label": "Bilagans namn",
+        "attachment_name_placeholder": "t.ex. invoice.pdf",
+        "message_size_label": "Meddelandestorlek",
+        "message_id_label": "Ursprungligt Message-ID",
+        "message_id_description": "Sök via Message-ID i e-posthuvudet",
+        "apply": "Använd filter",
+        "size_presets": {
+            "any": "Valfri storlek",
+            "tiny": "Mycket liten (< 15 KB)",
+            "small": "Liten (< 2 MB)",
+            "medium": "Mellan (2–10 MB)",
+            "large": "Stor (10–20 MB)",
+            "huge": "Mycket stor (> 20 MB)"
+        }
+    },
+    "search_view": {
+        "button_label": "Vy",
+        "menu_title": "Inställningar för kolumner"
+    },
+    "search_reset": {
+        "label": "Återställ",
+        "tooltip": "Rensa alla filter"
+    },
+    "search_input": {
+        "placeholder": "Sök e-post... (använd \"citattecken\" för exakt matchning)",
+        "button": "Sök",
+        "recent_title": "Senaste sökningar",
+        "clear_history": "Rensa historik",
+        "no_history": "Ingen sökhistorik",
+        "hint": "Standardomfattning: ämne, innehåll och bilagenamn"
     }
 }

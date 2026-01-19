@@ -1,5 +1,7 @@
 import * as React from 'react'
 import { CalendarRange, ChevronDown, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { format } from 'date-fns'
 import {
     Popover,
     PopoverContent,
@@ -14,11 +16,23 @@ import { DatePicker } from '@/components/date-picker'
 const DAY = 86400000
 
 export function TimePopover() {
+    const { t } = useTranslation()
     const { filter, setFilter } = useSearchContext()
     const [customDays, setCustomDays] = React.useState<string>('')
 
     const since = filter.since
     const before = filter.before
+
+    const toDate = (ts: number) => {
+        return format(ts, t('time.format'))
+    }
+
+    const label = (s?: number, b?: number) => {
+        if (!s && !b) return t('time.label')
+        if (s && b) return `${toDate(s)} → ${toDate(b)}`
+        if (s) return `${t('time.since')} ${toDate(s)}`
+        return `${t('time.before')} ${toDate(b!)}`
+    }
 
     const setRange = (s?: number, b?: number) => {
         setFilter(prev => {
@@ -62,23 +76,23 @@ export function TimePopover() {
             </PopoverTrigger>
 
             <PopoverContent align="start" className="w-[530px] p-4 space-y-6">
-                <Section title="Recent Range (Since...)">
+                <Section title={t('time.recent_range')}>
                     <div className="space-y-4 w-full">
                         <div className="flex flex-wrap gap-2">
                             {[1, 7, 30].map(d => (
                                 <Quick key={d} onClick={() => setRange(Date.now() - d * DAY, undefined)}>
-                                    Last {d === 1 ? 'day' : `${d} days`}
+                                    {d === 1 ? t('time.last_day') : t('time.last_days', { count: d })}
                                 </Quick>
                             ))}
                             {[3, 6].map(m => (
                                 <Quick key={m} onClick={() => setRange(Date.now() - m * 30 * DAY, undefined)}>
-                                    Last {m} months
+                                    {t('time.last_months', { count: m })}
                                 </Quick>
                             ))}
                         </div>
 
                         <div className="flex items-center gap-2 pt-3 border-t border-border/50">
-                            <span className="text-[10px] uppercase font-bold opacity-40 shrink-0">Recent:</span>
+                            <span className="text-[10px] uppercase font-bold opacity-40 shrink-0">{t('time.recent_prefix')}</span>
                             <Input
                                 type="number"
                                 min={1}
@@ -88,19 +102,19 @@ export function TimePopover() {
                                 onChange={e => setCustomDays(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleApplyRecent()}
                             />
-                            <span className="text-xs text-muted-foreground shrink-0">days ago to now</span>
+                            <span className="text-xs text-muted-foreground shrink-0">{t('time.days_ago_to_now')}</span>
                             <Button
                                 size="sm"
                                 variant="secondary"
                                 className="h-8 px-3 ml-auto text-xs"
                                 onClick={handleApplyRecent}
                             >
-                                Apply
+                                {t('time.apply')}
                             </Button>
                         </div>
                     </div>
                 </Section>
-                <Section title="Historical (Older than...)">
+                <Section title={t('time.historical')}>
                     <div className="flex flex-wrap gap-2 w-full">
                         {[1, 2, 3, 5, 10].map(y => (
                             <Quick
@@ -108,25 +122,28 @@ export function TimePopover() {
                                 onClick={() => setRange(undefined, Date.now() - y * 365 * DAY)}
                                 className="border-orange-200 hover:border-orange-400 hover:text-orange-600"
                             >
-                                Over {y} {y === 1 ? 'year' : 'years'} ago
+                                {t('time.over_years_ago', {
+                                    count: y,
+                                    unit: y === 1 ? t('time.year') : t('time.years')
+                                })}
                             </Quick>
                         ))}
                     </div>
                 </Section>
-                <Section title="Absolute Date Range">
+                <Section title={t('time.absolute_range')}>
                     <div className="flex gap-3 w-full">
                         <div className="flex-1 min-w-0 space-y-1.5">
-                            <span className="text-[10px] pl-1 opacity-50 font-medium">SINCE</span>
+                            <span className="text-[10px] pl-1 opacity-50 font-medium">{t('time.since').toUpperCase()}</span>
                             <DatePicker
-                                placeholder="Start date"
+                                placeholder={t('time.start_date')}
                                 selected={since ? new Date(since) : undefined}
                                 onSelect={(date) => setSince(date?.getTime())}
                             />
                         </div>
                         <div className="flex-1 min-w-0 space-y-1.5">
-                            <span className="text-[10px] pl-1 opacity-50 font-medium">BEFORE</span>
+                            <span className="text-[10px] pl-1 opacity-50 font-medium">{t('time.before').toUpperCase()}</span>
                             <DatePicker
-                                placeholder="End date"
+                                placeholder={t('time.end_date')}
                                 selected={before ? new Date(before) : undefined}
                                 onSelect={(date) => setBefore(date?.getTime())}
                             />
@@ -143,25 +160,13 @@ export function TimePopover() {
                             className="h-7 w-full justify-start text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                         >
                             <X className="mr-2 h-3.5 w-3.5" />
-                            Clear time filters
+                            {t('time.clear_filters')}
                         </Button>
                     </div>
                 )}
             </PopoverContent>
         </Popover>
     )
-}
-
-function toDate(ts: number) {
-    const d = new Date(ts)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function label(s?: number, b?: number) {
-    if (!s && !b) return 'Time'
-    if (s && b) return `${toDate(s)} → ${toDate(b)}`
-    if (s) return `Since ${toDate(s)}`
-    return `Older than ${toDate(b!)}`
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

@@ -1461,5 +1461,91 @@
         "successDesc": "De geselecteerde berichten zijn succesvol hersteld op de IMAP-server.",
         "failed": "Herstellen van berichten mislukt",
         "failedTitle": "Herstel mislukt"
+    },
+    "time": {
+        "label": "Tijd",
+        "since": "Sinds",
+        "before": "Voor",
+        "recent_range": "Recente periode (sinds...)",
+        "historical": "Historische periode (voor...)",
+        "absolute_range": "Absolute datumbereik",
+        "last_day": "Laatste 1 dag",
+        "last_days": "Laatste {{count}} dagen",
+        "last_months": "Laatste {{count}} maanden",
+        "over_years_ago": "{{count}} {{unit}} geleden",
+        "year": "jaar",
+        "years": "jaar",
+        "recent_prefix": "Recent:",
+        "days_ago_to_now": "dagen geleden tot nu",
+        "apply": "Toepassen",
+        "start_date": "Startdatum",
+        "end_date": "Einddatum",
+        "clear_filters": "Tijdfilters wissen",
+        "format": "yyyy-MM-dd"
+    },
+    "tag": {
+        "label": "Tags",
+        "search_placeholder": "Tags zoeken...",
+        "clear_all": "Alle tags wissen",
+        "no_tags_found": "Geen tags gevonden"
+    },
+    "search_accounts": {
+        "label": "E-mailaccounts",
+        "search_placeholder": "E-mailaccounts zoeken...",
+        "clear_accounts": "Geselecteerde accounts wissen",
+        "no_accounts_found": "Geen accounts gevonden"
+    },
+    "search_mailbox": {
+        "label": "Mailboxen",
+        "search_placeholder": "Mailboxen zoeken",
+        "clear_mailboxes": "Geselecteerde mappen wissen",
+        "select_account_first": "Selecteer eerst een e-mailaccount",
+        "no_mailbox_found": "Geen mailbox gevonden"
+    },
+    "search_contacts": {
+        "label": "Contacten",
+        "label_with_count": "Contacten ({{count}})",
+        "any": "Alle",
+        "search_placeholder": "{{field}} zoeken...",
+        "reset_all": "Alle contacten resetten",
+        "no_contact_found": "Geen contacten gevonden",
+        "loading": "Bezig met laden...",
+        "showing_limit": "Alleen de eerste 100 resultaten • Totaal {{total}}"
+    },
+    "search_more": {
+        "trigger_label": "Geavanceerd",
+        "title": "Geavanceerde filters",
+        "reset": "Resetten",
+        "has_attachment": "Bevat bijlage",
+        "attachment_name_label": "Bijlagenaam",
+        "attachment_name_placeholder": "Bijv.: invoice.pdf",
+        "message_size_label": "Berichtgrootte",
+        "message_id_label": "Originele Message-ID",
+        "message_id_description": "Zoeken via de Message-ID in de e-mailheader",
+        "apply": "Filters toepassen",
+        "size_presets": {
+            "any": "Elke grootte",
+            "tiny": "Zeer klein (< 15 KB)",
+            "small": "Klein (< 2 MB)",
+            "medium": "Gemiddeld (2 – 10 MB)",
+            "large": "Groot (10 – 20 MB)",
+            "huge": "Zeer groot (> 20 MB)"
+        }
+    },
+    "search_view": {
+        "button_label": "Weergave",
+        "menu_title": "Kolominstellingen"
+    },
+    "search_reset": {
+        "label": "Resetten",
+        "tooltip": "Alle filters wissen"
+    },
+    "search_input": {
+        "placeholder": "E-mails zoeken... (gebruik \"aanhalingstekens\" voor exacte overeenkomst)",
+        "button": "Zoeken",
+        "recent_title": "Recente zoekopdrachten",
+        "clear_history": "Geschiedenis wissen",
+        "no_history": "Geen zoekgeschiedenis",
+        "hint": "Standaard zoekbereik: onderwerp, inhoud en bijlagenamen"
     }
 }

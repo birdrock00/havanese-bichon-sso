@@ -1461,5 +1461,91 @@
         "successDesc": "선택한 메시지가 IMAP 서버로 성공적으로 복원되었습니다.",
         "failed": "메시지 복원 실패",
         "failedTitle": "복원 실패"
+    },
+    "time": {
+        "label": "시간",
+        "since": "이후",
+        "before": "이전",
+        "recent_range": "최근 범위 (이후...)",
+        "historical": "과거 범위 (이전...)",
+        "absolute_range": "절대 날짜 범위",
+        "last_day": "최근 1일",
+        "last_days": "최근 {{count}}일",
+        "last_months": "최근 {{count}}개월",
+        "over_years_ago": "{{count}}{{unit}} 전",
+        "year": "년",
+        "years": "년",
+        "recent_prefix": "최근:",
+        "days_ago_to_now": "며칠 전부터 현재까지",
+        "apply": "적용",
+        "start_date": "시작 날짜",
+        "end_date": "종료 날짜",
+        "clear_filters": "시간 필터 초기화",
+        "format": "yyyy-MM-dd"
+    },
+    "tag": {
+        "label": "태그",
+        "search_placeholder": "태그 검색...",
+        "clear_all": "모든 태그 지우기",
+        "no_tags_found": "태그를 찾을 수 없습니다"
+    },
+    "search_accounts": {
+        "label": "메일 계정",
+        "search_placeholder": "메일 계정 검색...",
+        "clear_accounts": "선택한 계정 지우기",
+        "no_accounts_found": "계정을 찾을 수 없습니다"
+    },
+    "search_mailbox": {
+        "label": "메일함",
+        "search_placeholder": "메일함 검색",
+        "clear_mailboxes": "선택한 폴더 지우기",
+        "select_account_first": "먼저 메일 계정을 선택하세요",
+        "no_mailbox_found": "폴더를 찾을 수 없습니다"
+    },
+    "search_contacts": {
+        "label": "연락처",
+        "label_with_count": "연락처 ({{count}})",
+        "any": "제한 없음",
+        "search_placeholder": "{{field}} 검색...",
+        "reset_all": "모든 연락처 초기화",
+        "no_contact_found": "연락처를 찾을 수 없습니다",
+        "loading": "불러오는 중...",
+        "showing_limit": "상위 100개 결과만 표시 • 전체 {{total}}개"
+    },
+    "search_more": {
+        "trigger_label": "고급",
+        "title": "고급 필터",
+        "reset": "초기화",
+        "has_attachment": "첨부파일 포함",
+        "attachment_name_label": "첨부파일 이름",
+        "attachment_name_placeholder": "예: invoice.pdf",
+        "message_size_label": "메일 크기",
+        "message_id_label": "원본 Message-ID",
+        "message_id_description": "메일 헤더의 Message-ID로 검색",
+        "apply": "필터 적용",
+        "size_presets": {
+            "any": "크기 제한 없음",
+            "tiny": "매우 작음 (< 15 KB)",
+            "small": "작음 (< 2 MB)",
+            "medium": "보통 (2 – 10 MB)",
+            "large": "큼 (10 – 20 MB)",
+            "huge": "매우 큼 (> 20 MB)"
+        }
+    },
+    "search_view": {
+        "button_label": "보기",
+        "menu_title": "표시 열 설정"
+    },
+    "search_reset": {
+        "label": "초기화",
+        "tooltip": "모든 필터 조건 지우기"
+    },
+    "search_input": {
+        "placeholder": "메일 검색... (\"따옴표\"로 정확히 일치)",
+        "button": "검색",
+        "recent_title": "최근 검색",
+        "clear_history": "기록 지우기",
+        "no_history": "검색 기록 없음",
+        "hint": "기본 검색 범위: 제목, 본문 및 첨부파일 이름"
     }
 }

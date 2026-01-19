@@ -21,7 +21,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { FixedHeader } from '@/components/layout/fixed-header';
 import { Main } from '@/components/layout/main';
 import { useSearchMessages } from '@/hooks/use-search-messages';
-import { SearchFormDialog } from './search-form';
 import { EnvelopeListPagination } from '@/components/pagination';
 import React from 'react';
 import { EmailEnvelope } from '@/api';
@@ -49,15 +48,12 @@ export default function Search() {
     total,
     totalPages,
     isLoading,
-    isFetching,
     page,
     pageSize,
     setPage,
     setPageSize,
     setSortBy,
     setSortOrder,
-    onSubmit,
-    reset,
     filter,
     setFilter
   } = useSearchMessages();
@@ -66,12 +62,6 @@ export default function Search() {
     setPage(1);
     setPageSize(pageSize)
   }
-
-
-  const handleReset = () => {
-    reset();
-    setSelectedTags([]);
-  };
 
   const handleTagToggle = (tag: string) => {
     setSelectedTags(prev =>
@@ -125,21 +115,6 @@ export default function Search() {
                   </Card>
                 )}
 
-                {/* {!isLoading && total === 0 && <div className="flex h-[750px] shrink-0 items-center justify-center rounded-md border border-dashed">
-                  <div className="mx-auto flex max-w-[420px] flex-col items-center justify-center text-center">
-                    <img
-                      src={Logo}
-                      className="max-h-[100px] w-auto opacity-20 saturate-0 transition-all duration-300 hover:opacity-100 hover:saturate-100 object-contain"
-                      alt="Bichon Logo"
-                    />
-                    <h3 className="mt-4 text-lg font-semibold">{t('search.noEmailsFound')}</h3>
-                    <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                      {Object.keys(filter).length === 0
-                        ? t('search.startSearching')
-                        : t('search.adjustSearch')}
-                    </p>
-                  </div>
-                </div>} */}
                 <MailListTable
                   isLoading={isLoading}
                   items={emails}
@@ -178,13 +153,6 @@ export default function Search() {
             key='edit-tags-dialog'
             open={open === 'edit-tags'}
             onOpenChange={() => setOpen('edit-tags')}
-          />
-
-          <SearchFormDialog
-            key='search-form-dialog'
-            onSubmit={onSubmit} isLoading={isLoading || isFetching} reset={handleReset}
-            open={open === 'search-form'}
-            onOpenChange={() => setOpen('search-form')}
           />
 
           <RestoreMessageDialog

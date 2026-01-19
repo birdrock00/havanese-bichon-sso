@@ -98,7 +98,7 @@ export function SearchTable({ columns, data, onRowClick, setSortBy, setSortOrder
   return (
     <div className="flex flex-1 flex-col gap-0.5">
       {children && (<>{children(table)}</>)}
-      <ScrollArea className='h-[calc(100vh-13rem)] rounded-md border' orientation='both'>
+      <ScrollArea className='h-[calc(100vh-15rem)] rounded-md border' orientation='both'>
         <ShadcnTable>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (

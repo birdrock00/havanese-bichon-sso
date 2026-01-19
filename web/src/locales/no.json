@@ -1461,5 +1461,91 @@
         "successDesc": "De valgte meldingene har blitt gjenopprettet til IMAP-serveren.",
         "failed": "Kunne ikke gjenopprette meldinger",
         "failedTitle": "Gjenoppretting mislyktes"
+    },
+    "time": {
+        "label": "Tid",
+        "since": "Siden",
+        "before": "Før",
+        "recent_range": "Nylig periode (siden...)",
+        "historical": "Historisk periode (før...)",
+        "absolute_range": "Absolutt datointervall",
+        "last_day": "Siste 1 dag",
+        "last_days": "Siste {{count}} dager",
+        "last_months": "Siste {{count}} måneder",
+        "over_years_ago": "For {{count}} {{unit}} siden",
+        "year": "år",
+        "years": "år",
+        "recent_prefix": "Nylig:",
+        "days_ago_to_now": "dager siden til nå",
+        "apply": "Bruk",
+        "start_date": "Startdato",
+        "end_date": "Sluttdato",
+        "clear_filters": "Fjern tidsfiltre",
+        "format": "yyyy-MM-dd"
+    },
+    "tag": {
+        "label": "Etiketter",
+        "search_placeholder": "Søk etter etiketter...",
+        "clear_all": "Fjern alle etiketter",
+        "no_tags_found": "Ingen etiketter funnet"
+    },
+    "search_accounts": {
+        "label": "E-postkontoer",
+        "search_placeholder": "Søk etter e-postkontoer...",
+        "clear_accounts": "Fjern valgte kontoer",
+        "no_accounts_found": "Ingen kontoer funnet"
+    },
+    "search_mailbox": {
+        "label": "Postbokser",
+        "search_placeholder": "Søk i postbokser",
+        "clear_mailboxes": "Fjern valgte mapper",
+        "select_account_first": "Velg først en e-postkonto",
+        "no_mailbox_found": "Ingen mappe funnet"
+    },
+    "search_contacts": {
+        "label": "Kontakter",
+        "label_with_count": "Kontakter ({{count}})",
+        "any": "Alle",
+        "search_placeholder": "Søk i {{field}}...",
+        "reset_all": "Tilbakestill alle kontakter",
+        "no_contact_found": "Ingen kontakter funnet",
+        "loading": "Laster...",
+        "showing_limit": "Viser kun de første 100 resultatene • Totalt {{total}}"
+    },
+    "search_more": {
+        "trigger_label": "Avansert",
+        "title": "Avanserte filtre",
+        "reset": "Tilbakestill",
+        "has_attachment": "Har vedlegg",
+        "attachment_name_label": "Vedleggsnavn",
+        "attachment_name_placeholder": "F.eks.: invoice.pdf",
+        "message_size_label": "Meldingsstørrelse",
+        "message_id_label": "Opprinnelig Message-ID",
+        "message_id_description": "Søk via Message-ID i e-postheaderen",
+        "apply": "Bruk filtre",
+        "size_presets": {
+            "any": "Alle størrelser",
+            "tiny": "Svært liten (< 15 KB)",
+            "small": "Liten (< 2 MB)",
+            "medium": "Middels (2 – 10 MB)",
+            "large": "Stor (10 – 20 MB)",
+            "huge": "Svært stor (> 20 MB)"
+        }
+    },
+    "search_view": {
+        "button_label": "Visning",
+        "menu_title": "Kolonneinnstillinger"
+    },
+    "search_reset": {
+        "label": "Tilbakestill",
+        "tooltip": "Fjern alle filtre"
+    },
+    "search_input": {
+        "placeholder": "Søk i e-poster... (bruk \"anførselstegn\" for eksakt treff)",
+        "button": "Søk",
+        "recent_title": "Nylige søk",
+        "clear_history": "Tøm historikk",
+        "no_history": "Ingen søkehistorikk",
+        "hint": "Standard søkeområde: emne, innhold og vedleggsnavn"
     }
 }

@@ -1461,5 +1461,91 @@
         "successDesc": "De valgte meddelelser er blevet gendannet til IMAP-serveren.",
         "failed": "Kunne ikke gendanne meddelelser",
         "failedTitle": "Gendannelse mislykkedes"
+    },
+    "time": {
+        "label": "Tid",
+        "since": "Siden",
+        "before": "Før",
+        "recent_range": "Seneste interval (siden...)",
+        "historical": "Historisk interval (før...)",
+        "absolute_range": "Absolut datointerval",
+        "last_day": "Seneste 1 dag",
+        "last_days": "Seneste {{count}} dage",
+        "last_months": "Seneste {{count}} måneder",
+        "over_years_ago": "For {{count}} {{unit}} siden",
+        "year": "år",
+        "years": "år",
+        "recent_prefix": "Seneste:",
+        "days_ago_to_now": "dage siden til nu",
+        "apply": "Anvend",
+        "start_date": "Startdato",
+        "end_date": "Slutdato",
+        "clear_filters": "Ryd tidsfiltre",
+        "format": "yyyy-MM-dd"
+    },
+    "tag": {
+        "label": "Tags",
+        "search_placeholder": "Søg tags...",
+        "clear_all": "Ryd alle tags",
+        "no_tags_found": "Ingen tags fundet"
+    },
+    "search_accounts": {
+        "label": "Mailkonti",
+        "search_placeholder": "Søg mailkonti...",
+        "clear_accounts": "Ryd valgte konti",
+        "no_accounts_found": "Ingen konti fundet"
+    },
+    "search_mailbox": {
+        "label": "Postkasser",
+        "search_placeholder": "Søg postkasser",
+        "clear_mailboxes": "Ryd valgte mapper",
+        "select_account_first": "Vælg venligst en mailkonto først",
+        "no_mailbox_found": "Ingen mappe fundet"
+    },
+    "search_contacts": {
+        "label": "Kontakter",
+        "label_with_count": "Kontakter ({{count}})",
+        "any": "Alle",
+        "search_placeholder": "Søg i {{field}}...",
+        "reset_all": "Nulstil alle kontakter",
+        "no_contact_found": "Ingen kontakter fundet",
+        "loading": "Indlæser...",
+        "showing_limit": "Viser kun de første 100 resultater • I alt {{total}}"
+    },
+    "search_more": {
+        "trigger_label": "Avanceret",
+        "title": "Avancerede filtre",
+        "reset": "Nulstil",
+        "has_attachment": "Har vedhæftning",
+        "attachment_name_label": "Navn på vedhæftning",
+        "attachment_name_placeholder": "F.eks.: invoice.pdf",
+        "message_size_label": "Mailstørrelse",
+        "message_id_label": "Original Message-ID",
+        "message_id_description": "Søg via Message-ID i mailheaderen",
+        "apply": "Anvend filtre",
+        "size_presets": {
+            "any": "Alle størrelser",
+            "tiny": "Meget lille (< 15 KB)",
+            "small": "Lille (< 2 MB)",
+            "medium": "Mellem (2 – 10 MB)",
+            "large": "Stor (10 – 20 MB)",
+            "huge": "Meget stor (> 20 MB)"
+        }
+    },
+    "search_view": {
+        "button_label": "Visning",
+        "menu_title": "Indstillinger for kolonner"
+    },
+    "search_reset": {
+        "label": "Nulstil",
+        "tooltip": "Ryd alle filtre"
+    },
+    "search_input": {
+        "placeholder": "Søg i mails... (brug \"anførselstegn\" til nøjagtig match)",
+        "button": "Søg",
+        "recent_title": "Seneste søgninger",
+        "clear_history": "Ryd historik",
+        "no_history": "Ingen søgehistorik",
+        "hint": "Standard søgeområde: emne, indhold og vedhæftningsnavne"
     }
 }

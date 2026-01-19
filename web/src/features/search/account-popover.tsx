@@ -90,7 +90,7 @@ export function AccountPopover() {
           )}
         >
           <AtSign className="h-4 w-4" />
-          Account
+          {t('search_accounts.label')}
           {selectedIds.length > 0 && (
             <Badge
               variant="secondary"
@@ -108,7 +108,7 @@ export function AccountPopover() {
           <Input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder={t('search.searchAccount')}
+            placeholder={t('search_accounts.search_placeholder')}
             className="h-8 text-sm"
           />
         </div>
@@ -124,7 +124,7 @@ export function AccountPopover() {
                 <X className="h-3.5 w-3.5" />
               </div>
               <span className="flex-1 text-left">
-                {t('search.clearAccounts')}
+                {t('search_accounts.clear_accounts')}
               </span>
               <span className="text-[10px] opacity-60 font-mono">
                 ({selectedIds.length})
@@ -134,44 +134,50 @@ export function AccountPopover() {
           </div>
         )}
         <ScrollArea className="h-96 p-1">
-          {filtered.map(account => {
-            const checked = selectedIds.includes(account.id)
-            const id = `account-${account.id}`
+          {filtered.length === 0 ? (
+            <p className="px-3 py-2 text-xs text-muted-foreground">
+              {t('search_accounts.no_accounts_found')}
+            </p>
+          ) : (
+            filtered.map(account => {
+              const checked = selectedIds.includes(account.id)
+              const id = `account-${account.id}`
 
-            return (
-              <div
-                key={account.id}
-                onClick={() => toggleAccount(account.id)}
-                className={cn(
-                  'flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer',
-                  'hover:bg-accent transition-colors'
-                )}
-              >
-                <Checkbox
-                  id={id}
-                  checked={checked}
-                  onCheckedChange={() =>
-                    toggleAccount(account.id)
-                  }
-                  onClick={e => e.stopPropagation()}
-                />
-
-                <Label
-                  htmlFor={id}
-                  className="flex-1 truncate text-xs cursor-pointer"
+              return (
+                <div
+                  key={account.id}
+                  onClick={() => toggleAccount(account.id)}
+                  className={cn(
+                    'flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer',
+                    'hover:bg-accent transition-colors'
+                  )}
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="truncate">
-                      {account.email}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      #{account.id}
-                    </span>
-                  </div>
-                </Label>
-              </div>
-            )
-          })}
+                  <Checkbox
+                    id={id}
+                    checked={checked}
+                    onCheckedChange={() =>
+                      toggleAccount(account.id)
+                    }
+                    onClick={e => e.stopPropagation()}
+                  />
+
+                  <Label
+                    htmlFor={id}
+                    className="flex-1 truncate text-xs cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="truncate">
+                        {account.email}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        #{account.id}
+                      </span>
+                    </div>
+                  </Label>
+                </div>
+              )
+            })
+          )}
         </ScrollArea>
       </PopoverContent>
     </Popover>

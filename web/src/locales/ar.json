@@ -1461,5 +1461,91 @@
         "successDesc": "تمت استعادة الرسائل المختارة إلى خادم IMAP بنجاح.",
         "failed": "فشلت استعادة الرسائل",
         "failedTitle": "فشل الاستعادة"
+    },
+    "time": {
+        "label": "الوقت",
+        "since": "منذ",
+        "before": "قبل",
+        "recent_range": "النطاق الأخير (منذ...)",
+        "historical": "النطاق السابق (قبل...)",
+        "absolute_range": "نطاق تاريخ محدد",
+        "last_day": "آخر يوم واحد",
+        "last_days": "آخر {{count}} أيام",
+        "last_months": "آخر {{count}} أشهر",
+        "over_years_ago": "منذ {{count}} {{unit}}",
+        "year": "سنة",
+        "years": "سنوات",
+        "recent_prefix": "الأخيرة:",
+        "days_ago_to_now": "منذ أيام حتى الآن",
+        "apply": "تطبيق",
+        "start_date": "تاريخ البدء",
+        "end_date": "تاريخ الانتهاء",
+        "clear_filters": "مسح فلترة الوقت",
+        "format": "yyyy-MM-dd"
+    },
+    "tag": {
+        "label": "الوسوم",
+        "search_placeholder": "بحث عن الوسوم...",
+        "clear_all": "مسح جميع الوسوم",
+        "no_tags_found": "لم يتم العثور على وسوم"
+    },
+    "search_accounts": {
+        "label": "حسابات البريد",
+        "search_placeholder": "بحث عن حسابات البريد...",
+        "clear_accounts": "مسح الحسابات المحددة",
+        "no_accounts_found": "لم يتم العثور على حسابات"
+    },
+    "search_mailbox": {
+        "label": "مجلدات البريد",
+        "search_placeholder": "بحث في المجلدات",
+        "clear_mailboxes": "مسح المجلدات المحددة",
+        "select_account_first": "يرجى اختيار حساب بريد أولاً",
+        "no_mailbox_found": "لم يتم العثور على مجلد"
+    },
+    "search_contacts": {
+        "label": "جهات الاتصال",
+        "label_with_count": "جهات الاتصال ({{count}})",
+        "any": "الكل",
+        "search_placeholder": "بحث في {{field}}...",
+        "reset_all": "إعادة تعيين جميع جهات الاتصال",
+        "no_contact_found": "لم يتم العثور على جهات اتصال",
+        "loading": "جارٍ التحميل...",
+        "showing_limit": "عرض أول 100 نتيجة فقط • المجموع {{total}}"
+    },
+    "search_more": {
+        "trigger_label": "متقدم",
+        "title": "فلاتر متقدمة",
+        "reset": "إعادة تعيين",
+        "has_attachment": "يحتوي على مرفق",
+        "attachment_name_label": "اسم المرفق",
+        "attachment_name_placeholder": "مثال: invoice.pdf",
+        "message_size_label": "حجم الرسالة",
+        "message_id_label": "معرّف Message-ID الأصلي",
+        "message_id_description": "البحث باستخدام Message-ID في ترويسة البريد",
+        "apply": "تطبيق الفلاتر",
+        "size_presets": {
+            "any": "أي حجم",
+            "tiny": "صغير جداً (< 15 كيلوبايت)",
+            "small": "صغير (< 2 ميغابايت)",
+            "medium": "متوسط (2 – 10 ميغابايت)",
+            "large": "كبير (10 – 20 ميغابايت)",
+            "huge": "ضخم (> 20 ميغابايت)"
+        }
+    },
+    "search_view": {
+        "button_label": "العرض",
+        "menu_title": "إعدادات الأعمدة"
+    },
+    "search_reset": {
+        "label": "إعادة تعيين",
+        "tooltip": "مسح جميع شروط التصفية"
+    },
+    "search_input": {
+        "placeholder": "البحث في البريد... (استخدم \"علامات الاقتباس\" للمطابقة التامة)",
+        "button": "بحث",
+        "recent_title": "عمليات البحث الأخيرة",
+        "clear_history": "مسح السجل",
+        "no_history": "لا يوجد سجل بحث",
+        "hint": "نطاق البحث الافتراضي: العنوان، المحتوى، وأسماء المرفقات"
     }
 }

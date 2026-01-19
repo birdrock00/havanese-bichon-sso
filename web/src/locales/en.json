@@ -1461,5 +1461,91 @@
     "successDesc": "The selected messages have been successfully restored to the IMAP server.",
     "failed": "Failed to restore messages",
     "failedTitle": "Restore Failed"
+  },
+  "time": {
+    "label": "Time",
+    "since": "Since",
+    "before": "Before",
+    "recent_range": "Recent range (since...)",
+    "historical": "Historical range (before...)",
+    "absolute_range": "Absolute date range",
+    "last_day": "Last 1 day",
+    "last_days": "Last {{count}} days",
+    "last_months": "Last {{count}} months",
+    "over_years_ago": "{{count}} {{unit}} ago",
+    "year": "year",
+    "years": "years",
+    "recent_prefix": "Recent:",
+    "days_ago_to_now": "days ago to now",
+    "apply": "Apply",
+    "start_date": "Start date",
+    "end_date": "End date",
+    "clear_filters": "Clear time filters",
+    "format": "yyyy-MM-dd"
+  },
+  "tag": {
+    "label": "Tags",
+    "search_placeholder": "Search tags...",
+    "clear_all": "Clear all tags",
+    "no_tags_found": "No tags found"
+  },
+  "search_accounts": {
+    "label": "Mail accounts",
+    "search_placeholder": "Search mail accounts...",
+    "clear_accounts": "Clear selected accounts",
+    "no_accounts_found": "No accounts found"
+  },
+  "search_mailbox": {
+    "label": "Mailboxes",
+    "search_placeholder": "Search mailboxes",
+    "clear_mailboxes": "Clear selected mailboxes",
+    "select_account_first": "Please select an account first",
+    "no_mailbox_found": "No mailbox found"
+  },
+  "search_contacts": {
+    "label": "Contacts",
+    "label_with_count": "Contacts ({{count}})",
+    "any": "Any",
+    "search_placeholder": "Search {{field}}...",
+    "reset_all": "Reset all contacts",
+    "no_contact_found": "No contacts found",
+    "loading": "Loading...",
+    "showing_limit": "Showing first 100 results • Total {{total}}"
+  },
+  "search_more": {
+    "trigger_label": "Advanced",
+    "title": "Advanced filters",
+    "reset": "Reset",
+    "has_attachment": "Has attachment",
+    "attachment_name_label": "Attachment name",
+    "attachment_name_placeholder": "e.g. invoice.pdf",
+    "message_size_label": "Message size",
+    "message_id_label": "Original Message-ID",
+    "message_id_description": "Search by Message-ID header",
+    "apply": "Apply filters",
+    "size_presets": {
+      "any": "Any size",
+      "tiny": "Tiny (< 15 KB)",
+      "small": "Small (< 2 MB)",
+      "medium": "Medium (2 – 10 MB)",
+      "large": "Large (10 – 20 MB)",
+      "huge": "Huge (> 20 MB)"
+    }
+  },
+  "search_view": {
+    "button_label": "View",
+    "menu_title": "Column settings"
+  },
+  "search_reset": {
+    "label": "Reset",
+    "tooltip": "Clear all filters"
+  },
+  "search_input": {
+    "placeholder": "Search emails... (use \"quotes\" for exact match)",
+    "button": "Search",
+    "recent_title": "Recent searches",
+    "clear_history": "Clear history",
+    "no_history": "No search history",
+    "hint": "Default scope: subject, body and attachment names"
   }
 }

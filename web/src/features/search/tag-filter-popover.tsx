@@ -86,7 +86,7 @@ export function TagFilterPopover() {
                     )}
                 >
                     <Tag className="h-4 w-4" />
-                    {t('mail.tags')}
+                    {t('tag.label')}
                     {selectedTags.length > 0 && (
                         <Badge
                             variant="secondary"
@@ -107,7 +107,7 @@ export function TagFilterPopover() {
                     <Input
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder={t('mail.searchTags')}
+                        placeholder={t('tag.search_placeholder')}
                         className="h-8 text-sm"
                         autoFocus
                     />
@@ -123,7 +123,7 @@ export function TagFilterPopover() {
                                     <X className="h-3 w-3" />
                                 </div>
                                 <span className="flex-1 text-xs font-medium">
-                                    {t('common.clear_all_tags')}
+                                    {t('tag.clear_all')}
                                 </span>
                                 <span className="text-[10px] opacity-60">({selectedTags.length})</span>
                             </div>
@@ -141,7 +141,7 @@ export function TagFilterPopover() {
                         </div>
                     ) : filteredTags.length === 0 ? (
                         <p className="px-3 py-2 text-xs text-muted-foreground">
-                            {t('mail.noTagsFound')}
+                            {t('tag.no_tags_found')}
                         </p>
                     ) : (
                         filteredTags.map(({ tag, count }) => {

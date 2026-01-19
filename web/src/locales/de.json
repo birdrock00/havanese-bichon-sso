@@ -1461,5 +1461,91 @@
         "successDesc": "Die ausgewählten Nachrichten wurden erfolgreich auf dem IMAP-Server wiederhergestellt.",
         "failed": "Wiederherstellung fehlgeschlagen",
         "failedTitle": "Fehler bei der Wiederherstellung"
+    },
+    "time": {
+        "label": "Zeit",
+        "since": "Seit",
+        "before": "Vor",
+        "recent_range": "Letzter Zeitraum (seit …)",
+        "historical": "Historischer Zeitraum (vor …)",
+        "absolute_range": "Absoluter Datumsbereich",
+        "last_day": "Letzter 1 Tag",
+        "last_days": "Letzte {{count}} Tage",
+        "last_months": "Letzte {{count}} Monate",
+        "over_years_ago": "Vor {{count}} {{unit}}",
+        "year": "Jahr",
+        "years": "Jahre",
+        "recent_prefix": "Kürzlich:",
+        "days_ago_to_now": "Tage bis heute",
+        "apply": "Anwenden",
+        "start_date": "Startdatum",
+        "end_date": "Enddatum",
+        "clear_filters": "Zeitfilter löschen",
+        "format": "yyyy-MM-dd"
+    },
+    "tag": {
+        "label": "Tags",
+        "search_placeholder": "Tags suchen...",
+        "clear_all": "Alle Tags löschen",
+        "no_tags_found": "Keine Tags gefunden"
+    },
+    "search_accounts": {
+        "label": "E-Mail-Konten",
+        "search_placeholder": "E-Mail-Konten suchen...",
+        "clear_accounts": "Ausgewählte Konten löschen",
+        "no_accounts_found": "Keine Konten gefunden"
+    },
+    "search_mailbox": {
+        "label": "Postfächer",
+        "search_placeholder": "Postfächer durchsuchen",
+        "clear_mailboxes": "Ausgewählte Ordner löschen",
+        "select_account_first": "Bitte zuerst ein E-Mail-Konto auswählen",
+        "no_mailbox_found": "Kein Ordner gefunden"
+    },
+    "search_contacts": {
+        "label": "Kontakte",
+        "label_with_count": "Kontakte ({{count}})",
+        "any": "Alle",
+        "search_placeholder": "{{field}} suchen...",
+        "reset_all": "Alle Kontakte zurücksetzen",
+        "no_contact_found": "Keine Kontakte gefunden",
+        "loading": "Wird geladen...",
+        "showing_limit": "Nur die ersten 100 Ergebnisse angezeigt • Gesamt {{total}}"
+    },
+    "search_more": {
+        "trigger_label": "Erweitert",
+        "title": "Erweiterte Filter",
+        "reset": "Zurücksetzen",
+        "has_attachment": "Mit Anhang",
+        "attachment_name_label": "Anhangname",
+        "attachment_name_placeholder": "z. B. invoice.pdf",
+        "message_size_label": "Nachrichtengröße",
+        "message_id_label": "Originale Message-ID",
+        "message_id_description": "Suche über die Message-ID im E-Mail-Header",
+        "apply": "Filter anwenden",
+        "size_presets": {
+            "any": "Beliebige Größe",
+            "tiny": "Sehr klein (< 15 KB)",
+            "small": "Klein (< 2 MB)",
+            "medium": "Mittel (2 – 10 MB)",
+            "large": "Groß (10 – 20 MB)",
+            "huge": "Sehr groß (> 20 MB)"
+        }
+    },
+    "search_view": {
+        "button_label": "Ansicht",
+        "menu_title": "Spalteneinstellungen"
+    },
+    "search_reset": {
+        "label": "Zurücksetzen",
+        "tooltip": "Alle Filter entfernen"
+    },
+    "search_input": {
+        "placeholder": "E-Mails durchsuchen... (\"Anführungszeichen\" für exakte Übereinstimmung)",
+        "button": "Suchen",
+        "recent_title": "Letzte Suchanfragen",
+        "clear_history": "Verlauf löschen",
+        "no_history": "Kein Suchverlauf",
+        "hint": "Standard-Suchbereich: Betreff, Inhalt und Anhangnamen"
     }
 }

@@ -1461,5 +1461,91 @@
         "successDesc": "Valitut viestit on palautettu onnistuneesti IMAP-palvelimelle.",
         "failed": "Viestien palautus epäonnistui",
         "failedTitle": "Palautus epäonnistui"
+    },
+    "time": {
+        "label": "Aika",
+        "since": "Alkaen",
+        "before": "Ennen",
+        "recent_range": "Viimeisin aikaväli (alkaen...)",
+        "historical": "Historiallinen aikaväli (ennen...)",
+        "absolute_range": "Kiinteä päivämääräväli",
+        "last_day": "Viimeiset 1 päivä",
+        "last_days": "Viimeiset {{count}} päivää",
+        "last_months": "Viimeiset {{count}} kuukautta",
+        "over_years_ago": "{{count}} {{unit}} sitten",
+        "year": "vuosi",
+        "years": "vuotta",
+        "recent_prefix": "Viimeisin:",
+        "days_ago_to_now": "päivää sitten – nyt",
+        "apply": "Käytä",
+        "start_date": "Aloituspäivä",
+        "end_date": "Päättymispäivä",
+        "clear_filters": "Tyhjennä aikasuodattimet",
+        "format": "yyyy-MM-dd"
+    },
+    "tag": {
+        "label": "Tunnisteet",
+        "search_placeholder": "Hae tunnisteita...",
+        "clear_all": "Tyhjennä kaikki tunnisteet",
+        "no_tags_found": "Tunnisteita ei löytynyt"
+    },
+    "search_accounts": {
+        "label": "Sähköpostitilit",
+        "search_placeholder": "Hae sähköpostitilejä...",
+        "clear_accounts": "Poista valitut tilit",
+        "no_accounts_found": "Tilejä ei löytynyt"
+    },
+    "search_mailbox": {
+        "label": "Postilaatikot",
+        "search_placeholder": "Hae postilaatikoita",
+        "clear_mailboxes": "Poista valitut kansiot",
+        "select_account_first": "Valitse ensin sähköpostitili",
+        "no_mailbox_found": "Kansiota ei löytynyt"
+    },
+    "search_contacts": {
+        "label": "Yhteystiedot",
+        "label_with_count": "Yhteystiedot ({{count}})",
+        "any": "Kaikki",
+        "search_placeholder": "Hae {{field}}...",
+        "reset_all": "Palauta kaikki yhteystiedot",
+        "no_contact_found": "Yhteystietoja ei löytynyt",
+        "loading": "Ladataan...",
+        "showing_limit": "Näytetään vain ensimmäiset 100 tulosta • Yhteensä {{total}}"
+    },
+    "search_more": {
+        "trigger_label": "Lisäasetukset",
+        "title": "Lisäsuodattimet",
+        "reset": "Palauta",
+        "has_attachment": "Sisältää liitteen",
+        "attachment_name_label": "Liitteen nimi",
+        "attachment_name_placeholder": "Esim.: invoice.pdf",
+        "message_size_label": "Viestin koko",
+        "message_id_label": "Alkuperäinen Message-ID",
+        "message_id_description": "Hae sähköpostin Message-ID-otsikon perusteella",
+        "apply": "Käytä suodattimia",
+        "size_presets": {
+            "any": "Mikä tahansa koko",
+            "tiny": "Erittäin pieni (< 15 KB)",
+            "small": "Pieni (< 2 MB)",
+            "medium": "Keskikokoinen (2 – 10 MB)",
+            "large": "Suuri (10 – 20 MB)",
+            "huge": "Erittäin suuri (> 20 MB)"
+        }
+    },
+    "search_view": {
+        "button_label": "Näkymä",
+        "menu_title": "Sarakeasetukset"
+    },
+    "search_reset": {
+        "label": "Palauta",
+        "tooltip": "Poista kaikki suodattimet"
+    },
+    "search_input": {
+        "placeholder": "Hae sähköposteja... (käytä \"lainausmerkkejä\" tarkkaan hakuun)",
+        "button": "Hae",
+        "recent_title": "Viimeisimmät haut",
+        "clear_history": "Tyhjennä historia",
+        "no_history": "Ei hakuhistoriaa",
+        "hint": "Oletushakualue: otsikko, sisältö ja liitteiden nimet"
     }
 }

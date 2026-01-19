@@ -1461,5 +1461,91 @@
         "successDesc": "Выбранные сообщения были успешно восстановлены на IMAP-сервере.",
         "failed": "Не удалось восстановить сообщения",
         "failedTitle": "Ошибка восстановления"
+    },
+    "time": {
+        "label": "Время",
+        "since": "С",
+        "before": "До",
+        "recent_range": "Недавний диапазон (с...)",
+        "historical": "Исторический диапазон (до...)",
+        "absolute_range": "Абсолютный диапазон дат",
+        "last_day": "Последний 1 день",
+        "last_days": "Последние {{count}} дней",
+        "last_months": "Последние {{count}} месяцев",
+        "over_years_ago": "{{count}} {{unit}} назад",
+        "year": "год",
+        "years": "лет",
+        "recent_prefix": "Недавно:",
+        "days_ago_to_now": "дней назад — по настоящее время",
+        "apply": "Применить",
+        "start_date": "Дата начала",
+        "end_date": "Дата окончания",
+        "clear_filters": "Очистить фильтр времени",
+        "format": "yyyy-MM-dd"
+    },
+    "tag": {
+        "label": "Теги",
+        "search_placeholder": "Поиск тегов...",
+        "clear_all": "Очистить все теги",
+        "no_tags_found": "Теги не найдены"
+    },
+    "search_accounts": {
+        "label": "Почтовые аккаунты",
+        "search_placeholder": "Поиск почтовых аккаунтов...",
+        "clear_accounts": "Очистить выбранные аккаунты",
+        "no_accounts_found": "Аккаунты не найдены"
+    },
+    "search_mailbox": {
+        "label": "Почтовые папки",
+        "search_placeholder": "Поиск папок",
+        "clear_mailboxes": "Очистить выбранные папки",
+        "select_account_first": "Сначала выберите почтовый аккаунт",
+        "no_mailbox_found": "Папки не найдены"
+    },
+    "search_contacts": {
+        "label": "Контакты",
+        "label_with_count": "Контакты ({{count}})",
+        "any": "Любые",
+        "search_placeholder": "Поиск по {{field}}...",
+        "reset_all": "Сбросить все контакты",
+        "no_contact_found": "Контакты не найдены",
+        "loading": "Загрузка...",
+        "showing_limit": "Показаны первые 100 результатов • Всего {{total}}"
+    },
+    "search_more": {
+        "trigger_label": "Дополнительно",
+        "title": "Расширенные фильтры",
+        "reset": "Сброс",
+        "has_attachment": "Есть вложение",
+        "attachment_name_label": "Имя вложения",
+        "attachment_name_placeholder": "Например: invoice.pdf",
+        "message_size_label": "Размер письма",
+        "message_id_label": "Исходный Message-ID",
+        "message_id_description": "Поиск по Message-ID из заголовков письма",
+        "apply": "Применить фильтры",
+        "size_presets": {
+            "any": "Любой размер",
+            "tiny": "Очень маленький (< 15 КБ)",
+            "small": "Маленький (< 2 МБ)",
+            "medium": "Средний (2–10 МБ)",
+            "large": "Большой (10–20 МБ)",
+            "huge": "Очень большой (> 20 МБ)"
+        }
+    },
+    "search_view": {
+        "button_label": "Вид",
+        "menu_title": "Настройки отображаемых столбцов"
+    },
+    "search_reset": {
+        "label": "Сброс",
+        "tooltip": "Очистить все фильтры"
+    },
+    "search_input": {
+        "placeholder": "Поиск писем... (используйте \"кавычки\" для точного совпадения)",
+        "button": "Поиск",
+        "recent_title": "Недавние поиски",
+        "clear_history": "Очистить историю",
+        "no_history": "История поиска пуста",
+        "hint": "По умолчанию поиск выполняется по теме, содержимому и именам вложений"
     }
 }

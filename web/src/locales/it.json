@@ -1461,5 +1461,91 @@
         "successDesc": "I messaggi selezionati sono stati ripristinati con successo sul server IMAP.",
         "failed": "Impossibile ripristinare i messaggi",
         "failedTitle": "Ripristino fallito"
+    },
+    "time": {
+        "label": "Tempo",
+        "since": "Da",
+        "before": "Prima di",
+        "recent_range": "Intervallo recente (da...)",
+        "historical": "Intervallo storico (prima di...)",
+        "absolute_range": "Intervallo di date assoluto",
+        "last_day": "Ultimo 1 giorno",
+        "last_days": "Ultimi {{count}} giorni",
+        "last_months": "Ultimi {{count}} mesi",
+        "over_years_ago": "{{count}} {{unit}} fa",
+        "year": "anno",
+        "years": "anni",
+        "recent_prefix": "Recenti:",
+        "days_ago_to_now": "giorni fa fino ad oggi",
+        "apply": "Applica",
+        "start_date": "Data di inizio",
+        "end_date": "Data di fine",
+        "clear_filters": "Cancella filtri temporali",
+        "format": "yyyy-MM-dd"
+    },
+    "tag": {
+        "label": "Tag",
+        "search_placeholder": "Cerca tag...",
+        "clear_all": "Cancella tutti i tag",
+        "no_tags_found": "Nessun tag trovato"
+    },
+    "search_accounts": {
+        "label": "Account email",
+        "search_placeholder": "Cerca account email...",
+        "clear_accounts": "Cancella account selezionati",
+        "no_accounts_found": "Nessun account trovato"
+    },
+    "search_mailbox": {
+        "label": "Caselle di posta",
+        "search_placeholder": "Cerca cartelle",
+        "clear_mailboxes": "Cancella cartelle selezionate",
+        "select_account_first": "Seleziona prima un account email",
+        "no_mailbox_found": "Nessuna cartella trovata"
+    },
+    "search_contacts": {
+        "label": "Contatti",
+        "label_with_count": "Contatti ({{count}})",
+        "any": "Qualsiasi",
+        "search_placeholder": "Cerca {{field}}...",
+        "reset_all": "Reimposta tutti i contatti",
+        "no_contact_found": "Nessun contatto trovato",
+        "loading": "Caricamento...",
+        "showing_limit": "Mostrati solo i primi 100 risultati • Totale {{total}}"
+    },
+    "search_more": {
+        "trigger_label": "Avanzato",
+        "title": "Filtri avanzati",
+        "reset": "Reimposta",
+        "has_attachment": "Con allegato",
+        "attachment_name_label": "Nome allegato",
+        "attachment_name_placeholder": "Es.: invoice.pdf",
+        "message_size_label": "Dimensione email",
+        "message_id_label": "Message-ID originale",
+        "message_id_description": "Ricerca tramite Message-ID nell’intestazione email",
+        "apply": "Applica filtri",
+        "size_presets": {
+            "any": "Qualsiasi dimensione",
+            "tiny": "Molto piccola (< 15 KB)",
+            "small": "Piccola (< 2 MB)",
+            "medium": "Media (2 – 10 MB)",
+            "large": "Grande (10 – 20 MB)",
+            "huge": "Molto grande (> 20 MB)"
+        }
+    },
+    "search_view": {
+        "button_label": "Vista",
+        "menu_title": "Impostazioni colonne"
+    },
+    "search_reset": {
+        "label": "Reimposta",
+        "tooltip": "Cancella tutti i filtri"
+    },
+    "search_input": {
+        "placeholder": "Cerca email... (usa le \"virgolette\" per corrispondenza esatta)",
+        "button": "Cerca",
+        "recent_title": "Ricerche recenti",
+        "clear_history": "Cancella cronologia",
+        "no_history": "Nessuna cronologia di ricerca",
+        "hint": "Ambito predefinito: oggetto, contenuto e nomi degli allegati"
     }
 }

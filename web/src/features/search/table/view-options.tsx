@@ -22,7 +22,6 @@ const defaultColumns = (t: (key: string) => string) => [
   { label: t('search.from'), value: "from" },
   { label: t('search.to'), value: "to" },
   { label: t('search.subject'), value: "subject" },
-  { label: t('mail.attachments'), value: "attachments" },
   { label: t('search.size'), value: "size" },
   { label: t('search.date'), value: "date" },
 ]
@@ -54,11 +53,11 @@ export function DataTableViewOptions<TData>({
           className='ms-auto hidden h-8 lg:flex rounded-none'
         >
           <MixerHorizontalIcon className='size-4' />
-          View
+          {t('search_view.button_label')}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align='end' className='w-[150px]'>
-        <DropdownMenuLabel className='text-xs'>Toggle columns</DropdownMenuLabel>
+        <DropdownMenuLabel className='text-xs'>{t('search_view.menu_title')}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         {table
           .getAllColumns()

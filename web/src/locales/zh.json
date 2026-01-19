@@ -1461,5 +1461,91 @@
     "successDesc": "选定的邮件已成功恢复到 IMAP 服务器。",
     "failed": "还原邮件失败",
     "failedTitle": "还原失败"
+  },
+  "time": {
+    "label": "时间",
+    "since": "自",
+    "before": "早于",
+    "recent_range": "近期范围 (自...)",
+    "historical": "历史范围 (早于...)",
+    "absolute_range": "绝对日期范围",
+    "last_day": "最近 1 天",
+    "last_days": "最近 {{count}} 天",
+    "last_months": "最近 {{count}} 个月",
+    "over_years_ago": "{{count}} {{unit}}前",
+    "year": "年",
+    "years": "年",
+    "recent_prefix": "最近:",
+    "days_ago_to_now": "天前至今",
+    "apply": "应用",
+    "start_date": "开始日期",
+    "end_date": "结束日期",
+    "clear_filters": "清除时间筛选",
+    "format": "yyyy-MM-dd"
+  },
+  "tag": {
+    "label": "标签",
+    "search_placeholder": "搜索标签...",
+    "clear_all": "清除所有标签",
+    "no_tags_found": "未找到标签"
+  },
+  "search_accounts": {
+    "label": "邮件账户",
+    "search_placeholder": "搜索邮件账户...",
+    "clear_accounts": "清除已选账户",
+    "no_accounts_found": "未找到账户"
+  },
+  "search_mailbox": {
+    "label": "邮箱文件夹",
+    "search_placeholder": "搜索邮箱文件夹",
+    "clear_mailboxes": "清除已选文件夹",
+    "select_account_first": "请先选择邮件账户",
+    "no_mailbox_found": "未找到文件夹"
+  },
+  "search_contacts": {
+    "label": "联系人",
+    "label_with_count": "联系人 ({{count}})",
+    "any": "不限",
+    "search_placeholder": "搜索 {{field}}...",
+    "reset_all": "重置所有联系人",
+    "no_contact_found": "未找到联系人",
+    "loading": "加载中...",
+    "showing_limit": "仅显示前 100 条结果 • 总计 {{total}} 条"
+  },
+  "search_more": {
+    "trigger_label": "高级",
+    "title": "高级筛选",
+    "reset": "重置",
+    "has_attachment": "包含附件",
+    "attachment_name_label": "附件名称",
+    "attachment_name_placeholder": "例如: invoice.pdf",
+    "message_size_label": "邮件大小",
+    "message_id_label": "原始消息 ID",
+    "message_id_description": "通过邮件头中的 'Message-ID' 进行搜索",
+    "apply": "应用筛选",
+    "size_presets": {
+      "any": "不限大小",
+      "tiny": "极小 (< 15 KB)",
+      "small": "较小 (< 2 MB)",
+      "medium": "普通 (2 - 10 MB)",
+      "large": "较大 (10 - 20 MB)",
+      "huge": "极大 (> 20 MB)"
+    }
+  },
+  "search_view": {
+    "button_label": "视图",
+    "menu_title": "显示列设置"
+  },
+  "search_reset": {
+    "label": "重置",
+    "tooltip": "清除所有筛选条件"
+  },
+  "search_input": {
+    "placeholder": "搜索邮件... (使用 \"双引号\" 进行精确匹配)",
+    "button": "搜索",
+    "recent_title": "最近搜索",
+    "clear_history": "清空记录",
+    "no_history": "暂无搜索记录",
+    "hint": "默认搜索范围：邮件标题、正文及附件名称"
   }
 }

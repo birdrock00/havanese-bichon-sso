@@ -1461,5 +1461,91 @@
         "successDesc": "選定的郵件已成功還原到 IMAP 伺服器。",
         "failed": "還原郵件失敗",
         "failedTitle": "還原失敗"
+    },
+    "time": {
+        "label": "時間",
+        "since": "自",
+        "before": "早於",
+        "recent_range": "近期範圍（自…）",
+        "historical": "歷史範圍（早於…）",
+        "absolute_range": "絕對日期範圍",
+        "last_day": "最近 1 天",
+        "last_days": "最近 {{count}} 天",
+        "last_months": "最近 {{count}} 個月",
+        "over_years_ago": "{{count}} {{unit}} 前",
+        "year": "年",
+        "years": "年",
+        "recent_prefix": "最近：",
+        "days_ago_to_now": "天前至今",
+        "apply": "套用",
+        "start_date": "開始日期",
+        "end_date": "結束日期",
+        "clear_filters": "清除時間篩選",
+        "format": "yyyy-MM-dd"
+    },
+    "tag": {
+        "label": "標籤",
+        "search_placeholder": "搜尋標籤…",
+        "clear_all": "清除所有標籤",
+        "no_tags_found": "未找到標籤"
+    },
+    "search_accounts": {
+        "label": "郵件帳戶",
+        "search_placeholder": "搜尋郵件帳戶…",
+        "clear_accounts": "清除已選帳戶",
+        "no_accounts_found": "未找到帳戶"
+    },
+    "search_mailbox": {
+        "label": "信箱資料夾",
+        "search_placeholder": "搜尋信箱資料夾",
+        "clear_mailboxes": "清除已選資料夾",
+        "select_account_first": "請先選擇郵件帳戶",
+        "no_mailbox_found": "未找到資料夾"
+    },
+    "search_contacts": {
+        "label": "聯絡人",
+        "label_with_count": "聯絡人（{{count}}）",
+        "any": "不限",
+        "search_placeholder": "搜尋 {{field}}…",
+        "reset_all": "重設所有聯絡人",
+        "no_contact_found": "未找到聯絡人",
+        "loading": "載入中…",
+        "showing_limit": "僅顯示前 100 筆結果 • 共 {{total}} 筆"
+    },
+    "search_more": {
+        "trigger_label": "進階",
+        "title": "進階篩選",
+        "reset": "重設",
+        "has_attachment": "包含附件",
+        "attachment_name_label": "附件名稱",
+        "attachment_name_placeholder": "例如：invoice.pdf",
+        "message_size_label": "郵件大小",
+        "message_id_label": "原始 Message-ID",
+        "message_id_description": "依郵件標頭中的 Message-ID 搜尋",
+        "apply": "套用篩選",
+        "size_presets": {
+            "any": "不限大小",
+            "tiny": "極小（< 15 KB）",
+            "small": "較小（< 2 MB）",
+            "medium": "一般（2–10 MB）",
+            "large": "較大（10–20 MB）",
+            "huge": "極大（> 20 MB）"
+        }
+    },
+    "search_view": {
+        "button_label": "檢視",
+        "menu_title": "顯示欄位設定"
+    },
+    "search_reset": {
+        "label": "重設",
+        "tooltip": "清除所有篩選條件"
+    },
+    "search_input": {
+        "placeholder": "搜尋郵件…（使用「雙引號」進行精確比對）",
+        "button": "搜尋",
+        "recent_title": "最近搜尋",
+        "clear_history": "清除紀錄",
+        "no_history": "尚無搜尋紀錄",
+        "hint": "預設搜尋範圍：郵件標題、內容與附件名稱"
     }
 }

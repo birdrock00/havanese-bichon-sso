@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Search, X, Clock, Trash2 } from "lucide-react"
+import { Search, X, Clock, Trash2, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSearchContext } from "./context"
+import { useTranslation } from "react-i18next"
 
 const STORAGE_KEY = "mail_search_history"
 const MAX_HISTORY = 20
 
 export function TextSearchInput() {
+    const { t } = useTranslation()
     const { filter, setFilter } = useSearchContext()
     const [value, setValue] = useState(filter.text || "")
     const [history, setHistory] = useState<string[]>([])
@@ -31,6 +33,7 @@ export function TextSearchInput() {
         setValue(filter.text || "")
     }, [filter.text])
 
+    
     const saveToHistory = (term: string) => {
         if (!term.trim()) return
 
@@ -82,6 +85,7 @@ export function TextSearchInput() {
     const handleSelectHistory = (term: string) => {
         setValue(term)
         setShowHistory(false)
+        // 如果需要点击历史立即搜索，可以在这里调用 handleSearch()
     }
 
     const handleClearHistory = () => {
@@ -108,49 +112,59 @@ export function TextSearchInput() {
 
     return (
         <div ref={containerRef} className="relative w-full max-w-[550px] min-w-[280px]">
-            <div className="relative flex items-center gap-1.5">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                        ref={inputRef}
-                        value={value}
-                        onChange={(e) => setValue(e.target.value)}
-                        onFocus={() => setShowHistory(true)}
-                        onKeyDown={handleKeyDown}
-                        placeholder='Search messages... (use "double quotes" for exact phrases)'
-                        className={cn(
-                            "h-9 pl-9 pr-9 text-sm",
-                            isActive && "border-primary/50 focus-visible:ring-primary/30"
+            <div className="flex flex-col gap-1.5">
+                <div className="relative flex items-center gap-1.5">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            ref={inputRef}
+                            value={value}
+                            onChange={(e) => setValue(e.target.value)}
+                            onFocus={() => setShowHistory(true)}
+                            onKeyDown={handleKeyDown}
+                            placeholder={t('search_input.placeholder')}
+                            className={cn(
+                                "h-9 pl-9 pr-9 text-sm",
+                                isActive && "border-primary/50 focus-visible:ring-primary/30"
+                            )}
+                        />
+                        {value && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                onClick={handleClear}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
                         )}
-                    />
-                    {value && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                            onClick={handleClear}
-                        >
-                            <X className="h-4 w-4" />
-                        </Button>
-                    )}
+                    </div>
+
+                    <Button
+                        size="sm"
+                        className="h-9 px-5"
+                        onClick={handleSearch}
+                        disabled={!value.trim()}
+                    >
+                        {t('search_input.button')}
+                    </Button>
                 </div>
 
-                <Button
-                    size="sm"
-                    className="h-9 px-5"
-                    onClick={handleSearch}
-                    disabled={!value.trim()}
-                >
-                    Search
-                </Button>
+                {/* 搜索范围提示 */}
+                <div className="flex items-center gap-1 px-1 opacity-60">
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground">
+                        {t('search_input.hint')}
+                    </span>
+                </div>
             </div>
 
             {showHistory && (
-                <div className="absolute top-full left-0 w-full mt-1 bg-popover border rounded-md shadow-md z-50 max-h-[280px] overflow-auto">
-                    <div className="py-1.5 px-3 text-xs text-muted-foreground font-medium border-b flex items-center justify-between">
+                <div className="absolute top-10 left-0 w-full mt-1 bg-popover border rounded-md shadow-md z-50 max-h-[280px] overflow-auto">
+                    <div className="py-1.5 px-3 text-xs text-muted-foreground font-medium border-b flex items-center justify-between sticky top-0 bg-popover z-10">
                         <div className="flex items-center gap-1.5">
                             <Clock className="h-3 w-3" />
-                            Recent searches
+                            {t('search_input.recent_title')}
                         </div>
                         {history.length > 0 && (
                             <button
@@ -158,7 +172,7 @@ export function TextSearchInput() {
                                 className="text-xs text-destructive hover:text-destructive/80 flex items-center gap-1 hover:underline"
                             >
                                 <Trash2 className="h-3 w-3" />
-                                Clear all
+                                {t('search_input.clear_history')}
                             </button>
                         )}
                     </div>
@@ -176,7 +190,7 @@ export function TextSearchInput() {
                         ))
                     ) : (
                         <div className="px-3 py-4 text-xs text-center text-muted-foreground">
-                            No recent searches
+                            {t('search_input.no_history')}
                         </div>
                     )}
                 </div>

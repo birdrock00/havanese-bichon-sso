@@ -1461,5 +1461,91 @@
     "successDesc": "Wybrane wiadomości zostały pomyślnie przywrócone na serwer IMAP.",
     "failed": "Nie udało się przywrócić wiadomości",
     "failedTitle": "Przywracanie nie powiodło się"
+  },
+  "time": {
+    "label": "Czas",
+    "since": "Od",
+    "before": "Przed",
+    "recent_range": "Ostatni zakres (od...)",
+    "historical": "Zakres historyczny (przed...)",
+    "absolute_range": "Bezwzględny zakres dat",
+    "last_day": "Ostatni 1 dzień",
+    "last_days": "Ostatnie {{count}} dni",
+    "last_months": "Ostatnie {{count}} miesiące",
+    "over_years_ago": "{{count}} {{unit}} temu",
+    "year": "rok",
+    "years": "lata",
+    "recent_prefix": "Ostatnio:",
+    "days_ago_to_now": "dni temu do teraz",
+    "apply": "Zastosuj",
+    "start_date": "Data rozpoczęcia",
+    "end_date": "Data zakończenia",
+    "clear_filters": "Wyczyść filtry czasu",
+    "format": "yyyy-MM-dd"
+  },
+  "tag": {
+    "label": "Tagi",
+    "search_placeholder": "Szukaj tagów...",
+    "clear_all": "Wyczyść wszystkie tagi",
+    "no_tags_found": "Nie znaleziono tagów"
+  },
+  "search_accounts": {
+    "label": "Konta e-mail",
+    "search_placeholder": "Szukaj kont e-mail...",
+    "clear_accounts": "Wyczyść wybrane konta",
+    "no_accounts_found": "Nie znaleziono kont"
+  },
+  "search_mailbox": {
+    "label": "Skrzynki pocztowe",
+    "search_placeholder": "Szukaj skrzynek",
+    "clear_mailboxes": "Wyczyść wybrane foldery",
+    "select_account_first": "Najpierw wybierz konto e-mail",
+    "no_mailbox_found": "Nie znaleziono folderu"
+  },
+  "search_contacts": {
+    "label": "Kontakty",
+    "label_with_count": "Kontakty ({{count}})",
+    "any": "Dowolne",
+    "search_placeholder": "Szukaj {{field}}...",
+    "reset_all": "Zresetuj wszystkie kontakty",
+    "no_contact_found": "Nie znaleziono kontaktów",
+    "loading": "Ładowanie...",
+    "showing_limit": "Wyświetlane tylko pierwsze 100 wyników • Łącznie {{total}}"
+  },
+  "search_more": {
+    "trigger_label": "Zaawansowane",
+    "title": "Filtry zaawansowane",
+    "reset": "Resetuj",
+    "has_attachment": "Zawiera załącznik",
+    "attachment_name_label": "Nazwa załącznika",
+    "attachment_name_placeholder": "Np.: invoice.pdf",
+    "message_size_label": "Rozmiar wiadomości",
+    "message_id_label": "Oryginalny Message-ID",
+    "message_id_description": "Wyszukiwanie według nagłówka Message-ID",
+    "apply": "Zastosuj filtry",
+    "size_presets": {
+      "any": "Dowolny rozmiar",
+      "tiny": "Bardzo mały (< 15 KB)",
+      "small": "Mały (< 2 MB)",
+      "medium": "Średni (2 – 10 MB)",
+      "large": "Duży (10 – 20 MB)",
+      "huge": "Bardzo duży (> 20 MB)"
+    }
+  },
+  "search_view": {
+    "button_label": "Widok",
+    "menu_title": "Ustawienia kolumn"
+  },
+  "search_reset": {
+    "label": "Reset",
+    "tooltip": "Wyczyść wszystkie filtry"
+  },
+  "search_input": {
+    "placeholder": "Szukaj e-maili... (użyj \"cudzysłowów\" dla dokładnego dopasowania)",
+    "button": "Szukaj",
+    "recent_title": "Ostatnie wyszukiwania",
+    "clear_history": "Wyczyść historię",
+    "no_history": "Brak historii wyszukiwania",
+    "hint": "Domyślny zakres wyszukiwania: temat, treść i nazwy załączników"
   }
 }

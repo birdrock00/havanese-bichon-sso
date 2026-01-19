@@ -1461,5 +1461,91 @@
         "successDesc": "As mensagens selecionadas foram restauradas com sucesso para o servidor IMAP.",
         "failed": "Falha ao restaurar mensagens",
         "failedTitle": "Falha na restauração"
+    },
+    "time": {
+        "label": "Tempo",
+        "since": "Desde",
+        "before": "Antes de",
+        "recent_range": "Intervalo recente (desde...)",
+        "historical": "Intervalo histórico (antes de...)",
+        "absolute_range": "Intervalo de datas absoluto",
+        "last_day": "Último 1 dia",
+        "last_days": "Últimos {{count}} dias",
+        "last_months": "Últimos {{count}} meses",
+        "over_years_ago": "Há {{count}} {{unit}}",
+        "year": "ano",
+        "years": "anos",
+        "recent_prefix": "Recente:",
+        "days_ago_to_now": "dias atrás até agora",
+        "apply": "Aplicar",
+        "start_date": "Data de início",
+        "end_date": "Data de fim",
+        "clear_filters": "Limpar filtros de tempo",
+        "format": "yyyy-MM-dd"
+    },
+    "tag": {
+        "label": "Etiquetas",
+        "search_placeholder": "Pesquisar etiquetas...",
+        "clear_all": "Limpar todas as etiquetas",
+        "no_tags_found": "Nenhuma etiqueta encontrada"
+    },
+    "search_accounts": {
+        "label": "Contas de e-mail",
+        "search_placeholder": "Pesquisar contas de e-mail...",
+        "clear_accounts": "Limpar contas selecionadas",
+        "no_accounts_found": "Nenhuma conta encontrada"
+    },
+    "search_mailbox": {
+        "label": "Caixas de correio",
+        "search_placeholder": "Pesquisar pastas",
+        "clear_mailboxes": "Limpar pastas selecionadas",
+        "select_account_first": "Selecione primeiro uma conta de e-mail",
+        "no_mailbox_found": "Nenhuma pasta encontrada"
+    },
+    "search_contacts": {
+        "label": "Contatos",
+        "label_with_count": "Contatos ({{count}})",
+        "any": "Qualquer",
+        "search_placeholder": "Pesquisar {{field}}...",
+        "reset_all": "Redefinir todos os contatos",
+        "no_contact_found": "Nenhum contato encontrado",
+        "loading": "Carregando...",
+        "showing_limit": "Mostrando apenas os primeiros 100 resultados • Total {{total}}"
+    },
+    "search_more": {
+        "trigger_label": "Avançado",
+        "title": "Filtros avançados",
+        "reset": "Redefinir",
+        "has_attachment": "Contém anexo",
+        "attachment_name_label": "Nome do anexo",
+        "attachment_name_placeholder": "Ex.: invoice.pdf",
+        "message_size_label": "Tamanho da mensagem",
+        "message_id_label": "Message-ID original",
+        "message_id_description": "Pesquisar pelo Message-ID no cabeçalho do e-mail",
+        "apply": "Aplicar filtros",
+        "size_presets": {
+            "any": "Qualquer tamanho",
+            "tiny": "Muito pequeno (< 15 KB)",
+            "small": "Pequeno (< 2 MB)",
+            "medium": "Médio (2 – 10 MB)",
+            "large": "Grande (10 – 20 MB)",
+            "huge": "Muito grande (> 20 MB)"
+        }
+    },
+    "search_view": {
+        "button_label": "Visualização",
+        "menu_title": "Configurações de colunas"
+    },
+    "search_reset": {
+        "label": "Redefinir",
+        "tooltip": "Limpar todos os filtros"
+    },
+    "search_input": {
+        "placeholder": "Pesquisar e-mails... (use \"aspas\" para correspondência exata)",
+        "button": "Pesquisar",
+        "recent_title": "Pesquisas recentes",
+        "clear_history": "Limpar histórico",
+        "no_history": "Nenhum histórico de pesquisa",
+        "hint": "Escopo padrão: assunto, conteúdo e nomes dos anexos"
     }
 }

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { Check, ChevronDown, Mail, X } from "lucide-react"
 import React from "react"
 import { useContacts } from "@/hooks/use-contacts"
+import { useTranslation } from 'react-i18next'
 import {
     Command,
     CommandEmpty,
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/command"
 
 export function MailFilterPopover() {
+    const { t } = useTranslation()
     const { filter, setFilter } = useSearchContext()
     const fields = ['from', 'to', 'cc', 'bcc'] as const
 
@@ -47,7 +49,11 @@ export function MailFilterPopover() {
                     )}
                 >
                     <Mail className="h-3.5 w-3.5 opacity-60" />
-                    <span>{activeCount > 0 ? `Participants (${activeCount})` : 'Participants'}</span>
+                    <span>
+                        {activeCount > 0
+                            ? t('search_contacts.label_with_count', { count: activeCount })
+                            : t('search_contacts.label')}
+                    </span>
                     <ChevronDown className="h-3.5 w-3.5 opacity-60" />
                 </Button>
             </PopoverTrigger>
@@ -69,14 +75,19 @@ export function MailFilterPopover() {
                 </div>
 
                 {activeCount > 0 && (
-                    <div className="p-2 flex justify-end bg-background">
+                    <div className="px-1 pb-2">
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-7 px-3 text-xs font-medium text-muted-foreground hover:text-destructive transition-colors"
                             onClick={resetAll}
+                            className="flex h-8 w-full items-center justify-start gap-2 px-2 text-xs font-medium text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors"
                         >
-                            Reset All Participants
+                            <div className="flex h-4 w-4 items-center justify-center">
+                                <X className="h-3.5 w-3.5" />
+                            </div>
+                            <span className="flex-1 text-left">
+                                {t('search_contacts.reset_all')}
+                            </span>
                         </Button>
                     </div>
                 )}
@@ -96,6 +107,7 @@ function ContactSelectorField({
     onSelect: (email: string | undefined) => void
     onReset: () => void
 }) {
+    const { t } = useTranslation()
     const [searchTerm, setSearchTerm] = React.useState("")
     const { contacts, isLoading } = useContacts(searchTerm)
 
@@ -129,7 +141,7 @@ function ContactSelectorField({
                                     : "text-xs text-muted-foreground/90"
                             )}
                         >
-                            {value || 'Any'}
+                            {value || t('search_contacts.any')}
                         </span>
                     </div>
 
@@ -161,16 +173,16 @@ function ContactSelectorField({
             >
                 <Command shouldFilter={false}>
                     <CommandInput
-                        placeholder={`Search ${label}...`}
+                        placeholder={t('search_contacts.search_placeholder', { field: label })}
                         className="h-9"
                         value={searchTerm}
                         onValueChange={setSearchTerm}
                     />
                     <CommandList className="max-h-[360px]">
                         {isLoading && (
-                            <div className="p-4 text-xs text-center opacity-50">Loading...</div>
+                            <div className="p-4 text-xs text-center opacity-50">{t('search_contacts.loading')}</div>
                         )}
-                        <CommandEmpty>No contact found.</CommandEmpty>
+                        <CommandEmpty>{t('search_contacts.no_contact_found')}</CommandEmpty>
                         <CommandGroup>
                             {contacts.slice(0, 100).map((email) => (
                                 <CommandItem
@@ -193,7 +205,7 @@ function ContactSelectorField({
                             ))}
                             {contacts.length > 100 && (
                                 <div className="px-3 py-2 text-[10px] text-center text-muted-foreground border-t border-border/50">
-                                    Showing top 100 results • {contacts.length} total
+                                    {t('search_contacts.showing_limit', { total: contacts.length })}
                                 </div>
                             )}
                         </CommandGroup>
