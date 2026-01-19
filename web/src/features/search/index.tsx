@@ -25,17 +25,12 @@ import { SearchFormDialog } from './search-form';
 import { EnvelopeListPagination } from '@/components/pagination';
 import React from 'react';
 import { EmailEnvelope } from '@/api';
-import { Filter, SearchIcon } from 'lucide-react';
 import { MailDisplayDrawer } from './mail-display-dialog';
 import { EnvelopeDeleteDialog } from './delete-dialog';
 import SearchProvider, { SearchDialogType } from './context';
 import useDialogState from '@/hooks/use-dialog-state';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Button } from '@/components/ui/button';
-import { EnvelopeTags } from './tag-facet';
 import { EditTagsDialog } from './add-tag-dialog';
 import { useTranslation } from 'react-i18next';
-import Logo from '@/assets/logo.svg'
 import { RestoreMessageDialog } from './restore-message-dialog';
 import { MailListTable } from './mail-list-table';
 import { SortingState } from '@tanstack/react-table';

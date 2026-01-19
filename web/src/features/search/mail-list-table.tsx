@@ -19,7 +19,7 @@
 
 import { dateFnsLocaleMap, formatBytes } from "@/lib/utils"
 import { format, formatDistanceToNow } from "date-fns"
-import { Badge, MessageSquareText, Paperclip } from "lucide-react"
+import { MessageSquareText, Paperclip } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
 import { EmailEnvelope } from "@/api"
