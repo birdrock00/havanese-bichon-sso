@@ -1453,14 +1453,19 @@
         "confirm": "Disconnetti"
     },
     "restore_message": {
-        "title": "Ripristina messaggi",
-        "desc": "Questa azione caricherà i messaggi selezionati da Bichon e li ripristinerà nelle rispettive caselle di posta sul server IMAP.",
-        "confirm": "Ripristina",
-        "restore_to_imap": "Ripristina posta",
-        "success": "Messaggi ripristinati",
+        "title": "Ripristina singolo messaggio",
+        "bulkTitle": "Ripristino multiplo messaggi",
+        "bulkWarning": "Nota: i messaggi verranno ripristinati nelle loro cartelle originali.",
+        "accountsInvolved": "Account coinvolti",
+        "summary": "Dettagli ripristino",
+        "messages": "messaggi",
+        "desc": "Questa azione caricherà nuovamente i messaggi selezionati da Bichon e li ripristinerà nelle rispettive caselle di posta sul server IMAP.",
+        "confirm": "Esegui ripristino",
+        "restore_to_imap": "Ripristina messaggio",
+        "success": "Ripristino completato",
         "successDesc": "I messaggi selezionati sono stati ripristinati con successo sul server IMAP.",
-        "failed": "Impossibile ripristinare i messaggi",
-        "failedTitle": "Ripristino fallito"
+        "failed": "Ripristino fallito",
+        "failedTitle": "Errore di ripristino"
     },
     "time": {
         "label": "Tempo",

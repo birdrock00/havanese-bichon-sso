@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useTranslation } from 'react-i18next'
-import { MoreVertical, TagIcon, Trash2 } from 'lucide-react'
+import { MoreVertical, TagIcon, Trash2, Upload } from 'lucide-react'
 import { EmailEnvelope } from '@/api'
 import { useSearchContext } from '../context'
 
@@ -37,7 +37,7 @@ interface DataTableRowActionsProps {
 }
 
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
-  const { setOpen, setCurrentEnvelope, setToDelete } = useSearchContext()
+  const { setOpen, setCurrentEnvelope, setSelected, setToDelete } = useSearchContext()
   const { t } = useTranslation()
 
   const toggleToDelete = (accountId: number, mailId: number) => {
@@ -93,12 +93,13 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             onClick={(e) => {
               e.stopPropagation()
               setCurrentEnvelope(row.original)
+              setSelected(new Map())
               setOpen("restore")
             }}
           >
             {t('restore_message.restore_to_imap', 'Restore Mail')}
             <DropdownMenuShortcut>
-              <TagIcon size={16} />
+              <Upload size={16} />
             </DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuSeparator />

@@ -1453,14 +1453,19 @@
         "confirm": "Logga ut"
     },
     "restore_message": {
-        "title": "Återställ meddelanden",
-        "desc": "Denna åtgärd kommer att ladda upp de valda meddelandena från Bichon och återställa dem till deras motsvarande brevlådor på IMAP-servern.",
-        "confirm": "Återställ",
-        "restore_to_imap": "Återställ e-post",
-        "success": "Meddelanden återställda",
+        "title": "Återställ enstaka meddelande",
+        "bulkTitle": "Återställ flera meddelanden",
+        "bulkWarning": "Obs: Meddelanden kommer att återställas till sina ursprungliga mappar.",
+        "accountsInvolved": "Inblandade konton",
+        "summary": "Återställningsdetaljer",
+        "messages": "meddelanden",
+        "desc": "Denna åtgärd kommer att ladda upp de valda meddelandena igen från Bichon och återställa dem till deras motsvarande inkorgar på IMAP-servern.",
+        "confirm": "Utför återställning",
+        "restore_to_imap": "Återställ meddelande",
+        "success": "Återställning lyckades",
         "successDesc": "De valda meddelandena har återställts till IMAP-servern.",
-        "failed": "Misslyckades med att återställa meddelanden",
-        "failedTitle": "Återställning misslyckades"
+        "failed": "Återställning misslyckades",
+        "failedTitle": "Fel vid återställning"
     },
     "time": {
         "label": "Tid",

@@ -1453,7 +1453,12 @@
     "confirm": "退出登录"
   },
   "restore_message": {
-    "title": "还原邮件",
+    "title": "还原单个邮件",
+    "bulkTitle": "批量还原多个邮件",
+    "bulkWarning": "请注意：邮件将被还原至其原始存储的文件夹中。",
+    "accountsInvolved": "涉及账户",
+    "summary": "待还原详情",
+    "messages": "封邮件",
     "desc": "此操作将把选定的邮件从 Bichon 系统重新上传并恢复到其在 IMAP 服务器上对应的邮箱中。",
     "confirm": "执行还原",
     "restore_to_imap": "还原邮件",

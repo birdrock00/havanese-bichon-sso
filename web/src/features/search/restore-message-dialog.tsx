@@ -25,6 +25,52 @@ import { AxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'
 import { ToastAction } from '@/components/ui/toast'
 import { useSearchContext } from './context'
+import { EmailEnvelope } from '@/api'
+
+function MessageSummary({ envelope, t }: { envelope: EmailEnvelope, t: (key: string) => string }) {
+    return (
+        <div className="mt-3 rounded-md border bg-muted/20 p-3 text-sm overflow-hidden">
+            <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1.5">
+
+                <span className="font-medium text-muted-foreground">{t("mail.subject")}:</span>
+                <div className="break-words font-medium">
+                    {envelope.subject || <em className="italic opacity-70">(No subject)</em>}
+                </div>
+
+                <span className="font-medium text-muted-foreground">{t("mail.from")}:</span>
+                <div className="break-all text-foreground/90">
+                    {envelope.from}
+                </div>
+
+                {envelope.to?.length > 0 && (
+                    <>
+                        <span className="font-medium text-muted-foreground">{t("mail.to")}:</span>
+                        <div className="break-all text-foreground/90">
+                            {envelope.to.slice(0, 2).join(", ")}
+                            {envelope.to.length > 2 && " …"}
+                        </div>
+                    </>
+                )}
+
+                <span className="font-medium text-muted-foreground">{t("mail.date")}:</span>
+                <div className="text-foreground/90">
+                    {new Date(envelope.date).toLocaleString()}
+                </div>
+
+                {envelope.mailbox_name && (
+                    <>
+                        <span className="font-medium text-muted-foreground">{t("search.mailbox")}:</span>
+                        <div className="truncate text-foreground/90" title={envelope.mailbox_name}>
+                            {envelope.mailbox_name}
+                        </div>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+}
+
+
 
 interface RestoreMessageDialogProps {
     open: boolean
@@ -36,12 +82,26 @@ export function RestoreMessageDialog({
     onOpenChange
 }: RestoreMessageDialogProps) {
     const { t } = useTranslation()
-    const { currentEnvelope } = useSearchContext()
+    const { currentEnvelope, selected } = useSearchContext()
+
+    const accountsWithSelection = Array.from(selected.entries()).filter(([_, ids]) => ids.size > 0);
+    const selectedCount = accountsWithSelection.reduce((sum, [_, set]) => sum + set.size, 0);
+    const accountCount = accountsWithSelection.length;
+
+    const isBulk = selectedCount > 0;
 
 
     const restoreMutation = useMutation({
-        mutationFn: () =>
-            restore_message(currentEnvelope!.account_id, [currentEnvelope!.id]),
+        mutationFn: async () => {
+            if (isBulk) {
+                const promises = accountsWithSelection.map(([accountId, ids]) =>
+                    restore_message(accountId, Array.from(ids))
+                );
+                return Promise.all(promises);
+            } else if (currentEnvelope) {
+                return restore_message(currentEnvelope.account_id, [currentEnvelope.id]);
+            }
+        },
         onSuccess: handleRestoreSuccess,
         onError: handleRestoreError,
     });
@@ -90,16 +150,37 @@ export function RestoreMessageDialog({
         <ConfirmDialog
             open={open}
             onOpenChange={onOpenChange}
-            title={t('restore_message.title', 'Restore messages')}
-            desc={t(
-                'restore_message.desc',
-                'This action will append the selected messages from Bichon to their corresponding mailboxes on the IMAP server.'
-            )}
+            title={isBulk ? t('restore_message.bulkTitle', 'Restore multiple messages') : t('restore_message.title', 'Restore message')}
+            desc={<div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                    {t(
+                        'restore_message.desc',
+                        'This action will append the selected messages to their corresponding mailboxes on the IMAP server.'
+                    )}
+                </p>
+
+                {isBulk ? (
+                    <div className="rounded-md bg-primary/5 border border-primary/20 p-3 text-sm">
+                        <div className="flex justify-between items-center text-primary font-medium">
+                            <span>{t('restore_message.summary', 'Summary')}</span>
+                            <span className="bg-primary/10 px-2 py-0.5 rounded text-xs">
+                                {selectedCount} {t('restore_message.messages', 'messages')}
+                            </span>
+                        </div>
+                        <div className="mt-2 text-xs space-y-1 text-muted-foreground">
+                            <p>• {t('restore_message.accountsInvolved', 'Accounts involved')}: {accountCount}</p>
+                            <p>• {t('restore_message.bulkWarning', 'Messages will be restored to their original folders.')}</p>
+                        </div>
+                    </div>
+                ) : (
+                    currentEnvelope && <MessageSummary envelope={currentEnvelope} t={t} />
+                )}
+            </div>}
             confirmText={t('restore_message.confirm', 'Restore')}
             handleConfirm={() => restoreMutation.mutate()}
             className="sm:max-w-sm"
             isLoading={restoreMutation.isPending}
-            disabled={restoreMutation.isPending}
+            disabled={restoreMutation.isPending || (!isBulk && !currentEnvelope)}
         />
     )
 }

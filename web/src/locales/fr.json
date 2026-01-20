@@ -1453,14 +1453,19 @@
         "confirm": "Déconnexion"
     },
     "restore_message": {
-        "title": "Restaurer les messages",
-        "desc": "Cette action téléchargera les messages sélectionnés depuis Bichon et les restaurera dans leurs boîtes aux lettres correspondantes sur le serveur IMAP.",
-        "confirm": "Restaurer",
-        "restore_to_imap": "Restaurer le courrier",
-        "success": "Messages restaurés",
+        "title": "Restaurer un message",
+        "bulkTitle": "Restaurer plusieurs messages",
+        "bulkWarning": "Remarque : les messages seront restaurés dans leurs dossiers d'origine.",
+        "accountsInvolved": "Comptes concernés",
+        "summary": "Détails de la restauration",
+        "messages": "messages",
+        "desc": "Cette action va re-télécharger les messages sélectionnés depuis Bichon et les restaurer dans leurs boîtes aux lettres correspondantes sur le serveur IMAP.",
+        "confirm": "Exécuter la restauration",
+        "restore_to_imap": "Restaurer le message",
+        "success": "Restauration réussie",
         "successDesc": "Les messages sélectionnés ont été restaurés avec succès sur le serveur IMAP.",
-        "failed": "Échec de la restauration des messages",
-        "failedTitle": "Échec de la restauration"
+        "failed": "Échec de la restauration",
+        "failedTitle": "Erreur de restauration"
     },
     "time": {
         "label": "Temps",

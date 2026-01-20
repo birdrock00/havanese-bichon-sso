@@ -19,7 +19,7 @@
 
 import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Loader, Download, Trash2, MessageSquareMore, FileText, FileImage, FileVideo, FileArchive, FileSpreadsheet, FileCode, FileIcon, FileAudio } from 'lucide-react';
+import { Loader, Download, Trash2, MessageSquareMore, FileText, FileImage, FileVideo, FileArchive, FileSpreadsheet, FileCode, FileIcon, FileAudio, Upload } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -119,7 +119,7 @@ export function MailMessageView({
   showHeader = true
 }: MailMessageViewProps) {
   const { t } = useTranslation()
-  const { setToDelete, setOpen } = useSearchContext();
+  const { setToDelete, setOpen, setSelected } = useSearchContext();
 
   const [content, setContent] = useState<string | null>(null);
   const [contentType, setContentType] = useState<'Plain' | 'Html' | null>(null);
@@ -279,6 +279,22 @@ export function MailMessageView({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('mail.viewThread')}</TooltipContent>
+            </Tooltip>
+            <Separator orientation="vertical" className="h-5" />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setSelected(new Map())
+                    setOpen('restore')
+                  }}
+                >
+                  <Upload className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('restore_message.restore_to_imap', 'Restore Mail')}</TooltipContent>
             </Tooltip>
           </div>
         </>

@@ -1453,14 +1453,19 @@
         "confirm": "Uitloggen"
     },
     "restore_message": {
-        "title": "Berichten herstellen",
-        "desc": "Deze actie uploadt de geselecteerde berichten van Bichon en herstelt ze in de bijbehorende mailboxen op de IMAP-server.",
-        "confirm": "Herstellen",
-        "restore_to_imap": "E-mail herstellen",
-        "success": "Berichten hersteld",
+        "title": "Enkel bericht herstellen",
+        "bulkTitle": "Meerdere berichten herstellen",
+        "bulkWarning": "Let op: berichten worden hersteld in hun oorspronkelijke mappen.",
+        "accountsInvolved": "Betrokken accounts",
+        "summary": "Hersteldetails",
+        "messages": "berichten",
+        "desc": "Deze actie zal de geselecteerde berichten opnieuw uploaden vanuit Bichon en ze herstellen in de bijbehorende mailboxen op de IMAP-server.",
+        "confirm": "Herstel uitvoeren",
+        "restore_to_imap": "Bericht herstellen",
+        "success": "Herstel geslaagd",
         "successDesc": "De geselecteerde berichten zijn succesvol hersteld op de IMAP-server.",
-        "failed": "Herstellen van berichten mislukt",
-        "failedTitle": "Herstel mislukt"
+        "failed": "Herstel mislukt",
+        "failedTitle": "Herstelfout"
     },
     "time": {
         "label": "Tijd",

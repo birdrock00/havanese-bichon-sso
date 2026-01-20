@@ -1453,14 +1453,19 @@
         "confirm": "Logg ut"
     },
     "restore_message": {
-        "title": "Gjenopprett meldinger",
-        "desc": "Denne handlingen vil laste opp de valgte meldingene fra Bichon og gjenopprette dem til deres tilsvarende postbokser på IMAP-serveren.",
-        "confirm": "Gjenopprett",
-        "restore_to_imap": "Gjenopprett e-post",
-        "success": "Meldinger gjenopprettet",
-        "successDesc": "De valgte meldingene har blitt gjenopprettet til IMAP-serveren.",
-        "failed": "Kunne ikke gjenopprette meldinger",
-        "failedTitle": "Gjenoppretting mislyktes"
+        "title": "Gjenopprett enkeltmelding",
+        "bulkTitle": "Gjenopprett flere meldinger",
+        "bulkWarning": "Merk: Meldinger vil bli gjenopprettet til sine opprinnelige mapper.",
+        "accountsInvolved": "Involverte kontoer",
+        "summary": "Gjenopprettingsdetaljer",
+        "messages": "meldinger",
+        "desc": "Denne handlingen vil laste opp valgte meldinger fra Bichon på nytt og gjenopprette dem til de tilsvarende postkassene på IMAP-serveren.",
+        "confirm": "Utfør gjenoppretting",
+        "restore_to_imap": "Gjenopprett melding",
+        "success": "Gjenoppretting vellykket",
+        "successDesc": "De valgte meldingene er gjenopprettet til IMAP-serveren.",
+        "failed": "Gjenoppretting mislykkedes",
+        "failedTitle": "Feil ved gjenoppretting"
     },
     "time": {
         "label": "Tid",

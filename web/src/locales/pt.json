@@ -1453,13 +1453,18 @@
         "confirm": "Sair"
     },
     "restore_message": {
-        "title": "Restaurar mensagens",
-        "desc": "Esta ação irá carregar as mensagens selecionadas do Bichon e restaurá-las nas respetivas caixas de correio no servidor IMAP.",
-        "confirm": "Restaurar",
-        "restore_to_imap": "Restaurar e-mail",
-        "success": "Mensagens restauradas",
-        "successDesc": "As mensagens selecionadas foram restauradas com sucesso para o servidor IMAP.",
-        "failed": "Falha ao restaurar mensagens",
+        "title": "Restaurar mensagem individual",
+        "bulkTitle": "Restaurar múltiplas mensagens",
+        "bulkWarning": "Nota: As mensagens serão restauradas nas suas pastas originais.",
+        "accountsInvolved": "Contas envolvidas",
+        "summary": "Detalhes da restauração",
+        "messages": "mensagens",
+        "desc": "Esta ação irá recarregar as mensagens selecionadas do Bichon e restaurá-las nas pastas correspondentes no servidor IMAP.",
+        "confirm": "Executar restauração",
+        "restore_to_imap": "Restaurar mensagem",
+        "success": "Restauração bem-sucedida",
+        "successDesc": "As mensagens selecionadas foram restauradas com sucesso no servidor IMAP.",
+        "failed": "Falha ao restaurar",
         "failedTitle": "Falha na restauração"
     },
     "time": {

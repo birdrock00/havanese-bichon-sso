@@ -1453,12 +1453,17 @@
         "confirm": "登出"
     },
     "restore_message": {
-        "title": "還原郵件",
-        "desc": "此操作將把選定的郵件從 Bichon 系統重新上傳並還原到其在 IMAP 伺服器上對應的信箱中。",
+        "title": "還原單個郵件",
+        "bulkTitle": "批量還原多個郵件",
+        "bulkWarning": "請注意：郵件將被還原至其原始存儲的資料夾中。",
+        "accountsInvolved": "涉及帳戶",
+        "summary": "待還原詳情",
+        "messages": "封郵件",
+        "desc": "此操作將把選定的郵件從 Bichon 系統重新上傳並恢復到其在 IMAP 服務器上對應的郵箱中。",
         "confirm": "執行還原",
         "restore_to_imap": "還原郵件",
         "success": "郵件還原成功",
-        "successDesc": "選定的郵件已成功還原到 IMAP 伺服器。",
+        "successDesc": "選定的郵件已成功恢復到 IMAP 服務器。",
         "failed": "還原郵件失敗",
         "failedTitle": "還原失敗"
     },

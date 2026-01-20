@@ -1453,14 +1453,19 @@
         "confirm": "Cerrar sesión"
     },
     "restore_message": {
-        "title": "Restaurar mensajes",
-        "desc": "Esta acción volverá a cargar los mensajes seleccionados de Bichon y los restaurará en sus carpetas correspondientes en el servidor IMAP.",
-        "confirm": "Restaurar",
-        "restore_to_imap": "Restaurar correo",
-        "success": "Mensajes restaurados",
+        "title": "Restaurar mensaje individual",
+        "bulkTitle": "Restaurar múltiples mensajes",
+        "bulkWarning": "Nota: Los mensajes se restaurarán en sus carpetas originales.",
+        "accountsInvolved": "Cuentas involucradas",
+        "summary": "Detalles de restauración",
+        "messages": "mensajes",
+        "desc": "Esta acción volverá a cargar los mensajes seleccionados desde Bichon y los restaurará en sus buzones correspondientes en el servidor IMAP.",
+        "confirm": "Ejecutar restauración",
+        "restore_to_imap": "Restaurar mensaje",
+        "success": "Restauración exitosa",
         "successDesc": "Los mensajes seleccionados se han restaurado correctamente en el servidor IMAP.",
-        "failed": "Error al restaurar los mensajes",
-        "failedTitle": "Error de restauración"
+        "failed": "Error al restaurar",
+        "failedTitle": "Fallo en la restauración"
     },
     "time": {
         "label": "Tiempo",

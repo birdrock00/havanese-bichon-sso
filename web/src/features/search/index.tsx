@@ -95,14 +95,6 @@ export default function Search() {
         >
           <div className="mx-auto w-full px-4">
             <div className="flex gap-6">
-              {/* <aside className="hidden lg:block w-64 flex-shrink-0">
-                <div className="rounded-lg border bg-card p-4">
-                  <EnvelopeTags
-                    selectedTags={selectedTags}
-                    onTagToggle={handleTagToggle}
-                  />
-                </div>
-              </aside> */}
               <div className="flex-1 min-w-0 space-y-4">
                 {isLoading && (
                   <Card>

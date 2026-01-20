@@ -1453,14 +1453,19 @@
     "confirm": "Sign out"
   },
   "restore_message": {
-    "title": "Restore Messages",
-    "desc": "This action will append the selected messages from Bichon back to their corresponding mailboxes on the IMAP server.",
-    "confirm": "Restore",
-    "restore_to_imap": "Restore Mail",
+    "title": "Restore Single Message",
+    "bulkTitle": "Bulk Restore Messages",
+    "bulkWarning": "Note: Messages will be restored to their original storage folders.",
+    "accountsInvolved": "Accounts involved",
+    "summary": "Restoration Details",
+    "messages": "messages",
+    "desc": "This action will re-upload selected messages from Bichon and restore them to their corresponding mailboxes on the IMAP server.",
+    "confirm": "Restore Now",
+    "restore_to_imap": "Restore Message",
     "success": "Messages Restored",
     "successDesc": "The selected messages have been successfully restored to the IMAP server.",
-    "failed": "Failed to restore messages",
-    "failedTitle": "Restore Failed"
+    "failed": "Restore Failed",
+    "failedTitle": "Failed to Restore"
   },
   "time": {
     "label": "Time",

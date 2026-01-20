@@ -1453,14 +1453,19 @@
         "confirm": "Log ud"
     },
     "restore_message": {
-        "title": "Gendan meddelelser",
-        "desc": "Denne handling vil uploade de valgte meddelelser fra Bichon og gendanne dem til deres tilsvarende postkasser på IMAP-serveren.",
-        "confirm": "Gendan",
-        "restore_to_imap": "Gendan e-mail",
-        "success": "Meddelelser gendannet",
-        "successDesc": "De valgte meddelelser er blevet gendannet til IMAP-serveren.",
-        "failed": "Kunne ikke gendanne meddelelser",
-        "failedTitle": "Gendannelse mislykkedes"
+        "title": "Gendan enkelt besked",
+        "bulkTitle": "Gendan flere beskeder",
+        "bulkWarning": "Bemærk: Beskeder vil blive gendannet til deres oprindelige mapper.",
+        "accountsInvolved": "Involverede konti",
+        "summary": "Gendannelsesdetaljer",
+        "messages": "beskeder",
+        "desc": "Denne handling vil gen-uploade valgte beskeder fra Bichon og gendanne dem til deres tilsvarende postkasser på IMAP-serveren.",
+        "confirm": "Udfør gendannelse",
+        "restore_to_imap": "Gendan besked",
+        "success": "Gendannelse gennemført",
+        "successDesc": "De valgte beskeder er blevet gendannet til IMAP-serveren.",
+        "failed": "Gendannelse mislykkedes",
+        "failedTitle": "Fejl ved gendannelse"
     },
     "time": {
         "label": "Tid",

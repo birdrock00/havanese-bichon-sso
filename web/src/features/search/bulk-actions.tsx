@@ -19,7 +19,7 @@
 
 
 import { useRef } from 'react'
-import { X, Trash2 } from 'lucide-react'
+import { X, Trash2, Upload } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -37,7 +37,7 @@ type MailBulkActionsProps = {
 }
 
 export function MailBulkActions({ children }: MailBulkActionsProps) {
-    const { selected, setSelected, setOpen, setToDelete } = useSearchContext()
+    const { selected, setSelected, setOpen, setToDelete, setCurrentEnvelope } = useSearchContext()
     const toolbarRef = useRef<HTMLDivElement>(null)
     const { t } = useTranslation()
 
@@ -58,6 +58,12 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
             })
         })
         setOpen('delete')
+    }
+
+
+    const handleRestore = () => {
+        setCurrentEnvelope(undefined);
+        setOpen('restore')
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -161,7 +167,26 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
                     </div>
 
                     <Separator orientation="vertical" className="h-5" />
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={handleRestore}
+                                className="gap-1"
+                            >
+                                <Upload className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">
+                                    {t('restore_message.restore_to_imap', 'Restore Mail')}
+                                </span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            {t('search.bulkActions.restoreDesc')}
+                        </TooltipContent>
+                    </Tooltip>
 
+                    <Separator orientation="vertical" className="h-5" />
                     {/* Delete */}
                     <Tooltip>
                         <TooltipTrigger asChild>
