@@ -444,7 +444,7 @@ dependencies = [
 
 [[package]]
 name = "bichon"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "ahash",
  "async-imap",
