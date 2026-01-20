@@ -23,6 +23,7 @@ use crate::modules::settings::cli::Settings;
 
 pub mod cli;
 pub mod dir;
+pub mod io;
 pub mod proxy;
 pub mod system;
 

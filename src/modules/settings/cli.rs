@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::modules::settings::io::check_dir_read_write;
 use clap::{builder::ValueParser, Parser, ValueEnum};
 use std::{collections::HashSet, env, fmt, path::PathBuf, sync::LazyLock};
 
@@ -64,7 +65,7 @@ pub struct Settings {
     )]
     pub bichon_bind_ip: Option<String>,
 
-    /// RustMail public URL (default: "http://localhost:15630")
+    /// bichon public URL (default: "http://localhost:15630")
     #[clap(
         long,
         default_value = "http://localhost:15630",
@@ -160,15 +161,12 @@ pub struct Settings {
         help = "Set the file path for bichon database",
         value_parser = ValueParser::new(|s: &str| {
             let path = PathBuf::from(s);
+
             if !path.is_absolute() {
-                return Err("Path must be an absolute directory path".to_string());
+                return Err("'bichon_root_dir' must be an absolute directory path".to_string());
             }
-            if !path.exists() {
-                return Err(format!("Path {:?} does not exist", path));
-            }
-            if !path.is_dir() {
-                return Err(format!("Path {:?} is not a directory", path));
-            }
+
+            check_dir_read_write(&path)?;
             Ok(s.to_string())
         })
     )]
@@ -179,15 +177,12 @@ pub struct Settings {
         help = "Set the file path for email index directory",
         value_parser = ValueParser::new(|s: &str| {
             let path = PathBuf::from(s);
+
             if !path.is_absolute() {
-                return Err("Path must be an absolute directory path".to_string());
+                return Err("'bichon_index_dir' must be an absolute directory path".to_string());
             }
-            if !path.exists() {
-                return Err(format!("Path {:?} does not exist", path));
-            }
-            if !path.is_dir() {
-                return Err(format!("Path {:?} is not a directory", path));
-            }
+
+            check_dir_read_write(&path)?;
             Ok(s.to_string())
         })
     )]
@@ -198,15 +193,12 @@ pub struct Settings {
         help = "Set the file path for email data directory",
         value_parser = ValueParser::new(|s: &str| {
             let path = PathBuf::from(s);
+
             if !path.is_absolute() {
-                return Err("Path must be an absolute directory path".to_string());
+                return Err("'bichon_data_dir' must be an absolute directory path".to_string());
             }
-            if !path.exists() {
-                return Err(format!("Path {:?} does not exist", path));
-            }
-            if !path.is_dir() {
-                return Err(format!("Path {:?} is not a directory", path));
-            }
+
+            check_dir_read_write(&path)?;
             Ok(s.to_string())
         })
     )]

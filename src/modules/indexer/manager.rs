@@ -76,6 +76,7 @@ use tokio::{
     sync::{mpsc, Mutex},
     task,
 };
+use tracing::info;
 
 pub static ENVELOPE_INDEX_MANAGER: LazyLock<EnvelopeIndexManager> =
     LazyLock::new(EnvelopeIndexManager::new);
@@ -188,13 +189,23 @@ impl EnvelopeIndexManager {
     }
 
     fn open_or_create_index(index_dir: &PathBuf) -> Index {
-        if !index_dir.exists() {
+        let need_create = !index_dir.exists()
+            || index_dir
+                .read_dir()
+                .map(|mut d| d.next().is_none())
+                .unwrap_or(true);
+        if need_create {
+            info!(
+                "Email index not found or empty, creating new index at {}",
+                index_dir.display()
+            );
             std::fs::create_dir_all(&index_dir).unwrap_or_else(|e| {
                 panic!("Failed to create index directory {:?}: {}", index_dir, e)
             });
             Index::create_in_dir(&index_dir, SchemaTools::envelope_schema())
                 .unwrap_or_else(|e| panic!("Failed to create index in {:?}: {}", index_dir, e))
         } else {
+            info!("Opening existing email index at {}", index_dir.display());
             open(&index_dir)
         }
     }
@@ -1331,7 +1342,17 @@ impl EmlIndexManager {
     }
 
     fn open_or_create_index(index_dir: &PathBuf) -> Index {
-        if !index_dir.exists() {
+        let need_create = !index_dir.exists()
+            || index_dir
+                .read_dir()
+                .map(|mut d| d.next().is_none())
+                .unwrap_or(true);
+
+        if need_create {
+            info!(
+                "Email data storage not found or empty, creating new mail storage at {}",
+                index_dir.display()
+            );
             std::fs::create_dir_all(&index_dir).unwrap_or_else(|e| {
                 panic!("Failed to create index directory {:?}: {}", index_dir, e)
             });
@@ -1347,6 +1368,10 @@ impl EmlIndexManager {
                 .create_in_dir(&index_dir)
                 .unwrap_or_else(|e| panic!("Failed to create index in {:?}: {}", index_dir, e))
         } else {
+            info!(
+                "Opening existing email data storage at {}",
+                index_dir.display()
+            );
             open(&index_dir)
         }
     }
