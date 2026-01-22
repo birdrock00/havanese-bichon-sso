@@ -79,13 +79,13 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-7xl sm:rounded-xl p-0 overflow-hidden">
+      <DialogContent className="w-full max-w-7xl sm:rounded-xl p-0 overflow-hidden max-h-[90vh]">
         <DialogHeader className="text-left space-y-2 px-4 sm:px-6 pt-4 sm:pt-6">
           <DialogTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
             <span className="text-blue-500 font-medium truncate">{currentRow.email}</span>
           </DialogTitle>
         </DialogHeader>
-        <ScrollArea className="max-h-[55rem] px-4 sm:px-6 pb-6">
+        <ScrollArea className="max-h-[calc(90vh-8rem)] px-4 sm:px-6 pb-6">
           {isLoading && (
             <div className="space-y-4 py-6">
               <Skeleton className="h-6 w-1/2" />
