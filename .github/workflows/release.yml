@@ -7,6 +7,7 @@ on:
 env:
   BINARY_NAME: bichon
   BINARY_CTL: bichonctl
+  BINARY_ADMIN: bichon-admin
 
 permissions:
   contents: write
@@ -93,6 +94,7 @@ jobs:
         run: |
           strip target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}
           strip target/${{ matrix.target }}/release/${{ env.BINARY_CTL }}
+          strip target/${{ matrix.target }}/release/${{ env.BINARY_ADMIN }}
 
       - name: Pack artifact (Linux/macOS)
         if: matrix.os != 'windows-latest'
@@ -103,6 +105,7 @@ jobs:
           cp README.md LICENSE release/
           cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} release/
           cp target/${{ matrix.target }}/release/${{ env.BINARY_CTL }} release/
+          cp target/${{ matrix.target }}/release/${{ env.BINARY_ADMIN }} release/
           tar -czvf "${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz" -C release .
           mv "${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz" release/
 
@@ -121,6 +124,7 @@ jobs:
 
           Copy-Item "target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe" release/
           Copy-Item "target/${{ matrix.target }}/release/${{ env.BINARY_CTL }}.exe" release/
+          Copy-Item "target/${{ matrix.target }}/release/${{ env.BINARY_ADMIN }}.exe" release/
 
           Copy-Item -Path README.md -Destination release/
           Copy-Item -Path LICENSE -Destination release/
