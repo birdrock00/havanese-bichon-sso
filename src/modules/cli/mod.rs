@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::bichon_version;
 
+pub mod admin;
 pub mod auth;
 pub mod eml;
 pub mod mbox;

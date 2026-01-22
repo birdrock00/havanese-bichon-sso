@@ -444,7 +444,7 @@ dependencies = [
 
 [[package]]
 name = "bichon"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "ahash",
  "async-imap",
@@ -471,7 +471,7 @@ dependencies = [
  "imap-proto",
  "itertools",
  "itoa",
- "lru 0.16.2",
+ "lru 0.16.3",
  "mail-parser",
  "mail-send",
  "memmap2 0.9.9",
@@ -501,7 +501,7 @@ dependencies = [
  "sysinfo",
  "tantivy",
  "tempfile",
- "time 0.3.44",
+ "time 0.3.45",
  "timeago",
  "tokio",
  "tokio-io-timeout",
@@ -747,9 +747,9 @@ checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "chrono"
-version = "0.4.42"
+version = "0.4.43"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "145052bdd345b87320e369255277e3fb5152762ad123a901ef5c262dd38fe8d2"
+checksum = "fac4744fb15ae8337dc853fee7fb3f4e48c0fbaa23d0afe49c447b4fab126118"
 dependencies = [
  "iana-time-zone",
  "js-sys",
@@ -1483,16 +1483,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42703706b716c37f96a77aea830392ad231f44c9e9a67872fa5548707e11b11c"
 
 [[package]]
-name = "futf"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df420e2e84819663797d1ec6544b13c5be84629e7bb00dc960d6917db2987843"
-dependencies = [
- "mac",
- "new_debug_unreachable",
-]
-
-[[package]]
 name = "futures"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1853,7 +1843,7 @@ dependencies = [
  "rustls",
  "rustls-pki-types",
  "thiserror 2.0.17",
- "time 0.3.44",
+ "time 0.3.45",
  "tinyvec",
  "tokio",
  "tokio-rustls",
@@ -1915,9 +1905,9 @@ dependencies = [
 
 [[package]]
 name = "html2text"
-version = "0.16.5"
+version = "0.16.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "89f3074c1e4a7c4b4f7aca411a610e0f2f27e16d571d0e584524b66c93204100"
+checksum = "9ea4ba4c0f993633569337a4fadfbd4f27448c81adb1af0c2407065f52809662"
 dependencies = [
  "html5ever",
  "tendril",
@@ -1927,9 +1917,9 @@ dependencies = [
 
 [[package]]
 name = "html5ever"
-version = "0.36.1"
+version = "0.37.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6452c4751a24e1b99c3260d505eaeee76a050573e61f30ac2c924ddc7236f01e"
+checksum = "5935f02fdc02823ff15fec27c2b3d7ca19d629e996f7a0ae4d7d500e62e54c76"
 dependencies = [
  "log",
  "markup5ever",
@@ -2520,9 +2510,9 @@ dependencies = [
 
 [[package]]
 name = "lru"
-version = "0.16.2"
+version = "0.16.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "96051b46fc183dc9cd4a223960ef37b9af631b55191852a8274bfef064cda20f"
+checksum = "a1dc47f592c06f33f8e3aea9591776ec7c9f9e4124778ff8a3c3b87159f7e593"
 dependencies = [
  "hashbrown 0.16.1",
 ]
@@ -2557,12 +2547,6 @@ dependencies = [
  "crc",
  "sha2 0.10.9",
 ]
-
-[[package]]
-name = "mac"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c41e0c4fef86961ac6d6f8a82609f55f31b05e4fce149ac5710e439df7619ba4"
 
 [[package]]
 name = "mail-auth"
@@ -2627,9 +2611,9 @@ dependencies = [
 
 [[package]]
 name = "markup5ever"
-version = "0.36.1"
+version = "0.37.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c3294c4d74d0742910f8c7b466f44dda9eb2d5742c1e430138df290a1e8451c"
+checksum = "7cfb33ea12d5d83b1ba9a55ae7d05faec4f2189d47b79c04d4cea6bbe9f5b083"
 dependencies = [
  "log",
  "tendril",
@@ -3836,9 +3820,9 @@ dependencies = [
 
 [[package]]
 name = "rust-embed"
-version = "8.9.0"
+version = "8.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "947d7f3fad52b283d261c4c99a084937e2fe492248cb9a68a8435a861b8798ca"
+checksum = "04113cb9355a377d83f06ef1f0a45b8ab8cd7d8b1288160717d66df5c7988d27"
 dependencies = [
  "rust-embed-impl",
  "rust-embed-utils",
@@ -3908,9 +3892,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.35"
+version = "0.23.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "533f54bc6a7d4f647e46ad909549eda97bf5afc1585190ef692b4286b198bd8f"
+checksum = "c665f33d38cea657d9614f766881e4d510e0eda4239891eea56b4cadcf01801b"
 dependencies = [
  "aws-lc-rs",
  "log",
@@ -3933,9 +3917,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-pki-types"
-version = "1.13.2"
+version = "1.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21e6f2ab2928ca4291b86736a8bd920a277a399bba1589409d72154ff87c1282"
+checksum = "be040f8b0a225e40375822a563fa9524378b9d63112f53e19ffff34df5d33fdd"
 dependencies = [
  "web-time",
  "zeroize",
@@ -4064,9 +4048,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.148"
+version = "1.0.149"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3084b546a1dd6289475996f182a22aba973866ea8e8b02c51d9f46b1336a22da"
+checksum = "83fc039473c5595ace860d8c4fafa220ff474b3fc6bfdb4293327f1a37e94d86"
 dependencies = [
  "itoa",
  "memchr",
@@ -4455,7 +4439,6 @@ dependencies = [
  "parking_lot",
  "phf_shared 0.13.1",
  "precomputed-hash",
- "serde",
 ]
 
 [[package]]
@@ -4617,7 +4600,7 @@ dependencies = [
  "tantivy-tokenizer-api",
  "tempfile",
  "thiserror 2.0.17",
- "time 0.3.44",
+ "time 0.3.45",
  "uuid",
  "winapi",
  "zstd",
@@ -4658,7 +4641,7 @@ dependencies = [
  "byteorder",
  "ownedbytes",
  "serde",
- "time 0.3.44",
+ "time 0.3.45",
 ]
 
 [[package]]
@@ -4732,12 +4715,11 @@ dependencies = [
 
 [[package]]
 name = "tendril"
-version = "0.4.3"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d24a120c5fc464a3458240ee02c299ebcb9d67b5249c8848b09d639dca8d7bb0"
+checksum = "c4790fc369d5a530f4b544b094e31388b9b3a37c0f4652ade4505945f5660d24"
 dependencies = [
- "futf",
- "mac",
+ "new_debug_unreachable",
  "utf-8",
 ]
 
@@ -4807,9 +4789,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.44"
+version = "0.3.45"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91e7d9e3bb61134e77bde20dd4825b97c010155709965fedf0f49bb138e52a9d"
+checksum = "f9e442fc33d7fdb45aa9bfeb312c095964abdf596f7567261062b2a7107aaabd"
 dependencies = [
  "deranged",
  "itoa",
@@ -4817,16 +4799,16 @@ dependencies = [
  "num-conv",
  "num_threads",
  "powerfmt",
- "serde",
+ "serde_core",
  "time-core",
- "time-macros 0.2.24",
+ "time-macros 0.2.25",
 ]
 
 [[package]]
 name = "time-core"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "40868e7c1d2f0b8d73e4a8c7f0ff63af4f6d19be117e90bd73eb1d62cf831c6b"
+checksum = "8b36ee98fd31ec7426d599183e8fe26932a8dc1fb76ddb6214d05493377d34ca"
 
 [[package]]
 name = "time-macros"
@@ -4840,9 +4822,9 @@ dependencies = [
 
 [[package]]
 name = "time-macros"
-version = "0.2.24"
+version = "0.2.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30cfb0125f12d9c277f35663a0a33f8c30190f4e4574868a330595412d34ebf3"
+checksum = "71e552d1249bf61ac2a52db88179fd0673def1e1ad8243a00d9ec9ed71fee3dd"
 dependencies = [
  "num-conv",
  "time-core",
@@ -5096,7 +5078,7 @@ checksum = "786d480bce6247ab75f005b14ae1624ad978d3029d9113f0a22fa1ac773faeaf"
 dependencies = [
  "crossbeam-channel",
  "thiserror 2.0.17",
- "time 0.3.44",
+ "time 0.3.45",
  "tracing-subscriber",
 ]
 
@@ -5535,9 +5517,9 @@ dependencies = [
 
 [[package]]
 name = "web_atoms"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "acd0c322f146d0f8aad130ce6c187953889359584497dac6561204c8e17bb43d"
+checksum = "30e588f10c7bc3465f5fc1ab087fc97877ec1064a7ec89fb685ac4ee998dac4a"
 dependencies = [
  "phf 0.13.1",
  "phf_codegen",
@@ -5547,9 +5529,9 @@ dependencies = [
 
 [[package]]
 name = "webpki-roots"
-version = "1.0.4"
+version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2878ef029c47c6e8cf779119f20fcf52bde7ad42a731b2a304bc221df17571e"
+checksum = "12bed680863276c63889429bfd6cab3b99943659923822de1c8a39c49e4d722c"
 dependencies = [
  "rustls-pki-types",
 ]
@@ -6208,7 +6190,7 @@ dependencies = [
  "pbkdf2",
  "ppmd-rust",
  "sha1 0.10.6",
- "time 0.3.44",
+ "time 0.3.45",
  "zeroize",
  "zopfli",
  "zstd",

@@ -498,7 +498,6 @@ impl BichonUserV2 {
     pub async fn update(id: u64, request: UserUpdateRequest) -> BichonResult<()> {
         let _ = &request.validate().await?;
         let password_changed = request.password.is_some();
-        //
         let is_default_admin = id == DEFAULT_ADMIN_USER_ID;
 
         if is_default_admin {

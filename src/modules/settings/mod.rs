@@ -16,17 +16,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::modules::settings::cli::Settings;
 use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
-
-use crate::modules::settings::cli::Settings;
 
 pub mod cli;
 pub mod dir;
 pub mod io;
 pub mod proxy;
 pub mod system;
-
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
 pub struct SystemConfigurations {
     pub bichon_log_level: String,

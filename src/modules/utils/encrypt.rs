@@ -72,7 +72,7 @@ pub fn decrypt_string(data: &str) -> BichonResult<String> {
     })
 }
 
-fn internal_encrypt_string(
+pub fn internal_encrypt_string(
     password: &str,
     plaintext: &str,
 ) -> Result<String, ring::error::Unspecified> {
@@ -102,7 +102,7 @@ fn internal_encrypt_string(
     Ok(general_purpose::URL_SAFE.encode(&result))
 }
 
-fn internal_decrypt_string(password: &str, data: &str) -> Result<String, ring::error::Unspecified> {
+pub fn internal_decrypt_string(password: &str, data: &str) -> Result<String, ring::error::Unspecified> {
     let data = general_purpose::URL_SAFE
         .decode(data)
         .map_err(|_| ring::error::Unspecified)?;
