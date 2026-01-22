@@ -249,7 +249,7 @@ export function Mail({
         _event: React.SyntheticEvent | null,
         itemId: string
     ) => {
-        console.log(itemId)
+        //console.log(itemId)
         setSelectedMailbox(mailboxes?.find(m => String(m.id) === itemId))
         setPage(0);
     };
