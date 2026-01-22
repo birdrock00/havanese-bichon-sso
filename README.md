@@ -112,13 +112,33 @@ docker pull rustmailer/bichon:latest
 # Create data directory
 mkdir -p ./bichon-data
 
+# Optional: Set PUID and PGID to match your host user for proper file permissions
+# Find your user ID with: id $USER
+# This prevents permission issues when using NFS mounts or shared volumes
+
 # Run container
 docker run -d \
   --name bichon \
   -p 15630:15630 \
   -v $(pwd)/bichon-data:/data \
+  -e PUID=1000 \
+  -e PGID=1000 \
   -e BICHON_LOG_LEVEL=info \
   -e BICHON_ROOT_DIR=/data \
+  rustmailer/bichon:latest
+
+# Optional: For custom storage configuration with separate volumes
+docker run -d \
+  --name bichon \
+  -p 15630:15630 \
+  -v $(pwd)/bichon-data:/data \
+  -v $(pwd)/envelope:/envelope \
+  -v $(pwd)/eml:/eml \
+  -e PUID=1000 \
+  -e PGID=1000 \
+  -e BICHON_ROOT_DIR=/data \
+  -e BICHON_INDEX_DIR=/envelope \
+  -e BICHON_DATA_DIR=/eml \
   rustmailer/bichon:latest
 ```
 
