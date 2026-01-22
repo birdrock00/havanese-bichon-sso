@@ -18,7 +18,7 @@ COPY ${TARGETARCH}/LICENSE /opt/bichon/
 RUN chmod +x /opt/bichon/bichon
 
 # Copy and setup entrypoint script for PUID/PGID support
-COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Install ca-certificates to ensure HTTPS certificate verification works correctly
