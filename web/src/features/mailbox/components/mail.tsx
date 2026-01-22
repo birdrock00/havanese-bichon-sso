@@ -234,15 +234,24 @@ export function Mail({
         }
     }, [isError, error]);
 
-    const handleItemSelectionToggle = (
+    // const handleItemSelectionToggle = (
+    //     _event: React.SyntheticEvent | null,
+    //     itemId: string,
+    //     isSelected: boolean,
+    // ) => {
+    //     if (isSelected) {
+    //         setSelectedMailbox(mailboxes?.find(m => String(m.id) === itemId))
+    //         setPage(0);
+    //     }
+    // };
+
+    const handleItemClick = (
         _event: React.SyntheticEvent | null,
-        itemId: string,
-        isSelected: boolean,
+        itemId: string
     ) => {
-        if (isSelected) {
-            setSelectedMailbox(mailboxes?.find(m => String(m.id) === itemId))
-            setPage(0);
-        }
+        console.log(itemId)
+        setSelectedMailbox(mailboxes?.find(m => String(m.id) === itemId))
+        setPage(0);
     };
 
     const handleDeleteClick = (id: string) => {
@@ -372,7 +381,8 @@ export function Mail({
                                 <RichTreeView
                                     //checkboxSelection
                                     items={tree}
-                                    onItemSelectionToggle={handleItemSelectionToggle}
+                                    expansionTrigger="iconContainer"
+                                    onItemClick={handleItemClick}
                                     slots={{ item: CustomTreeItem }}
                                 />
                             )}
