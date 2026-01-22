@@ -376,7 +376,6 @@ This data is provided solely as a **reference** for real-world usage. We encoura
 * [x] `bichonctl` command-line tool
 
   * [x] Import emails from `eml`, `mbox`, `pst` (Single file)
-  * [ ] Import emails from `msg`
 
 * [ ] Manual sync controls
 
@@ -399,7 +398,18 @@ This data is provided solely as a **reference** for real-world usage. We encoura
   * Sync emails to a specified target account
   * Support mailbox migration
 
----
+* [ ] SMTP server / gateway support
+
+  * Provide a lightweight SMTP receiving service
+  * Allow direct forwarding of incoming mail to Bichon at the gateway level
+  * Achieve more reliable, real-time, complete email archiving & backup
+  * Optional: support alias / catch-all / domain-level routing
+
+* [ ] MCP Server
+
+  * Provide an LLM interface for advanced email search and intelligent processing
+  * Enable natural language queries to search and understand email content
+  * Make Bichon capable of smarter email interaction and analysis
 
 ## 🛠️ Tech Stack
 
