@@ -27,7 +27,7 @@ const baseURL = process.env.NODE_ENV === "production"
 
 const axiosInstance = axios.create({
   baseURL,
-  timeout: 30000, // Timeout in milliseconds
+  timeout: 60000, // Timeout in milliseconds
   headers: {
     "Content-Type": "application/json",  // Explicitly setting Content-Type to application/json
   },
