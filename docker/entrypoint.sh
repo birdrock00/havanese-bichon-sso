@@ -16,28 +16,33 @@ fi
 switch_user() {
     local puid="$1"
     local pgid="$2"
+    local USER_NAME
+    local GROUP_NAME
 
-    # group: avoid GID conflict
-    if ! getent group "$pgid" >/dev/null 2>&1; then
+    # group
+    if getent group "$pgid" >/dev/null 2>&1; then
+        GROUP_NAME=$(getent group "$pgid" | cut -d: -f1)
+    else
         groupadd -g "$pgid" bichon
+        GROUP_NAME=bichon
     fi
 
-    # user: ensure bichon exists
-    if ! getent passwd bichon >/dev/null 2>&1; then
-        useradd -u "$puid" -g "$pgid" -s /bin/bash -d /data bichon
+    # user
+    if getent passwd "$puid" >/dev/null 2>&1; then
+        USER_NAME=$(getent passwd "$puid" | cut -d: -f1)
+    else
+        useradd -u "$puid" -g "$GROUP_NAME" -s /bin/bash -d /data bichon
+        USER_NAME=bichon
     fi
 
-
-    # Change ownership of directories that the process needs to write to
     chown -R "$puid:$pgid" /data
     chown -R "$puid:$pgid" /opt/bichon
-    # Handle mounted storage directories if they exist
     [ -d /envelope ] && chown -R "$puid:$pgid" /envelope
     [ -d /eml ] && chown -R "$puid:$pgid" /eml
 
-    # Switch to the user and execute the command
-    exec runuser -u bichon -- "$@"
+    exec runuser -u "$USER_NAME" -- "$@"
 }
+
 
 # Check if PUID and PGID are set
 if [ -n "$PUID" ] && [ -n "$PGID" ]; then
