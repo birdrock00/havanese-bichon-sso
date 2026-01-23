@@ -31,8 +31,11 @@ use crate::{
     },
     raise_error,
 };
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
+use tokio::sync::Semaphore;
 use tracing::{error, info};
+
+pub const DEFAULT_MAX_CONCURRENT_PER_ACCOUNT: usize = 5;
 
 pub async fn rebuild_cache(
     account: &AccountModel,
@@ -41,6 +44,8 @@ pub async fn rebuild_cache(
     let start_time = Instant::now();
     let mut total_inserted = 0;
     MailBox::batch_insert(remote_mailboxes).await?;
+
+    let local_semaphore = Arc::new(Semaphore::new(DEFAULT_MAX_CONCURRENT_PER_ACCOUNT));
 
     let mut handles = Vec::new();
     for mailbox in remote_mailboxes {
@@ -53,20 +58,40 @@ pub async fn rebuild_cache(
         }
         let account = account.clone();
         let mailbox = mailbox.clone();
-        match SEMAPHORE.clone().acquire_owned().await {
-            Ok(permit) => {
-                let handle: tokio::task::JoinHandle<Result<usize, BichonError>> =
-                    tokio::spawn(async move {
-                        let _permit = permit; // Ensure permit is released when task finishes
-                        fetch_and_save_full_mailbox(&account, &mailbox, mailbox.exists).await
-                    });
-                handles.push(handle);
-            }
+
+        let global_permit = match SEMAPHORE.clone().acquire_owned().await {
+            Ok(permit) => permit,
             Err(err) => {
-                error!("Failed to acquire semaphore permit, error: {:#?}", err);
+                error!(
+                    "Failed to acquire global semaphore permit for account {} mailbox '{}': {:#?}",
+                    account.id, &mailbox.name, err
+                );
+                continue;
             }
-        }
+        };
+
+        let local_permit = match local_semaphore.clone().acquire_owned().await {
+            Ok(permit) => permit,
+            Err(err) => {
+                error!(
+                    "Failed to acquire local semaphore permit for account {} mailbox '{}': {:#?}",
+                    account.id, &mailbox.name, err
+                );
+                drop(global_permit);
+                continue;
+            }
+        };
+
+        let handle: tokio::task::JoinHandle<Result<usize, BichonError>> =
+            tokio::spawn(async move {
+                let _global_permit = global_permit;
+                let _local_permit = local_permit;
+
+                fetch_and_save_full_mailbox(&account, &mailbox, mailbox.exists).await
+            });
+        handles.push(handle);
     }
+
     for task in handles {
         match task.await {
             Ok(Ok(count)) => {
@@ -96,6 +121,9 @@ pub async fn rebuild_cache_by_date(
     MailBox::batch_insert(remote_mailboxes).await?;
 
     let mut handles = Vec::new();
+
+    let local_semaphore = Arc::new(Semaphore::new(DEFAULT_MAX_CONCURRENT_PER_ACCOUNT));
+
     for mailbox in remote_mailboxes {
         if mailbox.exists == 0 {
             info!(
@@ -108,19 +136,38 @@ pub async fn rebuild_cache_by_date(
         let mailbox = mailbox.clone();
         let date = date.to_string();
         let direction = direction.clone();
-        match SEMAPHORE.clone().acquire_owned().await {
-            Ok(permit) => {
-                let handle: tokio::task::JoinHandle<Result<usize, BichonError>> =
-                    tokio::spawn(async move {
-                        let _permit = permit; // Ensure permit is released when task finishes
-                        fetch_and_save_by_date(&account, date.as_str(), &mailbox, direction).await
-                    });
-                handles.push(handle);
-            }
+
+        let global_permit = match SEMAPHORE.clone().acquire_owned().await {
+            Ok(permit) => permit,
             Err(err) => {
-                error!("Failed to acquire semaphore permit, error: {:#?}", err);
+                error!(
+                    "Failed to acquire global semaphore permit for account {} mailbox '{}': {:#?}",
+                    account.id, &mailbox.name, err
+                );
+                continue;
             }
-        }
+        };
+
+        let local_permit = match local_semaphore.clone().acquire_owned().await {
+            Ok(permit) => permit,
+            Err(err) => {
+                error!(
+                    "Failed to acquire local semaphore permit for account {} mailbox '{}': {:#?}",
+                    account.id, &mailbox.name, err
+                );
+                drop(global_permit);
+                continue;
+            }
+        };
+
+        let handle: tokio::task::JoinHandle<Result<usize, BichonError>> =
+            tokio::spawn(async move {
+                let _global_permit = global_permit;
+                let _local_permit = local_permit;
+
+                fetch_and_save_by_date(&account, date.as_str(), &mailbox, direction).await
+            });
+        handles.push(handle);
     }
     for task in handles {
         match task.await {

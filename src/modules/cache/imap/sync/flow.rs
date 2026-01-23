@@ -23,7 +23,10 @@ use crate::{
             imap::{
                 find_intersecting_mailboxes, find_missing_mailboxes,
                 mailbox::MailBox,
-                sync::rebuild::{rebuild_mailbox_cache, rebuild_mailbox_cache_by_date},
+                sync::rebuild::{
+                    rebuild_mailbox_cache, rebuild_mailbox_cache_by_date,
+                    DEFAULT_MAX_CONCURRENT_PER_ACCOUNT,
+                },
             },
             SEMAPHORE,
         },
@@ -33,7 +36,8 @@ use crate::{
     },
     raise_error,
 };
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
+use tokio::sync::Semaphore;
 use tracing::{debug, error, info, warn};
 
 pub const DEFAULT_BATCH_SIZE: u32 = 50;
@@ -335,46 +339,64 @@ pub async fn reconcile_mailboxes(
             if mailbox.exists > 0 {
                 let account = account.clone();
                 let mailbox = mailbox.clone();
-                match SEMAPHORE.clone().acquire_owned().await {
-                    Ok(permit) => {
-                        let handle: tokio::task::JoinHandle<Result<(), BichonError>> =
-                            tokio::spawn(async move {
-                                let _permit = permit;
-                                match &account.date_since {
-                                    Some(date_since) => {
-                                        rebuild_mailbox_cache_by_date(
-                                            &account,
-                                            mailbox.id,
-                                            &date_since.since_date()?,
-                                            &mailbox,
-                                            FetchDirection::Since,
-                                        )
-                                        .await
-                                    }
-                                    None => match &account.date_before {
-                                        Some(r) => {
-                                            rebuild_mailbox_cache_by_date(
-                                                &account,
-                                                mailbox.id,
-                                                &r.calculate_date()?,
-                                                &mailbox,
-                                                FetchDirection::Before,
-                                            )
-                                            .await
-                                        }
-                                        None => {
-                                            rebuild_mailbox_cache(&account, &mailbox, &mailbox)
-                                                .await
-                                        }
-                                    },
-                                }
-                            });
-                        handles.push(handle);
-                    }
+
+                let local_semaphore = Arc::new(Semaphore::new(DEFAULT_MAX_CONCURRENT_PER_ACCOUNT));
+
+                let global_permit = match SEMAPHORE.clone().acquire_owned().await {
+                    Ok(permit) => permit,
                     Err(err) => {
-                        error!("Failed to acquire semaphore permit, error: {:#?}", err);
+                        error!(
+                            "Failed to acquire global semaphore permit for account {} mailbox '{}': {:#?}",
+                            account.id, &mailbox.name, err
+                        );
+                        continue;
                     }
-                }
+                };
+
+                let local_permit = match local_semaphore.clone().acquire_owned().await {
+                    Ok(permit) => permit,
+                    Err(err) => {
+                        error!(
+                            "Failed to acquire local semaphore permit for account {} mailbox '{}': {:#?}",
+                            account.id, &mailbox.name, err
+                        );
+                        drop(global_permit);
+                        continue;
+                    }
+                };
+
+                let handle: tokio::task::JoinHandle<Result<(), BichonError>> =
+                    tokio::spawn(async move {
+                        let _global_permit = global_permit;
+                        let _local_permit = local_permit;
+
+                        match &account.date_since {
+                            Some(date_since) => {
+                                rebuild_mailbox_cache_by_date(
+                                    &account,
+                                    mailbox.id,
+                                    &date_since.since_date()?,
+                                    &mailbox,
+                                    FetchDirection::Since,
+                                )
+                                .await
+                            }
+                            None => match &account.date_before {
+                                Some(r) => {
+                                    rebuild_mailbox_cache_by_date(
+                                        &account,
+                                        mailbox.id,
+                                        &r.calculate_date()?,
+                                        &mailbox,
+                                        FetchDirection::Before,
+                                    )
+                                    .await
+                                }
+                                None => rebuild_mailbox_cache(&account, &mailbox, &mailbox).await,
+                            },
+                        }
+                    });
+                handles.push(handle);
             }
         }
 
