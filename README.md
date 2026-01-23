@@ -49,6 +49,16 @@ Built in Rust, it requires no external dependencies and provides fast, efficient
 | **API Interface** | Typically not provided | Complete REST API |
 | **Multi-account Management** | Limited | Supports unified search across accounts |
 
+### 🧠 Intelligent Storage & De-duplication
+
+Bichon implements a **Single-Instance Storage** philosophy at the account level to maximize storage efficiency and write performance.
+
+* **Message-ID Centric**: Every email is uniquely identified by its `Message-ID`.
+* **High-Performance Writes**: Uses an idempotent "Delete-then-Write" strategy to ensure the fastest possible indexing speed.
+* **Automatic State Updates**: Moving an email between folders (e.g., from Inbox to Trash) will update the existing record rather than creating a duplicate.
+* **Lean Imports**: Duplicate emails encountered during `nosync` bulk imports are automatically merged.
+
+👉 [**Deep Dive: How Bichon handles de-duplication**](https://github.com/rustmailer/bichon/wiki/De%E2%80%90duplication)
 
 ## 🚀 Features
 
