@@ -14,8 +14,16 @@ WORKDIR /opt/bichon
 # Copy compiled binary (ensure it's statically linked or compatible with bullseye)
 COPY ${TARGETARCH}/bichon /opt/bichon/bichon
 COPY ${TARGETARCH}/LICENSE /opt/bichon/
-# Set proper permissions
+
+
+# cli tools
+COPY ${TARGETARCH}/bichonctl /usr/local/bin/bichonctl
+COPY ${TARGETARCH}/bichon-admin /usr/local/bin/bichon-admin
+
+# Set permissions
 RUN chmod +x /opt/bichon/bichon
+RUN chmod +x /usr/local/bin/bichonctl
+RUN chmod +x /usr/local/bin/bichon-admin
 
 # Copy and setup entrypoint script for PUID/PGID support
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
