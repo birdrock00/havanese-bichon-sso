@@ -76,7 +76,7 @@ use tokio::{
     sync::{mpsc, Mutex},
     task,
 };
-use tracing::info;
+use tracing::{info, warn};
 
 pub static ENVELOPE_INDEX_MANAGER: LazyLock<EnvelopeIndexManager> =
     LazyLock::new(EnvelopeIndexManager::new);
@@ -1244,10 +1244,43 @@ impl EnvelopeIndexManager {
         {
             for entry in buckets {
                 if let Key::U64(account_id) = &entry.key {
-                    top_accounts.push(Group {
-                        key: AccountModel::get(*account_id).await?.email,
-                        count: entry.doc_count,
-                    });
+                    match AccountModel::get(*account_id).await {
+                        Ok(account) => {
+                            top_accounts.push(Group {
+                                key: account.email,
+                                count: entry.doc_count,
+                            });
+                        }
+                        Err(e) => {
+                            warn!(
+                                account_id = account_id,
+                                error = %e,
+                                "orphaned account index detected, scheduling cleanup"
+                            );
+                            let account_id = *account_id;
+                            tokio::spawn(async move {
+                                if let Err(e) = ENVELOPE_INDEX_MANAGER
+                                    .delete_account_envelopes(account_id)
+                                    .await
+                                {
+                                    tracing::error!(
+                                        account_id = account_id,
+                                        error = %e,
+                                        "failed to cleanup envelope index"
+                                    );
+                                }
+                                if let Err(e) =
+                                    EML_INDEX_MANAGER.delete_account_envelopes(account_id).await
+                                {
+                                    tracing::error!(
+                                        account_id = account_id,
+                                        error = %e,
+                                        "failed to cleanup eml index"
+                                    );
+                                }
+                            });
+                        }
+                    }
                 }
             }
         }
