@@ -938,7 +938,10 @@
         "folderLimitMustBeAtLeast100": "O Limite de Pasta deve ser pelo menos 100",
         "incrementalSyncMustBeNumber": "O Intervalo de Sincronização Incremental deve ser um número",
         "incrementalSyncMustBeAtLeast10": "O Intervalo de Sincronização Incremental deve ser de pelo menos 10 minutos",
-        "pleaseEnterUsernameOrEmail": "Por favor, digite seu nome de usuário ou e-mail"
+        "pleaseEnterUsernameOrEmail": "Por favor, digite seu nome de usuário ou e-mail",
+        "singleRequestBatchSizeMustBeNumber": "O tamanho do lote deve ser um número",
+        "singleRequestBatchSizeTooSmall": "O tamanho do lote deve ser pelo menos 10",
+        "singleRequestBatchSizeTooLarge": "O tamanho do lote deve ser no máximo 200"
     },
     "table": {
         "noResults": "Nenhum resultado encontrado",

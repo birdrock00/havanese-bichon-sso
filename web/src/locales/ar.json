@@ -938,7 +938,10 @@
         "folderLimitMustBeAtLeast100": "يجب أن يكون حد المجلد 100 على الأقل",
         "incrementalSyncMustBeNumber": "يجب أن يكون فاصل المزامنة التزايدية رقمًا",
         "incrementalSyncMustBeAtLeast10": "يجب أن يكون فاصل المزامنة التزايدية 10 دقائق على الأقل",
-        "pleaseEnterUsernameOrEmail": "الرجاء إدخال اسم المستخدم أو البريد الإلكتروني الخاص بك"
+        "pleaseEnterUsernameOrEmail": "الرجاء إدخال اسم المستخدم أو البريد الإلكتروني الخاص بك",
+        "singleRequestBatchSizeMustBeNumber": "يجب أن يكون حجم الدُفعة رقماً",
+        "singleRequestBatchSizeTooSmall": "يجب أن يكون حجم الدُفعة على الأقل 10",
+        "singleRequestBatchSizeTooLarge": "يجب أن يكون حجم الدُفعة على الأكثر 200"
     },
     "table": {
         "noResults": "لم يتم العثور على نتائج",

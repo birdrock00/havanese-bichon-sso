@@ -938,7 +938,10 @@
         "folderLimitMustBeAtLeast100": "Лимит папки должен быть не менее 100",
         "incrementalSyncMustBeNumber": "Интервал инкрементальной синхронизации должен быть числом",
         "incrementalSyncMustBeAtLeast10": "Интервал инкрементальной синхронизации должен быть не менее 10 минут",
-        "pleaseEnterUsernameOrEmail": "Пожалуйста, введите ваше имя пользователя или адрес электронной почты"
+        "pleaseEnterUsernameOrEmail": "Пожалуйста, введите ваше имя пользователя или адрес электронной почты",
+        "singleRequestBatchSizeMustBeNumber": "Размер пакета должен быть числом",
+        "singleRequestBatchSizeTooSmall": "Размер пакета должен быть не менее 10",
+        "singleRequestBatchSizeTooLarge": "Размер пакета должен быть не более 200"
     },
     "table": {
         "noResults": "Результатов не найдено",

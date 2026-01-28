@@ -938,7 +938,10 @@
         "folderLimitMustBeAtLeast100": "フォルダーの制限は100以上である必要があります",
         "incrementalSyncMustBeNumber": "増分同期間隔は数値である必要があります",
         "incrementalSyncMustBeAtLeast10": "増分同期間隔は10分以上である必要があります",
-        "pleaseEnterUsernameOrEmail": "ユーザー名またはメールアドレスを入力してください"
+        "pleaseEnterUsernameOrEmail": "ユーザー名またはメールアドレスを入力してください",
+        "singleRequestBatchSizeMustBeNumber": "バッチサイズは数値でなければなりません",
+        "singleRequestBatchSizeTooSmall": "バッチサイズは最低でも10でなければなりません",
+        "singleRequestBatchSizeTooLarge": "バッチサイズは最大でも200でなければなりません"
     },
     "table": {
         "noResults": "結果が見つかりませんでした",

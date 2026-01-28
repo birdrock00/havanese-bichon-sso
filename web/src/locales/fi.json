@@ -938,7 +938,10 @@
         "folderLimitMustBeAtLeast100": "Kansiorajan on oltava vähintään 100",
         "incrementalSyncMustBeNumber": "Lisäävän synkronoinnin välin on oltava numero",
         "incrementalSyncMustBeAtLeast10": "Lisäävän synkronoinnin välin on oltava vähintään 10 minuuttia",
-        "pleaseEnterUsernameOrEmail": "Ole hyvä ja anna käyttäjänimesi tai sähköpostiosoitteesi"
+        "pleaseEnterUsernameOrEmail": "Ole hyvä ja anna käyttäjänimesi tai sähköpostiosoitteesi",
+        "singleRequestBatchSizeMustBeNumber": "Eräkoko tulee olla numero",
+        "singleRequestBatchSizeTooSmall": "Eräkoko tulee olla vähintään 10",
+        "singleRequestBatchSizeTooLarge": "Eräkoko tulee olla enintään 200"
     },
     "table": {
         "noResults": "Ei tuloksia löydy",

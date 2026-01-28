@@ -938,7 +938,10 @@
         "folderLimitMustBeAtLeast100": "La limite de dossiers doit être d'au moins 100",
         "incrementalSyncMustBeNumber": "L'intervalle de synchronisation incrémentielle doit être un nombre",
         "incrementalSyncMustBeAtLeast10": "L'intervalle de synchronisation incrémentielle doit être d'au moins 10 minutes",
-        "pleaseEnterUsernameOrEmail": "Veuillez entrer votre nom d'utilisateur ou votre courriel"
+        "pleaseEnterUsernameOrEmail": "Veuillez entrer votre nom d'utilisateur ou votre courriel",
+        "singleRequestBatchSizeMustBeNumber": "La taille du lot doit être un nombre",
+        "singleRequestBatchSizeTooSmall": "La taille du lot doit être au moins 10",
+        "singleRequestBatchSizeTooLarge": "La taille du lot doit être au plus 200"
     },
     "table": {
         "noResults": "Aucun résultat trouvé",

@@ -938,7 +938,10 @@
         "folderLimitMustBeAtLeast100": "Mappgräns måste vara minst 100",
         "incrementalSyncMustBeNumber": "Intervall för inkrementell synkronisering måste vara ett tal",
         "incrementalSyncMustBeAtLeast10": "Intervall för inkrementell synkronisering måste vara minst 10 minuter",
-        "pleaseEnterUsernameOrEmail": "Vänligen ange ditt användarnamn eller din e-postadress"
+        "pleaseEnterUsernameOrEmail": "Vänligen ange ditt användarnamn eller din e-postadress",
+        "singleRequestBatchSizeMustBeNumber": "Batchstorlek måste vara ett tal",
+        "singleRequestBatchSizeTooSmall": "Batchstorlek måste vara minst 10",
+        "singleRequestBatchSizeTooLarge": "Batchstorlek måste vara högst 200"
     },
     "table": {
         "noResults": "Inga resultat hittades",

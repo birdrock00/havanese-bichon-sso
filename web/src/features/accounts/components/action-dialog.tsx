@@ -132,10 +132,10 @@ const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
       .optional(),
     sync_interval_min: z.number({ invalid_type_error: t('validation.incrementalSyncMustBeNumber') }).int().min(10, { message: t('validation.incrementalSyncMustBeAtLeast10') }),
     sync_batch_size: z
-      .number({ invalid_type_error: t('validation.incrementalSyncMustBeNumber') })
+      .number({ invalid_type_error: t('validation.singleRequestBatchSizeMustBeNumber') })
       .int()
-      .min(30, { message: t('validation.incrementalSyncMustBeAtLeast10') })
-      .max(200, { message: t('validation.incrementalSyncMustBeAtLeast10') }),
+      .min(10, { message: t('validation.singleRequestBatchSizeTooSmall') })
+      .max(200, { message: t('validation.singleRequestBatchSizeTooLarge') }),
   });
 
 type Step = {
@@ -180,7 +180,7 @@ const defaultValues: Account = {
   date_before: undefined,
   folder_limit: undefined,
   sync_interval_min: 10,
-  sync_batch_size: 50,
+  sync_batch_size: 30,
 };
 
 const emptyImap: ImapConfig = {

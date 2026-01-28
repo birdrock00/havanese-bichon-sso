@@ -938,7 +938,10 @@
         "folderLimitMustBeAtLeast100": "Mappegrense må være minst 100",
         "incrementalSyncMustBeNumber": "Intervall for inkrementell synkronisering må være et tall",
         "incrementalSyncMustBeAtLeast10": "Intervall for inkrementell synkronisering må være minst 10 minutter",
-        "pleaseEnterUsernameOrEmail": "Skriv inn brukernavn eller e-postadresse"
+        "pleaseEnterUsernameOrEmail": "Skriv inn brukernavn eller e-postadresse",
+        "singleRequestBatchSizeMustBeNumber": "Batchstørrelse må være et tall",
+        "singleRequestBatchSizeTooSmall": "Batchstørrelse må være minst 10",
+        "singleRequestBatchSizeTooLarge": "Batchstørrelse må være maksimalt 200"
     },
     "table": {
         "noResults": "Ingen resultater funnet",

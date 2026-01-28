@@ -938,7 +938,10 @@
         "folderLimitMustBeAtLeast100": "資料夾限制必須至少為 100",
         "incrementalSyncMustBeNumber": "增量同步間隔必須是數字",
         "incrementalSyncMustBeAtLeast10": "增量同步間隔必須至少為 10 分鐘",
-        "pleaseEnterUsernameOrEmail": "請輸入您的使用者名稱或電子郵件"
+        "pleaseEnterUsernameOrEmail": "請輸入您的使用者名稱或電子郵件",
+        "singleRequestBatchSizeMustBeNumber": "批次大小必須是數字",
+        "singleRequestBatchSizeTooSmall": "批次大小必須至少為10",
+        "singleRequestBatchSizeTooLarge": "批次大小必須最多為200"
     },
     "table": {
         "noResults": "查無結果",

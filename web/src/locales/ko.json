@@ -938,7 +938,10 @@
         "folderLimitMustBeAtLeast100": "폴더 제한은 최소 100 이상이어야 합니다",
         "incrementalSyncMustBeNumber": "증분 동기화 간격은 숫자여야 합니다",
         "incrementalSyncMustBeAtLeast10": "증분 동기화 간격은 최소 10분 이상이어야 합니다",
-        "pleaseEnterUsernameOrEmail": "사용자 이름 또는 이메일을 입력하세요"
+        "pleaseEnterUsernameOrEmail": "사용자 이름 또는 이메일을 입력하세요",
+        "singleRequestBatchSizeMustBeNumber": "배치 크기는 숫자여야 합니다",
+        "singleRequestBatchSizeTooSmall": "배치 크기는 최소 10이어야 합니다",
+        "singleRequestBatchSizeTooLarge": "배치 크기는 최대 200이어야 합니다"
     },
     "table": {
         "noResults": "검색 결과 없음",

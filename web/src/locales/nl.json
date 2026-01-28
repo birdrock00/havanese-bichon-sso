@@ -938,7 +938,10 @@
         "folderLimitMustBeAtLeast100": "Mappenlimiet moet ten minste 100 zijn",
         "incrementalSyncMustBeNumber": "Incrementaal sync interval moet een nummer zijn",
         "incrementalSyncMustBeAtLeast10": "Incrementaal sync interval moet ten minste 10 minuten zijn",
-        "pleaseEnterUsernameOrEmail": "Voer alstublieft uw gebruikersnaam of e-mailadres in"
+        "pleaseEnterUsernameOrEmail": "Voer alstublieft uw gebruikersnaam of e-mailadres in",
+        "singleRequestBatchSizeMustBeNumber": "Batch‑grootte moet een nummer zijn",
+        "singleRequestBatchSizeTooSmall": "Batch‑grootte moet ten minste 10 zijn",
+        "singleRequestBatchSizeTooLarge": "Batch‑grootte moet hoogstens 200 zijn"
     },
     "table": {
         "noResults": "Geen resultaten gevonden",

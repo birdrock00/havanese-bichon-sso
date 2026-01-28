@@ -938,7 +938,10 @@
         "folderLimitMustBeAtLeast100": "Il limite di cartelle deve essere almeno 100",
         "incrementalSyncMustBeNumber": "L'intervallo di sincronizzazione incrementale deve essere un numero",
         "incrementalSyncMustBeAtLeast10": "L'intervallo di sincronizzazione incrementale deve essere di almeno 10 minuti",
-        "pleaseEnterUsernameOrEmail": "Inserisci il tuo nome utente o email"
+        "pleaseEnterUsernameOrEmail": "Inserisci il tuo nome utente o email",
+        "singleRequestBatchSizeMustBeNumber": "La dimensione del batch deve essere un numero",
+        "singleRequestBatchSizeTooSmall": "La dimensione del batch deve essere almeno 10",
+        "singleRequestBatchSizeTooLarge": "La dimensione del batch deve essere al massimo 200"
     },
     "table": {
         "noResults": "Nessun risultato trovato",

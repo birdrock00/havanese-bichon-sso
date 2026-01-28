@@ -938,7 +938,10 @@
     "folderLimitMustBeAtLeast100": "Folder limit must be at least 100",
     "incrementalSyncMustBeNumber": "Incremental sync interval must be a number",
     "incrementalSyncMustBeAtLeast10": "Incremental sync interval must be at least 10 minutes",
-    "pleaseEnterUsernameOrEmail": "Please enter your username or email"
+    "pleaseEnterUsernameOrEmail": "Please enter your username or email",
+    "singleRequestBatchSizeMustBeNumber": "Batch size must be a number",
+    "singleRequestBatchSizeTooSmall": "Batch size must be at least 10",
+    "singleRequestBatchSizeTooLarge": "Batch size must be at most 200"
   },
   "table": {
     "noResults": "No results found",

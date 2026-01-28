@@ -938,7 +938,10 @@
     "folderLimitMustBeAtLeast100": "Limit folderów musi być liczbą nie mniejszą niż 100",
     "incrementalSyncMustBeNumber": "Przyrostowy interwał synchronizacji musi być liczbą",
     "incrementalSyncMustBeAtLeast10": "Przyrostowy interwał synchronizacji musi wynosić co najmniej 10 minut",
-    "pleaseEnterUsernameOrEmail": "Proszę podać nazwę użytkownika lub adres e-mail"
+    "pleaseEnterUsernameOrEmail": "Proszę podać nazwę użytkownika lub adres e-mail",
+    "singleRequestBatchSizeMustBeNumber": "Rozmiar partii musi być liczbą",
+    "singleRequestBatchSizeTooSmall": "Rozmiar partii musi wynosić co najmniej 10",
+    "singleRequestBatchSizeTooLarge": "Rozmiar partii może wynosić maksymalnie 200"
   },
   "table": {
     "noResults": "Brak wyników",

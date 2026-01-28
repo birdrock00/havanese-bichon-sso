@@ -938,7 +938,10 @@
     "folderLimitMustBeAtLeast100": "文件夹限制必须至少为 100",
     "incrementalSyncMustBeNumber": "增量同步间隔必须是数字",
     "incrementalSyncMustBeAtLeast10": "增量同步间隔必须至少为 10 分钟",
-    "pleaseEnterUsernameOrEmail": "请输入您的用户名或邮箱"
+    "pleaseEnterUsernameOrEmail": "请输入您的用户名或邮箱",
+    "singleRequestBatchSizeMustBeNumber": "批大小必须是数字",
+    "singleRequestBatchSizeTooSmall": "批大小必须至少为10",
+    "singleRequestBatchSizeTooLarge": "批大小必须最多为200"
   },
   "table": {
     "noResults": "未找到结果",
