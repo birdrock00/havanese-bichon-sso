@@ -25,9 +25,6 @@ RUN chmod +x /opt/bichon/bichon
 RUN chmod +x /usr/local/bin/bichonctl
 RUN chmod +x /usr/local/bin/bichon-admin
 
-# Copy and setup entrypoint script for PUID/PGID support
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Install ca-certificates to ensure HTTPS certificate verification works correctly
 RUN apt update && apt install -y ca-certificates curl && rm -rf /var/lib/apt/lists/*
@@ -43,6 +40,4 @@ WORKDIR /data
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD curl -fs http://localhost:15630/api/status || exit 1
 
-# Entrypoint with PUID/PGID support
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["/opt/bichon/bichon"]

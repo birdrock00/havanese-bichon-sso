@@ -122,35 +122,63 @@ docker pull rustmailer/bichon:latest
 # Create data directory
 mkdir -p ./bichon-data
 
-# Optional: Set PUID and PGID to match your host user for proper file permissions
-# Find your user ID with: id $USER
-# This prevents permission issues when using NFS mounts or shared volumes
-
 # Run container
 docker run -d \
   --name bichon \
   -p 15630:15630 \
   -v $(pwd)/bichon-data:/data \
-  -e PUID=1000 \
-  -e PGID=1000 \
+  --user 1000:1000 \
   -e BICHON_LOG_LEVEL=info \
   -e BICHON_ROOT_DIR=/data \
   rustmailer/bichon:latest
+```
 
-# Optional: For custom storage configuration with separate volumes
+### Optional: Custom storage layout
+
+```bash
 docker run -d \
   --name bichon \
   -p 15630:15630 \
   -v $(pwd)/bichon-data:/data \
   -v $(pwd)/envelope:/envelope \
   -v $(pwd)/eml:/eml \
-  -e PUID=1000 \
-  -e PGID=1000 \
+  --user 1000:1000 \
   -e BICHON_ROOT_DIR=/data \
   -e BICHON_INDEX_DIR=/envelope \
   -e BICHON_DATA_DIR=/eml \
   rustmailer/bichon:latest
 ```
+
+### Recommended docker-compose example
+
+```bash
+services:
+  bichon:
+    image: rustmailer/bichon:latest
+    container_name: bichon
+    ports:
+      - "15630:15630"
+    volumes:
+      - ./bichon-data:/data
+    user: "1000:1000"
+    environment:
+      BICHON_ROOT_DIR: /data
+      BICHON_LOG_LEVEL: info
+
+```
+
+### User and permissions
+
+`PUID` and `PGID` are no longer used to create users or groups inside the container.
+
+Please use Docker’s native `--user` option (or `user:` in docker-compose) to specify the UID and GID:
+
+```bash
+docker run --user 1000:1000 ...
+```
+
+This ensures container file permissions match the ownership of host-mounted directories.
+
 
 ## CORS Configuration (Important for Browser Access)
 
