@@ -121,7 +121,6 @@ pub async fn rebuild_cache_by_date(
     MailBox::batch_insert(remote_mailboxes).await?;
 
     let mut handles = Vec::new();
-
     let local_semaphore = Arc::new(Semaphore::new(DEFAULT_MAX_CONCURRENT_PER_ACCOUNT));
 
     for mailbox in remote_mailboxes {
@@ -164,7 +163,6 @@ pub async fn rebuild_cache_by_date(
             tokio::spawn(async move {
                 let _global_permit = global_permit;
                 let _local_permit = local_permit;
-
                 fetch_and_save_by_date(&account, date.as_str(), &mailbox, direction).await
             });
         handles.push(handle);

@@ -32,22 +32,10 @@ use crate::{bichon_version, decrypt, raise_error};
 use async_imap::Session;
 use tracing::error;
 
-#[derive(Debug)]
-pub struct ImapConnectionManager {
-    pub account_id: u64,
-}
+pub struct ImapConnectionManager;
 
 impl ImapConnectionManager {
-    pub fn new(account_id: u64) -> Self {
-        Self { account_id }
-    }
-
-    pub async fn fetch_account(&self) -> BichonResult<AccountModel> {
-        // Fetch the account entity in non-test environment
-        AccountModel::get(self.account_id).await
-    }
-
-    async fn create_client(&self, account: &AccountModel) -> BichonResult<Client> {
+    async fn create_client(account: &AccountModel) -> BichonResult<Client> {
         assert_eq!(account.account_type, AccountType::IMAP);
         let imap = account.imap.as_ref().unwrap();
         Client::connection(
@@ -61,7 +49,6 @@ impl ImapConnectionManager {
     }
 
     async fn authenticate(
-        &self,
         client: Client,
         account: &AccountModel,
     ) -> BichonResult<Session<Box<dyn SessionStream>>> {
@@ -87,7 +74,7 @@ impl ImapConnectionManager {
                 })
             }
             AuthType::OAuth2 => {
-                let record = OAuth2AccessToken::get(self.account_id).await?;
+                let record = OAuth2AccessToken::get(account.id).await?;
                 let access_token = record.and_then(|r| r.access_token).ok_or_else(|| {
                     raise_error!(
                         "Imap auth type is OAuth2, but OAuth2 authorization is not yet complete."
@@ -106,9 +93,9 @@ impl ImapConnectionManager {
         }
     }
 
-    pub async fn build(&self) -> BichonResult<Session<Box<dyn SessionStream>>> {
-        let account = self.fetch_account().await?;
-        let client = match self.create_client(&account).await {
+    pub async fn build(account_id: u64) -> BichonResult<Session<Box<dyn SessionStream>>> {
+        let account = AccountModel::get(account_id).await?;
+        let client = match Self::create_client(&account).await {
             Ok(client) => client,
             Err(error) => {
                 error!(
@@ -117,7 +104,7 @@ impl ImapConnectionManager {
                 );
                 STATUS_DISPATCHER
                     .append_error(
-                        self.account_id,
+                        account_id,
                         format!("imap client connect error: {:#?}", error),
                     )
                     .await;
@@ -125,14 +112,13 @@ impl ImapConnectionManager {
             }
         };
 
-        let mut session = match self.authenticate(client, &account).await {
+        let mut session = match Self::authenticate(client, &account).await {
             Ok(session) => session,
             Err(error) => {
                 error!("Failed to authenticate IMAP session: {:#?}", error);
-
                 STATUS_DISPATCHER
                     .append_error(
-                        self.account_id,
+                        account_id,
                         format!("imap client authenticate error: {:#?}", error),
                     )
                     .await;
@@ -143,12 +129,12 @@ impl ImapConnectionManager {
         match fetch_capabilities(&mut session).await {
             Ok(capabilities) => {
                 let to_save: Vec<String> = capabilities.iter().map(capability_to_string).collect();
-                AccountModel::update_capabilities(self.account_id, to_save).await?;
+                AccountModel::update_capabilities(account_id, to_save).await?;
                 if let Err(error) = check_capabilities(&capabilities) {
                     error!("Failed to check IMAP capabilities: {:#?}", error);
                     STATUS_DISPATCHER
                         .append_error(
-                            self.account_id,
+                            account_id,
                             format!("imap client check capabilities error: {:#?}", error),
                         )
                         .await;
@@ -172,7 +158,7 @@ impl ImapConnectionManager {
                 error!("Failed to fetch IMAP capabilities: {:#?}", error);
                 STATUS_DISPATCHER
                     .append_error(
-                        self.account_id,
+                        account_id,
                         format!("imap client fetch capabilities error: {:#?}", error),
                     )
                     .await;

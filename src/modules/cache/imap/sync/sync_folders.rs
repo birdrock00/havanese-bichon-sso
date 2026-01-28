@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use std::collections::BTreeSet;
 
 use crate::{
@@ -24,19 +23,21 @@ use crate::{
     modules::{
         account::migration::{AccountModel, AccountType},
         cache::imap::mailbox::{AttributeEnum, MailBox},
-        context::executors::MAIL_CONTEXT,
         error::{code::ErrorCode, BichonResult},
+        imap::{executor::ImapExecutor, session::SessionStream},
         mailbox::list::convert_names_to_mailboxes,
     },
     raise_error,
 };
-use async_imap::types::Name;
+use async_imap::{types::Name, Session};
 use tracing::{debug, info, warn};
 
-pub async fn get_sync_folders(account: &AccountModel) -> BichonResult<Vec<MailBox>> {
+pub async fn get_sync_folders(
+    account: &AccountModel,
+    session: &mut Session<Box<dyn SessionStream>>,
+) -> BichonResult<Vec<MailBox>> {
     assert_eq!(account.account_type, AccountType::IMAP);
-    let executor = MAIL_CONTEXT.imap(account.id).await?;
-    let names = executor.list_all_mailboxes().await?;
+    let names = ImapExecutor::list_all_mailboxes(session).await?;
     if names.is_empty() {
         warn!(
             "Account {}: No mailboxes returned from IMAP server.",
@@ -121,7 +122,7 @@ pub async fn get_sync_folders(account: &AccountModel) -> BichonResult<Vec<MailBo
             ), ErrorCode::ImapUnexpectedResult));
         }
     }
-    convert_names_to_mailboxes(account.id, matched_mailboxes).await
+    convert_names_to_mailboxes(account.id, session, matched_mailboxes).await
 }
 
 pub async fn detect_mailbox_changes(

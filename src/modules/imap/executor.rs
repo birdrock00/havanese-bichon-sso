@@ -22,12 +22,13 @@ use crate::modules::cache::imap::mailbox::MailBox;
 use crate::modules::cache::imap::sync::flow::{generate_uid_sequence_hashset, DEFAULT_BATCH_SIZE};
 use crate::modules::envelope::extractor::extract_envelope;
 use crate::modules::error::code::ErrorCode;
+use crate::modules::imap::session::SessionStream;
 use crate::modules::indexer::manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER};
 use crate::modules::indexer::schema::SchemaTools;
 use crate::modules::{error::BichonResult, imap::manager::ImapConnectionManager};
 use crate::raise_error;
-use async_imap::types::{Mailbox, Name};
-use bb8::{Pool, RunError};
+use async_imap::types::Name;
+use async_imap::Session;
 use futures::TryStreamExt;
 use std::collections::HashSet;
 use tantivy::doc;
@@ -35,18 +36,12 @@ use tracing::info;
 
 const BODY_FETCH_COMMAND: &str = "(UID INTERNALDATE RFC822.SIZE BODY.PEEK[])";
 
-pub struct ImapExecutor {
-    account_id: u64,
-    pool: Pool<ImapConnectionManager>,
-}
+pub struct ImapExecutor;
 
 impl ImapExecutor {
-    pub fn new(account_id: u64, pool: Pool<ImapConnectionManager>) -> Self {
-        Self { account_id, pool }
-    }
-
-    pub async fn list_all_mailboxes(&self) -> BichonResult<Vec<Name>> {
-        let mut session = self.get_connection().await?;
+    pub async fn list_all_mailboxes(
+        session: &mut Session<Box<dyn SessionStream>>,
+    ) -> BichonResult<Vec<Name>> {
         let list = session
             .list(Some(""), Some("*"))
             .await
@@ -58,16 +53,11 @@ impl ImapExecutor {
         Ok(result)
     }
 
-    pub async fn examine_mailbox(&self, mailbox_name: &str) -> BichonResult<Mailbox> {
-        let mut session = self.get_connection().await?;
-        session
-            .examine(mailbox_name)
-            .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))
-    }
-
-    pub async fn uid_search(&self, mailbox_name: &str, query: &str) -> BichonResult<HashSet<u32>> {
-        let mut session = self.get_connection().await?;
+    pub async fn uid_search(
+        session: &mut Session<Box<dyn SessionStream>>,
+        mailbox_name: &str,
+        query: &str,
+    ) -> BichonResult<HashSet<u32>> {
         session
             .examine(mailbox_name)
             .await
@@ -80,13 +70,12 @@ impl ImapExecutor {
     }
 
     pub async fn append(
-        &self,
+        session: &mut Session<Box<dyn SessionStream>>,
         mailbox_name: impl AsRef<str>,
         flags: Option<&str>,
         internaldate: Option<&str>,
         content: impl AsRef<[u8]>,
     ) -> BichonResult<()> {
-        let mut session = self.get_connection().await?;
         session
             .append(mailbox_name, flags, internaldate, content)
             .await
@@ -94,7 +83,7 @@ impl ImapExecutor {
     }
 
     pub async fn fetch_new_mail(
-        &self,
+        session: &mut Session<Box<dyn SessionStream>>,
         account: &AccountModel,
         mailbox: &MailBox,
         start_uid: u64,
@@ -107,7 +96,7 @@ impl ImapExecutor {
             None => format!("UID {start_uid}:*"),
         };
 
-        let uid_list = self.uid_search(&mailbox.encoded_name(), &query).await?;
+        let uid_list = Self::uid_search(session, &mailbox.encoded_name(), &query).await?;
 
         let len = uid_list.len();
         if len == 0 {
@@ -145,14 +134,20 @@ impl ImapExecutor {
                 )
                 .await?;
             }
-            self.uid_batch_retrieve_emails(account.id, mailbox.id, &batch, &mailbox.encoded_name())
-                .await?;
+            Self::uid_batch_retrieve_emails(
+                session,
+                account.id,
+                mailbox.id,
+                &batch,
+                &mailbox.encoded_name(),
+            )
+            .await?;
         }
         Ok(())
     }
 
     pub async fn batch_retrieve_emails(
-        &self,
+        session: &mut Session<Box<dyn SessionStream>>,
         account_id: u64,
         mailbox_id: u64,
         page: u64,
@@ -163,7 +158,6 @@ impl ImapExecutor {
         assert!(page > 0, "Page number must be greater than 0");
         assert!(page_size > 0, "Page size must be greater than 0");
 
-        let mut session = self.get_connection().await?;
         let total = session
             .examine(encoded_mailbox_name)
             .await
@@ -226,13 +220,12 @@ impl ImapExecutor {
     }
 
     pub async fn uid_batch_retrieve_emails(
-        &self,
+        session: &mut Session<Box<dyn SessionStream>>,
         account_id: u64,
         mailbox_id: u64,
         uid_set: &str,
         encoded_mailbox_name: &str,
     ) -> BichonResult<()> {
-        let mut session = self.get_connection().await?;
         session
             .examine(encoded_mailbox_name)
             .await
@@ -260,40 +253,46 @@ impl ImapExecutor {
         Ok(())
     }
 
-    async fn get_connection(
-        &self,
-    ) -> BichonResult<bb8::PooledConnection<'_, ImapConnectionManager>> {
-        match self.pool.get().await {
-            Ok(connection) => Ok(connection),
-            Err(e) => match e {
-                RunError::User(e) => Err(e),
-                RunError::TimedOut => {
-                    let state = self.pool.state();
-                    tracing::warn!(
-                        "{}: connections={}, idle={}, \
-                        get_started={}, get_direct={}, get_waited={}, get_timed_out={}, \
-                        wait_time_ms={}, created={}, closed_broken={}, closed_invalid={}, \
-                        closed_lifetime={}, closed_idle={}",
-                        self.account_id,
-                        state.connections,
-                        state.idle_connections,
-                        state.statistics.get_started,
-                        state.statistics.get_direct,
-                        state.statistics.get_waited,
-                        state.statistics.get_timed_out,
-                        state.statistics.get_wait_time.as_millis(),
-                        state.statistics.connections_created,
-                        state.statistics.connections_closed_broken,
-                        state.statistics.connections_closed_invalid,
-                        state.statistics.connections_closed_max_lifetime,
-                        state.statistics.connections_closed_idle_timeout,
-                    );
-                    return Err(raise_error!(
-                        "Timed out while attempting to acquire a connection from the pool".into(),
-                        ErrorCode::ConnectionPoolTimeout
-                    ));
-                }
-            },
-        }
+    // async fn get_connection(
+    //     &self,
+    // ) -> BichonResult<bb8::PooledConnection<'_, ImapConnectionManager>> {
+    //     match self.pool.get().await {
+    //         Ok(connection) => Ok(connection),
+    //         Err(e) => match e {
+    //             RunError::User(e) => Err(e),
+    //             RunError::TimedOut => {
+    //                 let state = self.pool.state();
+    //                 tracing::warn!(
+    //                     "{}: connections={}, idle={}, \
+    //                     get_started={}, get_direct={}, get_waited={}, get_timed_out={}, \
+    //                     wait_time_ms={}, created={}, closed_broken={}, closed_invalid={}, \
+    //                     closed_lifetime={}, closed_idle={}",
+    //                     self.account_id,
+    //                     state.connections,
+    //                     state.idle_connections,
+    //                     state.statistics.get_started,
+    //                     state.statistics.get_direct,
+    //                     state.statistics.get_waited,
+    //                     state.statistics.get_timed_out,
+    //                     state.statistics.get_wait_time.as_millis(),
+    //                     state.statistics.connections_created,
+    //                     state.statistics.connections_closed_broken,
+    //                     state.statistics.connections_closed_invalid,
+    //                     state.statistics.connections_closed_max_lifetime,
+    //                     state.statistics.connections_closed_idle_timeout,
+    //                 );
+    //                 return Err(raise_error!(
+    //                     "Timed out while attempting to acquire a connection from the pool".into(),
+    //                     ErrorCode::ConnectionPoolTimeout
+    //                 ));
+    //             }
+    //         },
+    //     }
+    // }
+
+    pub async fn create_connection(
+        account_id: u64,
+    ) -> BichonResult<Session<Box<dyn SessionStream>>> {
+        ImapConnectionManager::build(account_id).await
     }
 }

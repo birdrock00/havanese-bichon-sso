@@ -18,71 +18,35 @@
 
 use crate::modules::account::migration::AccountType;
 use crate::modules::context::Initialize;
-use crate::modules::error::code::ErrorCode;
-use crate::raise_error;
 use crate::{
     modules::{
-        account::migration::AccountModel,
-        context::controller::SYNC_CONTROLLER,
-        error::BichonResult,
-        imap::{executor::ImapExecutor, pool::build_imap_pool},
+        account::migration::AccountModel, context::controller::SYNC_CONTROLLER, error::BichonResult,
     },
     utc_now,
 };
-use dashmap::DashMap;
-use std::sync::{Arc, LazyLock};
+use std::sync::LazyLock;
 use tracing::info;
 
-pub static MAIL_CONTEXT: LazyLock<EmailClientExecutors> = LazyLock::new(EmailClientExecutors::new);
+pub static BICHON_CONTEXT: LazyLock<BichonContext> = LazyLock::new(BichonContext::new);
 
-pub struct EmailClientExecutors {
+pub struct BichonContext {
     start_at: i64,
-    imap: DashMap<u64, Arc<ImapExecutor>>,
 }
 
-impl Initialize for EmailClientExecutors {
+impl Initialize for BichonContext {
     async fn initialize() -> BichonResult<()> {
-        MAIL_CONTEXT.start_account_syncers().await
+        BICHON_CONTEXT.start_account_syncers().await
     }
 }
 
-impl EmailClientExecutors {
+impl BichonContext {
     pub fn new() -> Self {
         Self {
             start_at: utc_now!(),
-            imap: DashMap::new(),
         }
     }
     pub fn uptime_ms(&self) -> i64 {
         utc_now!() - self.start_at
-    }
-
-    pub async fn imap(&self, account_id: u64) -> BichonResult<Arc<ImapExecutor>> {
-        if let Some(executor) = self.imap.get(&account_id) {
-            return Ok(executor.value().clone());
-        }
-
-        let pool = build_imap_pool(account_id).await?;
-        let new_executor = Arc::new(ImapExecutor::new(account_id, pool));
-
-        match self.imap.try_entry(account_id) {
-            Some(dashmap::mapref::entry::Entry::Occupied(entry)) => Ok(entry.get().clone()),
-            Some(dashmap::mapref::entry::Entry::Vacant(entry)) => {
-                entry.insert(new_executor.clone());
-                Ok(new_executor)
-            }
-            None => Err(raise_error!(
-                "DashMap locked".into(),
-                ErrorCode::InternalError
-            )),
-        }
-    }
-
-    pub async fn clean_account(&self, account_id: u64) -> BichonResult<()> {
-        if self.imap.remove(&account_id).is_some() {
-            info!(account_id, "Closed IMAP pool for account");
-        }
-        Ok(())
     }
 
     pub async fn start_account_syncers(&self) -> BichonResult<()> {

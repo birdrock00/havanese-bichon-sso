@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-use crate::modules::context::executors::MAIL_CONTEXT;
+use crate::modules::context::executors::BICHON_CONTEXT;
 use chrono::Local;
 use poem_openapi::Object;
 use serde::Deserialize;
@@ -40,9 +40,9 @@ pub struct BichonStatus {
 impl BichonStatus {
     pub fn get() -> Self {
         Self {
-            uptime_ms: MAIL_CONTEXT.uptime_ms(),
+            uptime_ms: BICHON_CONTEXT.uptime_ms(),
             timeago: Formatter::new()
-                .convert(Duration::from_millis(MAIL_CONTEXT.uptime_ms() as u64)),
+                .convert(Duration::from_millis(BICHON_CONTEXT.uptime_ms() as u64)),
             timezone: Local::now().offset().to_string(),
             version: env!("CARGO_PKG_VERSION").into(),
         }

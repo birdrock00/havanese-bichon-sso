@@ -22,7 +22,6 @@ pub mod client;
 pub mod executor;
 pub mod manager;
 pub mod oauth2;
-pub mod pool;
 pub mod session;
 pub mod stats;
 #[cfg(test)]

@@ -20,7 +20,7 @@ use bichon::{
     bichon_version,
     modules::{
         common::rustls::RustMailerTls,
-        context::{executors::EmailClientExecutors, Initialize},
+        context::{executors::BichonContext, Initialize},
         error::BichonResult,
         logger,
         rest::start_http_server,
@@ -71,7 +71,7 @@ async fn initialize() -> BichonResult<()> {
     DataDirManager::initialize().await?;
     UserManager::initialize().await?;
     RustMailerTls::initialize().await?;
-    EmailClientExecutors::initialize().await?;
+    BichonContext::initialize().await?;
     PeriodicTasks::start_background_tasks();
     Ok(())
 }

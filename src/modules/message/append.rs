@@ -2,8 +2,8 @@ use crate::{
     encode_mailbox_name,
     modules::{
         account::migration::{AccountModel, AccountType},
-        context::executors::MAIL_CONTEXT,
         error::{code::ErrorCode, BichonResult},
+        imap::executor::ImapExecutor,
         indexer::manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER},
     },
     raise_error,
@@ -38,10 +38,9 @@ pub async fn restore_emails(account_id: u64, message_ids: Vec<u64>) -> BichonRes
             ErrorCode::Incompatible
         ));
     }
-    let executor = MAIL_CONTEXT.imap(account.id).await?;
 
     let mut failed = Vec::new();
-
+    let mut session = ImapExecutor::create_connection(account_id).await?;
     for message_id in message_ids {
         let result: BichonResult<()> = async {
             let envelope = ENVELOPE_INDEX_MANAGER
@@ -71,9 +70,14 @@ pub async fn restore_emails(account_id: u64, message_ids: Vec<u64>) -> BichonRes
                 })?;
 
             if let Some(mailbox_name) = envelope.mailbox_name {
-                executor
-                    .append(encode_mailbox_name!(&mailbox_name), None, None, &eml)
-                    .await?;
+                ImapExecutor::append(
+                    &mut session,
+                    encode_mailbox_name!(&mailbox_name),
+                    None,
+                    None,
+                    &eml,
+                )
+                .await?;
             }
 
             Ok(())
@@ -99,6 +103,8 @@ pub async fn restore_emails(account_id: u64, message_ids: Vec<u64>) -> BichonRes
             "Restore emails finished with partial failures"
         );
     }
+
+    session.logout().await.ok();
 
     Ok(())
 }

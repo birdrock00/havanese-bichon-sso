@@ -30,8 +30,8 @@ use crate::{
             },
             SEMAPHORE,
         },
-        context::executors::MAIL_CONTEXT,
         error::{code::ErrorCode, BichonError, BichonResult},
+        imap::executor::ImapExecutor,
         indexer::manager::ENVELOPE_INDEX_MANAGER,
     },
     raise_error,
@@ -55,16 +55,15 @@ pub async fn fetch_and_save_by_date(
     direction: FetchDirection,
 ) -> BichonResult<usize> {
     let account_id = account.id;
-    let executor = MAIL_CONTEXT.imap(account_id).await?;
+    let mut session = ImapExecutor::create_connection(account_id).await?;
 
     let search_criteria = match direction {
         FetchDirection::Since => format!("SINCE {date}"),
         FetchDirection::Before => format!("BEFORE {date}"),
     };
 
-    let uid_list = executor
-        .uid_search(&mailbox.encoded_name(), &search_criteria)
-        .await?;
+    let uid_list =
+        ImapExecutor::uid_search(&mut session, &mailbox.encoded_name(), &search_criteria).await?;
 
     let len = uid_list.len();
     if len == 0 {
@@ -109,12 +108,18 @@ pub async fn fetch_and_save_by_date(
             (index + 1) as u32,
         )
         .await?;
-        let executor = MAIL_CONTEXT.imap(account_id).await?;
+
         // Fetch metadata for the current batch of UIDs
-        executor
-            .uid_batch_retrieve_emails(account_id, mailbox.id, &batch, &mailbox.encoded_name())
-            .await?;
+        ImapExecutor::uid_batch_retrieve_emails(
+            &mut session,
+            account_id,
+            mailbox.id,
+            &batch,
+            &mailbox.encoded_name(),
+        )
+        .await?;
     }
+    session.logout().await.ok();
     Ok(len)
 }
 
@@ -153,26 +158,29 @@ pub async fn fetch_and_save_full_mailbox(
         "Starting full mailbox sync for '{}', total={}, limit={:?}, batches={}, desc={}",
         mailbox.name, total, folder_limit, total_batches, desc
     );
+
+    let mut session = ImapExecutor::create_connection(account_id).await?;
+
     for page in 1..=total_batches {
         AccountRunningState::set_current_sync_batch_number(account_id, mailbox.name.clone(), page)
             .await?;
-        let executor = MAIL_CONTEXT.imap(account_id).await?;
-        let count = executor
-            .batch_retrieve_emails(
-                account_id,
-                mailbox_id,
-                page as u64,
-                page_size as u64,
-                &mailbox.encoded_name(),
-                desc,
-            )
-            .await?;
+        let count = ImapExecutor::batch_retrieve_emails(
+            &mut session,
+            account_id,
+            mailbox_id,
+            page as u64,
+            page_size as u64,
+            &mailbox.encoded_name(),
+            desc,
+        )
+        .await?;
         inserted_count += count;
         info!(
             "Batch insertion completed for mailbox: {}, current page: {}, inserted count: {}",
             &mailbox.name, page, count
         );
     }
+    session.logout().await.ok();
     Ok(inserted_count)
 }
 
@@ -423,16 +431,22 @@ async fn perform_incremental_sync(
             .await?;
         match local_max_uid {
             Some(max_uid) => {
-                let executor = MAIL_CONTEXT.imap(account.id).await?;
+                let mut session = ImapExecutor::create_connection(account.id).await?;
                 let before_date = account
                     .date_before
                     .as_ref()
                     .map(|r| r.calculate_date())
                     .transpose()?;
 
-                executor
-                    .fetch_new_mail(account, local_mailbox, max_uid + 1, before_date.as_deref())
-                    .await?;
+                ImapExecutor::fetch_new_mail(
+                    &mut session,
+                    account,
+                    local_mailbox,
+                    max_uid + 1,
+                    before_date.as_deref(),
+                )
+                .await?;
+                session.logout().await.ok();
             }
             None => {
                 info!(

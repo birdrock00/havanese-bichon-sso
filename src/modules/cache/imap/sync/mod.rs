@@ -25,6 +25,7 @@ use crate::{
         },
         cache::imap::{mailbox::MailBox, sync::flow::FetchDirection},
         error::BichonResult,
+        imap::executor::ImapExecutor,
     },
     utc_now,
 };
@@ -33,7 +34,7 @@ use rebuild::{rebuild_cache, rebuild_cache_by_date};
 use std::time::Instant;
 use sync_folders::get_sync_folders;
 use sync_type::{determine_sync_type, SyncType};
-use tracing::debug;
+use tracing::{debug, warn};
 
 pub mod flow;
 pub mod rebuild;
@@ -48,7 +49,19 @@ pub async fn execute_imap_sync(account: &AccountModel) -> BichonResult<()> {
     if matches!(sync_type, SyncType::SkipSync) {
         return Ok(());
     }
-    let remote_mailboxes = get_sync_folders(account).await?;
+    let mut session = ImapExecutor::create_connection(account_id).await?;
+    let remote_mailboxes = match get_sync_folders(account, &mut session).await {
+        Ok(mailboxes) => mailboxes,
+        Err(err) => {
+            warn!(
+                account_id = account.id,
+                error = %err,
+                "Failed to get sync folders, logging out and skipping this account"
+            );
+            return Ok(());
+        }
+    };
+    session.logout().await.ok();
     if matches!(sync_type, SyncType::InitialSync) {
         AccountRunningState::add(account.id).await?;
         // AccountRunningState::set_initial_sync_start(account_id).await?;

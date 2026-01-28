@@ -47,7 +47,6 @@ use crate::modules::account::payload::AccountUpdateRequest;
 use crate::modules::account::payload::MinimalAccount;
 use crate::modules::cache::imap::task::SYNC_TASKS;
 use crate::modules::context::controller::SYNC_CONTROLLER;
-use crate::modules::context::executors::MAIL_CONTEXT;
 use crate::modules::database::count_by_unique_secondary_key_impl;
 use crate::modules::database::delete_impl;
 use crate::modules::database::manager::DB_MANAGER;
@@ -297,7 +296,7 @@ impl AccountV3 {
         if matches!(account.account_type, AccountType::IMAP) {
             SYNC_TASKS.stop(account.id).await?;
             AccountRunningState::delete(account.id).await?;
-            MAIL_CONTEXT.clean_account(account.id).await?;
+            //BICHON_CONTEXT.clean_account(account.id).await?;
         }
         OAuth2AccessToken::try_delete(account.id).await?;
         UserModel::cleanup_account(account.id).await?;

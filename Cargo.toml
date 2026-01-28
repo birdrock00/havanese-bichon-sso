@@ -93,7 +93,6 @@ webpki-roots = "1.0.5"
 rustls = { version = "0.23.36", default-features = false, features = ["ring"] }
 rustls-pki-types = "1.14.0"
 tokio-io-timeout = "1.2.1"
-bb8 = "0.9.1"
 semver = "1.0.27"
 governor = "0.10.4"
 lru = "0.16.3"
