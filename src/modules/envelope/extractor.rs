@@ -21,6 +21,7 @@ use crate::modules::envelope::utils::normalize_subject;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::error::BichonResult;
 use crate::modules::utils::create_hash;
+use crate::modules::utils::html::extract_text;
 use crate::{calculate_hash, raise_error, utc_now};
 use crate::{id, modules::indexer::envelope::Envelope};
 use async_imap::types::Fetch;
@@ -48,10 +49,7 @@ pub fn extract_envelope(fetch: &Fetch, account_id: u64, mailbox_id: u64) -> Bich
     let text = if let Some(text) = message.body_text(0).map(|cow| cow.into_owned()) {
         text
     } else if let Some(html) = message.body_html(0).map(|cow| cow.into_owned()) {
-        html2text::config::plain()
-            .allow_width_overflow()
-            .string_from_read(html.as_bytes(), 100)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+        extract_text(html)
     } else {
         String::new()
     };
@@ -150,10 +148,7 @@ pub fn extract_envelope_from_eml(
     let text = if let Some(text) = message.body_text(0).map(|cow| cow.into_owned()) {
         text
     } else if let Some(html) = message.body_html(0).map(|cow| cow.into_owned()) {
-        html2text::config::plain()
-            .allow_width_overflow()
-            .string_from_read(html.as_bytes(), 100)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+        extract_text(html)
     } else {
         String::new()
     };

@@ -26,6 +26,7 @@ use rand::{rng, Rng};
 use super::error::code::ErrorCode;
 
 pub mod encrypt;
+pub mod html;
 pub mod net;
 pub mod rate_limit;
 pub mod shutdown;
