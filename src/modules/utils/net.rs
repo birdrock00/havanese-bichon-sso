@@ -30,7 +30,7 @@ use tokio_io_timeout::TimeoutStream;
 use tokio_socks::tcp::Socks5Stream;
 use tracing::error;
 
-pub(crate) const TIMEOUT: Duration = Duration::from_secs(60);
+pub(crate) const TIMEOUT: Duration = Duration::from_secs(30);
 
 pub(crate) async fn establish_tcp_connection_with_timeout(
     address: SocketAddr,
@@ -39,17 +39,17 @@ pub(crate) async fn establish_tcp_connection_with_timeout(
     // Establish the TCP connection with a timeout
     let tcp_stream = connect_with_optional_proxy(use_proxy, address).await?;
 
-    // Disable Nagle's algorithm for more efficient network communication
-    tcp_stream
-        .set_nodelay(true)
-        .map_err(|e| raise_error!(e.to_string(), ErrorCode::NetworkError))?;
+    // // Disable Nagle's algorithm for more efficient network communication
+    // tcp_stream
+    //     .set_nodelay(true)
+    //     .map_err(|e| raise_error!(e.to_string(), ErrorCode::NetworkError))?;
 
     // Wrap the TCP stream in a TimeoutStream for timeout management
     let mut timeout_stream = TimeoutStream::new(tcp_stream);
 
     // Set read and write timeouts
-    timeout_stream.set_write_timeout(Some(TIMEOUT));
-    timeout_stream.set_read_timeout(Some(TIMEOUT));
+    timeout_stream.set_write_timeout(Some(Duration::from_secs(15)));
+    timeout_stream.set_read_timeout(Some(Duration::from_secs(30)));
 
     // Return the timeout-wrapped TCP stream as a Pin
     Ok(Box::pin(timeout_stream))

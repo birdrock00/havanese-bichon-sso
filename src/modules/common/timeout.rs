@@ -55,7 +55,7 @@ impl<E: Endpoint> Endpoint for TimeoutEndpoint<E> {
 
     async fn call(&self, req: Request) -> Result<Self::Output> {
         let timeout = extract_timeout(&req);
-        let seconds = timeout.unwrap_or(30).min(600);
+        let seconds = timeout.unwrap_or(60).min(600);
         match tokio::time::timeout(Duration::from_secs(seconds), self.ep.call(req)).await {
             Ok(Ok(response)) => Ok(response), // If the request completes successfully
             Ok(Err(e)) => Err(e),             // If the request returns an error
