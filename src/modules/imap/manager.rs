@@ -30,7 +30,7 @@ use crate::modules::imap::session::SessionStream;
 use crate::modules::oauth2::token::OAuth2AccessToken;
 use crate::{bichon_version, decrypt, raise_error};
 use async_imap::Session;
-use tracing::error;
+use tracing::{error, warn};
 
 pub struct ImapConnectionManager;
 
@@ -142,16 +142,16 @@ impl ImapConnectionManager {
                 }
 
                 if capabilities.has_str("ID") || capabilities.has_str("id") {
-                    session
+                    if let Err(e) = session
                         .id([
                             ("name", Some("bichon")),
                             ("version", Some(bichon_version!())),
                             ("vendor", Some("rustmailer")),
                         ])
                         .await
-                        .map_err(|e| {
-                            raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed)
-                        })?;
+                    {
+                        warn!("IMAP ID command failed (ignored): {:#?}", e);
+                    }
                 }
             }
             Err(error) => {
