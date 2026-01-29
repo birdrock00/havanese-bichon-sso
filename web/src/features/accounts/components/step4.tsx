@@ -47,7 +47,7 @@ export default function Step4() {
     const hasBefore = !!summaryData.date_before?.value;
 
     return (
-        <div className="p-5 rounded-xl">
+        <div className="rounded-xl">
             <Accordion type="multiple" defaultValue={['email', 'name', 'imap', 'date_since', 'folder_limit', 'sync_interval', 'sync_scope', 'sync_batch_size']}>
                 <AccordionItem key="email" value="email">
                     <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.email')}:</AccordionTrigger>

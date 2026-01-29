@@ -409,7 +409,7 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
 
           <div className="flex-1 min-h-0 relative">
             <ScrollArea className="h-full w-full">
-              <div className="p-6 md:p-10 lg:p-14">
+              <div className="p-6 md:p-6 lg:p-8">
                 <Form {...form}>
                   <form id="account-register-form" onSubmit={form.handleSubmit(onSubmit)}>
                     {currentStep === 1 && <Step1 isEdit={isEdit} />}
