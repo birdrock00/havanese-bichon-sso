@@ -378,6 +378,11 @@ fn extract_recipients_list(message: &Rc<dyn Message>) -> (Vec<String>, Vec<Strin
                 }
             }
         }
+    } else {
+        let receiver = extract_string_property(message.properties(), 0x0076);
+        if let Some(receiver) = receiver {
+            to.push(receiver);
+        }
     }
     (to, cc, bcc)
 }
