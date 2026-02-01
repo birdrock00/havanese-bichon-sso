@@ -342,38 +342,39 @@ fn extract_recipients_list(message: &Rc<dyn Message>) -> (Vec<String>, Vec<Strin
     let mut bcc = Vec::new();
 
     let recipient_table = message.recipient_table();
-    let context = recipient_table.context();
+    if let Some(recipient_table) = recipient_table {
+        let context = recipient_table.context();
+        for row in recipient_table.rows_matrix() {
+            if let Ok(cols) = row.columns(context) {
+                let mut r_type = 0;
+                let mut email = String::new();
 
-    for row in recipient_table.rows_matrix() {
-        if let Ok(cols) = row.columns(context) {
-            let mut r_type = 0;
-            let mut email = String::new();
-
-            for (col, val) in context.columns().iter().zip(cols) {
-                let prop_val = val
-                    .as_ref()
-                    .and_then(|v| recipient_table.read_column(v, col.prop_type()).ok());
-                match col.prop_id() {
-                    0x0C15 => {
-                        if let Some(PropertyValue::Integer32(t)) = prop_val {
-                            r_type = t;
+                for (col, val) in context.columns().iter().zip(cols) {
+                    let prop_val = val
+                        .as_ref()
+                        .and_then(|v| recipient_table.read_column(v, col.prop_type()).ok());
+                    match col.prop_id() {
+                        0x0C15 => {
+                            if let Some(PropertyValue::Integer32(t)) = prop_val {
+                                r_type = t;
+                            }
                         }
-                    }
-                    0x39FE | 0x3003 => {
-                        if let Some(s) = prop_val.and_then(|v| extract_string(&v)) {
-                            email = s;
+                        0x39FE | 0x3003 => {
+                            if let Some(s) = prop_val.and_then(|v| extract_string(&v)) {
+                                email = s;
+                            }
                         }
+                        _ => {}
                     }
-                    _ => {}
                 }
-            }
 
-            if !email.is_empty() {
-                match r_type {
-                    1 => to.push(email),
-                    2 => cc.push(email),
-                    3 => bcc.push(email),
-                    _ => {}
+                if !email.is_empty() {
+                    match r_type {
+                        1 => to.push(email),
+                        2 => cc.push(email),
+                        3 => bcc.push(email),
+                        _ => {}
+                    }
                 }
             }
         }

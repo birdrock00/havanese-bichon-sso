@@ -28,7 +28,7 @@ codegen-units = 1
 
 [dependencies]
 chrono = "0.4.43"
-clap = { version = "4.5.54", features = ["derive", "env"] }
+clap = { version = "4.5.56", features = ["derive", "env"] }
 mimalloc = "0.1.48"
 native_db = "0.8.2"
 itertools = "0.14.0"
@@ -113,7 +113,7 @@ openssl-sys = { version = "0.9.111", optional = true, features = ["vendored"] }
 gethostname = "1.1.0"
 tantivy = { version = "0.25.0", features = ["quickwit", "zstd-compression"] }
 itoa = "1.0.17"
-html2text = "0.16.6"
+html2text = "0.16.7"
 bytes = "1.11.0"
 dialoguer = "0.12.0"
 console = "0.16.2"

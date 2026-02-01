@@ -1,5 +1,7 @@
 use bichon::modules::cli::{
-    BichonCli, BichonCtlConfig, auth::verify_user_and_get_account, eml::handle_eml_directory_import, mbox::handle_mbox_single_file_import, pst::handle_pst_import, thunderbird::handle_thunderbird_import
+    auth::verify_user_and_get_account, eml::handle_eml_directory_import,
+    mbox::handle_mbox_single_file_import, pst::handle_pst_import,
+    thunderbird::handle_thunderbird_import, BichonCli, BichonCtlConfig,
 };
 use clap::Parser;
 use console::style;
@@ -72,10 +74,10 @@ async fn main() {
     let target_account_id = verify_user_and_get_account(&final_config, &theme).await;
 
     let import_modes = &[
-        "EML: Scan directory recursively (Maintains folder structure)",
-        "MBOX: Single archive file (Stream from one file)",
-        "Thunderbird: Import from local profile directory",
-        "PST: Outlook Personal Storage (Single .pst file)",
+        "1. EML: Scan directory recursively (Maintains folder structure)",
+        "2. MBOX: Single archive file (Stream from one file)",
+        "3. Thunderbird: Import from local profile directory",
+        "4. PST: Outlook Personal Storage (Single .pst file)",
     ];
 
     let mode_idx = Select::with_theme(&theme)
