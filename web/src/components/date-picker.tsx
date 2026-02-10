@@ -10,6 +10,7 @@ import {
 import i18n from '@/i18n'
 import { dateFnsLocaleMap } from '@/lib/utils'
 import { enUS } from 'date-fns/locale'
+import { useEffect, useState } from 'react'
 
 type DatePickerProps = {
   selected: Date | undefined
@@ -25,6 +26,14 @@ export function DatePicker({
 
   const currentLang = i18n.language.toLowerCase().replace('_', '-');
   const dateLocale = dateFnsLocaleMap[currentLang] || enUS;
+
+  const [month, setMonth] = useState<Date | undefined>(selected || new Date());
+
+  useEffect(() => {
+    if (selected) {
+      setMonth(selected);
+    }
+  }, [selected]);
 
   return (
     <Popover>
@@ -47,6 +56,8 @@ export function DatePicker({
           mode='single'
           captionLayout='dropdown'
           selected={selected}
+          month={month}
+          onMonthChange={setMonth}
           onSelect={onSelect}
           disabled={(date: Date) =>
             date > new Date() || date < new Date('1900-01-01')
