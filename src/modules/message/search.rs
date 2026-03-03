@@ -39,14 +39,14 @@ pub struct SearchFilter {
     pub bcc: Option<String>,
     pub since: Option<i64>,
     pub before: Option<i64>,
-    pub account_ids: Option<Vec<u64>>,
-    pub mailbox_ids: Option<Vec<u64>>,
+    pub account_ids: Option<HashSet<u64>>,
+    pub mailbox_ids: Option<HashSet<u64>>,
     pub min_size: Option<u64>,
     pub max_size: Option<u64>,
     pub message_id: Option<String>,
     pub has_attachment: Option<bool>,
     pub attachment_name: Option<String>,
-    pub tags: Option<Vec<String>>,
+    pub tags: Option<HashSet<String>>,
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, Enum)]
