@@ -99,6 +99,21 @@ impl DuckDBManager {
         Ok(())
     }
 
+    pub fn validate_regex(&self, pattern: &str) -> BichonResult<()> {
+        let conn = self.conn()?;
+        let check_sql = "SELECT regexp_matches('', ?)";
+        if let Err(e) = conn
+            .prepare(check_sql)
+            .and_then(|mut stmt| stmt.execute([pattern]))
+        {
+            return Err(raise_error!(
+                format!("Invalid Regular Expression for DuckDB: {}", e).into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+        Ok(())
+    }
+
     pub fn delete_envelopes_by_account(&self, account_id: u64) -> BichonResult<usize> {
         let mut conn = self.conn()?;
         let tx = conn

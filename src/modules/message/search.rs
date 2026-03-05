@@ -23,6 +23,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     modules::{
+        duckdb::init::duckdb,
         error::{code::ErrorCode, BichonResult},
         indexer::{envelope::Envelope, manager::ENVELOPE_INDEX_MANAGER},
         rest::response::DataPage,
@@ -78,6 +79,17 @@ impl SearchRequest {
                 ErrorCode::InvalidParameter
             ));
         }
+
+        if let Some(ref pattern) = self.filter.text {
+            if let Err(_) = duckdb()?.validate_regex(pattern) {
+                return Err(raise_error!(
+                    "Invalid search pattern: The regular expression is not supported by DuckDB."
+                        .into(),
+                    ErrorCode::InvalidParameter
+                ));
+            }
+        }
+
         Ok(())
     }
 }
