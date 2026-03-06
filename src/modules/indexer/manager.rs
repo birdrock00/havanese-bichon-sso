@@ -26,6 +26,7 @@ use std::{
 use crate::modules::{
     duckdb::init::duckdb,
     message::{content::AttachmentInfo, search::SortBy, tags::TagCount},
+    settings::cli::SETTINGS,
     utils::create_hash,
 };
 use crate::{
@@ -340,10 +341,13 @@ impl EmlIndexManager {
         let index = Self::open_or_create_index(&DATA_DIR_MANAGER.eml_dir);
         let index_writer = Arc::new(Mutex::new(
             index
-                .writer_with_num_threads(8, 536_870_912)
+                .writer_with_num_threads(
+                    SETTINGS.bichon_tantivy_threads,
+                    SETTINGS.bichon_tantivy_buffer_size,
+                )
                 .unwrap_or_else(|e| {
                     panic!(
-                        "Failed to create IndexWriter with 8 threads and 512MB buffer for {:?}: {}",
+                        "Failed to create IndexWriter with 8 threads and 128MB buffer for {:?}: {}",
                         DATA_DIR_MANAGER.eml_dir, e
                     )
                 }),

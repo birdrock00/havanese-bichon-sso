@@ -262,6 +262,25 @@ pub struct Settings {
         help = "Maximum memory DuckDB may use (e.g. 512MB, 2GB, 80%)"
     )]
     pub bichon_duckdb_max_memory: Option<String>,
+
+    /// Number of Tantivy execution threads (default: 4)
+    #[clap(
+        long,
+        env,
+        default_value = "4",
+        help = "Number of Tantivy execution threads (default: 4)",
+        value_parser = clap::value_parser!(u16).range(1..)
+    )]
+    pub bichon_tantivy_threads: usize,
+
+    /// Tantivy indexer memory budget in bytes (default: 256MB)
+    #[clap(
+        long,
+        env,
+        default_value = "268435456",
+        help = "Set the memory budget for Tantivy indexer in bytes (default: 256MB)"
+    )]
+    pub bichon_tantivy_buffer_size: usize,
 }
 
 impl Settings {
