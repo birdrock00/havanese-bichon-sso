@@ -20,7 +20,7 @@
   </a>
 </p>
 
-<p style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+<p align="center">
   <a href="https://github.com/rustmailer/bichon/releases">
     <img src="https://img.shields.io/github/v/release/rustmailer/bichon" alt="Release">
   </a>
@@ -30,7 +30,9 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-AGPLv3-blue.svg" alt="License">
   </a>
-  <a href="https://deepwiki.com/rustmailer/bichon"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+  <a href="https://deepwiki.com/rustmailer/bichon">
+    <img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki">
+  </a>
   <a href="https://discord.gg/Bq4M2cDmF4">
     <img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?logo=discord&logoColor=white" alt="Discord">
   </a>
@@ -38,6 +40,7 @@
     <img src="https://img.shields.io/twitter/follow/rustmailer?style=social" alt="Follow on X">
   </a>
 </p>
+
 </div>
 
 Bichon is an open-source email archiving system that **synchronizes emails from IMAP servers**, **indexes them for full-text search**, and provides a **REST API** for programmatic access.
