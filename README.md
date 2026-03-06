@@ -11,6 +11,15 @@
   A lightweight, high-performance Rust email archiver with WebUI
 </h3>
 
+<p align="center">
+  <a href="https://github.com/rustmailer/bichon/stargazers">
+    <img src="https://img.shields.io/github/stars/rustmailer/bichon?style=for-the-badge&color=gold&label=STARS" alt="GitHub Stars">
+  </a>
+  <a href="https://docs.google.com/forms/d/e/1FAIpQLScOlwsiUMfyQPBCLW2MLkygdRmAutEgvXDYPzzvEGPz0HFPXQ/viewform">
+    <img src="https://img.shields.io/badge/Roadmap-2026_Survey-blue?style=for-the-badge&logo=googleforms" alt="User Survey">
+  </a>
+</p>
+
 <p style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
   <a href="https://github.com/rustmailer/bichon/releases">
     <img src="https://img.shields.io/github/v/release/rustmailer/bichon" alt="Release">
@@ -59,6 +68,18 @@ Bichon implements a **Single-Instance Storage** philosophy at the account level 
 * **Lean Imports**: Duplicate emails encountered during `nosync` bulk imports are automatically merged.
 
 👉 [**Deep Dive: How Bichon handles de-duplication**](https://github.com/rustmailer/bichon/wiki/De%E2%80%90duplication)
+
+
+---
+
+### 📢 Shape the Future of Bichon!
+
+We’ve just reached **1.5k Stars**! To help us prioritize the **2026 Roadmap** (e.g., S3 support, Enterprise SSO, etc.), please take 1 minute to fill out our [User Feedback Survey](https://docs.google.com/forms/d/e/1FAIpQLScOlwsiUMfyQPBCLW2MLkygdRmAutEgvXDYPzzvEGPz0HFPXQ/viewform). 
+
+*Your input helps us keep the core engine free and fast!*
+
+---
+
 
 ## 🚀 Features
 
