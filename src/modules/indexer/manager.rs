@@ -44,7 +44,7 @@ use crate::{
 
 use mail_parser::{MessageParser, MimeHeaders};
 
-use tantivy::indexer::UserOperation;
+use tantivy::indexer::{LogMergePolicy, UserOperation};
 use tantivy::{
     collector::TopDocs,
     query::{BooleanQuery, Occur, Query, TermQuery},
@@ -339,19 +339,30 @@ pub struct EmlIndexManager {
 impl EmlIndexManager {
     pub fn new() -> Self {
         let index = Self::open_or_create_index(&DATA_DIR_MANAGER.eml_dir);
-        let index_writer = Arc::new(Mutex::new(
-            index
-                .writer_with_num_threads(
+
+        let writer: IndexWriter<TantivyDocument> = index
+            .writer_with_num_threads(
+                SETTINGS.bichon_tantivy_threads as usize,
+                SETTINGS.bichon_tantivy_buffer_size,
+            )
+            .unwrap_or_else(|e| {
+                panic!(
+                    "Failed to create IndexWriter (threads: {}, buffer: {}B) for {:?}: {}",
                     SETTINGS.bichon_tantivy_threads,
                     SETTINGS.bichon_tantivy_buffer_size,
+                    DATA_DIR_MANAGER.eml_dir,
+                    e
                 )
-                .unwrap_or_else(|e| {
-                    panic!(
-                        "Failed to create IndexWriter with 8 threads and 128MB buffer for {:?}: {}",
-                        DATA_DIR_MANAGER.eml_dir, e
-                    )
-                }),
-        ));
+            });
+
+        let mut merge_policy = LogMergePolicy::default();
+        merge_policy.set_min_num_segments(20);
+        merge_policy.set_max_docs_before_merge(10_000);
+        merge_policy.set_min_layer_size(1000);
+        writer.set_merge_policy(Box::new(merge_policy));
+
+        let index_writer = Arc::new(Mutex::new(writer));
+
         let reader = index.reader().unwrap_or_else(|e| {
             panic!(
                 "Failed to create IndexReader for {:?}: {}",
@@ -433,10 +444,10 @@ impl EmlIndexManager {
                 .schema(SchemaTools::eml_schema())
                 .settings(IndexSettings {
                     docstore_compression: Compressor::Zstd(ZstdCompressor {
-                        compression_level: Some(6),
+                        compression_level: Some(SETTINGS.bichon_eml_compression_level as i32),
                     }),
                     docstore_compress_dedicated_thread: true,
-                    docstore_blocksize: 2_097_152,
+                    docstore_blocksize: SETTINGS.bichon_eml_blocksize,
                 })
                 .create_in_dir(&index_dir)
                 .unwrap_or_else(|e| panic!("Failed to create index in {:?}: {}", index_dir, e))

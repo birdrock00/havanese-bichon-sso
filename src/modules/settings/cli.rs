@@ -271,7 +271,7 @@ pub struct Settings {
         help = "Number of Tantivy execution threads (default: 4)",
         value_parser = clap::value_parser!(u16).range(1..)
     )]
-    pub bichon_tantivy_threads: usize,
+    pub bichon_tantivy_threads: u16,
 
     /// Tantivy indexer memory budget in bytes (default: 256MB)
     #[clap(
@@ -281,6 +281,25 @@ pub struct Settings {
         help = "Set the memory budget for Tantivy indexer in bytes (default: 256MB)"
     )]
     pub bichon_tantivy_buffer_size: usize,
+
+    /// Zstd compression level for EML storage (default: 3)
+    #[clap(
+        long,
+        env,
+        default_value = "3",
+        help = "Set the Zstd compression level for EML storage (1-22)",
+        value_parser = clap::value_parser!(u16).range(1..22)
+    )]
+    pub bichon_eml_compression_level: u16,
+
+    /// Tantivy docstore block size in bytes (default: 1MB)
+    #[clap(
+        long,
+        env,
+        default_value = "2097152",
+        help = "Set the Tantivy docstore block size in bytes (default: 2MB)"
+    )]
+    pub bichon_eml_blocksize: usize,
 }
 
 impl Settings {
