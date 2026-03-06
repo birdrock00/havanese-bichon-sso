@@ -330,6 +330,44 @@ impl DuckDBManager {
         }
     }
 
+    pub fn get_envelopes_by_ids(
+        &self,
+        account_id: u64,
+        envelope_ids: &[u64],
+    ) -> BichonResult<Vec<Envelope>> {
+        if envelope_ids.is_empty() {
+            return Ok(vec![]);
+        }
+        let conn = self.conn()?;
+        let ids_str = envelope_ids
+            .iter()
+            .map(|id| id.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+
+        let query = format!(
+            "SELECT * FROM envelopes WHERE account_id = ? AND id IN ({})",
+            ids_str
+        );
+
+        let mut stmt = conn
+            .prepare(&query)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        let rows = stmt
+            .query_map(params![account_id], |row| Envelope::from_row(row))
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        let mut result = Vec::new();
+        for row in rows {
+            result.push(
+                row.map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?,
+            );
+        }
+
+        Ok(result)
+    }
+
     pub fn get_all_tags(&self, accounts: Option<HashSet<u64>>) -> BichonResult<Vec<TagCount>> {
         let conn = self.conn()?;
         let mut sql = "
@@ -491,6 +529,22 @@ impl DuckDBManager {
                     .map(|id| id.to_string())
                     .collect::<Vec<_>>()
                     .join(",");
+
+                let del_attachments_query = format!(
+                    "DELETE FROM envelope_attachments 
+                 WHERE account_id = ? 
+                 AND envelope_id IN ({})",
+                    ids_str
+                );
+
+                tx.execute(&del_attachments_query, params![account_id])
+                    .map_err(|e| {
+                        raise_error!(
+                            format!("Delete attachments fail: {:#?}", e),
+                            ErrorCode::InternalError
+                        )
+                    })?;
+
                 let query = format!(
                     "DELETE FROM envelopes 
                  WHERE account_id = ? 

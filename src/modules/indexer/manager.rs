@@ -26,6 +26,7 @@ use std::{
 use crate::modules::{
     duckdb::init::duckdb,
     message::{content::AttachmentInfo, search::SortBy, tags::TagCount},
+    utils::create_hash,
 };
 use crate::{
     modules::{
@@ -629,22 +630,43 @@ impl EmlIndexManager {
         deletes: &HashMap<u64, Vec<u64>>, // HashMap<account_id, envelope_ids>
     ) -> BichonResult<()> {
         if deletes.is_empty() {
-            tracing::warn!("delete_envelopes_multi_account: deletes is empty, nothing to delete");
+            tracing::warn!("delete_email_multi_account: deletes is empty, nothing to delete");
             return Ok(());
         }
 
         let mut writer = self.index_writer.lock().await;
 
         for (account_id, envelope_ids) in deletes {
-            let unique_ids: HashSet<u64> = envelope_ids.iter().copied().collect();
+            let unique_ids: Vec<u64> = envelope_ids
+                .iter()
+                .copied()
+                .collect::<HashSet<_>>()
+                .into_iter()
+                .collect();
             if unique_ids.is_empty() {
                 continue;
             }
-            for eid in unique_ids {
-                let query = self.envelope_query(*account_id, eid);
-                writer
-                    .delete_query(query)
-                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+            for chunk in unique_ids.chunks(100) {
+                let envelopes = duckdb()?.get_envelopes_by_ids(*account_id, chunk)?;
+                let found_ids_set: HashSet<u64> = envelopes.iter().map(|e| e.id).collect();
+                for &original_id in chunk {
+                    if !found_ids_set.contains(&original_id) {
+                        tracing::warn!(
+                        "delete_email_multi_account: envelope not found in DB, skipping tantivy delete. account_id: {}, envelope_id: {}", 
+                        account_id, original_id
+                    );
+                    }
+                }
+
+                for envelope in envelopes {
+                    let hashed_id = create_hash(*account_id, &envelope.message_id);
+                    let query = self.envelope_query(*account_id, hashed_id);
+
+                    writer
+                        .delete_query(query)
+                        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                }
             }
         }
         writer
