@@ -203,7 +203,7 @@ impl MessageApi {
 
     /// Downloads the raw EML file of a specific email.
     #[oai(
-        path = "/download-message/:account_id/:message_id",
+        path = "/download-message/:account_id/:envelope_id",
         method = "get",
         operation_id = "download_message"
     )]
@@ -212,7 +212,7 @@ impl MessageApi {
         /// The ID of the account.
         account_id: Path<u64>,
         /// The ID of the message to download.
-        message_id: Path<u64>,
+        envelope_id: Path<u64>,
         context: ClientContext,
     ) -> ApiResult<Attachment<Body>> {
         let account_id = account_id.0;
@@ -220,12 +220,12 @@ impl MessageApi {
         context
             .require_permission(Some(account_id), Permission::DATA_RAW_DOWNLOAD)
             .await?;
-        let message_id = message_id.0;
-        let reader = EML_INDEX_MANAGER.get_reader(account_id, message_id).await?;
+        let envelope_id = envelope_id.0;
+        let reader = EML_INDEX_MANAGER.get_reader(account_id, envelope_id).await?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
             .attachment_type(AttachmentType::Attachment)
-            .filename(format!("{message_id}.eml"));
+            .filename(format!("{envelope_id}.eml"));
         Ok(attachment)
     }
 
@@ -250,7 +250,7 @@ impl MessageApi {
 
     /// Downloads a specific attachment from an email. Requires `name` query parameter.
     #[oai(
-        path = "/download-attachment/:account_id/:message_id",
+        path = "/download-attachment/:account_id/:envelope_id",
         method = "get",
         operation_id = "download_attachment"
     )]
@@ -259,7 +259,7 @@ impl MessageApi {
         /// The ID of the account.
         account_id: Path<u64>,
         /// The ID of the message containing the attachment.
-        message_id: Path<u64>,
+        envelope_id: Path<u64>,
         /// The filename of the attachment to download.
         name: Query<String>,
         context: ClientContext,
@@ -271,7 +271,7 @@ impl MessageApi {
             .await?;
         let name = name.0.trim();
         let reader = EML_INDEX_MANAGER
-            .get_attachment(account_id, message_id.0, name)
+            .get_attachment(account_id, envelope_id.0, name)
             .await?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)

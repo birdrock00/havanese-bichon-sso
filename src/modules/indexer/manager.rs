@@ -476,9 +476,9 @@ impl EmlIndexManager {
         Box::new(boolean_query)
     }
 
-    pub async fn get(&self, account_id: u64, eid: u64) -> BichonResult<Option<Vec<u8>>> {
+    pub async fn get(&self, account_id: u64, eml_id: u64) -> BichonResult<Option<Vec<u8>>> {
         let searcher = self.reader.searcher();
-        let query = self.envelope_query(account_id, eid);
+        let query = self.envelope_query(account_id, eml_id);
         let docs = searcher
             .search(query.as_ref(), &TopDocs::with_limit(1))
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
@@ -510,9 +510,21 @@ impl EmlIndexManager {
     }
 
     pub async fn get_reader(&self, account_id: u64, eid: u64) -> BichonResult<File> {
-        let data = self.get(account_id, eid).await?.ok_or_else(|| {
+        let envelope = duckdb()?
+            .get_envelope_by_id(account_id, eid)?
+            .ok_or_else(|| {
+                raise_error!(
+                    format!(
+                        "Email envelope not found: account_id={} id={}",
+                        account_id, eid
+                    ),
+                    ErrorCode::ResourceNotFound
+                )
+            })?;
+        let eml_id = create_hash(account_id, &envelope.message_id);
+        let data = self.get(account_id, eml_id).await?.ok_or_else(|| {
             raise_error!(
-                format!("Email not found: account_id={}, eid={}", account_id, eid),
+                format!("Eml not found: account_id={}, eid={}", account_id, eid),
                 ErrorCode::ResourceNotFound
             )
         })?;
@@ -539,7 +551,19 @@ impl EmlIndexManager {
         eid: u64,
         file_name: &str,
     ) -> BichonResult<File> {
-        let data = self.get(account_id, eid).await?.ok_or_else(|| {
+        let envelope = duckdb()?
+            .get_envelope_by_id(account_id, eid)?
+            .ok_or_else(|| {
+                raise_error!(
+                    format!(
+                        "Email envelope not found: account_id={} id={}",
+                        account_id, eid
+                    ),
+                    ErrorCode::ResourceNotFound
+                )
+            })?;
+        let eml_id = create_hash(account_id, &envelope.message_id);
+        let data = self.get(account_id, eml_id).await?.ok_or_else(|| {
             raise_error!(
                 format!("Email not found: account_id={}, eid={}", account_id, eid),
                 ErrorCode::ResourceNotFound

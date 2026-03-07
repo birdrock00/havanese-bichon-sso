@@ -206,6 +206,10 @@ pub async fn retrieve_email_content(account_id: u64, id: u64) -> BichonResult<Fu
                 }
             }
         }
+        //inline attachment will not be displayed in email attachment list
+        if inline && attachment.content_id().is_some() {
+            continue;
+        }
 
         attachments.push(AttachmentInfo {
             filename,
