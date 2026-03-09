@@ -1132,7 +1132,8 @@
             "delete_all": "모든 계정의 이메일 삭제",
             "export_batch": "할당 데이터 일괄 내보내기",
             "export_batch_all": "모든 데이터 일괄 내보내기",
-            "import_batch": "이메일 데이터 일괄 가져오기"
+            "import_batch": "이메일 데이터 일괄 가져오기",
+            "smtp_ingest": "SMTP 프로토콜을 통해 이메일 수집"
         }
     },
     "users": {

@@ -300,6 +300,73 @@ pub struct Settings {
         help = "Set the Tantivy docstore block size in bytes (default: 2MB)"
     )]
     pub bichon_eml_blocksize: usize,
+
+    #[clap(
+        long,
+        env,
+        default_value = "false",
+        help = "Enable the embedded SMTP server for real-time email receiving"
+    )]
+    pub bichon_enable_smtp: bool,
+
+    #[clap(
+        long,
+        env,
+        help = "Path to the SMTP TLS private key file (e.g., key.pem)",
+        value_parser = ValueParser::new(|s: &str| {
+            let path = PathBuf::from(s);
+            if !path.is_absolute() {
+                return Err("'bichon_smtp_tls_key_path' must be an absolute path".to_string());
+            }
+            if !path.exists() {
+                return Err(format!("SMTP TLS key file not found: {}", s));
+            }
+            Ok(s.to_string())
+        })
+    )]
+    pub bichon_smtp_tls_key_path: Option<String>,
+
+    #[clap(
+        long,
+        env,
+        help = "Path to the SMTP TLS certificate chain file (e.g., cert.pem)",
+        value_parser = ValueParser::new(|s: &str| {
+            let path = PathBuf::from(s);
+            if !path.is_absolute() {
+                return Err("'bichon_smtp_tls_cert_path' must be an absolute path".to_string());
+            }
+            if !path.exists() {
+                return Err(format!("SMTP TLS certificate file not found: {}", s));
+            }
+            Ok(s.to_string())
+        })
+    )]
+    pub bichon_smtp_tls_cert_path: Option<String>,
+
+    #[clap(
+        long,
+        default_value = "2525",
+        env,
+        help = "Set the SMTP port for Bichon (e.g., 25 or 2525). Note: Port 25 may require root privileges.",
+        value_parser = clap::value_parser!(u16).range(1..)
+    )]
+    pub bichon_smtp_port: u16,
+
+    #[clap(
+        long,
+        env,
+        default_value = "starttls",
+        help = "Set the encryption mode for SMTP: 'none', 'starttls', or 'tls'"
+    )]
+    pub bichon_smtp_encryption: SmtpEncryptionMode,
+
+    #[clap(
+        long,
+        env,
+        default_value = "true",
+        help = "Enable SMTP authentication requirement"
+    )]
+    pub bichon_smtp_auth_required: bool,
 }
 
 impl Settings {
@@ -336,6 +403,26 @@ impl fmt::Display for CompressionAlgorithm {
             CompressionAlgorithm::Brotli => write!(f, "brotli"),
             CompressionAlgorithm::Zstd => write!(f, "zstd"),
             CompressionAlgorithm::Deflate => write!(f, "deflate"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, ValueEnum)]
+pub enum SmtpEncryptionMode {
+    #[clap(name = "none")]
+    None,
+    #[clap(name = "starttls")]
+    Starttls,
+    #[clap(name = "tls")]
+    Tls,
+}
+
+impl fmt::Display for SmtpEncryptionMode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SmtpEncryptionMode::None => write!(f, "none"),
+            SmtpEncryptionMode::Starttls => write!(f, "starttls"),
+            SmtpEncryptionMode::Tls => write!(f, "tls"),
         }
     }
 }

@@ -40,6 +40,7 @@ export function getPermissions(t: (key: string) => string) {
         { label: t('permission.data.delete'), value: 'data:delete' },
         { label: t('permission.data.export_batch'), value: 'data:export:batch' },
         { label: t('permission.data.import_batch'), value: 'data:import:batch' },
+        { label: t('permission.data.smtp_ingest'), value: 'data:smtp:ingest' },
     ]
 }
 

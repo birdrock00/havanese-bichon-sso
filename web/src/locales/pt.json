@@ -1132,7 +1132,8 @@
             "delete_all": "Excluir e-mails de todas as contas",
             "export_batch": "Exportar dados atribuídos em lote",
             "export_batch_all": "Exportar todos os dados em lote",
-            "import_batch": "Importar dados de e-mail em lote"
+            "import_batch": "Importar dados de e-mail em lote",
+            "smtp_ingest": "Ingerir e-mails via protocolo SMTP"
         }
     },
     "users": {

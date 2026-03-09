@@ -1132,7 +1132,8 @@
             "delete_all": "Slette e-poster fra alle kontoer",
             "export_batch": "Batch-eksportere tildelte data",
             "export_batch_all": "Batch-eksportere alle data",
-            "import_batch": "Batch-importere e-postdata"
+            "import_batch": "Batch-importere e-postdata",
+            "smtp_ingest": "Hent e-post via SMTP-protokoll"
         }
     },
     "users": {

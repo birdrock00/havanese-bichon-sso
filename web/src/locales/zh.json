@@ -1132,7 +1132,8 @@
       "delete_all": "删除所有账户的邮件",
       "export_batch": "批量导出分配账户的数据",
       "export_batch_all": "批量导出所有数据",
-      "import_batch": "批量导入邮件数据"
+      "import_batch": "批量导入邮件数据",
+      "smtp_ingest": "通过 SMTP 协议归档邮件"
     }
   },
   "users": {

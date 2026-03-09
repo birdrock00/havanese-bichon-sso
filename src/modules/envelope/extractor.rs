@@ -61,6 +61,21 @@ pub fn extract_envelope_from_eml(
     )
 }
 
+pub fn extract_envelope_from_smtp(
+    body: &[u8],
+    account_id: u64,
+    mailbox_id: u64,
+) -> BichonResult<(Envelope, Vec<AttachmentInfo>)> {
+    extract_envelope_core(
+        body,
+        0,
+        body.len() as u32,
+        utc_now!(),
+        account_id,
+        mailbox_id,
+    )
+}
+
 fn extract_envelope_core(
     body: &[u8],
     uid: u32,

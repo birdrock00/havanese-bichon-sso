@@ -1132,7 +1132,8 @@
             "delete_all": "刪除所有帳戶的郵件",
             "export_batch": "批次匯出指派帳戶的資料",
             "export_batch_all": "批次匯出所有資料",
-            "import_batch": "批次匯入郵件資料"
+            "import_batch": "批次匯入郵件資料",
+            "smtp_ingest": "透過 SMTP 協定歸檔郵件"
         }
     },
     "users": {

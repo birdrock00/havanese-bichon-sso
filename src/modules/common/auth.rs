@@ -93,6 +93,37 @@ impl ClientContext {
         ))
     }
 
+    pub async fn check_has_permission(user: &UserModel, account_id: Option<u64>, permission: &str) -> bool {
+        if user.is_admin().await {
+            return true;
+        }
+
+        let mut global_perms = HashSet::new();
+        for rid in &user.global_roles {
+            if let Some(role) = UserRole::find(*rid).await.ok().flatten() {
+                global_perms.extend(role.permissions);
+            }
+        }
+
+        if Self::check_global_logic(&global_perms, permission) {
+            return true;
+        }
+
+        if let Some(aid) = account_id {
+            if let Some(role_id) = user.account_access_map.get(&aid) {
+                if let Some(role) = UserRole::find(*role_id).await.ok().flatten() {
+                    if role.permissions.contains(&permission.to_string())
+                        || Self::check_account_logic(&role.permissions, permission)
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
     pub async fn has_permission(&self, account_id: Option<u64>, permission: &str) -> bool {
         if self.user.is_admin().await {
             return true;
@@ -105,7 +136,7 @@ impl ClientContext {
             }
         }
 
-        if self.check_global_logic(&global_perms, permission) {
+        if Self::check_global_logic(&global_perms, permission) {
             return true;
         }
 
@@ -113,7 +144,7 @@ impl ClientContext {
             if let Some(role_id) = self.user.account_access_map.get(&aid) {
                 if let Some(role) = UserRole::find(*role_id).await.ok().flatten() {
                     if role.permissions.contains(&permission.to_string())
-                        || self.check_account_logic(&role.permissions, permission)
+                        || Self::check_account_logic(&role.permissions, permission)
                     {
                         return true;
                     }
@@ -124,7 +155,7 @@ impl ClientContext {
         false
     }
 
-    fn check_global_logic(&self, global: &HashSet<String>, perm: &str) -> bool {
+    fn check_global_logic(global: &HashSet<String>, perm: &str) -> bool {
         if global.contains(perm) {
             return true;
         }
@@ -141,7 +172,7 @@ impl ClientContext {
         }
     }
 
-    fn check_account_logic(&self, scoped_perms: &BTreeSet<String>, perm: &str) -> bool {
+    fn check_account_logic(scoped_perms: &BTreeSet<String>, perm: &str) -> bool {
         if scoped_perms.contains(perm) {
             return true;
         }

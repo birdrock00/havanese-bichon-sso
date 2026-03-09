@@ -1132,7 +1132,8 @@
       "delete_all": "Usuwanie wiadomości e-mail ze wszystkich kont",
       "export_batch": "Eksport zbiorczy przypisanych danych",
       "export_batch_all": "Eksport zbiorczy wszystkich danych",
-      "import_batch": "Import zbiorczy danych e-mail"
+      "import_batch": "Import zbiorczy danych e-mail",
+      "smtp_ingest": "Pobieranie wiadomości e-mail za pośrednictwem protokołu SMTP"
     }
   },
   "users": {

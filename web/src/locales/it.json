@@ -1132,7 +1132,8 @@
             "delete_all": "Eliminare le email di tutti gli account",
             "export_batch": "Esportare i dati assegnati in batch",
             "export_batch_all": "Esportare tutti i dati in batch",
-            "import_batch": "Importare dati email in batch"
+            "import_batch": "Importare dati email in batch",
+            "smtp_ingest": "Acquisire e-mail tramite protocollo SMTP"
         }
     },
     "users": {

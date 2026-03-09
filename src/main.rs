@@ -22,14 +22,17 @@ use bichon::{
         common::rustls::RustMailerTls,
         context::{executors::BichonContext, Initialize},
         duckdb::init::DuckDBManager,
-        error::BichonResult,
+        error::{code::ErrorCode, BichonResult},
         logger,
         rest::start_http_server,
+        settings::cli::SETTINGS,
+        smtp::{start_smtp_server, SmtpServer},
         tasks::PeriodicTasks,
     },
+    raise_error,
 };
 use mimalloc::MiMalloc;
-use tracing::info;
+use tracing::{error, info};
 
 use bichon::modules::{
     common::signal::SignalManager, settings::dir::DataDirManager, users::manager::UserManager,
@@ -61,7 +64,32 @@ async fn main() -> BichonResult<()> {
         return Err(error);
     }
 
+    let mut smtp_service: Option<SmtpServer> = None;
+    if SETTINGS.bichon_enable_smtp {
+        info!("SMTP service is enabled, starting...");
+        match start_smtp_server().await {
+            Ok(server) => {
+                info!("SMTP server listening on: {}", server.smtp_addr);
+                smtp_service = Some(server);
+            }
+            Err(e) => {
+                error!("Failed to start SMTP server: {}", e);
+                return Err(raise_error!(format!("{:#?}", e), ErrorCode::InternalError));
+            }
+        }
+    } else {
+        info!("SMTP service is disabled by configuration.");
+    }
+
     start_http_server().await?;
+
+    if let Some(server) = smtp_service {
+        info!("Shutting down SMTP server...");
+        server.stop().await;
+        info!("SMTP server stopped.");
+    }
+
+    info!("Bichon server stopped.");
     Ok(())
 }
 

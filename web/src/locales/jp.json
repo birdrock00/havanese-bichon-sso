@@ -1132,7 +1132,8 @@
             "delete_all": "すべてのアカウントのメールを削除",
             "export_batch": "割り当てデータを一括エクスポート",
             "export_batch_all": "すべてのデータを一括エクスポート",
-            "import_batch": "メールデータを一括インポート"
+            "import_batch": "メールデータを一括インポート",
+            "smtp_ingest": "SMTPプロトコル経由でメールを取り込む"
         }
     },
     "users": {

@@ -18,13 +18,14 @@
 
 use crate::modules::common::error::ErrorCapture;
 use crate::modules::common::log::Tracing;
+use crate::modules::common::signal::SIGNAL_MANAGER;
 use crate::modules::common::tls::rustls_config;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::error::handler::error_handler;
 use crate::modules::error::BichonResult;
 use crate::modules::rest::public::login::login;
 use crate::modules::rest::public::status::get_status;
-use crate::modules::{settings::cli::SETTINGS, utils::shutdown::shutdown_signal};
+use crate::modules::settings::cli::SETTINGS;
 
 use super::error::ApiErrorResponse;
 use crate::modules::common::auth::ApiGuard;
@@ -137,12 +138,16 @@ pub async fn start_http_server() -> BichonResult<()> {
         .with_if(SETTINGS.bichon_http_compression_enabled, Compression::new())
         .with(CatchPanic::new());
 
+    let mut rx = SIGNAL_MANAGER.subscribe();
+    let shutdown_fut = async move {
+        let _ = rx.recv().await;
+    };
     let server = Server::new(listener)
         .name("Bichon Service")
         .idle_timeout(Duration::from_secs(60))
         .run_with_graceful_shutdown(
             route.catch_all_error(error_handler),
-            shutdown_signal(),
+            shutdown_fut,
             Some(Duration::from_secs(5)),
         );
     println!(

@@ -58,7 +58,7 @@ export function PermissionsDialog({ currentRow, open, onOpenChange }: Props) {
     account: [
       {
         titleKey: "roles.categories.account_resource",
-        keys: ["account:manage", "account:read_details", "data:read", "data:manage", "data:raw:download", "data:delete", "data:export:batch", "data:import:batch"]
+        keys: ["account:manage", "account:read_details", "data:read", "data:manage", "data:raw:download", "data:delete", "data:export:batch", "data:import:batch", "data:smtp:ingest"]
       }
     ]
   };

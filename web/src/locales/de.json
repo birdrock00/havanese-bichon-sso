@@ -1132,7 +1132,8 @@
             "delete_all": "E-Mails aller Konten löschen",
             "export_batch": "Zugewiesene Daten stapelweise exportieren",
             "export_batch_all": "Alle Daten stapelweise exportieren",
-            "import_batch": "E-Mail-Daten stapelweise importieren"
+            "import_batch": "E-Mail-Daten stapelweise importieren",
+            "smtp_ingest": "E-Mails über das SMTP-Protokoll aufnehmen"
         }
     },
     "users": {

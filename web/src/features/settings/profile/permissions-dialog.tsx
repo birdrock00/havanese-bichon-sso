@@ -80,6 +80,7 @@ function getAccountCategories(t: (key: string) => string) {
         'data:delete',
         'data:export:batch',
         'data:import:batch',
+        'data:smtp:ingest',
       ],
     },
   ]

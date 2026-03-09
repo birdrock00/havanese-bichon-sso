@@ -1132,7 +1132,8 @@
             "delete_all": "Slette e-mails fra alle konti",
             "export_batch": "Batch-eksportere tildelte data",
             "export_batch_all": "Batch-eksportere alle data",
-            "import_batch": "Batch-importere e-maildata"
+            "import_batch": "Batch-importere e-maildata",
+            "smtp_ingest": "Indsend e-mails via SMTP-protokol"
         }
     },
     "users": {

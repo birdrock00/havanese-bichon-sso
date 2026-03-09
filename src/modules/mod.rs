@@ -36,6 +36,7 @@ pub mod message;
 pub mod oauth2;
 pub mod rest;
 pub mod settings;
+pub mod smtp;
 pub mod tasks;
 pub mod token;
 pub mod users;

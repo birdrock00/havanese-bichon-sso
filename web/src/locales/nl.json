@@ -1132,7 +1132,8 @@
             "delete_all": "E-mails van alle accounts verwijderen",
             "export_batch": "Toegewezen gegevens batchgewijs exporteren",
             "export_batch_all": "Alle gegevens batchgewijs exporteren",
-            "import_batch": "E-mailgegevens batchgewijs importeren"
+            "import_batch": "E-mailgegevens batchgewijs importeren",
+            "smtp_ingest": "E-mails opnemen via het SMTP-protocol"
         }
     },
     "users": {

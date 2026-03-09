@@ -421,6 +421,17 @@ impl AccountV4 {
         list_all_impl(DB_MANAGER.meta_db()).await
     }
 
+    pub async fn find_by_email(email: &str) -> BichonResult<Option<AccountModel>> {
+        let all: Vec<AccountModel> = list_all_impl(DB_MANAGER.meta_db()).await?;
+        let target_email = email.trim().to_lowercase();
+
+        let first_match = all
+            .into_iter()
+            .find(|acc| acc.email.to_lowercase() == target_email);
+
+        Ok(first_match)
+    }
+
     pub async fn minimal_list(only_nosync: bool) -> BichonResult<Vec<MinimalAccount>> {
         let result = list_all_impl(DB_MANAGER.meta_db())
             .await?

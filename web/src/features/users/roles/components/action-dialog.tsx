@@ -86,6 +86,7 @@ const CATEGORY_MAP: Record<'Global' | 'Account', { titleKey: string; keys: strin
         'data:delete',
         'data:export:batch',
         'data:import:batch',
+        'data:smtp:ingest',
       ],
     },
   ],

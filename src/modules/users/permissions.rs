@@ -116,6 +116,9 @@ impl Permission {
     /// Authorization requires checking access to the target account_id.
     pub const DATA_IMPORT_BATCH: &str = "data:import:batch";
 
+    /// Allow SMTP ingestion into SPECIFIC accounts.
+    pub const DATA_SMTP_INGEST: &str = "data:smtp:ingest";
+
     pub fn global_permissions() -> Vec<(&'static str, &'static str)> {
         vec![
             (
@@ -193,6 +196,10 @@ impl Permission {
             (
                 Self::DATA_IMPORT_BATCH,
                 "Import external EML/PST data into authorized accounts.",
+            ),
+            (
+                Self::DATA_SMTP_INGEST,
+                "Receive and archive emails via SMTP for authorized accounts.",
             ),
         ]
     }

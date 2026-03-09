@@ -141,6 +141,7 @@ impl BuiltinRole {
             Permission::DATA_DELETE,
             Permission::DATA_EXPORT_BATCH,
             Permission::DATA_IMPORT_BATCH,
+            Permission::DATA_SMTP_INGEST,
         ]
         .into_iter()
         .collect()

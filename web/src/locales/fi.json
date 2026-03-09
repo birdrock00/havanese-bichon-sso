@@ -1132,7 +1132,8 @@
             "delete_all": "Kaikkien tilien sähköpostien poistaminen",
             "export_batch": "Tietojen erävienti",
             "export_batch_all": "Kaikkien tietojen erävienti",
-            "import_batch": "Sähköpostitietojen erätuonti"
+            "import_batch": "Sähköpostitietojen erätuonti",
+            "smtp_ingest": "Vastaanota sähköposteja SMTP-protokollan kautta"
         }
     },
     "users": {

@@ -1132,7 +1132,8 @@
             "delete_all": "Ta bort e-postmeddelanden från alla konton",
             "export_batch": "Batch-exportera tilldelad data",
             "export_batch_all": "Batch-exportera all data",
-            "import_batch": "Batch-importera e-postdata"
+            "import_batch": "Batch-importera e-postdata",
+            "smtp_ingest": "Hämta e-post via SMTP-protokoll"
         }
     },
     "users": {

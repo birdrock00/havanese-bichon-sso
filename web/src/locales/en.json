@@ -1132,7 +1132,8 @@
       "delete_all": "Delete Emails from All Accounts",
       "export_batch": "Batch Export Assigned Data",
       "export_batch_all": "Batch Export All Data",
-      "import_batch": "Batch Import Email Data"
+      "import_batch": "Batch Import Email Data",
+      "smtp_ingest": "Ingest Emails via SMTP Protocol"
     }
   },
   "users": {
