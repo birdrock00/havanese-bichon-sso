@@ -25,7 +25,7 @@ import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pi
 import { Mail, HardDrive, Database, Users, Inbox, Info } from 'lucide-react';
 import { formatBytes, formatNumber } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
-import { get_dashboard_stats, TimeBucket } from '@/api/system/api';
+import { get_dashboard_stats, INITIAL_DASHBOARD_STATS, TimeBucket } from '@/api/system/api';
 import { Main } from '@/components/layout/main';
 import { FixedHeader } from '@/components/layout/fixed-header';
 import { useTranslation } from 'react-i18next';
@@ -108,6 +108,7 @@ export default function MailArchiveDashboard() {
     queryKey: ['dashboard-stats'],
     enabled: !!token,
     queryFn: get_dashboard_stats,
+    placeholderData: INITIAL_DASHBOARD_STATS,
   });
 
   const { t, i18n } = useTranslation();

@@ -57,6 +57,23 @@ export interface DashboardStats {
     commit_hash: string //Git commit hash used to build this system version
 }
 
+export const INITIAL_DASHBOARD_STATS: DashboardStats = {
+    account_count: 0,
+    email_count: 0,
+    total_size_bytes: 0,
+    storage_usage_bytes: 0,
+    index_usage_bytes: 0,
+    recent_activity: [],
+    top_senders: [],
+    top_accounts: [],
+    with_attachment_count: 0,
+    without_attachment_count: 0,
+    top_largest_emails: [],
+    system_version: '0.0.0',
+    commit_hash: 'n/a'
+};
+
+
 export interface TimeBucket {
     timestamp_ms: number;   // Timestamp in milliseconds
     count: number;  // Number of emails in this time bucket
