@@ -37,8 +37,8 @@ use http::{HeaderValue, Method};
 use poem::endpoint::EmbeddedFilesEndpoint;
 use poem::listener::{Listener, TcpListener};
 use poem::middleware::{CatchPanic, Compression, SetHeader};
-use poem::{endpoint::EmbeddedFileEndpoint, middleware::Cors, EndpointExt, Route, Server};
-use poem::{get, post};
+use poem::{get, handler, post, IntoResponse};
+use poem::{middleware::Cors, EndpointExt, Route, Server};
 use public::oauth2::oauth2_callback;
 use std::collections::HashSet;
 use std::time::Duration;
@@ -115,7 +115,7 @@ pub async fn start_http_server() -> BichonResult<()> {
         )
     };
 
-    let route = Route::new()
+    let app_logic = Route::new()
         .nest("/api-docs/swagger", swagger)
         .nest("/api-docs/redoc", redoc)
         .nest("/api-docs/explorer", openapi_explorer)
@@ -130,10 +130,10 @@ pub async fn start_http_server() -> BichonResult<()> {
             "/assets",
             EmbeddedFilesEndpoint::<FrontEndAssets>::new().with(cache_static()),
         )
-        .at(
-            "/*",
-            EmbeddedFileEndpoint::<FrontEndAssets>::new("index.html"),
-        )
+        .at("/*", serve_index_with_base);
+
+    let route = Route::new()
+        .nest(&SETTINGS.bichon_base_url, app_logic)
         .with(cors)
         .with_if(SETTINGS.bichon_http_compression_enabled, Compression::new())
         .with(CatchPanic::new());
@@ -157,4 +157,27 @@ pub async fn start_http_server() -> BichonResult<()> {
     server
         .await
         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
+}
+
+#[handler]
+async fn serve_index_with_base() -> impl IntoResponse {
+    let mut html =
+        String::from_utf8_lossy(&FrontEndAssets::get("index.html").unwrap().data).to_string();
+
+    let raw_base = &SETTINGS.bichon_base_url;
+    let base_href = if raw_base.ends_with('/') {
+        raw_base.clone()
+    } else {
+        format!("{}/", raw_base)
+    };
+
+    let inject_content = format!(
+        r#"<base href="{}"><script>window.__BICHON_BASE__ = '{}';</script>"#,
+        base_href, raw_base
+    );
+
+    html = html.replace("<head>", &format!("<head>{}", inject_content));
+    poem::Response::builder()
+        .content_type("text/html; charset=utf-8")
+        .body(html)
 }

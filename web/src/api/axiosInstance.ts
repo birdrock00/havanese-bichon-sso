@@ -20,9 +20,13 @@
 import { getToken } from "@/stores/authStore";
 import axios from "axios";
 
+const injectedBase = (window as any).__BICHON_BASE__;
+const base_url = (injectedBase === "/" || !injectedBase) ? "" : injectedBase;
+
+
 // Create an Axios instance
 const baseURL = process.env.NODE_ENV === "production"
-  ? "/" // Production: relative to the current domain
+  ? base_url // Production: relative to the current domain
   : "http://localhost:15630"; // Development: Poem's backend server
 
 const axiosInstance = axios.create({

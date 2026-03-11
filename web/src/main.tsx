@@ -121,9 +121,12 @@ const queryClient = new QueryClient({
   }),
 })
 
+const basepath = (window as any).__BICHON_BASE__ || '/';
+console.log('Current Basepath:', basepath);
 // Create a new router instance
 const router = createRouter({
   routeTree,
+  basepath,
   context: { queryClient },
   defaultPreload: 'intent',
   defaultPreloadStaleTime: 0,

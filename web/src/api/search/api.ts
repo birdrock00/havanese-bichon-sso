@@ -21,7 +21,7 @@ import axiosInstance from "@/api/axiosInstance";
 import { EmailEnvelope, PaginatedResponse } from "..";
 
 export const search_messages = async (payload: Record<string, any>) => {
-    const response = await axiosInstance.post<PaginatedResponse<EmailEnvelope>>("/api/v1/search-messages", payload);
+    const response = await axiosInstance.post<PaginatedResponse<EmailEnvelope>>("api/v1/search-messages", payload);
     return response.data;
 };
 
@@ -31,18 +31,18 @@ export interface TagCount {
 }
 
 export const get_tags = async () => {
-    const response = await axiosInstance.get<TagCount[]>("/api/v1/all-tags");
+    const response = await axiosInstance.get<TagCount[]>("api/v1/all-tags");
     return response.data;
 }
 
 export const update_tags = async (data: Record<string, any>) => {
-    const response = await axiosInstance.post("/api/v1/update-tags", data);
+    const response = await axiosInstance.post("api/v1/update-tags", data);
     return response.data;
 };
 
 
 export const get_contacts = async () => {
-    const response = await axiosInstance.get<string[]>("/api/v1/all-contacts");
+    const response = await axiosInstance.get<string[]>("api/v1/all-contacts");
     return response.data;
 }
 

@@ -27,12 +27,14 @@ import { Separator } from "./ui/separator";
 export default function APIDocs() {
   const { t } = useTranslation()
 
+  const base_url = (window as any).__BICHON_BASE__ || '';
+
   const docsOptions = [
-    { name: t('apiDocs.swaggerUI'), path: "/api-docs/swagger" },
-    { name: t('apiDocs.reDoc'), path: "/api-docs/redoc" },
-    { name: t('apiDocs.openAPIExplorer'), path: "/api-docs/explorer" },
-    { name: t('apiDocs.scalar'), path: "/api-docs/scalar" },
-    { name: t('apiDocs.downloadSpecYAML'), path: "/api-docs/spec.yaml" }
+    { name: t('apiDocs.swaggerUI'), path: `${base_url}/api-docs/swagger` },
+    { name: t('apiDocs.reDoc'), path: `${base_url}/api-docs/redoc` },
+    { name: t('apiDocs.openAPIExplorer'), path: `${base_url}/api-docs/explorer` },
+    { name: t('apiDocs.scalar'), path: `${base_url}/api-docs/scalar` },
+    { name: t('apiDocs.downloadSpecYAML'), path: `${base_url}/api-docs/spec.yaml` }
   ];
   const handleCardClick = (path: string) => {
     // Open in new tab
@@ -41,7 +43,6 @@ export default function APIDocs() {
 
   return (
     <>
-
       <FixedHeader />
       <Main>
         <div className='mb-2 flex items-center justify-between space-y-2 flex-wrap gap-x-4'>

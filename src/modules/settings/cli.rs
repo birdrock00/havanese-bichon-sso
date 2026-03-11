@@ -74,6 +74,16 @@ pub struct Settings {
     )]
     pub bichon_public_url: String,
 
+    /// bichon base URL path (default: "/")
+    #[clap(
+        long,
+        default_value = "/",
+        env,
+        help = "Set the base UI path for bichon (e.g., '/bichon' or '/bichon/'). Must start with /",
+        value_parser = validate_base_url
+    )]
+    pub bichon_base_url: String,
+
     /// CORS allowed origins (default: "*")
     #[clap(
         long,
@@ -379,6 +389,18 @@ impl Settings {
         }
         s
     }
+}
+
+fn validate_base_url(s: &str) -> Result<String, String> {
+    if s == "/" {
+        return Ok(s.to_string());
+    }
+    if !s.starts_with('/') {
+        return Err(String::from(
+            "Base URL must start with '/' (e.g., '/bichon')",
+        ));
+    }
+    Ok(s.to_string())
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, ValueEnum)]

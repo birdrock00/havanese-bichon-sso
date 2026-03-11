@@ -29,7 +29,7 @@ export const list_messages = async (accountId: number, mailbox_id: number, page:
     });
 
     const response = await axiosInstance.get<PaginatedResponse<EmailEnvelope>>(
-        `/api/v1/list-messages/${accountId}?${params.toString()}`
+        `api/v1/list-messages/${accountId}?${params.toString()}`
     );
     return response.data;
 };
@@ -42,13 +42,13 @@ export const get_thread_messages = async (accountId: number, thread_id: number, 
     });
 
     const response = await axiosInstance.get<PaginatedResponse<EmailEnvelope>>(
-        `/api/v1/get-thread-messages/${accountId}?${params.toString()}`
+        `api/v1/get-thread-messages/${accountId}?${params.toString()}`
     );
     return response.data;
 }
 
 export const download_attachment = async (accountId: number, id: number, attachmentFileName: string) => {
-    const response = await axiosInstance.get(`/api/v1/download-attachment/${accountId}/${id}?name=${attachmentFileName}`, { responseType: 'blob' });
+    const response = await axiosInstance.get(`api/v1/download-attachment/${accountId}/${id}?name=${attachmentFileName}`, { responseType: 'blob' });
     const blob = new Blob([response.data]);
     saveAs(blob, attachmentFileName);
 };
@@ -83,17 +83,17 @@ export const getContent = (messageContent: MessageContentResponse): string | nul
 };
 
 export const load_message = async (accountId: number, id: number) => {
-    const response = await axiosInstance.get<MessageContentResponse>(`/api/v1/message-content/${accountId}/${id}`);
+    const response = await axiosInstance.get<MessageContentResponse>(`api/v1/message-content/${accountId}/${id}`);
     return response.data;
 };
 
 export const delete_messages = async (payload: Record<string, number[]>) => {
-    const response = await axiosInstance.post("/api/v1/delete-messages", payload);
+    const response = await axiosInstance.post("api/v1/delete-messages", payload);
     return response.data;
 };
 
 export const download_message = async (accountId: number, id: number) => {
-    const response = await axiosInstance.get(`/api/v1/download-message/${accountId}/${id}`, { responseType: 'blob' });
+    const response = await axiosInstance.get(`api/v1/download-message/${accountId}/${id}`, { responseType: 'blob' });
     const blob = new Blob([response.data]);
     saveAs(blob, `${id}.eml`);
 };
@@ -101,7 +101,7 @@ export const download_message = async (accountId: number, id: number) => {
 
 
 export const restore_message = async (accountId: number, messageIds: number[]) => {
-    const response = await axiosInstance.post(`/api/v1/restore-messages/${accountId}`, {
+    const response = await axiosInstance.post(`api/v1/restore-messages/${accountId}`, {
         message_ids: messageIds,
     });
     return response.data;

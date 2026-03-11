@@ -37,7 +37,7 @@ interface Notifications {
 }
 
 export const get_notifications = async () => {
-    const response = await axiosInstance.get<Notifications>(`/api/v1/notifications`);
+    const response = await axiosInstance.get<Notifications>(`api/v1/notifications`);
     return response.data;
 };
 
@@ -118,22 +118,22 @@ export type ServerConfigurations = {
 }
 
 export const get_dashboard_stats = async () => {
-    const response = await axiosInstance.get<DashboardStats>(`/api/v1/dashboard-stats`);
+    const response = await axiosInstance.get<DashboardStats>(`api/v1/dashboard-stats`);
     return response.data;
 };
 
 export const list_proxy = async () => {
-    const response = await axiosInstance.get<Proxy[]>(`/api/v1/list-proxy`);
+    const response = await axiosInstance.get<Proxy[]>(`api/v1/list-proxy`);
     return response.data;
 };
 
 export const delete_proxy = async (id: number) => {
-    const response = await axiosInstance.delete(`/api/v1/proxy/${id}`);
+    const response = await axiosInstance.delete(`api/v1/proxy/${id}`);
     return response.data;
 };
 
 export const update_proxy = async (id: number, url: string) => {
-    const response = await axiosInstance.post(`/api/v1/proxy/${id}`, url, {
+    const response = await axiosInstance.post(`api/v1/proxy/${id}`, url, {
         headers: {
             "Content-Type": "text/plain",
         },
@@ -142,7 +142,7 @@ export const update_proxy = async (id: number, url: string) => {
 };
 
 export const add_proxy = async (url: string) => {
-    const response = await axiosInstance.post(`/api/v1/proxy`, url, {
+    const response = await axiosInstance.post(`api/v1/proxy`, url, {
         headers: {
             "Content-Type": "text/plain",
         },
@@ -152,6 +152,6 @@ export const add_proxy = async (url: string) => {
 
 
 export const get_system_configurations = async () => {
-    const response = await axiosInstance.get<ServerConfigurations>(`/api/v1/system-configurations`);
+    const response = await axiosInstance.get<ServerConfigurations>(`api/v1/system-configurations`);
     return response.data;
 };

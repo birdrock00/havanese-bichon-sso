@@ -125,17 +125,17 @@ export interface MinimalUser {
 
 
 export const login = async (data: Record<string, any>) => {
-    const response = await axiosInstance.post<LoginResult>(`/api/login`, data);
+    const response = await axiosInstance.post<LoginResult>(`api/login`, data);
     return response.data;
 };
 
 export const reset_admin_token = async () => {
-    const response = await axiosInstance.post("/api/v1/reset-admin-token");
+    const response = await axiosInstance.post("api/v1/reset-admin-token");
     return response.data;
 };
 
 export const reset_admin_password = async (password: string) => {
-    const response = await axiosInstance.post("/api/v1/reset-admin-password", password, {
+    const response = await axiosInstance.post("api/v1/reset-admin-password", password, {
         headers: {
             "Content-Type": "text/plain",
         },
@@ -144,89 +144,89 @@ export const reset_admin_password = async (password: string) => {
 };
 
 export const list_access_tokens = async () => {
-    const response = await axiosInstance.get<AccessToken[]>("/api/v1/access-token-list");
+    const response = await axiosInstance.get<AccessToken[]>("api/v1/access-token-list");
     return response.data;
 };
 
 export const create_access_token = async (data: Record<string, any>) => {
-    const response = await axiosInstance.post("/api/v1/access-token", data);
+    const response = await axiosInstance.post("api/v1/access-token", data);
     return response.data;
 }
 
 export const update_access_token = async (token: string, data: Record<string, any>) => {
-    const response = await axiosInstance.post(`/api/v1/access-token/${token}`, data);
+    const response = await axiosInstance.post(`api/v1/access-token/${token}`, data);
     return response.data;
 }
 
 export const remove_access_token = async (token: string) => {
-    const response = await axiosInstance.delete(`/api/v1/access-token/${token}`);
+    const response = await axiosInstance.delete(`api/v1/access-token/${token}`);
     return response.data;
 }
 
 
 export const list_roles = async () => {
-    const response = await axiosInstance.get<UserRole[]>("/api/v1/list-roles");
+    const response = await axiosInstance.get<UserRole[]>("api/v1/list-roles");
     return response.data;
 };
 
 
 export const remove_role = async (id: number) => {
-    const response = await axiosInstance.delete(`/api/v1/roles/${id}`);
+    const response = await axiosInstance.delete(`api/v1/roles/${id}`);
     return response.data;
 };
 
 
 export const create_role = async (data: Record<string, any>) => {
-    const response = await axiosInstance.post("/api/v1/roles", data);
+    const response = await axiosInstance.post("api/v1/roles", data);
     return response.data;
 };
 
 
 export const update_role = async (id: number, data: Record<string, any>) => {
-    const response = await axiosInstance.post(`/api/v1/roles/${id}`, data);
+    const response = await axiosInstance.post(`api/v1/roles/${id}`, data);
     return response.data;
 };
 
 
 export const list_users = async () => {
-    const response = await axiosInstance.get<User[]>("/api/v1/list-users");
+    const response = await axiosInstance.get<User[]>("api/v1/list-users");
     return response.data;
 };
 
 
 export const list_minimal_users = async () => {
-    const response = await axiosInstance.get<MinimalUser[]>("/api/v1/minimal-user-list");
+    const response = await axiosInstance.get<MinimalUser[]>("api/v1/minimal-user-list");
     return response.data;
 };
 
 export const list_account_roles = async () => {
-    const response = await axiosInstance.get<UserRole[]>("/api/v1/list-account-roles");
+    const response = await axiosInstance.get<UserRole[]>("api/v1/list-account-roles");
     return response.data;
 };
 
 export const remove_user = async (id: number) => {
-    const response = await axiosInstance.delete(`/api/v1/users/${id}`);
+    const response = await axiosInstance.delete(`api/v1/users/${id}`);
     return response.data;
 };
 
 
 export const create_user = async (data: Record<string, any>) => {
-    const response = await axiosInstance.post("/api/v1/users", data);
+    const response = await axiosInstance.post("api/v1/users", data);
     return response.data;
 };
 
 
 export const update_user = async (id: number, data: Record<string, any>) => {
-    const response = await axiosInstance.post(`/api/v1/users/${id}`, data);
+    const response = await axiosInstance.post(`api/v1/users/${id}`, data);
     return response.data;
 };
 
 export const get_user_tokens = async (id: number) => {
-    const response = await axiosInstance.get<AccessToken[]>(`/api/v1/user-tokens/${id}`);
+    const response = await axiosInstance.get<AccessToken[]>(`api/v1/user-tokens/${id}`);
     return response.data;
 };
 
 export const get_current_user = async () => {
-    const response = await axiosInstance.get<User>("/api/v1/current-user");
+    const response = await axiosInstance.get<User>("api/v1/current-user");
     return response.data;
 };

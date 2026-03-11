@@ -26,7 +26,7 @@ export interface MinimalAccount {
 }
 
 export const minimal_account_list = async () => {
-    const response = await axiosInstance.get<MinimalAccount[]>("/api/v1/minimal-account-list");
+    const response = await axiosInstance.get<MinimalAccount[]>("api/v1/minimal-account-list");
     return response.data;
 };
 
@@ -109,27 +109,27 @@ export interface AccountModel {
 }
 
 export const account_state = async (account_id: number) => {
-    const response = await axiosInstance.get<AccountRunningState>(`/api/v1/account-state/${account_id}`);
+    const response = await axiosInstance.get<AccountRunningState>(`api/v1/account-state/${account_id}`);
     return response.data;
 };
 
 export const create_account = async (data: Record<string, any>) => {
-    const response = await axiosInstance.post("/api/v1/account", data);
+    const response = await axiosInstance.post("api/v1/account", data);
     return response.data;
 };
 
 export const list_accounts = async () => {
-    const response = await axiosInstance.get<PaginatedResponse<AccountModel>>("/api/v1/accounts?desc=true");
+    const response = await axiosInstance.get<PaginatedResponse<AccountModel>>("api/v1/accounts?desc=true");
     return response.data;
 };
 
 export const update_account = async (account_id: number, data: Record<string, any>) => {
-    const response = await axiosInstance.post(`/api/v1/account/${account_id}`, data);
+    const response = await axiosInstance.post(`api/v1/account/${account_id}`, data);
     return response.data;
 };
 
 export const remove_account = async (account_id: number) => {
-    const response = await axiosInstance.delete(`/api/v1/account/${account_id}`);
+    const response = await axiosInstance.delete(`api/v1/account/${account_id}`);
     return response.data;
 };
 
@@ -152,11 +152,11 @@ export interface OAuth2Config {
 }
 
 export const autoconfig = async (email: string) => {
-    const response = await axiosInstance.get<AutoConfigResult>(`/api/v1/autoconfig/${email}`);
+    const response = await axiosInstance.get<AutoConfigResult>(`api/v1/autoconfig/${email}`);
     return response.data;
 };
 
 export const access_assign = async (data: Record<string, any>) => {
-    const response = await axiosInstance.post("/api/v1/accounts/access/assignments", data);
+    const response = await axiosInstance.post("api/v1/accounts/access/assignments", data);
     return response.data;
 };
