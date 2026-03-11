@@ -71,6 +71,7 @@ export function DataTablePagination<TData>({
             <Select
               value={`${table.getState().pagination.pageSize}`}
               onValueChange={(value) => {
+                localStorage.setItem('bichon_oauth2_page_size', value);
                 table.setPageSize(Number(value))
               }}
             >

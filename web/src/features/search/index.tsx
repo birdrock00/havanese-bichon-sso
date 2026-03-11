@@ -51,7 +51,7 @@ export default function Search() {
     page,
     pageSize,
     setPage,
-    setPageSize,
+    setSearchPageSize,
     setSortBy,
     setSortOrder,
     filter,
@@ -60,7 +60,7 @@ export default function Search() {
 
   const handleSetPageSize = (pageSize: number) => {
     setPage(1);
-    setPageSize(pageSize)
+    setSearchPageSize(pageSize)
   }
 
   const handleTagToggle = (tag: string) => {

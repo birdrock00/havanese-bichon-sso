@@ -75,6 +75,12 @@ export function RolesTable({ columns, data }: DataTableProps) {
       rowSelection,
       columnFilters,
     },
+    initialState: {
+      pagination: {
+        pageIndex: 0,
+        pageSize: Number(localStorage.getItem('bichon_roles_page_size')) || 10
+      }
+    },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onSortingChange: setSorting,

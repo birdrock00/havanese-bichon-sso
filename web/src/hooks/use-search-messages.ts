@@ -29,7 +29,7 @@ export function useSearchMessages() {
     // const queryClient = useQueryClient();
     const [filter, _setFilter] = useState<Record<string, any>>({});
     const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(30);
+    const [pageSize, setPageSize] = useState(Number(localStorage.getItem('bichon_search_page_size')) || 30);
     const [sortBy, setSortBy] = useState<"DATE" | "SIZE">("DATE");
     const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
@@ -37,6 +37,12 @@ export function useSearchMessages() {
         _setFilter(val);
         setPage(1);
     }, []);
+
+
+    const setSearchPageSize = (value: number) => {
+        localStorage.setItem('bichon_search_page_size', value.toString());
+        setPageSize(value);
+    }
 
     const onSubmit = (cleaned: Record<string, any>) => {
         if ('has_attachment' in cleaned && cleaned.has_attachment === false) {
@@ -84,7 +90,7 @@ export function useSearchMessages() {
         total: data?.total_items ?? 0,
         totalPages: data?.total_pages ?? 1,
         pageSize: data?.page_size ?? pageSize,
-        setPageSize,
+        setSearchPageSize,
         sortBy,
         setSortBy,
         sortOrder,
