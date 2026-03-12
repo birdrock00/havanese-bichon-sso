@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -134,9 +133,21 @@ pub async fn run_import(
 
     println!("Starting import process...");
 
-    for e in mbox.iter() {
+    for (index, e) in mbox.iter().enumerate() {
+        let msg_num = index + 1;
         let body = e.data;
-        let message = MessageParser::new().parse(body).unwrap();
+        let message = match MessageParser::new().parse(body) {
+            Some(msg) => msg,
+            None => {
+                eprintln!(
+                    "{} {}: {}",
+                    style("Warning").yellow().bold(),
+                    style(format!("at message #{}", msg_num)).dim(),
+                    "Failed to parse email structure. Skipping..."
+                );
+                continue;
+            }
+        };
 
         let folder_name = match target_folder {
             Some(ref folder_name) => folder_name.clone(),
