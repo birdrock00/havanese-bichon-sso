@@ -27,6 +27,7 @@ use crate::modules::cli::BichonCtlConfig;
 use console::style;
 use dialoguer::{theme::ColorfulTheme, Input};
 use dialoguer::{Confirm, Select};
+use mail_parser::parsers::MessageStream;
 use mail_parser::MessageParser;
 use reqwest::Client;
 
@@ -152,11 +153,15 @@ pub async fn run_import(
         let folder_name = match target_folder {
             Some(ref folder_name) => folder_name.clone(),
             None => {
-                let labels = message
-                    .header("X-Gmail-Labels")
-                    .and_then(|h| h.as_text())
-                    .unwrap_or("Inbox");
-                determine_folder(labels)
+                let gmail_labels = message.header_raw("X-Gmail-Labels").unwrap_or("INBOX");
+                let text_cow = MessageStream::new(gmail_labels.as_bytes())
+                    .parse_unstructured()
+                    .into_text();
+                let data: &str = match &text_cow {
+                    Some(c) => c.as_ref(),
+                    None => "INBOX",
+                };
+                determine_folder(data)
             }
         };
         let b64_eml = base64_encode_url_safe!(&body);

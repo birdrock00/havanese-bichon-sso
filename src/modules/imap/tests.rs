@@ -52,6 +52,7 @@ async fn test1() {
 #[tokio::test]
 async fn test2() {
     const MESSAGE: &str = r#"From: Art Vandelay <art@vandelay.com> (Vandelay Industries)
+X-Gmail-Labels: =?UTF-8?Q?Archiv=C3=A9s,Envoy=C3=A9?=
 To: "Colleagues": "James Smythe" <james@vandelay.com>; Friends:
     jane@example.com, =?UTF-8?Q?John_Sm=C3=AEth?= <john@example.com>;
 Date: Sat, 20 Nov 2021 14:22:01 -0800
@@ -93,16 +94,16 @@ R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7
 "#;
 
     let message = MessageParser::default().parse(MESSAGE).unwrap();
-    let raw_subject = message.header_raw("Subject").unwrap().as_bytes();
+    let header = message.header_raw("X-Gmail-Labels").unwrap().as_bytes();
 
-    let data = MessageStream::new(raw_subject)
+    let data = MessageStream::new(header)
         .parse_unstructured()
         .unwrap_text()
         .to_string();
 
     println!("{}", data);
     // RFC2047 support for encoded text in message readers
-    println!("{}", message.subject().unwrap());
+    //println!("{}", message.subject().unwrap());
 }
 
 #[tokio::test]
