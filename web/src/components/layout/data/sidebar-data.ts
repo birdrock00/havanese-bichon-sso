@@ -22,7 +22,7 @@ import {
   IconLayoutDashboard,
   IconSettings
 } from '@tabler/icons-react'
-import { IdCard, Inbox, Mailbox, Search, Users2 } from 'lucide-react'
+import { IdCard, Inbox, Search, Users2 } from 'lucide-react'
 import { type SidebarData } from '../types'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/use-current-user'
@@ -51,11 +51,6 @@ export function useSidebarData(): SidebarData {
             title: t('navigation.accounts'),
             url: '/accounts',
             icon: Inbox,
-          },
-          {
-            title: t('navigation.mailbox'),
-            url: '/mailboxes',
-            icon: Mailbox,
           },
           {
             title: t('common.search'),

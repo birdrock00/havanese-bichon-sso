@@ -33,6 +33,7 @@ import { useTranslation } from 'react-i18next';
 import { RestoreMessageDialog } from './restore-message-dialog';
 import { MailListTable } from './mail-list-table';
 import { SortingState } from '@tanstack/react-table';
+import { MailBoxDeleteDialog } from './delete-mailbox-dialog';
 
 export default function Search() {
   const { t } = useTranslation()
@@ -42,6 +43,8 @@ export default function Search() {
   const [selected, setSelected] = React.useState<Map<number, Set<number>>>(new Map());
   const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "date", desc: true }]);
+  const [deleteMailboxId, setDeleteMailboxId] = React.useState<string | undefined>(undefined);
+  const [selectedAccountId, setSelectedAccountId] = React.useState<number | undefined>(undefined);
 
   const {
     emails,
@@ -90,6 +93,10 @@ export default function Search() {
             setSorting,
             filter,
             setFilter,
+            deleteMailboxId,
+            setDeleteMailboxId,
+            selectedAccountId,
+            setSelectedAccountId,
             handleTagToggle
           }}
         >
@@ -151,6 +158,12 @@ export default function Search() {
             key='restore-mail-dialog'
             open={open === 'restore'}
             onOpenChange={() => setOpen('restore')}
+          />
+
+          <MailBoxDeleteDialog
+            key='mailbox-delete'
+            open={open === 'delete-mailbox'}
+            onOpenChange={() => setOpen('delete-mailbox')}
           />
         </SearchProvider>
       </Main>

@@ -252,7 +252,7 @@ export function MailList({
                                             }}
                                         >
                                             <TagIcon className="ml-2 h-3.5 w-3.5" />
-                                            {t('restore_message.restore_to_imap', 'Restore Mail')}
+                                            {t('restore_message.restore_to_imap')}
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                             className="text-destructive focus:text-destructive"

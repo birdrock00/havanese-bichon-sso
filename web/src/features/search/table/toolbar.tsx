@@ -1,12 +1,13 @@
 import { type Table } from '@tanstack/react-table'
 import { DataTableViewOptions } from './view-options'
 import { TagFilterPopover } from '../tag-filter-popover'
-import { AccountMailboxFilter } from '../account-mailbox-filter'
 import { TimePopover } from '../time-popover'
 import { MailFilterPopover } from '../contact-popover'
 import { TextSearchInput } from '../text-search-input'
 import { MoreFiltersPopover } from '../more-filters-popover'
 import { FilterResetButton } from '../filter-reset'
+import { MailboxPopover } from '../mailbox-popover'
+import { AccountPopover } from '../account-popover'
 
 type DataTableToolbarProps<TData> = {
   table: Table<TData>
@@ -25,9 +26,10 @@ export function DataTableToolbar<TData>({
       </div>
       <div className="flex flex-wrap items-center gap-1 lg:flex-nowrap lg:justify-end">
         <div className="flex flex-wrap items-center gap-1 lg:flex-nowrap">
-          <TagFilterPopover />
-          <AccountMailboxFilter />
+          <AccountPopover />
+          <MailboxPopover />
           <MailFilterPopover />
+          <TagFilterPopover />
           <TimePopover />
           <MoreFiltersPopover />
           <FilterResetButton />

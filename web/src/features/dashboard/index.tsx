@@ -463,7 +463,7 @@ export default function MailArchiveDashboard() {
         </div>
 
         <div className="p-6 md:p-8 pt-0 text-center text-xs text-muted-foreground">
-          © 2025 <a href="https://rustmailer.com" target="_blank" rel="noopener noreferrer" className="hover:underline">rustmailer.com</a> - Bichon Email Archiving Project
+          © 2025-2026 <a href="https://rustmailer.com" target="_blank" rel="noopener noreferrer" className="hover:underline">rustmailer.com</a> - Bichon Email Archiving Project
         </div>
       </Main>
     </>

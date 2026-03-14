@@ -46,9 +46,6 @@ const AuthenticatedOauth2IndexLazyImport = createFileRoute(
 const AuthenticatedOauth2ResultIndexLazyImport = createFileRoute(
   '/_authenticated/oauth2-result/',
 )()
-const AuthenticatedMailboxesIndexLazyImport = createFileRoute(
-  '/_authenticated/mailboxes/',
-)()
 const AuthenticatedApiDocsIndexLazyImport = createFileRoute(
   '/_authenticated/api-docs/',
 )()
@@ -205,15 +202,6 @@ const AuthenticatedOauth2ResultIndexLazyRoute =
     import('./routes/_authenticated/oauth2-result/index.lazy').then(
       (d) => d.Route,
     ),
-  )
-
-const AuthenticatedMailboxesIndexLazyRoute =
-  AuthenticatedMailboxesIndexLazyImport.update({
-    id: '/mailboxes/',
-    path: '/mailboxes/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any).lazy(() =>
-    import('./routes/_authenticated/mailboxes/index.lazy').then((d) => d.Route),
   )
 
 const AuthenticatedApiDocsIndexLazyRoute =
@@ -451,13 +439,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedApiDocsIndexLazyImport
       parentRoute: typeof AuthenticatedRouteImport
     }
-    '/_authenticated/mailboxes/': {
-      id: '/_authenticated/mailboxes/'
-      path: '/mailboxes'
-      fullPath: '/mailboxes'
-      preLoaderRoute: typeof AuthenticatedMailboxesIndexLazyImport
-      parentRoute: typeof AuthenticatedRouteImport
-    }
     '/_authenticated/oauth2-result/': {
       id: '/_authenticated/oauth2-result/'
       path: '/oauth2-result'
@@ -550,7 +531,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAccountsIndexLazyRoute: typeof AuthenticatedAccountsIndexLazyRoute
   AuthenticatedApiDocsIndexLazyRoute: typeof AuthenticatedApiDocsIndexLazyRoute
-  AuthenticatedMailboxesIndexLazyRoute: typeof AuthenticatedMailboxesIndexLazyRoute
   AuthenticatedOauth2ResultIndexLazyRoute: typeof AuthenticatedOauth2ResultIndexLazyRoute
   AuthenticatedOauth2IndexLazyRoute: typeof AuthenticatedOauth2IndexLazyRoute
   AuthenticatedSearchIndexLazyRoute: typeof AuthenticatedSearchIndexLazyRoute
@@ -564,7 +544,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAccountsIndexLazyRoute: AuthenticatedAccountsIndexLazyRoute,
   AuthenticatedApiDocsIndexLazyRoute: AuthenticatedApiDocsIndexLazyRoute,
-  AuthenticatedMailboxesIndexLazyRoute: AuthenticatedMailboxesIndexLazyRoute,
   AuthenticatedOauth2ResultIndexLazyRoute:
     AuthenticatedOauth2ResultIndexLazyRoute,
   AuthenticatedOauth2IndexLazyRoute: AuthenticatedOauth2IndexLazyRoute,
@@ -594,7 +573,6 @@ export interface FileRoutesByFullPath {
   '/users/roles': typeof AuthenticatedUsersRolesLazyRoute
   '/accounts': typeof AuthenticatedAccountsIndexLazyRoute
   '/api-docs': typeof AuthenticatedApiDocsIndexLazyRoute
-  '/mailboxes': typeof AuthenticatedMailboxesIndexLazyRoute
   '/oauth2-result': typeof AuthenticatedOauth2ResultIndexLazyRoute
   '/oauth2': typeof AuthenticatedOauth2IndexLazyRoute
   '/search': typeof AuthenticatedSearchIndexLazyRoute
@@ -619,7 +597,6 @@ export interface FileRoutesByTo {
   '/users/roles': typeof AuthenticatedUsersRolesLazyRoute
   '/accounts': typeof AuthenticatedAccountsIndexLazyRoute
   '/api-docs': typeof AuthenticatedApiDocsIndexLazyRoute
-  '/mailboxes': typeof AuthenticatedMailboxesIndexLazyRoute
   '/oauth2-result': typeof AuthenticatedOauth2ResultIndexLazyRoute
   '/oauth2': typeof AuthenticatedOauth2IndexLazyRoute
   '/search': typeof AuthenticatedSearchIndexLazyRoute
@@ -649,7 +626,6 @@ export interface FileRoutesById {
   '/_authenticated/users/roles': typeof AuthenticatedUsersRolesLazyRoute
   '/_authenticated/accounts/': typeof AuthenticatedAccountsIndexLazyRoute
   '/_authenticated/api-docs/': typeof AuthenticatedApiDocsIndexLazyRoute
-  '/_authenticated/mailboxes/': typeof AuthenticatedMailboxesIndexLazyRoute
   '/_authenticated/oauth2-result/': typeof AuthenticatedOauth2ResultIndexLazyRoute
   '/_authenticated/oauth2/': typeof AuthenticatedOauth2IndexLazyRoute
   '/_authenticated/search/': typeof AuthenticatedSearchIndexLazyRoute
@@ -679,7 +655,6 @@ export interface FileRouteTypes {
     | '/users/roles'
     | '/accounts'
     | '/api-docs'
-    | '/mailboxes'
     | '/oauth2-result'
     | '/oauth2'
     | '/search'
@@ -703,7 +678,6 @@ export interface FileRouteTypes {
     | '/users/roles'
     | '/accounts'
     | '/api-docs'
-    | '/mailboxes'
     | '/oauth2-result'
     | '/oauth2'
     | '/search'
@@ -731,7 +705,6 @@ export interface FileRouteTypes {
     | '/_authenticated/users/roles'
     | '/_authenticated/accounts/'
     | '/_authenticated/api-docs/'
-    | '/_authenticated/mailboxes/'
     | '/_authenticated/oauth2-result/'
     | '/_authenticated/oauth2/'
     | '/_authenticated/search/'
@@ -790,7 +763,6 @@ export const routeTree = rootRoute
         "/_authenticated/",
         "/_authenticated/accounts/",
         "/_authenticated/api-docs/",
-        "/_authenticated/mailboxes/",
         "/_authenticated/oauth2-result/",
         "/_authenticated/oauth2/",
         "/_authenticated/search/"
@@ -876,10 +848,6 @@ export const routeTree = rootRoute
     },
     "/_authenticated/api-docs/": {
       "filePath": "_authenticated/api-docs/index.lazy.tsx",
-      "parent": "/_authenticated"
-    },
-    "/_authenticated/mailboxes/": {
-      "filePath": "_authenticated/mailboxes/index.lazy.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/oauth2-result/": {

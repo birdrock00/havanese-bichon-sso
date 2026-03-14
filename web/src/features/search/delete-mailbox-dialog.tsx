@@ -21,63 +21,60 @@ import { toast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { delete_messages } from '@/api/mailbox/envelope/api';
-import { useMailboxContext } from '../context';
-import { mapToRecordOfArrays } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
+import { delete_mailbox } from '@/api/mailbox/api';
+import { useSearchContext } from './context';
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function EnvelopeDeleteDialog({ open, onOpenChange }: Props) {
+export function MailBoxDeleteDialog({ open, onOpenChange }: Props) {
   const queryClient = useQueryClient();
-  const { selectedAccountId, deleteIds, setDeleteIds } = useMailboxContext();
+  const { selectedAccountId, deleteMailboxId, setDeleteMailboxId } = useSearchContext();
   const { t } = useTranslation();
 
   const deleteMutation = useMutation({
-    mutationFn: ({ payload }: { payload: Record<string, number[]> }) => delete_messages(payload),
+    mutationFn: ({ accountId, mailboxId }: { accountId: number; mailboxId: string }) =>
+      delete_mailbox(accountId, mailboxId),
     retry: false,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['mailbox-list-messages'] });
+      queryClient.invalidateQueries({ queryKey: ['search-mailboxes', selectedAccountId] });
       onOpenChange(false);
-      setDeleteIds(new Set());
+      setDeleteMailboxId(undefined);
       toast({
-        title: t('mailbox.deleteDialog.successTitle'),
-        description: t('mailbox.deleteDialog.successDesc'),
+        title: t('mailbox.deleteMailboxDialog.successTitle'),
+        description: t('mailbox.deleteMailboxDialog.successDesc'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: t('mailbox.deleteDialog.errorTitle'),
-        description: `${error.message}`,
+        title: t('mailbox.deleteMailboxDialog.errorTitle'),
+        description: error.message || "Delete failed",
         variant: 'destructive',
       });
     },
   });
 
   const handleDelete = () => {
-    if (selectedAccountId) {
-      const body = new Map<number, Set<number>>();
-      body.set(selectedAccountId, deleteIds);
-      const payload = mapToRecordOfArrays(body);
-      deleteMutation.mutate({ payload });
+    if (selectedAccountId && deleteMailboxId) {
+      deleteMutation.mutate({
+        accountId: selectedAccountId,
+        mailboxId: deleteMailboxId
+      });
     }
   };
 
   const isLoading = deleteMutation.isPending;
 
-  const emailCount = deleteIds.size;
-  const countText =
-    emailCount > 1
-      ? t('mailbox.deleteDialog.descCountMultiple', { count: emailCount })
-      : t('mailbox.deleteDialog.descCountSingle');
-
   return (
     <ConfirmDialog
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={(isOpen) => {
+        onOpenChange(isOpen);
+        if (!isOpen) setDeleteMailboxId(undefined);
+      }}
       handleConfirm={handleDelete}
       className="max-w-xl"
       isLoading={isLoading}
@@ -87,22 +84,21 @@ export function EnvelopeDeleteDialog({ open, onOpenChange }: Props) {
             className="mr-1 inline-block stroke-destructive"
             size={18}
           />{' '}
-          {t('mailbox.deleteDialog.title')}
+          {t('mailbox.deleteMailboxDialog.title')}
         </span>
       }
       desc={
         <div className="space-y-4">
           <p className="mb-2">
-            {t('mailbox.deleteDialog.desc', { countText })}
+            {t('mailbox.deleteMailboxDialog.desc')}
           </p>
-
           <Alert variant="destructive">
-            <AlertTitle>{t('mailbox.deleteDialog.warningTitle')}</AlertTitle>
-            <AlertDescription>{t('mailbox.deleteDialog.warningDesc')}</AlertDescription>
+            <AlertTitle>{t('mailbox.deleteMailboxDialog.warningTitle')}</AlertTitle>
+            <AlertDescription>{t('mailbox.deleteMailboxDialog.warningDesc')}</AlertDescription>
           </Alert>
         </div>
       }
-      confirmText={t('mailbox.deleteDialog.confirm')}
+      confirmText={t('mailbox.deleteMailboxDialog.confirm')}
       destructive
     />
   );

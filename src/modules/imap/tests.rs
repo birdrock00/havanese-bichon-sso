@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::io::Write;
+
 use mail_parser::{parsers::MessageStream, MessageParser, MimeHeaders};
 
 use crate::{
@@ -108,7 +110,7 @@ R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7
 
 #[tokio::test]
 async fn test44() {
-    let path = r"C:\Users\polly\Downloads\test333.eml";
+    let path = r"C:\Users\polly\Downloads\3462966311412541.eml";
     let input = std::fs::read(path).unwrap();
     let message = MessageParser::default().parse(&input).unwrap();
     for attachment in message.attachments() {
@@ -119,6 +121,15 @@ async fn test44() {
             .unwrap_or_else(|| "unknown".to_string());
 
         let disposition = attachment.content_disposition();
+
+        let body_start = attachment.raw_body_offset() as usize;
+        let body_end = attachment.raw_end_offset() as usize;
+
+        if body_start < input.len() && body_end <= input.len() && body_start <= body_end {
+            //let raw_data = &input[body_start..body_end];
+            let mut file = std::fs::File::create(&filename).unwrap();
+            file.write_all(attachment.contents()).unwrap();
+        }
 
         let file_type = format!(
             "{}/{}",

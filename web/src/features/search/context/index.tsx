@@ -21,7 +21,7 @@ import React from 'react'
 import { EmailEnvelope } from '@/api'
 import { SortingState } from '@tanstack/react-table'
 
-export type SearchDialogType = 'mailbox' | 'display' | 'delete' | 'filters' | 'tags' | 'edit-tags' | 'restore'
+export type SearchDialogType = 'mailbox' | 'display' | 'delete' | 'filters' | 'tags' | 'edit-tags' | 'restore' | 'delete-mailbox'
 
 interface SearchContextType {
   open: SearchDialogType | null
@@ -32,6 +32,10 @@ interface SearchContextType {
   setToDelete: React.Dispatch<React.SetStateAction<Map<number, Set<number>>>>
   selected: Map<number, Set<number>>
   setSelected: React.Dispatch<React.SetStateAction<Map<number, Set<number>>>>
+  deleteMailboxId: string | undefined
+  setDeleteMailboxId: React.Dispatch<React.SetStateAction<string | undefined>>
+  selectedAccountId: number | undefined
+  setSelectedAccountId: React.Dispatch<React.SetStateAction<number | undefined>>
   selectedTags: string[]
   sorting: SortingState
   setSorting: React.Dispatch<React.SetStateAction<SortingState>>

@@ -144,8 +144,6 @@ export const TokenCardList: React.FC<Props> = ({ tokens, userId }) => {
                                             </Button>
                                         </div>
                                     </div>
-
-                                    {/* Meta */}
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-muted-foreground">
                                         <div>
                                             <span className="block font-medium text-foreground">
