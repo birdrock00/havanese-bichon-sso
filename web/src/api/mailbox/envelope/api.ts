@@ -21,18 +21,18 @@ import { EmailEnvelope, PaginatedResponse } from "@/api";
 import axiosInstance from "@/api/axiosInstance";
 import { saveAs } from 'file-saver';
 
-export const list_messages = async (accountId: number, mailbox_id: number, page: number, page_size: number) => {
-    const params = new URLSearchParams({
-        mailbox_id: String(mailbox_id),
-        page: String(page),
-        page_size: String(page_size),
-    });
+// export const list_messages = async (accountId: number, mailbox_id: number, page: number, page_size: number) => {
+//     const params = new URLSearchParams({
+//         mailbox_id: String(mailbox_id),
+//         page: String(page),
+//         page_size: String(page_size),
+//     });
 
-    const response = await axiosInstance.get<PaginatedResponse<EmailEnvelope>>(
-        `api/v1/list-messages/${accountId}?${params.toString()}`
-    );
-    return response.data;
-};
+//     const response = await axiosInstance.get<PaginatedResponse<EmailEnvelope>>(
+//         `api/v1/list-messages/${accountId}?${params.toString()}`
+//     );
+//     return response.data;
+// };
 
 export const get_thread_messages = async (accountId: number, thread_id: number, page: number, page_size: number) => {
     const params = new URLSearchParams({
@@ -53,7 +53,11 @@ export const download_attachment = async (accountId: number, id: number, attachm
     saveAs(blob, attachmentFileName);
 };
 
-
+export const download_nested_attachment = async (accountId: number, id: number, attachmentFileName: string, nestedAttachmentFileName: string) => {
+    const response = await axiosInstance.get(`api/v1/download-nested-attachment/${accountId}/${id}?name=${attachmentFileName}&nested_name=${nestedAttachmentFileName}`, { responseType: 'blob' });
+    const blob = new Blob([response.data]);
+    saveAs(blob, nestedAttachmentFileName);
+};
 export interface AttachmentInfo {
     /** MIME content type of the attachment (e.g., `image/png`, `application/pdf`). */
     file_type: string;
@@ -66,11 +70,17 @@ export interface AttachmentInfo {
     /** Size of the attachment in bytes. */
     size: number;
 }
-
 export interface MessageContentResponse {
     text?: string;
     html?: string;
     attachments?: AttachmentInfo[]
+}
+
+export interface NestedMessageContentResponse {
+    text?: string;
+    html?: string;
+    attachments?: AttachmentInfo[];
+    envelope: EmailEnvelope;
 }
 
 export const getContent = (messageContent: MessageContentResponse): string | null => {
@@ -87,6 +97,11 @@ export const load_message = async (accountId: number, id: number) => {
     return response.data;
 };
 
+export const load_nested_message = async (accountId: number, id: number, attachmentFileName: string) => {
+    const response = await axiosInstance.get<NestedMessageContentResponse>(`api/v1/nested-message-content/${accountId}/${id}?name=${attachmentFileName}`);
+    return response.data;
+};
+
 export const delete_messages = async (payload: Record<string, number[]>) => {
     const response = await axiosInstance.post("api/v1/delete-messages", payload);
     return response.data;
@@ -97,8 +112,6 @@ export const download_message = async (accountId: number, id: number) => {
     const blob = new Blob([response.data]);
     saveAs(blob, `${id}.eml`);
 };
-
-
 
 export const restore_message = async (accountId: number, messageIds: number[]) => {
     const response = await axiosInstance.post(`api/v1/restore-messages/${accountId}`, {

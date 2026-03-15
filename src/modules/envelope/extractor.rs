@@ -197,6 +197,81 @@ fn extract_envelope_core(
     Ok((envelope, attachments))
 }
 
+pub fn extract_envelope_from_message(
+    message: Message<'_>,
+    account_id: u64,
+) -> BichonResult<Envelope> {
+    let text = if let Some(text) = message.body_text(0).map(|cow| cow.into_owned()) {
+        text
+    } else if let Some(html) = message.body_html(0).map(|cow| cow.into_owned()) {
+        extract_text(html)
+    } else {
+        String::new()
+    };
+
+    let message_id = message
+        .message_id()
+        .map(String::from)
+        .unwrap_or_else(generate_message_id);
+
+    let in_reply_to = message.in_reply_to().as_text().map(String::from);
+    let references = extract_references(&message);
+    let thread_id = compute_thread_id(in_reply_to, references, &message_id);
+
+    let mut subject = message.subject().map(String::from).unwrap_or_default();
+    if subject.contains('\u{FFFD}') {
+        subject = normalize_subject(message.header_raw(HeaderName::Subject));
+    }
+
+    let date = message.date().map(|d| d.to_timestamp() * 1000).unwrap_or(0);
+
+    let parse_addrs = |addrs: Option<&Address<'_>>| {
+        addrs
+            .map(|addr| {
+                AddrVec::from(addr)
+                    .0
+                    .into_iter()
+                    .filter_map(|a| a.address)
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+
+    let bcc = parse_addrs(message.bcc());
+    let cc = parse_addrs(message.cc());
+    let to = parse_addrs(message.to());
+
+    let from = message
+        .from()
+        .and_then(|addr| AddrVec::from(addr).0.into_iter().next())
+        .and_then(|add| add.address)
+        .unwrap_or_else(|| "unknown".to_string());
+
+    let envelope = Envelope {
+        id: 0,
+        message_id,
+        account_id,
+        mailbox_id: 0,
+        uid: 0,
+        subject,
+        text,
+        from,
+        to,
+        cc,
+        bcc,
+        date,
+        internal_date: 0,
+        size: 0,
+        thread_id,
+        attachment_count: 0,
+        tags: None,
+        account_email: None,
+        mailbox_name: None,
+    };
+
+    Ok(envelope)
+}
+
 pub fn compute_thread_id(
     in_reply_to: Option<String>,
     references: Option<Vec<String>>,

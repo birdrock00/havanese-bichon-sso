@@ -18,7 +18,9 @@
 
 use crate::base64_encode;
 use crate::modules::account::migration::AccountModel;
+use crate::modules::envelope::extractor::extract_envelope_from_message;
 use crate::modules::error::code::ErrorCode;
+use crate::modules::indexer::envelope::Envelope;
 use crate::modules::indexer::manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER};
 use crate::modules::utils::create_hash;
 use crate::{modules::error::BichonResult, raise_error};
@@ -130,6 +132,18 @@ pub struct FullMessageContent {
     pub attachments: Option<Vec<AttachmentInfo>>,
 }
 
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
+pub struct FullNestedMessageContent {
+    /// Optional plain text version of the message.
+    pub text: Option<String>,
+    /// Optional HTML version of the message.
+    pub html: Option<String>,
+    // all Attachments include inline attachments
+    pub attachments: Option<Vec<AttachmentInfo>>,
+    /// Metadata for the email envelope.
+    pub envelope: Envelope,
+}
+
 pub async fn retrieve_email_content(account_id: u64, id: u64) -> BichonResult<FullMessageContent> {
     AccountModel::check_account_exists(account_id).await?;
     let envelope = ENVELOPE_INDEX_MANAGER
@@ -223,5 +237,75 @@ pub async fn retrieve_email_content(account_id: u64, id: u64) -> BichonResult<Fu
         text,
         html,
         attachments: Some(attachments),
+    })
+}
+
+pub async fn retrieve_nested_eml_content(
+    account_id: u64,
+    envelope_id: u64,
+    name: &str,
+) -> BichonResult<FullNestedMessageContent> {
+    let attachment_content = EML_INDEX_MANAGER
+        .get_attachment_content(account_id, envelope_id, name)
+        .await?;
+    let message = MessageParser::default().parse(&attachment_content).ok_or_else(|| {
+        raise_error!(
+            format!(
+                "Unable to parse '{}' as an email. It may not be in RFC822 format or the file is corrupted.",
+                name
+            ),
+            ErrorCode::InternalError
+        )
+    })?;
+
+    let mut html: Option<String> = message.body_html(0).map(|cow| cow.into_owned());
+    let text: Option<String> = message.body_text(0).map(|cow| cow.into_owned());
+    let mut attachments = Vec::new();
+
+    for attachment in message.attachments() {
+        let content_type = attachment.content_type();
+        let file_type = content_type.map_or_else(
+            || "application/octet-stream".to_string(),
+            |ct| format!("{}/{}", ct.c_type, ct.c_subtype.as_deref().unwrap_or("")),
+        );
+
+        let filename = attachment
+            .attachment_name()
+            .map(|n| n.to_string())
+            .unwrap_or_else(|| format!("attached_file_{}", attachment.raw_body_offset()));
+
+        let disposition = attachment.content_disposition();
+        let is_inline = disposition.map(|d| d.is_inline()).unwrap_or(false);
+        let cid = attachment.content_id();
+
+        if is_inline && cid.is_some() {
+            if let (Some(html_str), Some(content_id)) = (html.as_mut(), cid) {
+                if html_str.contains(content_id) {
+                    let data = attachment.contents();
+                    let base64_encoded = base64_encode!(data);
+                    *html_str = html_str.replace(
+                        &format!("cid:{}", content_id),
+                        &format!("data:{};base64,{}", file_type, base64_encoded),
+                    );
+                }
+            }
+            continue;
+        }
+
+        attachments.push(AttachmentInfo {
+            filename,
+            size: attachment.contents().len(),
+            inline: is_inline,
+            file_type,
+            content_id: cid.map(Into::into),
+        });
+    }
+
+    let envelope = extract_envelope_from_message(message, account_id)?;
+    Ok(FullNestedMessageContent {
+        text,
+        html,
+        attachments: Some(attachments),
+        envelope,
     })
 }

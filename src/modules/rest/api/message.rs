@@ -23,6 +23,8 @@ use crate::modules::indexer::manager::EML_INDEX_MANAGER;
 use crate::modules::indexer::manager::ENVELOPE_INDEX_MANAGER;
 use crate::modules::message::append::restore_emails;
 use crate::modules::message::append::RestoreMessagesRequest;
+use crate::modules::message::content::retrieve_nested_eml_content;
+use crate::modules::message::content::FullNestedMessageContent;
 use crate::modules::message::content::{retrieve_email_content, FullMessageContent};
 use crate::modules::message::delete::delete_messages_impl;
 use crate::modules::message::list::{get_thread_messages, list_messages_impl};
@@ -168,6 +170,31 @@ impl MessageApi {
         ))
     }
 
+    /// Retrieves the content of an email embedded as an attachment.
+    #[oai(
+        path = "/nested-message-content/:account_id/:envelope_id",
+        method = "get",
+        operation_id = "fetch_nested_message_content"
+    )]
+    async fn fetch_nested_message_content(
+        &self,
+        /// The ID of the account.
+        account_id: Path<u64>,
+        /// The ID of the message to fetch.
+        envelope_id: Path<u64>,
+        name: Query<String>,
+        context: ClientContext,
+    ) -> ApiResult<Json<FullNestedMessageContent>> {
+        let account_id = account_id.0;
+        context
+            .require_permission(Some(account_id), Permission::DATA_READ)
+            .await?;
+        let name = name.0.trim();
+        Ok(Json(
+            retrieve_nested_eml_content(account_id, envelope_id.0, name).await?,
+        ))
+    }
+
     /// Retrieves the envelope (metadata) of a specific message.
     #[oai(
         path = "/envelope/:account_id/:envelope_id",
@@ -221,7 +248,9 @@ impl MessageApi {
             .require_permission(Some(account_id), Permission::DATA_RAW_DOWNLOAD)
             .await?;
         let envelope_id = envelope_id.0;
-        let reader = EML_INDEX_MANAGER.get_reader(account_id, envelope_id).await?;
+        let reader = EML_INDEX_MANAGER
+            .get_reader(account_id, envelope_id)
+            .await?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
             .attachment_type(AttachmentType::Attachment)
@@ -229,6 +258,7 @@ impl MessageApi {
         Ok(attachment)
     }
 
+    /// Restore an email to an account's IMAP server.
     #[oai(
         path = "/restore-messages/:account_id",
         method = "post",
@@ -279,6 +309,41 @@ impl MessageApi {
             .filename(name);
         Ok(attachment)
     }
+
+    /// Downloads an attachment from within a nested email (EML file).
+    #[oai(
+        path = "/download-nested-attachment/:account_id/:envelope_id",
+        method = "get",
+        operation_id = "download_nested_attachment"
+    )]
+    async fn download_nested_attachment(
+        &self,
+        /// The ID of the account.
+        account_id: Path<u64>,
+        /// The ID of the message containing the attachment.
+        envelope_id: Path<u64>,
+        /// The filename of the attachment to download.
+        name: Query<String>,
+        nested_name: Query<String>,
+        context: ClientContext,
+    ) -> ApiResult<Attachment<Body>> {
+        let account_id = account_id.0;
+        AccountModel::check_account_exists(account_id).await?;
+        context
+            .require_permission(Some(account_id), Permission::DATA_READ)
+            .await?;
+        let name = name.0.trim();
+        let nested_name = nested_name.0.trim();
+        let reader = EML_INDEX_MANAGER
+            .get_nested_attachment(account_id, envelope_id.0, name, nested_name)
+            .await?;
+        let body = Body::from_async_read(reader);
+        let attachment = Attachment::new(body)
+            .attachment_type(AttachmentType::Attachment)
+            .filename(name);
+        Ok(attachment)
+    }
+
     /// Returns all facets in the index along with their document counts.
     #[oai(path = "/all-tags", method = "get", operation_id = "get_all_tags")]
     async fn get_all_tags(&self, context: ClientContext) -> ApiResult<Json<Vec<TagCount>>> {
@@ -324,6 +389,7 @@ impl MessageApi {
         Ok(())
     }
 
+    /// Retrieves a unique list of all contact email addresses across authorized accounts.
     #[oai(
         path = "/all-contacts",
         method = "get",

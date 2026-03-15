@@ -545,12 +545,12 @@ impl EmlIndexManager {
         Ok(file)
     }
 
-    pub async fn get_attachment(
+    pub async fn get_attachment_content(
         &self,
         account_id: u64,
         eid: u64,
         file_name: &str,
-    ) -> BichonResult<File> {
+    ) -> BichonResult<Vec<u8>> {
         let envelope = duckdb()?
             .get_envelope_by_id(account_id, eid)?
             .ok_or_else(|| {
@@ -578,25 +578,96 @@ impl EmlIndexManager {
                 ErrorCode::InternalError
             )
         })?;
-        let target_attachment = message
+
+        let content = message
             .attachments()
-            .find(|p| p.attachment_name().is_some_and(|name| name == file_name));
-        let content = match target_attachment {
-            Some(att) => att.contents(),
-            None => {
-                return Err(raise_error!(
-                    "Attachment not found".into(),
+            .find(|att| {
+                att.attachment_name()
+                    .map(|name| name == file_name)
+                    .unwrap_or(false)
+            })
+            .map(|att| att.contents().to_vec())
+            .ok_or_else(|| {
+                raise_error!(
+                    format!("Attachment '{}' not found in email {}", file_name, eid),
                     ErrorCode::ResourceNotFound
-                ))
-            }
-        };
+                )
+            })?;
+
+        Ok(content)
+    }
+
+    pub async fn get_attachment(
+        &self,
+        account_id: u64,
+        eid: u64,
+        file_name: &str,
+    ) -> BichonResult<File> {
+        let content = self
+            .get_attachment_content(account_id, eid, file_name)
+            .await?;
         let mut path = DATA_DIR_MANAGER.temp_dir.clone();
-        path.push(format!("{eid}.{file_name}.eml"));
+        path.push(format!("{eid}.{file_name}.attachment"));
         {
             let mut file = File::create(&path)
                 .await
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-            file.write_all(content)
+            file.write_all(&content)
+                .await
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        }
+        let file = File::open(&path)
+            .await
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        Ok(file)
+    }
+
+    pub async fn get_nested_attachment(
+        &self,
+        account_id: u64,
+        eid: u64,
+        file_name: &str,
+        nested_file_name: &str,
+    ) -> BichonResult<File> {
+        let content = self
+            .get_attachment_content(account_id, eid, file_name)
+            .await?;
+
+        let message = MessageParser::default().parse(&content).ok_or_else(|| {
+            raise_error!(
+                format!(
+                    "Failed to parse email: account_id={}, eid={}",
+                    account_id, eid
+                ),
+                ErrorCode::InternalError
+            )
+        })?;
+
+        let content = message
+            .attachments()
+            .find(|att| {
+                att.attachment_name()
+                    .map(|name| name == nested_file_name)
+                    .unwrap_or(false)
+            })
+            .map(|att| att.contents().to_vec())
+            .ok_or_else(|| {
+                raise_error!(
+                    format!(
+                        "Nested attachment '{}' not found in email {}",
+                        nested_file_name, eid
+                    ),
+                    ErrorCode::ResourceNotFound
+                )
+            })?;
+
+        let mut path = DATA_DIR_MANAGER.temp_dir.clone();
+        path.push(format!("{eid}.{file_name}.{nested_file_name}.attachment"));
+        {
+            let mut file = File::create(&path)
+                .await
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            file.write_all(&content)
                 .await
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         }

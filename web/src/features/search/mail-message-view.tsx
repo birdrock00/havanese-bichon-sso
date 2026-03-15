@@ -39,6 +39,7 @@ import { useSearchContext } from './context';
 import { MailThreadDialog } from './thread-dialog';
 import useMinimalAccountList from '@/hooks/use-minimal-account-list';
 import { useTranslation } from 'react-i18next';
+import { NestedEmailDialog } from './nested-email-dialog';
 
 
 interface MailMessageViewProps {
@@ -84,7 +85,7 @@ const Multilines: React.FC<{ title: string; lines: string[] }> = ({ title, lines
   );
 };
 
-const getFileConfig = (mimeType: string) => {
+export const getFileConfig = (mimeType: string) => {
   const type = mimeType.toLowerCase();
   if (type.includes('pdf')) {
     return { icon: <FileText className="h-4 w-4" />, color: 'text-red-600 bg-red-50 border-red-100' };
@@ -120,13 +121,12 @@ export function MailMessageView({
 }: MailMessageViewProps) {
   const { t } = useTranslation()
   const { setToDelete, setOpen, setSelected } = useSearchContext();
-
   const [content, setContent] = useState<string | null>(null);
   const [contentType, setContentType] = useState<'Plain' | 'Html' | null>(null);
   const [attachments, setAttachments] = useState<AttachmentInfo[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloadingAttachmentFileName, setDownloadingAttachmentFileName] = useState<string | null>(null);
-
+  const [nestedEmlFile, setNestedEmlFile] = useState<string | null>(null);
   const { getEmailById } = useMinimalAccountList();
   const [threadOpen, setThreadOpen] = useState(false);
 
@@ -168,6 +168,10 @@ export function MailMessageView({
   }, [envelope.id]);
 
 
+  const handleViewNestedEml = (filename: string) => {
+    setNestedEmlFile(filename);
+  };
+
   const toggleToDelete = (accountId: number, mailId: number) => {
     setToDelete(prev => {
       const next = new Map(prev);
@@ -192,6 +196,7 @@ export function MailMessageView({
       setOpen("delete")
     }
   }
+
 
   const downloadEmlFile = async () => {
     try {
@@ -312,6 +317,8 @@ export function MailMessageView({
                 <div className="space-y-2">
                   {nonInline.map((attachment, i) => {
                     const { icon, color } = getFileConfig(attachment.file_type);
+                    const isNestedEmail = attachment.file_type.toLowerCase() === 'message/rfc822';
+
                     return <div key={i} className="flex items-center">
                       <div className="group flex items-center gap-2 p-1 hover:bg-muted/60 rounded transition-colors min-w-0 w-full">
                         <div className={`flex-shrink-0 ${color}`}>
@@ -324,12 +331,27 @@ export function MailMessageView({
                           >
                             {attachment.filename}
                           </span>
-                          <span className="flex-shrink-0 text-[9px] font-bold text-muted-foreground/60 bg-muted px-1 py-0.5 rounded uppercase tracking-tighter group-hover:text-foreground transition-colors">
-                            {attachment.file_type.split('/').pop()?.toUpperCase()}
+                          <span className="flex-shrink-0 text-[9px] font-bold text-muted-foreground/60 bg-muted px-1 py-0.5 rounded uppercase">
+                            {attachment.file_type.split('/').pop()}
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-4 ml-auto">
+                      <div className="flex items-center space-x-3 ml-auto pr-1">
+                        {isNestedEmail && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                onClick={() => handleViewNestedEml(attachment.filename)}
+                              >
+                                <MessageSquareMore className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{t('mail.viewNestedEmail', 'View Embedded Email')}</TooltipContent>
+                          </Tooltip>
+                        )}
                         <span className="text-gray-500 text-xs shrink-0">
                           {formatBytes(attachment.size)}
                         </span>
@@ -380,11 +402,18 @@ export function MailMessageView({
       </div>
 
       <MailThreadDialog open={threadOpen} onOpenChange={setThreadOpen} />
+      <NestedEmailDialog
+        open={!!nestedEmlFile}
+        onOpenChange={(open: boolean) => !open && setNestedEmlFile(null)}
+        accountId={envelope.account_id}
+        envelopeId={envelope.id}
+        fileName={nestedEmlFile || ''}
+      />
     </div>
   );
 }
 
-function formatTimestamp(milliseconds: number): string {
+export function formatTimestamp(milliseconds: number): string {
   const date = new Date(milliseconds);
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
