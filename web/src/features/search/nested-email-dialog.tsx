@@ -142,9 +142,6 @@ export function NestedEmailDialog({ open, onOpenChange, accountId, envelopeId, f
                         <Mail className="h-4 w-4 text-blue-400" />
                         <span className="text-sm font-medium truncate max-w-[400px] opacity-90">{fileName}</span>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} className="text-white hover:bg-white/10 h-8 w-8 p-0">
-                        ✕
-                    </Button>
                 </div>
 
                 <div className="flex-1 overflow-auto bg-white p-8">
