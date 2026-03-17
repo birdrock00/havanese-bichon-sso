@@ -20,7 +20,7 @@ use crate::modules::error::BichonResult;
 use crate::modules::indexer::manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER};
 use std::collections::HashMap;
 
-pub async fn delete_messages_impl(request: HashMap<u64, Vec<u64>>) -> BichonResult<()> {
+pub async fn delete_messages_impl(request: HashMap<u64, Vec<String>>) -> BichonResult<()> {
     EML_INDEX_MANAGER
         .delete_email_multi_account(&request)
         .await?;

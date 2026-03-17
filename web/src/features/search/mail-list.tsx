@@ -66,7 +66,7 @@ export function MailList({
         }
     }
 
-    const toggleToDelete = (accountId: number, mailId: number) => {
+    const toggleToDelete = (accountId: number, mailId: string) => {
         setToDelete(prev => {
             const next = new Map(prev);
             const set = new Set(next.get(accountId) || []);
@@ -84,7 +84,7 @@ export function MailList({
         });
     };
 
-    const toggleSelected = (accountId: number, mailId: number) => {
+    const toggleSelected = (accountId: number, mailId: string) => {
         setSelected(prev => {
             const next = new Map(prev);
             const set = new Set(next.get(accountId) || []);
@@ -105,7 +105,7 @@ export function MailList({
     const totalSelected = Array.from(selected.values())
         .reduce((sum, set) => sum + set.size, 0);
 
-    const hasSelected = (accountId: number, mailId: number) => {
+    const hasSelected = (accountId: number, mailId: string) => {
         return selected.get(accountId)?.has(mailId) ?? false;
     }
 

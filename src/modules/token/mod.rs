@@ -21,7 +21,7 @@ use std::collections::HashMap;
 use super::error::code::ErrorCode;
 use crate::modules::database::manager::DB_MANAGER;
 use crate::modules::database::{
-    async_find_impl, delete_impl, async_filter_by_secondary_key_impl, with_transaction,
+    async_filter_by_secondary_key_impl, async_find_impl, delete_impl, with_transaction,
 };
 use crate::modules::database::{insert_impl, list_all_impl, update_impl};
 use crate::modules::settings::cli::SETTINGS;
@@ -187,7 +187,7 @@ impl AccessTokenModel {
             Some(token) => token,
             None => {
                 return Err(raise_error!(
-                    "Permission denied: no valid access token provided.".into(),
+                    "Invalid access token provided. Please check your credentials.".into(),
                     ErrorCode::PermissionDenied
                 ))
             }

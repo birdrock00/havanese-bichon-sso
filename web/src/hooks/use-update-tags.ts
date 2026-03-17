@@ -22,7 +22,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from './use-toast';
 
 export interface UpdateTagsParams {
-    updates: Record<number, number[]>;
+    updates: Record<number, string[]>;
     tags: string[];
 }
 

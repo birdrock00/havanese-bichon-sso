@@ -22,7 +22,6 @@ use crate::modules::envelope::extractor::extract_envelope_from_message;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::indexer::envelope::Envelope;
 use crate::modules::indexer::manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER};
-use crate::modules::utils::create_hash;
 use crate::{modules::error::BichonResult, raise_error};
 use mail_parser::{MessageParser, MimeHeaders};
 
@@ -144,29 +143,32 @@ pub struct FullNestedMessageContent {
     pub envelope: Envelope,
 }
 
-pub async fn retrieve_email_content(account_id: u64, id: u64) -> BichonResult<FullMessageContent> {
+pub async fn retrieve_email_content(
+    account_id: u64,
+    envelope_id: String,
+) -> BichonResult<FullMessageContent> {
     AccountModel::check_account_exists(account_id).await?;
     let envelope = ENVELOPE_INDEX_MANAGER
-        .get_envelope_by_id(account_id, id)
+        .get_envelope_by_id(account_id, envelope_id.clone())
         .await?
         .ok_or_else(|| {
             raise_error!(
                 format!(
                     "Email record not found: account_id={} id={}",
-                    account_id, id
+                    account_id, &envelope_id
                 ),
                 ErrorCode::ResourceNotFound
             )
         })?;
-    let eml_id = create_hash(account_id, &envelope.message_id);
+
     let eml = EML_INDEX_MANAGER
-        .get(account_id, eml_id)
+        .get(account_id, &envelope.content_hash)
         .await?
         .ok_or_else(|| {
             raise_error!(
                 format!(
                     "Email record not found: account_id={} id={}",
-                    account_id, id
+                    account_id, &envelope_id
                 ),
                 ErrorCode::ResourceNotFound
             )
@@ -175,7 +177,7 @@ pub async fn retrieve_email_content(account_id: u64, id: u64) -> BichonResult<Fu
         raise_error!(
             format!(
                 "Failed to parse EML data (id={}) — the message may be corrupted.",
-                id
+                &envelope_id
             ),
             ErrorCode::InternalError
         )
@@ -186,14 +188,23 @@ pub async fn retrieve_email_content(account_id: u64, id: u64) -> BichonResult<Fu
     for attachment in message.attachments() {
         let content_type = attachment.content_type().ok_or_else(|| {
             raise_error!(
-                format!("Attachment is missing Content-Type (email id={})", id),
+                format!(
+                    "Attachment is missing Content-Type (email id={})",
+                    &envelope_id
+                ),
                 ErrorCode::InternalError
             )
         })?;
         let filename = attachment
             .attachment_name()
             .map(|name| name.to_string())
-            .unwrap_or_else(|| format!("email{}_attachment{}", id, attachment.raw_body_offset()));
+            .unwrap_or_else(|| {
+                format!(
+                    "email{}_attachment{}",
+                    &envelope_id,
+                    attachment.raw_body_offset()
+                )
+            });
 
         let disposition = attachment.content_disposition();
 
@@ -242,7 +253,7 @@ pub async fn retrieve_email_content(account_id: u64, id: u64) -> BichonResult<Fu
 
 pub async fn retrieve_nested_eml_content(
     account_id: u64,
-    envelope_id: u64,
+    envelope_id: String,
     name: &str,
 ) -> BichonResult<FullNestedMessageContent> {
     let attachment_content = EML_INDEX_MANAGER

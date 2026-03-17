@@ -24,7 +24,7 @@ use crate::modules::{account::migration::AccountModel, cache::imap::mailbox::Mai
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
 pub struct Envelope {
-    pub id: u64,
+    pub id: String,
     pub message_id: String,
     pub account_id: u64,
     pub account_email: Option<String>,
@@ -40,9 +40,10 @@ pub struct Envelope {
     pub date: i64,
     pub internal_date: i64,
     pub size: u32,
-    pub thread_id: u64,
+    pub thread_id: String,
     pub attachment_count: usize,
     pub tags: Option<Vec<String>>,
+    pub content_hash: String,
 }
 
 impl Envelope {
@@ -97,7 +98,7 @@ impl Envelope {
             date: row.get("sent_at").unwrap_or(0),
             internal_date: row.get("received_at").unwrap_or(0),
             size: row.get::<_, u64>("size_bytes")? as u32,
-            thread_id: row.get("thread_id").unwrap_or(0),
+            thread_id: row.get("thread_id")?,
             attachment_count: row.get::<_, i32>("attachment_count")? as usize,
             tags: {
                 let t = get_list("tags");
@@ -107,6 +108,7 @@ impl Envelope {
                     Some(t)
                 }
             },
+            content_hash: row.get("content_hash")?,
         })
     }
 }

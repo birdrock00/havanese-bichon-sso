@@ -37,7 +37,7 @@ export function EnvelopeDeleteDialog({ open, onOpenChange }: Props) {
   const { t } = useTranslation()
 
   const deleteMutation = useMutation({
-    mutationFn: ({ payload }: { payload: Record<string, number[]> }) =>
+    mutationFn: ({ payload }: { payload: Record<number, string[]> }) =>
       delete_messages(payload),
     retry: false,
     onSuccess: () => {

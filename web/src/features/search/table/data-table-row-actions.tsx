@@ -40,7 +40,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const { setOpen, setCurrentEnvelope, setSelected, setToDelete } = useSearchContext()
   const { t } = useTranslation()
 
-  const toggleToDelete = (accountId: number, mailId: number) => {
+  const toggleToDelete = (accountId: number, mailId: string) => {
     setToDelete(prev => {
       const next = new Map(prev)
       const set = new Set(next.get(accountId) || [])

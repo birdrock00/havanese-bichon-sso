@@ -5,7 +5,6 @@ use crate::{
         error::{code::ErrorCode, BichonResult},
         imap::executor::ImapExecutor,
         indexer::manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER},
-        utils::create_hash,
     },
     raise_error,
 };
@@ -16,16 +15,16 @@ const MAX_RESTORE_COUNT: usize = 100;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
 pub struct RestoreMessagesRequest {
-    /// Message IDs to restore (max 100)
-    pub message_ids: Vec<u64>,
+    /// envelope IDs to restore (max 100)
+    pub envelope_ids: Vec<String>,
 }
 
-pub async fn restore_emails(account_id: u64, message_ids: Vec<u64>) -> BichonResult<()> {
-    if message_ids.len() > MAX_RESTORE_COUNT {
+pub async fn restore_emails(account_id: u64, envelope_ids: Vec<String>) -> BichonResult<()> {
+    if envelope_ids.len() > MAX_RESTORE_COUNT {
         return Err(raise_error!(
             format!(
                 "Too many messages to restore: {} (max {})",
-                message_ids.len(),
+                envelope_ids.len(),
                 MAX_RESTORE_COUNT
             ),
             ErrorCode::InvalidParameter
@@ -42,27 +41,30 @@ pub async fn restore_emails(account_id: u64, message_ids: Vec<u64>) -> BichonRes
 
     let mut failed = Vec::new();
     let mut session = ImapExecutor::create_connection(account_id).await?;
-    for message_id in message_ids {
+    for envelope_id in envelope_ids {
         let result: BichonResult<()> = async {
+            let eid = envelope_id.clone();
             let envelope = ENVELOPE_INDEX_MANAGER
-                .get_envelope_by_id(account_id, message_id)
+                .get_envelope_by_id(account_id, eid)
                 .await?
                 .ok_or_else(|| {
                     raise_error!(
                         format!(
                             "Envelope not found: account_id={} message_id={}",
-                            account_id, message_id
+                            account_id, &envelope_id
                         ),
                         ErrorCode::ResourceNotFound
                     )
                 })?;
-            let eml_id = create_hash(account_id, &envelope.message_id);
             let eml = EML_INDEX_MANAGER
-                .get(account_id, eml_id)
+                .get(account_id, &envelope.content_hash)
                 .await?
                 .ok_or_else(|| {
                     raise_error!(
-                        format!("Eml not found: account_id={} id={}", account_id, message_id),
+                        format!(
+                            "Eml not found: account_id={} id={}",
+                            account_id, &envelope_id
+                        ),
                         ErrorCode::ResourceNotFound
                     )
                 })?;
@@ -83,13 +85,13 @@ pub async fn restore_emails(account_id: u64, message_ids: Vec<u64>) -> BichonRes
         .await;
 
         if let Err(err) = result {
-            failed.push(message_id);
             tracing::warn!(
                 account_id = account_id,
-                message_id = message_id,
+                message_id = &envelope_id,
                 error = ?err,
                 "Failed to restore email"
             );
+            failed.push(envelope_id);
         }
     }
 

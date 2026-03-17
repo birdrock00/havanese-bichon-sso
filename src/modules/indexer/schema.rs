@@ -19,37 +19,37 @@
 use std::sync::{Arc, LazyLock};
 
 use crate::modules::indexer::fields::*;
-use tantivy::schema::INDEXED;
 use tantivy::schema::{Schema, FAST, STORED};
+use tantivy::schema::{INDEXED, STRING};
 
-static EML_FIELDS: LazyLock<Arc<EmlFields>> = LazyLock::new(|| {
-    let (_, fields) = SchemaTools::create_eml_schema();
+static BLOB_FIELDS: LazyLock<Arc<BlobFields>> = LazyLock::new(|| {
+    let (_, fields) = SchemaTools::create_schema();
     Arc::new(fields)
 });
 
 pub struct SchemaTools;
 
 impl SchemaTools {
-    pub fn eml_schema() -> Schema {
-        let (schema, _) = Self::create_eml_schema();
+    pub fn schema() -> Schema {
+        let (schema, _) = Self::create_schema();
         schema
     }
 
-    pub fn eml_fields() -> &'static EmlFields {
-        &EML_FIELDS
+    pub fn fields() -> &'static BlobFields {
+        &BLOB_FIELDS
     }
 
-    pub fn create_eml_schema() -> (Schema, EmlFields) {
+    pub fn create_schema() -> (Schema, BlobFields) {
         let mut builder = Schema::builder();
-        let f_id = builder.add_u64_field(F_ID, INDEXED | FAST);
+        let f_id = builder.add_text_field(F_ID, STRING | FAST);
         let f_account_id = builder.add_u64_field(F_ACCOUNT_ID, INDEXED | STORED | FAST);
         let f_mailbox_id = builder.add_u64_field(F_MAILBOX_ID, INDEXED | STORED | FAST);
-        let f_eml = builder.add_bytes_field(F_EML, STORED);
-        let fields = EmlFields {
+        let f_blob = builder.add_bytes_field(F_BLOB, STORED);
+        let fields = BlobFields {
             f_id,
             f_account_id,
             f_mailbox_id,
-            f_eml,
+            f_blob,
         };
         (builder.build(), fields)
     }

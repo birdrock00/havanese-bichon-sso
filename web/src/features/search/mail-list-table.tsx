@@ -273,7 +273,7 @@ export function MailListTable({
     }
   }
 
-  const toggleSelected = (accountId: number, mailId: number) => {
+  const toggleSelected = (accountId: number, mailId: string) => {
     setSelected(prev => {
       const next = new Map(prev)
       const set = new Set(next.get(accountId) || [])
@@ -292,7 +292,7 @@ export function MailListTable({
 
   const totalSelected = Array.from(selected.values()).reduce((sum, set) => sum + set.size, 0)
 
-  const hasSelected = (accountId: number, mailId: number) => selected.get(accountId)?.has(mailId) ?? false
+  const hasSelected = (accountId: number, mailId: string) => selected.get(accountId)?.has(mailId) ?? false
 
   if (isLoading) {
     return (

@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::{
     modules::{
         account::migration::AccountModel,
@@ -58,7 +57,7 @@ fn validate_pagination_params(page: u64, page_size: u64) -> BichonResult<()> {
 
 pub async fn get_thread_messages(
     account_id: u64,
-    thread_id: u64,
+    thread_id: String,
     page: u64,
     page_size: u64,
 ) -> BichonResult<DataPage<Envelope>> {

@@ -107,7 +107,7 @@ macro_rules! raise_error {
         $crate::modules::error::BichonError::Generic {
             message: $msg,
             code: $code,
-            location: snafu::location!()
+            location: snafu::location!(),
         }
     };
 }
@@ -244,13 +244,6 @@ pub fn validate_email(email: &str) -> crate::modules::error::BichonResult<()> {
 }
 
 #[macro_export]
-macro_rules! calculate_hash {
-    ($name:expr) => {
-        $crate::modules::utils::hash($name)
-    };
-}
-
-#[macro_export]
 macro_rules! id {
     ($bit_strength:expr) => {{
         // Generate a token with the given bit strength
@@ -275,6 +268,14 @@ pub fn hash(s: &str) -> u64 {
     let mut cursor = std::io::Cursor::new(cursor);
     let hash = murmur3::murmur3_x64_128(&mut cursor, 0).unwrap();
     (hash & 0x1F_FFFF_FFFF_FFFF) as u64
+}
+
+pub fn hex_hash(s: &str) -> String {
+    let mut cursor = Vec::new();
+    cursor.extend_from_slice(s.as_bytes());
+    let mut cursor = std::io::Cursor::new(cursor);
+    let hash = murmur3::murmur3_x64_128(&mut cursor, 0).unwrap();
+    format!("{:032x}", hash)
 }
 
 pub fn create_hash(account_id: u64, field: &str) -> u64 {
@@ -369,4 +370,9 @@ pub fn validate_tag(tag: &str) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+pub fn content_hash(content: &[u8]) -> String {
+    let hash = blake3::hash(content);
+    hash.to_hex().to_string()
 }

@@ -25,7 +25,6 @@ use crate::modules::error::code::ErrorCode;
 use crate::modules::imap::session::SessionStream;
 use crate::modules::indexer::manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER};
 use crate::modules::indexer::schema::SchemaTools;
-use crate::modules::utils::create_hash;
 use crate::modules::{error::BichonResult, imap::manager::ImapConnectionManager};
 use crate::raise_error;
 use async_imap::types::Name;
@@ -201,22 +200,19 @@ impl ImapExecutor {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
 
         let mut count = 0;
-        let fields = SchemaTools::eml_fields();
+        let fields = SchemaTools::fields();
         while let Some(fetch) = stream
             .try_next()
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
         {
             let envelope = extract_envelope(&fetch, account_id, mailbox_id)?;
-            let eml_id = create_hash(account_id, &envelope.0.message_id);
-
-            ENVELOPE_INDEX_MANAGER
-                .add_document(envelope.0.id, envelope)
-                .await;
+            let content_hash = envelope.0.content_hash.clone();
+            ENVELOPE_INDEX_MANAGER.add_document(envelope).await;
             let body = fetch.body().ok_or_else(|| {
                 raise_error!("missing a body".into(), ErrorCode::ImapUnexpectedResult)
             })?;
-            EML_INDEX_MANAGER.add_document( eml_id, doc!(fields.f_id => eml_id, fields.f_account_id => account_id, fields.f_mailbox_id => mailbox_id, fields.f_eml => body)).await;
+            EML_INDEX_MANAGER.add_document( content_hash.clone(), doc!(fields.f_id => content_hash, fields.f_account_id => account_id, fields.f_mailbox_id => mailbox_id, fields.f_blob => body)).await;
             count += 1;
         }
         Ok(count)
@@ -238,61 +234,22 @@ impl ImapExecutor {
             .uid_fetch(uid_set, BODY_FETCH_COMMAND)
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
-        let fields = SchemaTools::eml_fields();
+        let fields = SchemaTools::fields();
         while let Some(fetch) = stream
             .try_next()
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
         {
             let envelope = extract_envelope(&fetch, account_id, mailbox_id)?;
-            let eml_id = create_hash(account_id, &envelope.0.message_id);
-            ENVELOPE_INDEX_MANAGER
-                .add_document(envelope.0.id, envelope)
-                .await;
+            let content_hash = envelope.0.content_hash.clone();
+            ENVELOPE_INDEX_MANAGER.add_document(envelope).await;
             let body = fetch.body().ok_or_else(|| {
                 raise_error!("missing a body".into(), ErrorCode::ImapUnexpectedResult)
             })?;
-            EML_INDEX_MANAGER.add_document( eml_id, doc!(fields.f_id => eml_id, fields.f_account_id => account_id, fields.f_mailbox_id => mailbox_id, fields.f_eml => body)).await;
+            EML_INDEX_MANAGER.add_document( content_hash.clone(), doc!(fields.f_id => content_hash, fields.f_account_id => account_id, fields.f_mailbox_id => mailbox_id, fields.f_blob => body)).await;
         }
         Ok(())
     }
-
-    // async fn get_connection(
-    //     &self,
-    // ) -> BichonResult<bb8::PooledConnection<'_, ImapConnectionManager>> {
-    //     match self.pool.get().await {
-    //         Ok(connection) => Ok(connection),
-    //         Err(e) => match e {
-    //             RunError::User(e) => Err(e),
-    //             RunError::TimedOut => {
-    //                 let state = self.pool.state();
-    //                 tracing::warn!(
-    //                     "{}: connections={}, idle={}, \
-    //                     get_started={}, get_direct={}, get_waited={}, get_timed_out={}, \
-    //                     wait_time_ms={}, created={}, closed_broken={}, closed_invalid={}, \
-    //                     closed_lifetime={}, closed_idle={}",
-    //                     self.account_id,
-    //                     state.connections,
-    //                     state.idle_connections,
-    //                     state.statistics.get_started,
-    //                     state.statistics.get_direct,
-    //                     state.statistics.get_waited,
-    //                     state.statistics.get_timed_out,
-    //                     state.statistics.get_wait_time.as_millis(),
-    //                     state.statistics.connections_created,
-    //                     state.statistics.connections_closed_broken,
-    //                     state.statistics.connections_closed_invalid,
-    //                     state.statistics.connections_closed_max_lifetime,
-    //                     state.statistics.connections_closed_idle_timeout,
-    //                 );
-    //                 return Err(raise_error!(
-    //                     "Timed out while attempting to acquire a connection from the pool".into(),
-    //                     ErrorCode::ConnectionPoolTimeout
-    //                 ));
-    //             }
-    //         },
-    //     }
-    // }
 
     pub async fn create_connection(
         account_id: u64,

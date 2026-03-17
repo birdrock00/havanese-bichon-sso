@@ -58,7 +58,7 @@ impl MessageApi {
     async fn delete_messages(
         &self,
         /// specifying the mailbox and messages to delete.
-        payload: Json<HashMap<u64, Vec<u64>>>,
+        payload: Json<HashMap<u64, Vec<String>>>,
         context: ClientContext,
     ) -> ApiResult<()> {
         let request = payload.0;
@@ -130,7 +130,7 @@ impl MessageApi {
         /// The ID of the account owning the mailbox.
         account_id: Path<u64>,
         // Thread ID
-        thread_id: Query<u64>,
+        thread_id: Query<String>,
         /// The page number for pagination (1-based).
         page: Query<u64>,
         /// The number of messages per page.
@@ -158,7 +158,7 @@ impl MessageApi {
         /// The ID of the account.
         account_id: Path<u64>,
         /// The ID of the message to fetch.
-        envelope_id: Path<u64>,
+        envelope_id: Path<String>,
         context: ClientContext,
     ) -> ApiResult<Json<FullMessageContent>> {
         let account_id = account_id.0;
@@ -181,7 +181,7 @@ impl MessageApi {
         /// The ID of the account.
         account_id: Path<u64>,
         /// The ID of the message to fetch.
-        envelope_id: Path<u64>,
+        envelope_id: Path<String>,
         name: Query<String>,
         context: ClientContext,
     ) -> ApiResult<Json<FullNestedMessageContent>> {
@@ -206,21 +206,22 @@ impl MessageApi {
         /// The ID of the account.
         account_id: Path<u64>,
         /// The ID of the message.
-        envelope_id: Path<u64>,
+        envelope_id: Path<String>,
         context: ClientContext,
     ) -> ApiResult<Json<Envelope>> {
         let account_id = account_id.0;
         context
             .require_permission(Some(account_id), Permission::DATA_READ)
             .await?;
+        let envelope_id = envelope_id.0;
         let envelope = ENVELOPE_INDEX_MANAGER
-            .get_envelope_by_id(account_id, envelope_id.0)
+            .get_envelope_by_id(account_id, envelope_id.clone())
             .await?
             .ok_or_else(|| {
                 raise_error!(
                     format!(
                         "Envelope not found: account_id={} envelope_id={}",
-                        account_id, envelope_id.0
+                        account_id, &envelope_id
                     ),
                     ErrorCode::ResourceNotFound
                 )
@@ -239,7 +240,7 @@ impl MessageApi {
         /// The ID of the account.
         account_id: Path<u64>,
         /// The ID of the message to download.
-        envelope_id: Path<u64>,
+        envelope_id: Path<String>,
         context: ClientContext,
     ) -> ApiResult<Attachment<Body>> {
         let account_id = account_id.0;
@@ -249,7 +250,7 @@ impl MessageApi {
             .await?;
         let envelope_id = envelope_id.0;
         let reader = EML_INDEX_MANAGER
-            .get_reader(account_id, envelope_id)
+            .get_reader(account_id, envelope_id.clone())
             .await?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
@@ -275,7 +276,7 @@ impl MessageApi {
         context
             .require_permission(Some(account_id), Permission::DATA_EXPORT_BATCH)
             .await?;
-        Ok(restore_emails(account_id, payload.0.message_ids).await?)
+        Ok(restore_emails(account_id, payload.0.envelope_ids).await?)
     }
 
     /// Downloads a specific attachment from an email. Requires `name` query parameter.
@@ -289,7 +290,7 @@ impl MessageApi {
         /// The ID of the account.
         account_id: Path<u64>,
         /// The ID of the message containing the attachment.
-        envelope_id: Path<u64>,
+        envelope_id: Path<String>,
         /// The filename of the attachment to download.
         name: Query<String>,
         context: ClientContext,
@@ -321,7 +322,7 @@ impl MessageApi {
         /// The ID of the account.
         account_id: Path<u64>,
         /// The ID of the message containing the attachment.
-        envelope_id: Path<u64>,
+        envelope_id: Path<String>,
         /// The filename of the attachment to download.
         name: Query<String>,
         nested_name: Query<String>,

@@ -21,12 +21,13 @@ use crate::modules::envelope::utils::normalize_subject;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::error::BichonResult;
 use crate::modules::message::content::AttachmentInfo;
-use crate::modules::utils::create_hash2;
 use crate::modules::utils::html::extract_text;
-use crate::{calculate_hash, raise_error, utc_now};
+use crate::modules::utils::{content_hash, hex_hash};
 use crate::{id, modules::indexer::envelope::Envelope};
+use crate::{raise_error, utc_now};
 use async_imap::types::Fetch;
 use mail_parser::{Address, HeaderName, Message, MessageParser, MimeHeaders};
+use uuid::Uuid;
 
 pub fn extract_envelope(
     fetch: &Fetch,
@@ -84,6 +85,7 @@ fn extract_envelope_core(
     account_id: u64,
     mailbox_id: u64,
 ) -> BichonResult<(Envelope, Vec<AttachmentInfo>)> {
+    let content_hash = content_hash(body);
     let message = MessageParser::new().parse(body).ok_or_else(|| {
         raise_error!(
             "Email header parse result is not available".into(),
@@ -173,7 +175,7 @@ fn extract_envelope_core(
         .collect();
 
     let envelope = Envelope {
-        id: create_hash2(account_id, mailbox_id, &message_id),
+        id: Uuid::new_v4().to_string(),
         message_id,
         account_id,
         mailbox_id,
@@ -192,6 +194,7 @@ fn extract_envelope_core(
         tags: None,
         account_email: None,
         mailbox_name: None,
+        content_hash,
     };
 
     Ok((envelope, attachments))
@@ -248,11 +251,11 @@ pub fn extract_envelope_from_message(
         .unwrap_or_else(|| "unknown".to_string());
 
     let envelope = Envelope {
-        id: 0,
+        id: Default::default(),
         message_id,
         account_id,
-        mailbox_id: 0,
-        uid: 0,
+        mailbox_id: Default::default(),
+        uid: Default::default(),
         subject,
         text,
         from,
@@ -260,13 +263,14 @@ pub fn extract_envelope_from_message(
         cc,
         bcc,
         date,
-        internal_date: 0,
-        size: 0,
+        internal_date: Default::default(),
+        size: Default::default(),
         thread_id,
-        attachment_count: 0,
-        tags: None,
-        account_email: None,
-        mailbox_name: None,
+        attachment_count: Default::default(),
+        tags: Default::default(),
+        account_email: Default::default(),
+        mailbox_name: Default::default(),
+        content_hash: Default::default(),
     };
 
     Ok(envelope)
@@ -276,11 +280,11 @@ pub fn compute_thread_id(
     in_reply_to: Option<String>,
     references: Option<Vec<String>>,
     message_id: &str,
-) -> u64 {
+) -> String {
     if in_reply_to.is_some() && references.as_ref().map_or(false, |r| !r.is_empty()) {
-        return calculate_hash!(&references.as_ref().unwrap()[0]);
+        return hex_hash(&references.as_ref().unwrap()[0]);
     }
-    calculate_hash!(message_id)
+    hex_hash(message_id)
 }
 
 pub fn generate_message_id() -> String {

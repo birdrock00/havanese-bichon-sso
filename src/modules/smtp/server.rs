@@ -606,7 +606,7 @@ async fn read_data<R: AsyncBufReadExt + Unpin>(reader: &mut R) -> io::Result<Vec
 }
 
 async fn parse_email(data: &[u8], session: &Session) -> BichonResult<()> {
-    let fields = SchemaTools::eml_fields();
+    let fields = SchemaTools::fields();
     let rcpt = match session.rcpt_to.first() {
         Some(r) => r,
         None => {
@@ -646,19 +646,17 @@ async fn parse_email(data: &[u8], session: &Session) -> BichonResult<()> {
         e
     })?;
 
-    let eml_id = create_hash(rcpt.id, &envelope.0.message_id);
-    ENVELOPE_INDEX_MANAGER
-        .add_document(envelope.0.id, envelope)
-        .await;
+    let content_hash = envelope.0.content_hash.clone();
+    ENVELOPE_INDEX_MANAGER.add_document(envelope).await;
 
     EML_INDEX_MANAGER
         .add_document(
-            eml_id,
+            content_hash.clone(),
             doc!(
-                fields.f_id => eml_id,
+                fields.f_id => content_hash,
                 fields.f_account_id => rcpt.id,
                 fields.f_mailbox_id => mailbox_id,
-                fields.f_eml => data
+                fields.f_blob => data
             ),
         )
         .await;

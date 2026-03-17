@@ -27,7 +27,7 @@ export interface PaginatedResponse<S> {
 
 
 export interface EmailEnvelope {
-  id: number;
+  id: string;
   message_id: string;
   account_id: number;
   account_email?: string;
@@ -42,7 +42,8 @@ export interface EmailEnvelope {
   date: number;
   internal_date: number;
   size: number;
-  thread_id: number,
+  thread_id: string,
   attachment_count: number;
   tags: string[];
+  content_hash: string;
 }

@@ -24,7 +24,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, Object)]
 pub struct UpdateTagsRequest {
-    pub updates: HashMap<u64, Vec<u64>>, // account_id -> envelope_ids
+    pub updates: HashMap<u64, Vec<String>>, // account_id -> envelope_ids
     pub tags: Vec<String>,
 }
 

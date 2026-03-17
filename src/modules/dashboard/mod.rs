@@ -113,5 +113,5 @@ pub struct Group {
 pub struct LargestEmail {
     pub subject: String, // Email subject
     pub size_bytes: u64, // Email size in bytes
-    pub id: u64,
+    pub id: String,
 }

@@ -63,10 +63,10 @@ export const validateFlag = (input: string): string | null => {
 
 
 export function mapToRecordOfArrays(
-  map: Map<number, Set<number>>
-): Record<string, number[]> {
+  map: Map<number, Set<string>>
+): Record<number, string[]> {
   return Object.fromEntries(
-    Array.from(map.entries()).map(([key, value]) => [String(key), Array.from(value)])
+    Array.from(map.entries()).map(([key, value]) => [key, Array.from(value)])
   );
 }
 

@@ -28,10 +28,10 @@ interface SearchContextType {
   setOpen: (str: SearchDialogType | null) => void
   currentEnvelope: EmailEnvelope | undefined
   setCurrentEnvelope: React.Dispatch<React.SetStateAction<EmailEnvelope | undefined>>
-  toDelete: Map<number, Set<number>>
-  setToDelete: React.Dispatch<React.SetStateAction<Map<number, Set<number>>>>
-  selected: Map<number, Set<number>>
-  setSelected: React.Dispatch<React.SetStateAction<Map<number, Set<number>>>>
+  toDelete: Map<number, Set<string>>
+  setToDelete: React.Dispatch<React.SetStateAction<Map<number, Set<string>>>>
+  selected: Map<number, Set<string>>
+  setSelected: React.Dispatch<React.SetStateAction<Map<number, Set<string>>>>
   deleteMailboxId: string | undefined
   setDeleteMailboxId: React.Dispatch<React.SetStateAction<string | undefined>>
   selectedAccountId: number | undefined

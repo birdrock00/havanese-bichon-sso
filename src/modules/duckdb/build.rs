@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use arrow::array::{BooleanArray, Int32Array, Int64Array, ListBuilder, StringBuilder, UInt64Array};
 use arrow::datatypes::{DataType, Field, Schema};
 use arrow::record_batch::RecordBatch;
@@ -30,10 +29,11 @@ pub fn build_record_batch(items: &[Envelope]) -> RecordBatch {
     let capacity = items.len();
 
     let schema = Arc::new(Schema::new(vec![
-        Field::new("id", DataType::UInt64, false),
+        Field::new("id", DataType::Utf8, false),
         Field::new("account_id", DataType::UInt64, false),
         Field::new("mailbox_id", DataType::UInt64, false),
         Field::new("uid", DataType::UInt64, false),
+        Field::new("content_hash", DataType::Utf8, false),
         Field::new("subject", DataType::Utf8, true),
         Field::new("body", DataType::Utf8, true),
         Field::new("sender", DataType::Utf8, true),
@@ -55,7 +55,7 @@ pub fn build_record_batch(items: &[Envelope]) -> RecordBatch {
         Field::new("sent_at", DataType::Int64, true),
         Field::new("received_at", DataType::Int64, true),
         Field::new("size_bytes", DataType::UInt64, true),
-        Field::new("thread_id", DataType::UInt64, true),
+        Field::new("thread_id", DataType::Utf8, true),
         Field::new("message_id", DataType::Utf8, true),
         Field::new("has_attachment", DataType::Boolean, false),
         Field::new("attachment_count", DataType::Int32, false),
@@ -67,10 +67,12 @@ pub fn build_record_batch(items: &[Envelope]) -> RecordBatch {
         Field::new("shard_id", DataType::UInt64, false),
     ]));
 
-    let mut id_b = UInt64Array::builder(capacity);
+    let mut id_b = StringBuilder::with_capacity(capacity, capacity * 20);
     let mut account_id_b = UInt64Array::builder(capacity);
     let mut mailbox_id_b = UInt64Array::builder(capacity);
     let mut uid_b = UInt64Array::builder(capacity);
+
+    let mut content_hash_b = StringBuilder::with_capacity(capacity, capacity * 64);
     let mut subject_b = StringBuilder::with_capacity(capacity, capacity * 20);
     let mut body_b = StringBuilder::with_capacity(capacity, capacity * 100);
     let mut from_b = StringBuilder::with_capacity(capacity, capacity * 20);
@@ -82,7 +84,7 @@ pub fn build_record_batch(items: &[Envelope]) -> RecordBatch {
     let mut date_b = Int64Array::builder(capacity);
     let mut internal_date_b = Int64Array::builder(capacity);
     let mut size_b = UInt64Array::builder(capacity);
-    let mut thread_id_b = UInt64Array::builder(capacity);
+    let mut thread_id_b = StringBuilder::with_capacity(capacity, capacity * 20);
     let mut msg_id_b = StringBuilder::with_capacity(capacity, capacity * 30);
     let mut has_att_b = BooleanArray::builder(capacity);
     let mut att_count_b = Int32Array::builder(capacity);
@@ -90,10 +92,11 @@ pub fn build_record_batch(items: &[Envelope]) -> RecordBatch {
     let mut shard_id_b = UInt64Array::builder(capacity);
 
     for e in items {
-        id_b.append_value(e.id);
+        id_b.append_value(&e.id);
         account_id_b.append_value(e.account_id);
         mailbox_id_b.append_value(e.mailbox_id);
         uid_b.append_value(e.uid as u64);
+        content_hash_b.append_value(&e.content_hash);
         subject_b.append_value(&e.subject);
         body_b.append_value(&e.text);
         from_b.append_value(&e.from);
@@ -116,7 +119,7 @@ pub fn build_record_batch(items: &[Envelope]) -> RecordBatch {
         date_b.append_value(e.date);
         internal_date_b.append_value(e.internal_date);
         size_b.append_value(e.size as u64);
-        thread_id_b.append_value(e.thread_id);
+        thread_id_b.append_value(&e.thread_id);
         msg_id_b.append_value(&e.message_id);
 
         has_att_b.append_value(e.attachment_count > 0);
@@ -132,6 +135,7 @@ pub fn build_record_batch(items: &[Envelope]) -> RecordBatch {
             Arc::new(account_id_b.finish()),
             Arc::new(mailbox_id_b.finish()),
             Arc::new(uid_b.finish()),
+            Arc::new(content_hash_b.finish()),
             Arc::new(subject_b.finish()),
             Arc::new(body_b.finish()),
             Arc::new(from_b.finish()),
@@ -163,50 +167,46 @@ mod integration_tests {
         conn.execute_batch(
             r#"
             CREATE TABLE IF NOT EXISTS envelopes (
-                -- internal id (tantivy f_id)
-                id                UBIGINT NOT NULL,
-
-                -- account / mailbox / uid
+                id                UUID PRIMARY KEY, 
                 account_id        UBIGINT NOT NULL,
                 mailbox_id        UBIGINT NOT NULL,
                 uid               UBIGINT NOT NULL,
 
-                -- headers / content
+                content_hash      VARCHAR(64), 
+
                 subject           TEXT,
                 body              TEXT,
 
-                sender         TEXT,
-                recipients           VARCHAR[],
-                cc           VARCHAR[],
-                bcc          VARCHAR[],
+                sender            TEXT,
+                recipients        VARCHAR[],
+                cc                VARCHAR[],
+                bcc               VARCHAR[],
 
-                -- dates
                 sent_at           BIGINT,
-                received_at  BIGINT,
+                received_at       BIGINT,
 
-                -- size
-                size_bytes              UBIGINT,
-
-                -- thread
-                thread_id         UBIGINT,
-
-                -- message-id
+                size_bytes        UBIGINT,
+                thread_id         VARCHAR,
                 message_id        TEXT,
 
-                -- attachment summary
                 has_attachment    BOOLEAN NOT NULL,
                 attachment_count  INTEGER NOT NULL CHECK (attachment_count >= 0),
                 tags              VARCHAR[],
-                shard_id      UBIGINT NOT NULL
+                shard_id          UBIGINT NOT NULL
             );
             "#,
         )?;
 
+        let test_uuid = uuid::Uuid::new_v4().to_string();
+        let test_hash =
+            "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a1b2c3d4e5f6".to_string();
+
         let items = vec![Envelope {
-            id: 101,
+            id: test_uuid.clone(),
             account_id: 1,
             mailbox_id: 1,
             uid: 50,
+            content_hash: test_hash.clone(),
             subject: "Testing Arrow".to_string(),
             text: "Content".to_string(),
             from: "sender@test.com".to_string(),
@@ -216,7 +216,7 @@ mod integration_tests {
             date: 1000,
             internal_date: 1001,
             size: 2048,
-            thread_id: 1,
+            thread_id: "1".to_string(),
             message_id: "id123".to_string(),
             attachment_count: 1,
             tags: None,
@@ -231,13 +231,18 @@ mod integration_tests {
             appender.flush()?;
         }
 
-        let mut stmt = conn.prepare("SELECT subject, size_bytes FROM envelopes WHERE id = 101")?;
-        let mut rows = stmt.query([])?;
+        let mut stmt =
+            conn.prepare("SELECT subject, size_bytes, content_hash FROM envelopes WHERE id = ?")?;
+        let mut rows = stmt.query([&test_uuid])?;
+
         if let Some(row) = rows.next()? {
             let subject: String = row.get(0)?;
             let size: u64 = row.get(1)?;
+            let hash_in_db: String = row.get(2)?;
+
             assert_eq!(subject, "Testing Arrow");
             assert_eq!(size, 2048);
+            assert_eq!(hash_in_db, test_hash);
         }
 
         let mut stmt = conn.prepare(
@@ -247,13 +252,13 @@ mod integration_tests {
         assert_eq!(count, 1);
 
         let has_att: bool = conn.query_row(
-            "SELECT has_attachment FROM envelopes WHERE id = 101",
-            [],
+            "SELECT has_attachment FROM envelopes WHERE id = ?",
+            [&test_uuid],
             |r| r.get(0),
         )?;
         assert!(has_att);
 
-        println!("Integration test for ingestion and query passed!");
+        println!("Integration test with content_hash passed!");
         Ok(())
     }
 }

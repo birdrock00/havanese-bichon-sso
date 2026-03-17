@@ -112,7 +112,7 @@ impl ImportEmls {
             },
         };
 
-        let fields = SchemaTools::eml_fields();
+        let fields = SchemaTools::fields();
         let account_id = account.id;
         let mut success_count = 0;
         let mut failed_details: Vec<FailedEmlDetail> = Vec::new(); // Store failure details
@@ -148,19 +148,19 @@ impl ImportEmls {
                     continue;
                 }
             };
-            let eml_id = create_hash(account_id, &envelope.0.message_id);
+            let content_hash = envelope.0.content_hash.clone();
             ENVELOPE_INDEX_MANAGER
-                .add_document(envelope.0.id, envelope)
+                .add_document(envelope)
                 .await;
 
             EML_INDEX_MANAGER
                 .add_document(
-                    eml_id,
+                    content_hash.clone(),
                     doc!(
-                        fields.f_id => eml_id,
+                        fields.f_id => content_hash,
                         fields.f_account_id => account_id,
                         fields.f_mailbox_id => mailbox_id,
-                        fields.f_eml => decoded
+                        fields.f_blob => decoded
                     ),
                 )
                 .await;

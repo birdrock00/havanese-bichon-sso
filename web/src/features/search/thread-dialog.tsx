@@ -42,7 +42,7 @@ interface MailThreadDialogProps {
 
 export function MailThreadDialog({ open, onOpenChange }: MailThreadDialogProps) {
   const { currentEnvelope } = useSearchContext();
-  const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const { t } = useTranslation();
 
   const threadId = currentEnvelope?.thread_id;
@@ -73,7 +73,7 @@ export function MailThreadDialog({ open, onOpenChange }: MailThreadDialogProps) 
   const allMessages = data?.pages.flatMap((page) => page.items) ?? [];
   const totalCount = data?.pages[0]?.total_items ?? 0;
 
-  const toggleExpand = (id: number) => {
+  const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);

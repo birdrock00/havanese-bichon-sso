@@ -39,8 +39,8 @@ export default function Search() {
   const { t } = useTranslation()
   const [selectedEnvelope, setSelectedEnvelope] = React.useState<EmailEnvelope | undefined>(undefined);
   const [open, setOpen] = useDialogState<SearchDialogType>(null)
-  const [toDelete, setToDelete] = React.useState<Map<number, Set<number>>>(new Map());
-  const [selected, setSelected] = React.useState<Map<number, Set<number>>>(new Map());
+  const [toDelete, setToDelete] = React.useState<Map<number, Set<string>>>(new Map());
+  const [selected, setSelected] = React.useState<Map<number, Set<string>>>(new Map());
   const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "date", desc: true }]);
   const [deleteMailboxId, setDeleteMailboxId] = React.useState<string | undefined>(undefined);

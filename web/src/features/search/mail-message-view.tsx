@@ -44,7 +44,7 @@ import { NestedEmailDialog } from './nested-email-dialog';
 
 interface MailMessageViewProps {
   envelope: {
-    id: number;
+    id: string;
     account_id: number,
     from?: string;
     to?: string[];
@@ -172,7 +172,7 @@ export function MailMessageView({
     setNestedEmlFile(filename);
   };
 
-  const toggleToDelete = (accountId: number, mailId: number) => {
+  const toggleToDelete = (accountId: number, mailId: string) => {
     setToDelete(prev => {
       const next = new Map(prev);
       const set = new Set(next.get(accountId) || []);

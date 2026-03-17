@@ -3,7 +3,7 @@
 -- =========================
 CREATE TABLE IF NOT EXISTS envelopes (
     -- internal id (tantivy f_id)
-    id                UBIGINT NOT NULL,
+    id UUID PRIMARY KEY,
 
     -- account / mailbox / uid
     account_id        UBIGINT NOT NULL,
@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS envelopes (
     uid               UBIGINT NOT NULL,
 
     -- headers / content
+    content_hash      VARCHAR(64) NOT NULL,
     subject           TEXT,
     body              TEXT,
 
@@ -27,7 +28,7 @@ CREATE TABLE IF NOT EXISTS envelopes (
     size_bytes        UBIGINT,
 
     -- thread
-    thread_id         UBIGINT,
+    thread_id         VARCHAR NOT NULL,
 
     -- message-id
     message_id        TEXT,
@@ -39,8 +40,7 @@ CREATE TABLE IF NOT EXISTS envelopes (
     shard_id          UBIGINT NOT NULL
 );
 
-CREATE INDEX idx_env_mailbox_sent ON envelopes(account_id, mailbox_id, sent_at);
-
+CREATE INDEX IF NOT EXISTS idx_env_mailbox_sent ON envelopes(account_id, mailbox_id, sent_at);
 -- =========================
 -- envelope_attachments
 --
@@ -48,9 +48,9 @@ CREATE INDEX idx_env_mailbox_sent ON envelopes(account_id, mailbox_id, sent_at);
 -- =========================
 CREATE TABLE IF NOT EXISTS envelope_attachments (
     -- Reference to envelopes.id
-    envelope_id      UBIGINT NOT NULL,
-    account_id        UBIGINT NOT NULL,
-    mailbox_id        UBIGINT NOT NULL,
+    envelope_id      UUID NOT NULL,
+    account_id       UBIGINT NOT NULL,
+    mailbox_id       UBIGINT NOT NULL,
     -- Original attachment filename (for display)
     filename         TEXT NOT NULL,
 
@@ -63,8 +63,8 @@ CREATE TABLE IF NOT EXISTS envelope_attachments (
     -- Attachment size in bytes
     -- 0 if unknown
     size_bytes       UBIGINT NOT NULL,
+    content_hash         VARCHAR(64) NOT NULL,
     shard_id      UBIGINT NOT NULL
 );
 
-
-CREATE INDEX IF NOT EXISTS idx_attachments_mailbox_id ON envelope_attachments (mailbox_id);
+CREATE INDEX IF NOT EXISTS idx_attachments_env_id ON envelope_attachments (envelope_id);

@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use chrono::{NaiveDateTime, Utc};
 use duckdb::{params, types::Value, DuckdbConnectionManager};
 use refinery::Runner;
@@ -249,6 +248,7 @@ impl DuckDBManager {
                             att.get_category(),
                             att.file_type,
                             att.size as u64,
+                            env.content_hash.clone(), //这里是错误的，应该保存附件的content_hash
                             0,
                         ])
                         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
@@ -291,7 +291,7 @@ impl DuckDBManager {
         Ok(total)
     }
 
-    pub fn num_messages_in_thread(&self, account_id: u64, thread_id: u64) -> BichonResult<u64> {
+    pub fn num_messages_in_thread(&self, account_id: u64, thread_id: String) -> BichonResult<u64> {
         let conn = self.conn()?;
         let count: u64 = conn
             .query_row(
@@ -331,7 +331,7 @@ impl DuckDBManager {
     pub fn get_envelope_by_id(
         &self,
         account_id: u64,
-        envelope_id: u64,
+        envelope_id: String,
     ) -> BichonResult<Option<Envelope>> {
         let conn = self.conn()?;
         let mut stmt = conn
@@ -352,36 +352,44 @@ impl DuckDBManager {
     pub fn get_envelopes_by_ids(
         &self,
         account_id: u64,
-        envelope_ids: &[u64],
+        envelope_ids: &[&str],
     ) -> BichonResult<Vec<Envelope>> {
         if envelope_ids.is_empty() {
             return Ok(vec![]);
         }
         let conn = self.conn()?;
-        let ids_str = envelope_ids
-            .iter()
-            .map(|id| id.to_string())
-            .collect::<Vec<_>>()
-            .join(",");
+        let placeholders = vec!["?"; envelope_ids.len()].join(", ");
 
         let query = format!(
             "SELECT * FROM envelopes WHERE account_id = ? AND id IN ({})",
-            ids_str
+            placeholders
         );
 
-        let mut stmt = conn
-            .prepare(&query)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        let mut stmt = conn.prepare(&query).map_err(|e| {
+            raise_error!(format!("Prepare error: {:#?}", e), ErrorCode::InternalError)
+        })?;
+
+        let mut params: Vec<Box<dyn duckdb::ToSql>> = Vec::new();
+        params.push(Box::new(account_id));
+        for id in envelope_ids {
+            params.push(Box::new(id.to_string()));
+        }
+
+        let param_refs: Vec<&dyn duckdb::ToSql> = params.iter().map(|p| p.as_ref()).collect();
 
         let rows = stmt
-            .query_map(params![account_id], |row| Envelope::from_row(row))
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            .query_map(duckdb::params_from_iter(param_refs), |row| {
+                Envelope::from_row(row)
+            })
+            .map_err(|e| {
+                raise_error!(format!("Query error: {:#?}", e), ErrorCode::InternalError)
+            })?;
 
         let mut result = Vec::new();
         for row in rows {
-            result.push(
-                row.map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?,
-            );
+            result.push(row.map_err(|e| {
+                raise_error!(format!("Row error: {:#?}", e), ErrorCode::InternalError)
+            })?);
         }
 
         Ok(result)
@@ -497,34 +505,46 @@ impl DuckDBManager {
 
     pub fn update_envelope_tags(
         &self,
-        updates: HashMap<u64, Vec<u64>>, // account_id -> [envelope_id1, ...]
+        updates: HashMap<u64, Vec<String>>,
         tags: Vec<String>,
     ) -> BichonResult<()> {
         let mut conn = self.conn()?;
         let tags_json = serde_json::to_string(&tags)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
         let tx = conn
             .transaction()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
         for (account_id, ids) in updates {
             if ids.is_empty() {
                 continue;
             }
-            let ids_str = ids
-                .iter()
-                .map(|id| id.to_string())
-                .collect::<Vec<_>>()
-                .join(",");
-            let query = format!(
-                "UPDATE envelopes 
-                SET tags = CAST(json(?) AS VARCHAR[])
-                WHERE account_id = ? 
-                AND id IN ({})",
-                ids_str
-            );
-            tx.execute(&query, params![tags_json, account_id])
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+            for chunk in ids.chunks(100) {
+                let placeholders = vec!["?"; chunk.len()].join(", ");
+                let query = format!(
+                    "UPDATE envelopes 
+                 SET tags = CAST(json(?) AS VARCHAR[])
+                 WHERE account_id = ? 
+                 AND id IN ({})",
+                    placeholders
+                );
+
+                let mut params: Vec<Box<dyn duckdb::ToSql>> = Vec::new();
+                params.push(Box::new(tags_json.clone()));
+                params.push(Box::new(account_id));
+                for id in chunk {
+                    params.push(Box::new(id.clone()));
+                }
+
+                let param_refs: Vec<&dyn duckdb::ToSql> =
+                    params.iter().map(|p| p.as_ref()).collect();
+                tx.execute(&query, duckdb::params_from_iter(param_refs))
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            }
         }
+
         tx.commit()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         Ok(())
@@ -532,31 +552,38 @@ impl DuckDBManager {
 
     pub fn delete_envelopes_multi_account(
         &self,
-        deletes: HashMap<u64, Vec<u64>>, // account_id -> [envelope_id1, ...]
+        deletes: HashMap<u64, Vec<String>>,
     ) -> BichonResult<()> {
         let mut conn = self.conn()?;
         let tx = conn
             .transaction()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
         for (account_id, ids) in deletes {
             if ids.is_empty() {
                 continue;
             }
+
             for chunk in ids.chunks(100) {
-                let ids_str = chunk
-                    .iter()
-                    .map(|id| id.to_string())
-                    .collect::<Vec<_>>()
-                    .join(",");
+                let placeholders = vec!["?"; chunk.len()].join(", ");
+                let mut params: Vec<Box<dyn duckdb::ToSql>> = Vec::new();
+                params.push(Box::new(account_id));
+                for id in chunk {
+                    params.push(Box::new(id.clone()));
+                }
+
+                let param_refs: Vec<&dyn duckdb::ToSql> =
+                    params.iter().map(|p| p.as_ref()).collect();
+                let query_params = duckdb::params_from_iter(param_refs);
 
                 let del_attachments_query = format!(
                     "DELETE FROM envelope_attachments 
                  WHERE account_id = ? 
                  AND envelope_id IN ({})",
-                    ids_str
+                    placeholders
                 );
 
-                tx.execute(&del_attachments_query, params![account_id])
+                tx.execute(&del_attachments_query, query_params.clone())
                     .map_err(|e| {
                         raise_error!(
                             format!("Delete attachments fail: {:#?}", e),
@@ -568,14 +595,17 @@ impl DuckDBManager {
                     "DELETE FROM envelopes 
                  WHERE account_id = ? 
                  AND id IN ({})",
-                    ids_str
+                    placeholders
                 );
-                tx.execute(&query, params![account_id])
+
+                tx.execute(&query, query_params)
                     .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
             }
         }
+
         tx.commit()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
         Ok(())
     }
 
@@ -1000,7 +1030,7 @@ impl DuckDBManager {
     pub fn list_thread_envelopes(
         &self,
         account_id: u64,
-        thread_id: u64,
+        thread_id: String,
         page: u64,
         page_size: u64,
         desc: bool,

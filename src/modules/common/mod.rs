@@ -92,11 +92,6 @@ impl<'x> From<&ImapAddress<'x>> for AddrVec {
     }
 }
 
-// #[derive(Serialize)]
-// pub struct ErrorResponse {
-//     pub message: String,
-// }
-
 #[inline]
 fn create_rust_mailer_error(message: &str, code: ErrorCode) -> BichonError {
     BichonError::Generic {

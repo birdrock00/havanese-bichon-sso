@@ -27,7 +27,6 @@ use crate::modules::{
     duckdb::init::duckdb,
     message::{content::AttachmentInfo, search::SortBy, tags::TagCount},
     settings::cli::SETTINGS,
-    utils::create_hash,
 };
 use crate::{
     modules::{
@@ -70,12 +69,12 @@ pub const EML_BATCH_SIZE: usize = 100;
 const MAX_BUFFER_DURATION: Duration = Duration::from_secs(10);
 
 pub enum MetadataOp {
-    Record((u64, (Envelope, Vec<AttachmentInfo>))),
+    Record((Envelope, Vec<AttachmentInfo>)),
     Shutdown,
 }
 
 pub enum DocumentOp {
-    Document((u64, TantivyDocument)),
+    Document((String, TantivyDocument)),
     Shutdown,
 }
 
@@ -87,16 +86,16 @@ impl EnvelopeIndexManager {
     pub fn new() -> Self {
         let (sender, mut receiver) = mpsc::channel::<MetadataOp>(1000);
         task::spawn(async move {
-            let mut buffer: HashMap<u64, (Envelope, Vec<AttachmentInfo>)> =
-                HashMap::with_capacity(ENVELOPE_BATCH_SIZE);
+            let mut buffer: Vec<(Envelope, Vec<AttachmentInfo>)> =
+                Vec::with_capacity(ENVELOPE_BATCH_SIZE);
             let mut interval = tokio::time::interval(MAX_BUFFER_DURATION);
             let mut shutdown = SIGNAL_MANAGER.subscribe();
             loop {
                 tokio::select! {
                     maybe_msg = receiver.recv() => {
                         match maybe_msg {
-                            Some(MetadataOp::Record((eid, doc))) => {
-                                buffer.insert(eid, doc);
+                            Some(MetadataOp::Record(doc)) => {
+                                buffer.push(doc);
                                 if buffer.len() >= ENVELOPE_BATCH_SIZE {
                                     ENVELOPE_INDEX_MANAGER.drain_and_commit(&mut buffer).await;
                                 }
@@ -122,16 +121,16 @@ impl EnvelopeIndexManager {
         Self { sender }
     }
 
-    pub async fn add_document(&self, eid: u64, doc: (Envelope, Vec<AttachmentInfo>)) {
-        let _ = self.sender.send(MetadataOp::Record((eid, doc))).await;
+    pub async fn add_document(&self, doc: (Envelope, Vec<AttachmentInfo>)) {
+        let _ = self.sender.send(MetadataOp::Record(doc)).await;
     }
 
-    async fn drain_and_commit(&self, buffer: &mut HashMap<u64, (Envelope, Vec<AttachmentInfo>)>) {
+    async fn drain_and_commit(&self, buffer: &mut Vec<(Envelope, Vec<AttachmentInfo>)>) {
         if buffer.is_empty() {
             return;
         }
 
-        let items: Vec<(Envelope, Vec<AttachmentInfo>)> = buffer.drain().map(|(_, v)| v).collect();
+        let items: Vec<(Envelope, Vec<AttachmentInfo>)> = buffer.drain(..).collect();
 
         let result = (|| -> BichonResult<()> {
             duckdb()?.append_envelopes_with_attachments(&items)?;
@@ -195,7 +194,7 @@ impl EnvelopeIndexManager {
 
     pub async fn delete_envelopes_multi_account(
         &self,
-        deletes: HashMap<u64, Vec<u64>>, // HashMap<account_id, envelope_ids>
+        deletes: HashMap<u64, Vec<String>>, // HashMap<account_id, envelope_ids>
     ) -> BichonResult<()> {
         if deletes.is_empty() {
             tracing::warn!("delete_envelopes_multi_account: deletes is empty, nothing to delete");
@@ -209,7 +208,7 @@ impl EnvelopeIndexManager {
 
     pub async fn update_envelope_tags(
         &self,
-        updates: HashMap<u64, Vec<u64>>, // HashMap<account_id, envelope_ids>
+        updates: HashMap<u64, Vec<String>>, // HashMap<account_id, envelope_ids>
         tags: Vec<String>,
     ) -> BichonResult<()> {
         if updates.is_empty() {
@@ -259,7 +258,7 @@ impl EnvelopeIndexManager {
     pub async fn list_thread_envelopes(
         &self,
         account_id: u64,
-        thread_id: u64,
+        thread_id: String,
         page: u64,
         page_size: u64,
         desc: bool,
@@ -276,7 +275,7 @@ impl EnvelopeIndexManager {
     pub async fn get_envelope_by_id(
         &self,
         account_id: u64,
-        envelope_id: u64,
+        envelope_id: String,
     ) -> BichonResult<Option<Envelope>> {
         tokio::task::spawn_blocking(move || duckdb()?.get_envelope_by_id(account_id, envelope_id))
             .await
@@ -313,7 +312,7 @@ impl EnvelopeIndexManager {
     pub async fn num_messages_in_thread(
         &self,
         account_id: u64,
-        thread_id: u64,
+        thread_id: String,
     ) -> BichonResult<u64> {
         tokio::task::spawn_blocking(move || duckdb()?.num_messages_in_thread(account_id, thread_id))
             .await
@@ -371,7 +370,8 @@ impl EmlIndexManager {
         });
         let (sender, mut receiver) = mpsc::channel::<DocumentOp>(100);
         task::spawn(async move {
-            let mut buffer: HashMap<u64, TantivyDocument> = HashMap::with_capacity(EML_BATCH_SIZE);
+            let mut buffer: HashMap<String, TantivyDocument> =
+                HashMap::with_capacity(EML_BATCH_SIZE);
             let mut interval = tokio::time::interval(MAX_BUFFER_DURATION);
             let mut shutdown = SIGNAL_MANAGER.subscribe();
             loop {
@@ -421,8 +421,11 @@ impl EmlIndexManager {
     /// this `eid` ignores the folder context. This ensures that while metadata
     /// (envelopes) can be duplicated across different folders, the physical
     /// EML/document storage remains de-duplicated and unique.
-    pub async fn add_document(&self, eid: u64, doc: TantivyDocument) {
-        let _ = self.sender.send(DocumentOp::Document((eid, doc))).await;
+    pub async fn add_document(&self, content_hash: String, doc: TantivyDocument) {
+        let _ = self
+            .sender
+            .send(DocumentOp::Document((content_hash, doc)))
+            .await;
     }
 
     fn open_or_create_index(index_dir: &PathBuf) -> Index {
@@ -441,7 +444,7 @@ impl EmlIndexManager {
                 panic!("Failed to create index directory {:?}: {}", index_dir, e)
             });
             IndexBuilder::new()
-                .schema(SchemaTools::eml_schema())
+                .schema(SchemaTools::schema())
                 .settings(IndexSettings {
                     docstore_compression: Compressor::Zstd(ZstdCompressor {
                         compression_level: Some(SETTINGS.bichon_eml_compression_level as i32),
@@ -460,13 +463,13 @@ impl EmlIndexManager {
         }
     }
 
-    fn envelope_query(&self, account_id: u64, eid: u64) -> Box<dyn Query> {
+    fn envelope_query(&self, account_id: u64, eid: &str) -> Box<dyn Query> {
         let account_id_query = TermQuery::new(
-            Term::from_field_u64(SchemaTools::eml_fields().f_account_id, account_id),
+            Term::from_field_u64(SchemaTools::fields().f_account_id, account_id),
             IndexRecordOption::Basic,
         );
         let envelope_id_query = TermQuery::new(
-            Term::from_field_u64(SchemaTools::eml_fields().f_id, eid),
+            Term::from_field_text(SchemaTools::fields().f_id, eid),
             IndexRecordOption::Basic,
         );
         let boolean_query = BooleanQuery::new(vec![
@@ -476,7 +479,7 @@ impl EmlIndexManager {
         Box::new(boolean_query)
     }
 
-    pub async fn get(&self, account_id: u64, eml_id: u64) -> BichonResult<Option<Vec<u8>>> {
+    pub async fn get(&self, account_id: u64, eml_id: &str) -> BichonResult<Option<Vec<u8>>> {
         let searcher = self.reader.searcher();
         let query = self.envelope_query(account_id, eml_id);
         let docs = searcher
@@ -492,8 +495,8 @@ impl EmlIndexManager {
             .doc_async(*doc_address)
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        let fields = SchemaTools::eml_fields();
-        let value = doc.get_first(fields.f_eml).ok_or_else(|| {
+        let fields = SchemaTools::fields();
+        let value = doc.get_first(fields.f_blob).ok_or_else(|| {
             raise_error!(
                 format!("miss '{}' field in tantivy document", stringify!(field)),
                 ErrorCode::InternalError
@@ -509,25 +512,27 @@ impl EmlIndexManager {
         Ok(Some(bytes.to_vec()))
     }
 
-    pub async fn get_reader(&self, account_id: u64, eid: u64) -> BichonResult<File> {
+    pub async fn get_reader(&self, account_id: u64, eid: String) -> BichonResult<File> {
         let envelope = duckdb()?
-            .get_envelope_by_id(account_id, eid)?
+            .get_envelope_by_id(account_id, eid.clone())?
             .ok_or_else(|| {
                 raise_error!(
                     format!(
                         "Email envelope not found: account_id={} id={}",
-                        account_id, eid
+                        account_id, &eid
                     ),
                     ErrorCode::ResourceNotFound
                 )
             })?;
-        let eml_id = create_hash(account_id, &envelope.message_id);
-        let data = self.get(account_id, eml_id).await?.ok_or_else(|| {
-            raise_error!(
-                format!("Eml not found: account_id={}, eid={}", account_id, eid),
-                ErrorCode::ResourceNotFound
-            )
-        })?;
+        let data = self
+            .get(account_id, &envelope.content_hash)
+            .await?
+            .ok_or_else(|| {
+                raise_error!(
+                    format!("Eml not found: account_id={}, eid={}", account_id, &eid),
+                    ErrorCode::ResourceNotFound
+                )
+            })?;
         let mut path = DATA_DIR_MANAGER.temp_dir.clone();
 
         path.push(format!("{eid}.eml"));
@@ -548,32 +553,34 @@ impl EmlIndexManager {
     pub async fn get_attachment_content(
         &self,
         account_id: u64,
-        eid: u64,
+        eid: String,
         file_name: &str,
     ) -> BichonResult<Vec<u8>> {
         let envelope = duckdb()?
-            .get_envelope_by_id(account_id, eid)?
+            .get_envelope_by_id(account_id, eid.clone())?
             .ok_or_else(|| {
                 raise_error!(
                     format!(
                         "Email envelope not found: account_id={} id={}",
-                        account_id, eid
+                        account_id, &eid
                     ),
                     ErrorCode::ResourceNotFound
                 )
             })?;
-        let eml_id = create_hash(account_id, &envelope.message_id);
-        let data = self.get(account_id, eml_id).await?.ok_or_else(|| {
-            raise_error!(
-                format!("Email not found: account_id={}, eid={}", account_id, eid),
-                ErrorCode::ResourceNotFound
-            )
-        })?;
+        let data = self
+            .get(account_id, envelope.content_hash.as_str())
+            .await?
+            .ok_or_else(|| {
+                raise_error!(
+                    format!("Email not found: account_id={}, eid={}", account_id, &eid),
+                    ErrorCode::ResourceNotFound
+                )
+            })?;
         let message = MessageParser::default().parse(&data).ok_or_else(|| {
             raise_error!(
                 format!(
                     "Failed to parse email: account_id={}, eid={}",
-                    account_id, eid
+                    account_id, &eid
                 ),
                 ErrorCode::InternalError
             )
@@ -600,11 +607,11 @@ impl EmlIndexManager {
     pub async fn get_attachment(
         &self,
         account_id: u64,
-        eid: u64,
+        eid: String,
         file_name: &str,
     ) -> BichonResult<File> {
         let content = self
-            .get_attachment_content(account_id, eid, file_name)
+            .get_attachment_content(account_id, eid.clone(), file_name)
             .await?;
         let mut path = DATA_DIR_MANAGER.temp_dir.clone();
         path.push(format!("{eid}.{file_name}.attachment"));
@@ -625,19 +632,19 @@ impl EmlIndexManager {
     pub async fn get_nested_attachment(
         &self,
         account_id: u64,
-        eid: u64,
+        eid: String,
         file_name: &str,
         nested_file_name: &str,
     ) -> BichonResult<File> {
         let content = self
-            .get_attachment_content(account_id, eid, file_name)
+            .get_attachment_content(account_id, eid.clone(), file_name)
             .await?;
 
         let message = MessageParser::default().parse(&content).ok_or_else(|| {
             raise_error!(
                 format!(
                     "Failed to parse email: account_id={}, eid={}",
-                    account_id, eid
+                    account_id, &eid
                 ),
                 ErrorCode::InternalError
             )
@@ -655,7 +662,7 @@ impl EmlIndexManager {
                 raise_error!(
                     format!(
                         "Nested attachment '{}' not found in email {}",
-                        nested_file_name, eid
+                        nested_file_name, &eid
                     ),
                     ErrorCode::ResourceNotFound
                 )
@@ -678,7 +685,7 @@ impl EmlIndexManager {
     }
 
     fn account_query(&self, account_id: u64) -> Box<TermQuery> {
-        let account_term = Term::from_field_u64(SchemaTools::eml_fields().f_account_id, account_id);
+        let account_term = Term::from_field_u64(SchemaTools::fields().f_account_id, account_id);
         Box::new(TermQuery::new(account_term, IndexRecordOption::Basic))
     }
 
@@ -696,11 +703,11 @@ impl EmlIndexManager {
 
     fn mailbox_query(&self, account_id: u64, mailbox_id: u64) -> Box<dyn Query> {
         let account_query = TermQuery::new(
-            Term::from_field_u64(SchemaTools::eml_fields().f_account_id, account_id),
+            Term::from_field_u64(SchemaTools::fields().f_account_id, account_id),
             IndexRecordOption::Basic,
         );
         let mailbox_query = TermQuery::new(
-            Term::from_field_u64(SchemaTools::eml_fields().f_mailbox_id, mailbox_id),
+            Term::from_field_u64(SchemaTools::fields().f_mailbox_id, mailbox_id),
             IndexRecordOption::Basic,
         );
         let boolean_query = BooleanQuery::new(vec![
@@ -737,7 +744,7 @@ impl EmlIndexManager {
 
     pub async fn delete_email_multi_account(
         &self,
-        deletes: &HashMap<u64, Vec<u64>>, // HashMap<account_id, envelope_ids>
+        deletes: &HashMap<u64, Vec<String>>, // HashMap<account_id, envelope_ids>
     ) -> BichonResult<()> {
         if deletes.is_empty() {
             tracing::warn!("delete_email_multi_account: deletes is empty, nothing to delete");
@@ -747,10 +754,10 @@ impl EmlIndexManager {
         let mut writer = self.index_writer.lock().await;
 
         for (account_id, envelope_ids) in deletes {
-            let unique_ids: Vec<u64> = envelope_ids
+            let unique_ids: Vec<&str> = envelope_ids
                 .iter()
-                .copied()
-                .collect::<HashSet<_>>()
+                .map(|s| s.as_str())
+                .collect::<HashSet<&str>>()
                 .into_iter()
                 .collect();
             if unique_ids.is_empty() {
@@ -759,7 +766,8 @@ impl EmlIndexManager {
 
             for chunk in unique_ids.chunks(100) {
                 let envelopes = duckdb()?.get_envelopes_by_ids(*account_id, chunk)?;
-                let found_ids_set: HashSet<u64> = envelopes.iter().map(|e| e.id).collect();
+                let found_ids_set: HashSet<&str> =
+                    envelopes.iter().map(|e| e.id.as_str()).collect();
                 for &original_id in chunk {
                     if !found_ids_set.contains(&original_id) {
                         tracing::warn!(
@@ -770,7 +778,7 @@ impl EmlIndexManager {
                 }
 
                 for envelope in envelopes {
-                    let hashed_id = create_hash(*account_id, &envelope.message_id);
+                    let hashed_id = &envelope.content_hash;
                     let query = self.envelope_query(*account_id, hashed_id);
 
                     writer
@@ -786,7 +794,7 @@ impl EmlIndexManager {
         Ok(())
     }
 
-    async fn drain_and_commit(&self, buffer: &mut HashMap<u64, TantivyDocument>) {
+    async fn drain_and_commit(&self, buffer: &mut HashMap<String, TantivyDocument>) {
         if buffer.is_empty() {
             return;
         }
@@ -794,7 +802,7 @@ impl EmlIndexManager {
         let mut operations = Vec::new();
 
         for (eid, doc) in buffer.drain() {
-            let delete_term = Term::from_field_u64(SchemaTools::eml_fields().f_id, eid);
+            let delete_term = Term::from_field_text(SchemaTools::fields().f_id, &eid);
             operations.push(UserOperation::Delete(delete_term));
             operations.push(UserOperation::Add(doc));
         }
