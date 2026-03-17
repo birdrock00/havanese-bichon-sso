@@ -109,39 +109,75 @@ R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7
 }
 
 #[tokio::test]
-async fn test44() {
-    let path = r"C:\Users\polly\Downloads\3462966311412541.eml";
-    let input = std::fs::read(path).unwrap();
-    let message = MessageParser::default().parse(&input).unwrap();
-    for attachment in message.attachments() {
-        let content_type = attachment.content_type().unwrap();
-        let filename = attachment
-            .attachment_name()
-            .map(|name| name.to_string())
-            .unwrap_or_else(|| "unknown".to_string());
+async fn test_bulk_attachment_stripping_blake3() {
+    let path = r"C:\Users\polly\Downloads\test666.eml";
+    let input = std::fs::read(path).expect("Failed to read EML file");
 
-        let disposition = attachment.content_disposition();
+    // 1. Initial Parse
+    let message = MessageParser::default()
+        .parse(&input)
+        .expect("Failed to parse EML");
 
-        let body_start = attachment.raw_body_offset() as usize;
-        let body_end = attachment.raw_end_offset() as usize;
+    // 2. Collect and cast types explicitly
+    // We map the u32 offsets to usize here to satisfy the Vec<(usize, usize, ...)> requirement
+    let mut attachments: Vec<(usize, usize, Vec<u8>)> = message
+        .attachments()
+        .map(|att| {
+            (
+                att.raw_body_offset() as usize,
+                att.raw_end_offset() as usize,
+                att.contents().to_vec(),
+            )
+        })
+        .collect();
 
-        if body_start < input.len() && body_end <= input.len() && body_start <= body_end {
-            //let raw_data = &input[body_start..body_end];
-            let mut file = std::fs::File::create(&filename).unwrap();
-            file.write_all(attachment.contents()).unwrap();
-        }
+    // 3. Sort by offset descending (BACK TO FRONT)
+    // This ensures that modifying the file length doesn't invalidate earlier offsets
+    attachments.sort_by(|a, b| b.0.cmp(&a.0));
 
-        let file_type = format!(
-            "{}/{}",
-            content_type.c_type.as_ref(),
-            content_type.c_subtype.as_deref().unwrap_or("")
-        );
+    let mut modified_eml = input.clone();
 
-        let inline = disposition.map(|d| d.is_inline()).unwrap_or(false);
+    println!(
+        "Processing {} attachments in reverse order...",
+        attachments.len()
+    );
 
+    for (start, end, raw_content) in attachments {
+        // Calculate BLAKE3 Hash
+        let hash = blake3::hash(&raw_content).to_hex().to_string();
+        let placeholder = format!("STRIPPED_BLAKE3:{}", hash);
+        let placeholder_bytes = placeholder.as_bytes();
+
+        // Perform the byte surgery
+        let mut new_buffer =
+            Vec::with_capacity(modified_eml.len() - (end - start) + placeholder_bytes.len());
+        new_buffer.extend_from_slice(&modified_eml[..start]);
+        new_buffer.extend_from_slice(placeholder_bytes);
+        new_buffer.extend_from_slice(&modified_eml[end..]);
+
+        modified_eml = new_buffer;
         println!(
-            "filename: {}, file_type: {}, inline: {}",
-            filename, file_type, inline
+            "Stripped attachment at offset {}. New hash: {}",
+            start, hash
         );
     }
+
+    std::fs::write("test.eml", &modified_eml).unwrap();
+
+    // 4. Final Verification
+    let final_message = MessageParser::default().parse(&modified_eml).unwrap();
+
+    println!("\n--- Verification Report ---");
+    for (i, att) in final_message.attachments().enumerate() {
+        let content = String::from_utf8_lossy(att.contents());
+        println!(
+            "Part [{}]: {}, Content: {}",
+            i,
+            att.attachment_name().unwrap_or("unknown"),
+            content
+        );
+        assert!(content.contains("STRIPPED_BLAKE3:"));
+    }
+
+    println!("✅ All attachments replaced successfully from back to front.");
 }

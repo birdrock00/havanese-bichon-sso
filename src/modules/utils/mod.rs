@@ -106,11 +106,12 @@ macro_rules! raise_error {
     ($msg:expr, $code:expr) => {
         $crate::modules::error::BichonError::Generic {
             message: $msg,
-            location: snafu::Location::default(),
             code: $code,
+            location: snafu::location!()
         }
     };
 }
+
 #[macro_export]
 macro_rules! run_with_timeout {
     ($duration:expr, $task:expr, $err_msg:expr) => {{

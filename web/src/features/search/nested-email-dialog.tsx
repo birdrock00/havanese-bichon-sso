@@ -9,7 +9,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Download, Loader, Mail } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getFileConfig } from './mail-message-view';
-import { Button } from '@/components/ui/button';
 
 const MessageHeader = ({
     envelope,

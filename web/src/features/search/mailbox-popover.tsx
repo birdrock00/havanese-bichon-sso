@@ -87,8 +87,8 @@ function CustomLabel({
                 alignItems: 'center',
             }}
         >
-            <FolderIcon className="mr-2" />
-            <span className="font-medium text-sm text-inherit">
+            <FolderIcon className="mr-2 h-3.5 w-3.5" />
+            <span className="font-medium text-xs text-inherit">
                 {children}
             </span>
             <div className="ml-auto flex items-center">
@@ -107,9 +107,9 @@ function CustomLabel({
                             <MoreVertical className="h-4 w-4" />
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-20">
+                    <DropdownMenuContent align="end" className="w-24">
                         <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
+                            className="text-destructive focus:text-destructive flex items-center px-2 py-1 text-[11px] cursor-pointer"
                             onClick={(e) => {
                                 e.stopPropagation();
                             }}
@@ -118,7 +118,7 @@ function CustomLabel({
                                 onDelete(id);
                             }}
                         >
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <Trash2 className="mr-1 h-3 w-3" />
                             <span>{t('common.delete')}</span>
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -223,6 +223,9 @@ export function MailboxPopover() {
                             '&.Mui-checked': {
                                 color: 'hsl(var(--primary))',
                             },
+                            '& .MuiSvgIcon-root': {
+                                fontSize: '1.3rem'
+                            }
                         }} />
                         <CustomLabel
                             {...getLabelProps({

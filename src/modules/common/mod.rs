@@ -101,7 +101,7 @@ impl<'x> From<&ImapAddress<'x>> for AddrVec {
 fn create_rust_mailer_error(message: &str, code: ErrorCode) -> BichonError {
     BichonError::Generic {
         message: message.into(),
-        location: snafu::Location::default(),
+        location: snafu::location!(),
         code,
     }
 }
