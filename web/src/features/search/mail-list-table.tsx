@@ -19,7 +19,7 @@
 
 import { dateFnsLocaleMap, formatBytes } from "@/lib/utils"
 import { format, formatDistanceToNow } from "date-fns"
-import { MessageSquareText, Paperclip } from "lucide-react"
+import { MessageSquareText, Paperclip, Search } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
 import { EmailEnvelope } from "@/api"
@@ -32,9 +32,10 @@ import LongText from "@/components/long-text"
 import { DataTableColumnHeader } from "./table/data-table-column-header"
 import { SearchTable } from "./table/table"
 import { DataTableRowActions } from "./table/data-table-row-actions"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { DataTableToolbar } from "./table/toolbar"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
+import { useSearchMessages } from "@/hooks/use-search-messages"
 
 interface MailListProps {
   items: EmailEnvelope[]
@@ -87,87 +88,161 @@ export function MailListTable({
     {
       accessorKey: "account_email",
       header: t('search.account'),
-      cell: ({ row }) => <LongText className='text-xs'>{row.original.account_email}</LongText>,
-      meta: { className: 'text-left text-xs' },
-      minSize: 150,
-      maxSize: 156,
+      cell: ({ row }) => {
+        const { setFilter } = useSearchMessages();
+        const { account_email, account_id } = row.original;
+
+        return (
+          <div className="group relative flex items-center w-full min-w-0 h-full">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setFilter((prev: any) => ({
+                  ...prev,
+                  account_ids: [account_id],
+                  mailbox_ids: undefined
+                }));
+              }}
+              className="absolute left-0 z-10 opacity-0 group-hover:opacity-100 p-0.5 bg-background border rounded shadow-sm hover:bg-accent"
+            >
+              <Search size={12} className="text-primary" />
+            </button>
+            <span className="text-[11px] truncate group-hover:pl-5 transition-all duration-200">
+              {account_email}
+            </span>
+          </div>
+        );
+      },
+      meta: { className: 'w-[150px]' },
+      minSize: 150, maxSize: 150,
     },
     {
       accessorKey: "mailbox_name",
       header: t('search.mailbox'),
       cell: ({ row }) => {
-        const mailbox = row.original.mailbox_name
-        const tags = row.original.tags ?? []
+        const { setFilter } = useSearchMessages();
+        const { mailbox_name, mailbox_id, account_id, tags } = row.original;
 
-        if (!mailbox) return null
-
-        const visible = tags.slice(0, 3)
-        const rest = tags.length - visible.length
-
-        const fullTags = tags.join(' · ')
+        if (!mailbox_name) return null;
+        const safeTags = tags ?? [];
+        const visibleTags = safeTags.slice(0, 2);
 
         return (
-          <TooltipProvider delayDuration={200}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="flex flex-col leading-tight max-w-[130px] cursor-default">
-                  <span className="text-xs truncate">
-                    {mailbox}
-                  </span>
-
-                  {visible.length > 0 && (
-                    <span className="text-[10px] text-primary/80 truncate">
-                      {visible.join(' · ')}
-                      {rest > 0 && ` · +${rest}`}
-                    </span>
-                  )}
-                </div>
-              </TooltipTrigger>
-
-              <TooltipContent
-                side="right"
-                align="start"
-                className="max-w-xs"
-              >
-                <div className="text-xs font-medium mb-1">
-                  {mailbox}
-                </div>
-
-                <div className="text-[11px] text-muted-foreground break-words">
-                  {fullTags}
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )
+          <div className="group relative flex items-center w-full min-w-0 h-full">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setFilter((prev: any) => ({
+                  ...prev,
+                  account_ids: [account_id],
+                  mailbox_ids: [mailbox_id]
+                }));
+              }}
+              className="absolute left-0 z-10 opacity-0 group-hover:opacity-100 p-0.5 bg-background border rounded shadow-sm hover:bg-accent transition-all"
+            >
+              <Search size={11} className="text-primary" />
+            </button>
+            <div className="flex flex-col min-w-0 transition-all duration-200 group-hover:pl-5">
+              <span className="text-[11px] truncate font-medium leading-none">
+                {mailbox_name}
+              </span>
+              {safeTags.length > 0 && (
+                <span className="text-[9px] text-primary/70 truncate leading-none mt-0.5">
+                  {visibleTags.join(' · ')}
+                  {safeTags.length > 2 && ` · +${safeTags.length - 2}`}
+                </span>
+              )}
+            </div>
+          </div>
+        );
       },
-      meta: { className: 'text-left text-xs' },
-      minSize: 116,
-      maxSize: 116,
+      maxSize: 120,
     },
     {
       accessorKey: "from",
       header: t('search.from'),
-      cell: ({ row }) => <LongText className='text-xs'>{row.original.from}</LongText>,
+      cell: ({ row }) => {
+        const fromEmail = row.original.from;
+        const { setFilter } = useSearchMessages();
+
+        return (
+          <div className="group relative flex items-center w-full min-w-0">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setFilter((prev: Record<string, any>) => ({ ...prev, from: fromEmail }));
+              }}
+              className="absolute left-0 z-10 opacity-0 group-hover:opacity-100 p-1 bg-background/90 hover:bg-accent rounded shadow-sm transition-all cursor-pointer"
+              title={`Filter by ${fromEmail}`}
+            >
+              <Search size={12} className="text-primary" />
+            </button>
+            <LongText
+              className='text-xs pl-0 group-hover:pl-6 transition-all duration-200 ease-in-out'
+            >
+              {fromEmail}
+            </LongText>
+          </div>
+        );
+      },
       meta: { className: 'text-left text-xs' },
       minSize: 150,
-      maxSize: 156,
+      maxSize: 300,
     },
     {
       accessorKey: "to",
       header: t('search.to'),
-      cell: ({ row }) => <LongText className='text-xs'>{row.original.to.join(", ")}</LongText>,
+      cell: ({ row }) => {
+        const recipients = row.original.to || [];
+        const { setFilter } = useSearchMessages();
+
+        return (
+          <div className="group relative flex items-center w-full min-w-0">
+            {recipients.length > 0 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFilter((prev: Record<string, any>) => ({ ...prev, to: recipients[0] }));
+                }}
+                className="absolute left-0 z-10 opacity-0 group-hover:opacity-100 p-1 bg-background/90 hover:bg-accent rounded shadow-sm transition-all cursor-pointer"
+                title={`${t('search.filter_by')} ${recipients[0]}`}
+              >
+                <Search size={12} className="text-primary" />
+              </button>
+            )}
+            <div className="text-xs transition-all duration-200 ease-in-out group-hover:pl-6 flex flex-wrap gap-x-1 min-w-0 overflow-hidden">
+              {recipients.map((email, index) => (
+                <span key={index} className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFilter((prev: Record<string, any>) => ({ ...prev, to: email }));
+                    }}
+                    className="hover:text-primary hover:underline transition-colors truncate max-w-[150px]"
+                    title={`${t('search.filter_by')} ${email}`}
+                  >
+                    {email}
+                  </button>
+                  {index < recipients.length - 1 && (
+                    <span className="text-muted-foreground ml-0.5">,</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      },
       meta: { className: 'text-left text-xs' },
       minSize: 150,
-      maxSize: 156,
+      maxSize: 200,
     },
     {
       accessorKey: "subject",
       header: t('search.subject'),
       cell: ({ row }) => <LongText className='text-xs'>{row.original.subject}</LongText>,
       meta: { className: 'text-left text-xs' },
-      minSize: 450,
-      maxSize: 456,
+      maxSize: 600,
     },
     {
       id: "text_preview",

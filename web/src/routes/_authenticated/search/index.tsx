@@ -17,9 +17,26 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import { createLazyFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import Search from '@/features/search'
+import { z } from 'zod'
 
-export const Route = createLazyFileRoute('/_authenticated/search/')({
+const searchSchema = z.object({
+  page: z.number().catch(1),
+  pageSize: z.number().optional(),
+  sortBy: z.enum(['DATE', 'SIZE']).catch('DATE'),
+  sortOrder: z.enum(['asc', 'desc']).catch('desc'),
+  q: z.string().optional(),
+})
+
+export const Route = createFileRoute('/_authenticated/search/')({
   component: Search,
+  validateSearch: (search) => {
+    const result = searchSchema.parse(search);
+    return {
+      ...result,
+      page: result.page ?? 1,
+      pageSize: result.pageSize ?? (Number(localStorage.getItem('bichon_search_page_size')) || 30),
+    }
+  }
 })

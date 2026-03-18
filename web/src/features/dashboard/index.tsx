@@ -22,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
-import { Mail, HardDrive, Database, Users, Inbox, Info } from 'lucide-react';
+import { Mail, HardDrive, Database, Users, Inbox, Info, Search } from 'lucide-react';
 import { formatBytes, formatNumber } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { get_dashboard_stats, INITIAL_DASHBOARD_STATS, TimeBucket } from '@/api/system/api';
@@ -30,6 +30,8 @@ import { Main } from '@/components/layout/main';
 import { FixedHeader } from '@/components/layout/fixed-header';
 import { useTranslation } from 'react-i18next';
 import { getToken } from '@/stores/authStore';
+import { useNavigate } from '@tanstack/react-router';
+import useMinimalAccountList from '@/hooks/use-minimal-account-list';
 
 interface DailyActivity {
   date: string;
@@ -111,6 +113,8 @@ export default function MailArchiveDashboard() {
     placeholderData: INITIAL_DASHBOARD_STATS,
   });
 
+
+  const navigate = useNavigate();
   const { t, i18n } = useTranslation();
 
   const currentLocale = i18n.resolvedLanguage || i18n.language || navigator.language;
@@ -122,6 +126,28 @@ export default function MailArchiveDashboard() {
   const hasTopSenders = stats?.top_senders && stats.top_senders.length > 0;
   const hasTopEmails = stats?.top_largest_emails && stats.top_largest_emails.length > 0;
   const hasTopAccounts = stats?.top_accounts && stats.top_accounts.length > 0;
+
+  const { minimalList } = useMinimalAccountList();
+  const getAccountIdByEmail = (email: string): number | null => {
+    if (!minimalList) return null;
+    const account = minimalList.find(a => a.email === email);
+    return account ? account.id : null;
+  };
+
+
+
+  const handleQuickSearch = (filter: Record<string, any>) => {
+    navigate({
+      to: '/search',
+      search: (prev: any) => ({
+        page: 1,
+        pageSize: prev.pageSize ?? 50,
+        sortBy: prev.sortBy ?? "DATE",
+        sortOrder: prev.sortOrder ?? "desc",
+        q: JSON.stringify(filter),
+      }),
+    });
+  };
 
   const attachmentData = totalAttachments > 0
     ? [
@@ -380,9 +406,14 @@ export default function MailArchiveDashboard() {
                         </TableHeader>
                         <TableBody>
                           {stats!.top_senders.map((s) => (
-                            <TableRow key={s.key}>
-                              <TableCell className="font-medium max-w-[180px] truncate" title={s.key}>
-                                {s.key}
+                            <TableRow
+                              key={s.key}
+                              className="cursor-pointer hover:bg-accent/50 group"
+                              onClick={() => handleQuickSearch({ from: s.key })}
+                            >
+                              <TableCell className="font-medium max-w-[380px] truncate flex items-center gap-2">
+                                <Search size={12} className="opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
+                                <span title={s.key}>{s.key}</span>
                               </TableCell>
                               <TableCell className="text-right">{formatNumber(s.count)}</TableCell>
                             </TableRow>
@@ -410,14 +441,18 @@ export default function MailArchiveDashboard() {
                         </TableHeader>
                         <TableBody>
                           {stats!.top_largest_emails.map((m, index) => (
-                            <TableRow key={index}>
-                              <TableCell
-                                className="max-w-[180px] truncate font-medium"
-                                title={m.subject}
-                              >
-                                {m.subject || t('dashboard.noSubject')}
+                            <TableRow
+                              key={index}
+                              className="cursor-pointer hover:bg-accent/50 group"
+                              onClick={() => handleQuickSearch({ text: m.subject })}
+                            >
+                              <TableCell className="max-w-[350px] truncate font-medium flex items-center gap-2" title={m.subject}>
+                                <Search size={12} className="opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
+                                <span>{m.subject || t('dashboard.noSubject')}</span>
                               </TableCell>
-                              <TableCell className="text-right">{formatBytes(m.size_bytes)}</TableCell>
+                              <TableCell className="text-right font-mono text-orange-600">
+                                {formatBytes(m.size_bytes)}
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -442,14 +477,28 @@ export default function MailArchiveDashboard() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {stats!.top_accounts.map((acc) => (
-                            <TableRow key={acc.key}>
-                              <TableCell className="font-medium max-w-[160px] truncate" title={acc.key}>
-                                {acc.key}
-                              </TableCell>
-                              <TableCell className="text-right">{formatNumber(acc.count)}</TableCell>
-                            </TableRow>
-                          ))}
+                          {stats!.top_accounts.map((acc) => {
+                            const accountId = getAccountIdByEmail(acc.key);
+                            return (
+                              <TableRow
+                                key={acc.key}
+                                className="group cursor-pointer hover:bg-accent/50 transition-colors"
+                                onClick={() => {
+                                  if (accountId) {
+                                    handleQuickSearch({ account_ids: [accountId] });
+                                  } else {
+                                    handleQuickSearch({ to: acc.key });
+                                  }
+                                }}
+                              >
+                                <TableCell className="font-medium max-w-[300px] truncate flex items-center gap-2">
+                                  <Search size={12} className="opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
+                                  <span title={acc.key}>{acc.key}</span>
+                                </TableCell>
+                                <TableCell className="text-right">{formatNumber(acc.count)}</TableCell>
+                              </TableRow>
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     ) : (

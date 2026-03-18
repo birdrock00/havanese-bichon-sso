@@ -17,6 +17,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated/route
 import { Route as AuthenticatedIndexImport } from './routes/_authenticated/index'
 import { Route as authSignInImport } from './routes/(auth)/sign-in'
 import { Route as auth500Import } from './routes/(auth)/500'
+import { Route as AuthenticatedSearchIndexImport } from './routes/_authenticated/search/index'
 
 // Create Virtual Routes
 
@@ -36,9 +37,6 @@ const AuthenticatedUsersIndexLazyImport = createFileRoute(
 )()
 const AuthenticatedSettingsIndexLazyImport = createFileRoute(
   '/_authenticated/settings/',
-)()
-const AuthenticatedSearchIndexLazyImport = createFileRoute(
-  '/_authenticated/search/',
 )()
 const AuthenticatedOauth2IndexLazyImport = createFileRoute(
   '/_authenticated/oauth2/',
@@ -175,15 +173,6 @@ const AuthenticatedSettingsIndexLazyRoute =
     import('./routes/_authenticated/settings/index.lazy').then((d) => d.Route),
   )
 
-const AuthenticatedSearchIndexLazyRoute =
-  AuthenticatedSearchIndexLazyImport.update({
-    id: '/search/',
-    path: '/search/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any).lazy(() =>
-    import('./routes/_authenticated/search/index.lazy').then((d) => d.Route),
-  )
-
 const AuthenticatedOauth2IndexLazyRoute =
   AuthenticatedOauth2IndexLazyImport.update({
     id: '/oauth2/',
@@ -221,6 +210,12 @@ const AuthenticatedAccountsIndexLazyRoute =
   } as any).lazy(() =>
     import('./routes/_authenticated/accounts/index.lazy').then((d) => d.Route),
   )
+
+const AuthenticatedSearchIndexRoute = AuthenticatedSearchIndexImport.update({
+  id: '/search/',
+  path: '/search/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 const AuthenticatedUsersRolesLazyRoute =
   AuthenticatedUsersRolesLazyImport.update({
@@ -425,6 +420,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUsersRolesLazyImport
       parentRoute: typeof AuthenticatedUsersRouteLazyImport
     }
+    '/_authenticated/search/': {
+      id: '/_authenticated/search/'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof AuthenticatedSearchIndexImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
     '/_authenticated/accounts/': {
       id: '/_authenticated/accounts/'
       path: '/accounts'
@@ -451,13 +453,6 @@ declare module '@tanstack/react-router' {
       path: '/oauth2'
       fullPath: '/oauth2'
       preLoaderRoute: typeof AuthenticatedOauth2IndexLazyImport
-      parentRoute: typeof AuthenticatedRouteImport
-    }
-    '/_authenticated/search/': {
-      id: '/_authenticated/search/'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof AuthenticatedSearchIndexLazyImport
       parentRoute: typeof AuthenticatedRouteImport
     }
     '/_authenticated/settings/': {
@@ -529,11 +524,11 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteLazyRoute: typeof AuthenticatedSettingsRouteLazyRouteWithChildren
   AuthenticatedUsersRouteLazyRoute: typeof AuthenticatedUsersRouteLazyRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedSearchIndexRoute: typeof AuthenticatedSearchIndexRoute
   AuthenticatedAccountsIndexLazyRoute: typeof AuthenticatedAccountsIndexLazyRoute
   AuthenticatedApiDocsIndexLazyRoute: typeof AuthenticatedApiDocsIndexLazyRoute
   AuthenticatedOauth2ResultIndexLazyRoute: typeof AuthenticatedOauth2ResultIndexLazyRoute
   AuthenticatedOauth2IndexLazyRoute: typeof AuthenticatedOauth2IndexLazyRoute
-  AuthenticatedSearchIndexLazyRoute: typeof AuthenticatedSearchIndexLazyRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -542,12 +537,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedUsersRouteLazyRoute:
     AuthenticatedUsersRouteLazyRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedSearchIndexRoute: AuthenticatedSearchIndexRoute,
   AuthenticatedAccountsIndexLazyRoute: AuthenticatedAccountsIndexLazyRoute,
   AuthenticatedApiDocsIndexLazyRoute: AuthenticatedApiDocsIndexLazyRoute,
   AuthenticatedOauth2ResultIndexLazyRoute:
     AuthenticatedOauth2ResultIndexLazyRoute,
   AuthenticatedOauth2IndexLazyRoute: AuthenticatedOauth2IndexLazyRoute,
-  AuthenticatedSearchIndexLazyRoute: AuthenticatedSearchIndexLazyRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -571,11 +566,11 @@ export interface FileRoutesByFullPath {
   '/settings/proxy': typeof AuthenticatedSettingsProxyLazyRoute
   '/users/api-tokens': typeof AuthenticatedUsersApiTokensLazyRoute
   '/users/roles': typeof AuthenticatedUsersRolesLazyRoute
+  '/search': typeof AuthenticatedSearchIndexRoute
   '/accounts': typeof AuthenticatedAccountsIndexLazyRoute
   '/api-docs': typeof AuthenticatedApiDocsIndexLazyRoute
   '/oauth2-result': typeof AuthenticatedOauth2ResultIndexLazyRoute
   '/oauth2': typeof AuthenticatedOauth2IndexLazyRoute
-  '/search': typeof AuthenticatedSearchIndexLazyRoute
   '/settings/': typeof AuthenticatedSettingsIndexLazyRoute
   '/users/': typeof AuthenticatedUsersIndexLazyRoute
 }
@@ -595,11 +590,11 @@ export interface FileRoutesByTo {
   '/settings/proxy': typeof AuthenticatedSettingsProxyLazyRoute
   '/users/api-tokens': typeof AuthenticatedUsersApiTokensLazyRoute
   '/users/roles': typeof AuthenticatedUsersRolesLazyRoute
+  '/search': typeof AuthenticatedSearchIndexRoute
   '/accounts': typeof AuthenticatedAccountsIndexLazyRoute
   '/api-docs': typeof AuthenticatedApiDocsIndexLazyRoute
   '/oauth2-result': typeof AuthenticatedOauth2ResultIndexLazyRoute
   '/oauth2': typeof AuthenticatedOauth2IndexLazyRoute
-  '/search': typeof AuthenticatedSearchIndexLazyRoute
   '/settings': typeof AuthenticatedSettingsIndexLazyRoute
   '/users': typeof AuthenticatedUsersIndexLazyRoute
 }
@@ -624,11 +619,11 @@ export interface FileRoutesById {
   '/_authenticated/settings/proxy': typeof AuthenticatedSettingsProxyLazyRoute
   '/_authenticated/users/api-tokens': typeof AuthenticatedUsersApiTokensLazyRoute
   '/_authenticated/users/roles': typeof AuthenticatedUsersRolesLazyRoute
+  '/_authenticated/search/': typeof AuthenticatedSearchIndexRoute
   '/_authenticated/accounts/': typeof AuthenticatedAccountsIndexLazyRoute
   '/_authenticated/api-docs/': typeof AuthenticatedApiDocsIndexLazyRoute
   '/_authenticated/oauth2-result/': typeof AuthenticatedOauth2ResultIndexLazyRoute
   '/_authenticated/oauth2/': typeof AuthenticatedOauth2IndexLazyRoute
-  '/_authenticated/search/': typeof AuthenticatedSearchIndexLazyRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexLazyRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexLazyRoute
 }
@@ -653,11 +648,11 @@ export interface FileRouteTypes {
     | '/settings/proxy'
     | '/users/api-tokens'
     | '/users/roles'
+    | '/search'
     | '/accounts'
     | '/api-docs'
     | '/oauth2-result'
     | '/oauth2'
-    | '/search'
     | '/settings/'
     | '/users/'
   fileRoutesByTo: FileRoutesByTo
@@ -676,11 +671,11 @@ export interface FileRouteTypes {
     | '/settings/proxy'
     | '/users/api-tokens'
     | '/users/roles'
+    | '/search'
     | '/accounts'
     | '/api-docs'
     | '/oauth2-result'
     | '/oauth2'
-    | '/search'
     | '/settings'
     | '/users'
   id:
@@ -703,11 +698,11 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/proxy'
     | '/_authenticated/users/api-tokens'
     | '/_authenticated/users/roles'
+    | '/_authenticated/search/'
     | '/_authenticated/accounts/'
     | '/_authenticated/api-docs/'
     | '/_authenticated/oauth2-result/'
     | '/_authenticated/oauth2/'
-    | '/_authenticated/search/'
     | '/_authenticated/settings/'
     | '/_authenticated/users/'
   fileRoutesById: FileRoutesById
@@ -761,11 +756,11 @@ export const routeTree = rootRoute
         "/_authenticated/settings",
         "/_authenticated/users",
         "/_authenticated/",
+        "/_authenticated/search/",
         "/_authenticated/accounts/",
         "/_authenticated/api-docs/",
         "/_authenticated/oauth2-result/",
-        "/_authenticated/oauth2/",
-        "/_authenticated/search/"
+        "/_authenticated/oauth2/"
       ]
     },
     "/(auth)/500": {
@@ -842,6 +837,10 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/users/roles.lazy.tsx",
       "parent": "/_authenticated/users"
     },
+    "/_authenticated/search/": {
+      "filePath": "_authenticated/search/index.tsx",
+      "parent": "/_authenticated"
+    },
     "/_authenticated/accounts/": {
       "filePath": "_authenticated/accounts/index.lazy.tsx",
       "parent": "/_authenticated"
@@ -856,10 +855,6 @@ export const routeTree = rootRoute
     },
     "/_authenticated/oauth2/": {
       "filePath": "_authenticated/oauth2/index.lazy.tsx",
-      "parent": "/_authenticated"
-    },
-    "/_authenticated/search/": {
-      "filePath": "_authenticated/search/index.lazy.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/settings/": {

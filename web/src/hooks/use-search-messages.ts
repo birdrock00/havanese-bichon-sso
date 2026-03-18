@@ -20,29 +20,73 @@
 import { EmailEnvelope, PaginatedResponse } from '@/api';
 import { search_messages } from '@/api/search/api';
 import { useQuery } from '@tanstack/react-query';
+import { getRouteApi } from '@tanstack/react-router';
 import React from 'react';
-import { useState } from 'react';
 
-
+const routeApi = getRouteApi('/_authenticated/search/')
 
 export function useSearchMessages() {
     // const queryClient = useQueryClient();
-    const [filter, _setFilter] = useState<Record<string, any>>({});
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(Number(localStorage.getItem('bichon_search_page_size')) || 30);
-    const [sortBy, setSortBy] = useState<"DATE" | "SIZE">("DATE");
-    const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
+    const search = routeApi.useSearch()
+    const navigate = routeApi.useNavigate()
 
-    const setFilter = React.useCallback((val: any) => {
-        _setFilter(val);
-        setPage(1);
-    }, []);
+    const page = search.page;
+    const pageSize = search.pageSize;
+    const sortBy = search.sortBy;
+    const sortOrder = search.sortOrder;
+
+    const filter = React.useMemo(() => {
+        if (!search.q) return {};
+        try {
+            return JSON.parse(search.q);
+        } catch (e) {
+            console.error("URL 'q' parameter parse error:", e);
+            return {};
+        }
+    }, [search.q]);
 
 
-    const setSearchPageSize = (value: number) => {
-        localStorage.setItem('bichon_search_page_size', value.toString());
-        setPageSize(value);
-    }
+
+    const updateParams = React.useCallback((newParams: Partial<typeof search>) => {
+        navigate({
+            search: (prev) => ({
+                ...prev,
+                ...newParams,
+            }),
+            replace: false,
+        });
+    }, [navigate]);
+
+
+    const setFilter = React.useCallback((val: any | ((prev: any) => any)) => {
+        navigate({
+            search: (prev) => {
+                let currentFilter = {};
+                try {
+                    currentFilter = prev.q ? JSON.parse(prev.q) : {};
+                } catch (e) {
+                    currentFilter = {};
+                }
+                const nextFilter = typeof val === 'function' ? val(currentFilter) : val;
+                return {
+                    ...prev,
+                    page: 1,
+                    q: Object.keys(nextFilter).length > 0 ? JSON.stringify(nextFilter) : undefined
+                };
+            }
+        });
+    }, [navigate]);
+
+
+    const setPage = (p: number) => updateParams({ page: p });
+
+    const setSearchPageSize = (size: number) => {
+        localStorage.setItem('bichon_search_page_size', size.toString());
+        updateParams({ pageSize: size, page: 1 });
+    };
+
+    const setSortBy = (val: "DATE" | "SIZE") => updateParams({ sortBy: val });
+    const setSortOrder = (val: "desc" | "asc") => updateParams({ sortOrder: val });
 
     const onSubmit = (cleaned: Record<string, any>) => {
         if ('has_attachment' in cleaned && cleaned.has_attachment === false) {
@@ -55,7 +99,6 @@ export function useSearchMessages() {
                 ...(cleaned.before && { before: cleaned.before.getTime() }),
             };
             setFilter(payload);
-            setPage(1);
         } else {
             setFilter({});
         }

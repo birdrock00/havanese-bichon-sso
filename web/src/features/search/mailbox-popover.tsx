@@ -163,7 +163,7 @@ export function MailboxPopover() {
     const { data: activeMailboxes = [], isLoading: activeIsLoading } = useQuery({
         queryKey: ['search-mailboxes', activeAccountId],
         queryFn: () => list_mailboxes(activeAccountId!, false),
-        enabled: !!activeAccountId,
+        enabled: !!activeAccountId,      
     });
 
     const treeData = React.useMemo(() => {
@@ -184,7 +184,6 @@ export function MailboxPopover() {
     };
 
     const handleDeleteClick = (id: string) => {
-        console.log("delete=", id);
         setDeleteMailboxId(id);
         setSelectedAccountId(activeAccountId);
         setOpen('delete-mailbox');
