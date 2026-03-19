@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
+import { useAttachmentMetadata } from "@/hooks/use-attachment-metadata"
+import { MetadataSelectorField } from "./attachment-metadata-selector"
 
 const SIZES = {
     tiny: { min: undefined, max: 15 * 1024 },
@@ -34,8 +36,13 @@ export function MoreFiltersPopover() {
     const { filter, setFilter } = useSearchContext();
     const [open, setOpen] = React.useState(false);
 
+    const { data: meta, isLoading: metaLoading } = useAttachmentMetadata();
+
     const [localState, setLocalState] = React.useState({
         attachment_name: filter?.attachment_name || '',
+        attachment_extension: filter?.attachment_extension || '',
+        attachment_category: filter?.attachment_category || '',
+        attachment_content_type: filter?.attachment_content_type || '',
         message_id: filter?.message_id || '',
         size_preset: getPresetFromSize(filter?.min_size, filter?.max_size),
         has_attachment: filter?.has_attachment || false
@@ -45,6 +52,9 @@ export function MoreFiltersPopover() {
         if (open) {
             setLocalState({
                 attachment_name: filter?.attachment_name || '',
+                attachment_extension: filter?.attachment_extension || '',
+                attachment_category: filter?.attachment_category || '',
+                attachment_content_type: filter?.attachment_content_type || '',
                 message_id: filter?.message_id || '',
                 size_preset: getPresetFromSize(filter?.min_size, filter?.max_size),
                 has_attachment: filter?.has_attachment || false
@@ -58,6 +68,15 @@ export function MoreFiltersPopover() {
 
             if (localState.attachment_name) next.attachment_name = localState.attachment_name;
             else delete next.attachment_name;
+
+            if (localState.attachment_extension) next.attachment_extension = localState.attachment_extension;
+            else delete next.attachment_extension;
+
+            if (localState.attachment_category) next.attachment_category = localState.attachment_category;
+            else delete next.attachment_category;
+
+            if (localState.attachment_content_type) next.attachment_content_type = localState.attachment_content_type;
+            else delete next.attachment_content_type;
 
             if (localState.message_id) next.message_id = localState.message_id;
             else delete next.message_id;
@@ -79,7 +98,10 @@ export function MoreFiltersPopover() {
         filter?.min_size,
         filter?.max_size,
         filter?.message_id,
-        filter?.has_attachment
+        filter?.has_attachment,
+        filter?.attachment_extension,
+        filter?.attachment_category,
+        filter?.attachment_content_type
     ].filter(Boolean).length;
 
     return (
@@ -118,6 +140,9 @@ export function MoreFiltersPopover() {
                                     delete next.max_size;
                                     delete next.message_id;
                                     delete next.has_attachment;
+                                    delete next.attachment_extension;
+                                    delete next.attachment_category;
+                                    delete next.attachment_content_type;
                                     return next;
                                 });
                                 setOpen(false);
@@ -132,9 +157,19 @@ export function MoreFiltersPopover() {
                     <Checkbox
                         id="has_attachment"
                         checked={localState.has_attachment}
-                        onCheckedChange={(checked) =>
-                            setLocalState(prev => ({ ...prev, has_attachment: checked as boolean }))
-                        }
+                        onCheckedChange={(checked) => {
+                            const isChecked = checked as boolean;
+                            setLocalState(prev => ({
+                                ...prev,
+                                has_attachment: isChecked,
+                                ...(isChecked ? {} : {
+                                    attachment_name: '',
+                                    attachment_extension: '',
+                                    attachment_category: '',
+                                    attachment_content_type: ''
+                                })
+                            }));
+                        }}
                     />
                     <Label
                         htmlFor="has_attachment"
@@ -144,15 +179,46 @@ export function MoreFiltersPopover() {
                     </Label>
                 </div>
 
-                <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">{t('search_more.attachment_name_label')}</Label>
-                    <Input
-                        className="h-8 text-xs"
-                        value={localState.attachment_name}
-                        onChange={(e) => setLocalState(prev => ({ ...prev, attachment_name: e.target.value }))}
-                        placeholder={t('search_more.attachment_name_placeholder')}
-                    />
-                </div>
+                {localState.has_attachment && (
+                    <div className="space-y-3 p-2 bg-muted/30 rounded-lg border border-dashed border-border animate-in fade-in slide-in-from-top-1">
+                        <MetadataSelectorField
+                            label={t('search_more.extension')}
+                            value={localState.attachment_extension}
+                            options={meta?.extensions || []}
+                            isLoading={metaLoading}
+                            onSelect={(v) => setLocalState(p => ({ ...p, attachment_extension: v, attachment_category: '', attachment_content_type: '' }))}
+                            onReset={() => setLocalState(p => ({ ...p, attachment_extension: '' }))}
+                        />
+
+                        <MetadataSelectorField
+                            label={t('search_more.category')}
+                            value={localState.attachment_category}
+                            options={meta?.categories || []}
+                            isLoading={metaLoading}
+                            onSelect={(v) => setLocalState(p => ({ ...p, attachment_category: v, attachment_extension: '', attachment_content_type: '' }))}
+                            onReset={() => setLocalState(p => ({ ...p, attachment_category: '' }))}
+                        />
+
+                        <MetadataSelectorField
+                            label={t('search_more.content_types')}
+                            value={localState.attachment_content_type}
+                            options={meta?.content_types || []}
+                            isLoading={metaLoading}
+                            onSelect={(v) => setLocalState(p => ({ ...p, attachment_content_type: v, attachment_extension: '', attachment_category: '' }))}
+                            onReset={() => setLocalState(p => ({ ...p, attachment_content_type: '' }))}
+                        />
+
+                        <div className="space-y-1 px-1">
+                            <Label className="text-xs text-muted-foreground">{t('search_more.attachment_name_label')}</Label>
+                            <Input
+                                className="h-8 text-xs"
+                                value={localState.attachment_name}
+                                onChange={(e) => setLocalState(prev => ({ ...prev, attachment_name: e.target.value }))}
+                                placeholder={t('search_more.attachment_name_placeholder')}
+                            />
+                        </div>
+                    </div>
+                )}
 
                 <div className="space-y-2">
                     <Label className="text-xs text-muted-foreground">{t('search_more.message_size_label')}</Label>

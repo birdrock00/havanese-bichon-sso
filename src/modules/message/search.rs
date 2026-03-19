@@ -50,6 +50,9 @@ pub struct SearchFilter {
     pub has_attachment: Option<bool>,
     pub attachment_name: Option<String>,
     pub tags: Option<HashSet<String>>,
+    pub attachment_extension: Option<String>,
+    pub attachment_category: Option<String>,
+    pub attachment_content_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, Enum)]

@@ -1539,7 +1539,12 @@
             "medium": "Moyenne (2 – 10 Mo)",
             "large": "Grande (10 – 20 Mo)",
             "huge": "Très grande (> 20 Mo)"
-        }
+        },
+        "any": "Tous",
+        "search_placeholder": "Rechercher {{field}}...",
+        "extension": "Extension de fichier",
+        "category": "Catégorie de pièce jointe",
+        "content_types": "Type spécifique"
     },
     "search_view": {
         "button_label": "Affichage",

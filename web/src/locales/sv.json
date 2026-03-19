@@ -1539,7 +1539,12 @@
             "medium": "Mellan (2–10 MB)",
             "large": "Stor (10–20 MB)",
             "huge": "Mycket stor (> 20 MB)"
-        }
+        },
+        "any": "Alla",
+        "search_placeholder": "Sök {{field}}...",
+        "extension": "Filändelse",
+        "category": "Bilagskategori",
+        "content_types": "Specifik typ"
     },
     "search_view": {
         "button_label": "Vy",

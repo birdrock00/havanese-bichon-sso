@@ -66,7 +66,7 @@ export function MailFilterPopover() {
                     {fields.map((field) => (
                         <ContactSelectorField
                             key={field}
-                            label={field}
+                            label={t(`search.${field}`)}
                             value={filter[field] as string | undefined}
                             onSelect={(email) => updateFilter(field, email)}
                             onReset={() => updateFilter(field, undefined)}

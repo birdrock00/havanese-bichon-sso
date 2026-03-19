@@ -37,6 +37,7 @@ use crate::{
             manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER},
         },
         message::{
+            attachment::AttachmentMetadata,
             content::AttachmentInfo,
             search::{SearchFilter, SortBy},
             tags::TagCount,
@@ -246,9 +247,9 @@ impl DuckDBManager {
                             att.filename,
                             att.get_extension(),
                             att.get_category(),
-                            att.file_type,
+                            att.file_type.to_ascii_lowercase(),
                             att.size as u64,
-                            env.content_hash.clone(), //这里是错误的，应该保存附件的content_hash
+                            env.content_hash.clone(), // It's the hash of the attachment content itself, not the hash of the full email.
                             0,
                         ])
                         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
@@ -548,6 +549,55 @@ impl DuckDBManager {
         tx.commit()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         Ok(())
+    }
+
+    pub fn get_attachment_metadata(
+        &self,
+        accounts: Option<HashSet<u64>>,
+    ) -> BichonResult<AttachmentMetadata> {
+        let conn = self.conn()?;
+        let mut sql = r#"
+            SELECT 
+                CAST(array_agg(DISTINCT extension) AS JSON) AS extensions,
+                CAST(array_agg(DISTINCT ext_category) AS JSON) AS categories,
+                CAST(array_agg(DISTINCT content_type) AS JSON) AS content_types
+            FROM envelope_attachments
+        "#
+        .to_string();
+
+        let mut params_vec: Vec<duckdb::types::Value> = Vec::new();
+        if let Some(ref acc_set) = accounts {
+            if !acc_set.is_empty() {
+                let placeholders = vec!["?"; acc_set.len()].join(", ");
+                sql.push_str(&format!(" WHERE account_id IN ({})", placeholders));
+
+                for &id in acc_set {
+                    params_vec.push(id.into());
+                }
+            }
+        }
+
+        let mut stmt = conn
+            .prepare(&sql)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        let result = stmt
+            .query_row(duckdb::params_from_iter(params_vec), |row| {
+                let exts_raw: String = row.get(0)?;
+                let cats_raw: String = row.get(1)?;
+                let ctypes_raw: String = row.get(2)?;
+                let exts: Vec<String> = serde_json::from_str(&exts_raw).unwrap_or_default();
+                let cats: Vec<String> = serde_json::from_str(&cats_raw).unwrap_or_default();
+                let ctypes: Vec<String> = serde_json::from_str(&ctypes_raw).unwrap_or_default();
+
+                Ok(AttachmentMetadata {
+                    extensions: exts.into_iter().collect(),
+                    categories: cats.into_iter().collect(),
+                    content_types: ctypes.into_iter().collect(),
+                })
+            })
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        Ok(result)
     }
 
     pub fn delete_envelopes_multi_account(
@@ -1122,7 +1172,10 @@ impl DuckDBManager {
 
         let mut base_sql = String::from(" FROM envelopes e ");
 
-        let need_join_attachment = filter.attachment_name.is_some();
+        let need_join_attachment = filter.attachment_name.is_some()
+            || filter.attachment_extension.is_some()
+            || filter.attachment_category.is_some()
+            || filter.attachment_content_type.is_some();
 
         if need_join_attachment {
             base_sql.push_str(
@@ -1288,6 +1341,21 @@ impl DuckDBManager {
         if let Some(name) = filter.attachment_name {
             base_sql.push_str(" AND a.filename ILIKE ? ");
             args.push(format!("%{}%", name).into());
+        }
+
+        if let Some(ext) = filter.attachment_extension {
+            base_sql.push_str(" AND a.extension ILIKE ? ");
+            args.push(format!("%{}%", ext).into());
+        }
+
+        if let Some(cat) = filter.attachment_category {
+            base_sql.push_str(" AND a.ext_category ILIKE ? ");
+            args.push(format!("%{}%", cat).into());
+        }
+
+        if let Some(ctype) = filter.attachment_content_type {
+            base_sql.push_str(" AND a.content_type ILIKE ? ");
+            args.push(format!("%{}%", ctype).into());
         }
 
         let count_sql = if need_join_attachment {

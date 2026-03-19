@@ -1539,7 +1539,12 @@
             "medium": "보통 (2 – 10 MB)",
             "large": "큼 (10 – 20 MB)",
             "huge": "매우 큼 (> 20 MB)"
-        }
+        },
+        "any": "제한 없음",
+        "search_placeholder": "{{field}} 검색...",
+        "extension": "파일 확장자",
+        "category": "첨부 파일 카테고리",
+        "content_types": "구체적인 형식"
     },
     "search_view": {
         "button_label": "보기",

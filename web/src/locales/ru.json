@@ -1539,7 +1539,12 @@
             "medium": "Средний (2–10 МБ)",
             "large": "Большой (10–20 МБ)",
             "huge": "Очень большой (> 20 МБ)"
-        }
+        },
+        "any": "Любой",
+        "search_placeholder": "Поиск {{field}}...",
+        "extension": "Расширение файла",
+        "category": "Категория вложения",
+        "content_types": "Конкретный тип"
     },
     "search_view": {
         "button_label": "Вид",

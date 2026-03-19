@@ -456,8 +456,8 @@
         "before": "以前:",
         "selectDate": "日付を選択",
         "pleaseSelectAtLeastOne": "少なくとも1つの検索条件を選択してください",
-        "cc": "CC",
-        "bcc": "BCC",
+        "cc": "CC（写し）",
+        "bcc": "BCC（ブラインド写し）",
         "attachmentName": "添付ファイル名",
         "messageId": "メッセージID",
         "minSize": "最小サイズ",
@@ -1539,7 +1539,12 @@
             "medium": "中 (2 – 10 MB)",
             "large": "大 (10 – 20 MB)",
             "huge": "特大 (> 20 MB)"
-        }
+        },
+        "any": "制限なし",
+        "search_placeholder": "{{field}}を検索...",
+        "extension": "拡張子",
+        "category": "添付ファイルカテゴリ",
+        "content_types": "具体的な形式"
     },
     "search_view": {
         "button_label": "表示",

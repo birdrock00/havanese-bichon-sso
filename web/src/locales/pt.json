@@ -1539,7 +1539,12 @@
             "medium": "Médio (2 – 10 MB)",
             "large": "Grande (10 – 20 MB)",
             "huge": "Muito grande (> 20 MB)"
-        }
+        },
+        "any": "Qualquer",
+        "search_placeholder": "Buscar {{field}}...",
+        "extension": "Extensão de arquivo",
+        "category": "Categoria de anexo",
+        "content_types": "Tipo específico"
     },
     "search_view": {
         "button_label": "Visualização",

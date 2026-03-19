@@ -23,6 +23,7 @@ use crate::modules::indexer::manager::EML_INDEX_MANAGER;
 use crate::modules::indexer::manager::ENVELOPE_INDEX_MANAGER;
 use crate::modules::message::append::restore_emails;
 use crate::modules::message::append::RestoreMessagesRequest;
+use crate::modules::message::attachment::AttachmentMetadata;
 use crate::modules::message::content::retrieve_nested_eml_content;
 use crate::modules::message::content::FullNestedMessageContent;
 use crate::modules::message::content::{retrieve_email_content, FullMessageContent};
@@ -408,6 +409,31 @@ impl MessageApi {
         Ok(Json(
             ENVELOPE_INDEX_MANAGER
                 .get_all_contacts(authorized_ids)
+                .await?,
+        ))
+    }
+
+    /// Retrieves unique metadata for all attachments across authorized accounts.
+    #[oai(
+        path = "/attachment_metadata",
+        method = "get",
+        operation_id = "get_attachment_metadata"
+    )]
+    async fn get_attachment_metadata(
+        &self,
+        context: ClientContext,
+    ) -> ApiResult<Json<AttachmentMetadata>> {
+        let authorized_ids: Option<HashSet<u64>> = if context
+            .has_permission(None, Permission::DATA_READ_ALL)
+            .await
+        {
+            None
+        } else {
+            Some(context.user.account_access_map.keys().cloned().collect())
+        };
+        Ok(Json(
+            ENVELOPE_INDEX_MANAGER
+                .get_attachment_metadata(authorized_ids)
                 .await?,
         ))
     }

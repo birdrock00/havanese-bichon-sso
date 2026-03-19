@@ -1539,7 +1539,12 @@
       "medium": "普通 (2 - 10 MB)",
       "large": "较大 (10 - 20 MB)",
       "huge": "极大 (> 20 MB)"
-    }
+    },
+    "any": "不限",
+    "search_placeholder": "搜索{{field}}...",
+    "extension": "文件后缀",
+    "category": "附件分类",
+    "content_types": "具体类型"
   },
   "search_view": {
     "button_label": "视图",

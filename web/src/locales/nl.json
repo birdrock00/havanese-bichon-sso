@@ -1539,7 +1539,12 @@
             "medium": "Gemiddeld (2 – 10 MB)",
             "large": "Groot (10 – 20 MB)",
             "huge": "Zeer groot (> 20 MB)"
-        }
+        },
+        "any": "Alle",
+        "search_placeholder": "Zoek {{field}}...",
+        "extension": "Bestandsextensie",
+        "category": "Bijlagecategorie",
+        "content_types": "Specifiek type"
     },
     "search_view": {
         "button_label": "Weergave",

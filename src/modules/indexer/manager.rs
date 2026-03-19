@@ -25,7 +25,9 @@ use std::{
 
 use crate::modules::{
     duckdb::init::duckdb,
-    message::{content::AttachmentInfo, search::SortBy, tags::TagCount},
+    message::{
+        attachment::AttachmentMetadata, content::AttachmentInfo, search::SortBy, tags::TagCount,
+    },
     settings::cli::SETTINGS,
 };
 use crate::{
@@ -188,6 +190,15 @@ impl EnvelopeIndexManager {
         accounts: Option<HashSet<u64>>,
     ) -> BichonResult<HashSet<String>> {
         tokio::task::spawn_blocking(move || duckdb()?.get_all_contacts(accounts))
+            .await
+            .map_err(|e| raise_error!(format!("{:?}", e), ErrorCode::InternalError))?
+    }
+
+    pub async fn get_attachment_metadata(
+        &self,
+        accounts: Option<HashSet<u64>>,
+    ) -> BichonResult<AttachmentMetadata> {
+        tokio::task::spawn_blocking(move || duckdb()?.get_attachment_metadata(accounts))
             .await
             .map_err(|e| raise_error!(format!("{:?}", e), ErrorCode::InternalError))?
     }

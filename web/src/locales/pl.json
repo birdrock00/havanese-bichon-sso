@@ -1539,7 +1539,12 @@
       "medium": "Średni (2 – 10 MB)",
       "large": "Duży (10 – 20 MB)",
       "huge": "Bardzo duży (> 20 MB)"
-    }
+    },
+    "any": "Dowolne",
+    "search_placeholder": "Szukaj {{field}}...",
+    "extension": "Rozszerzenie pliku",
+    "category": "Kategoria załącznika",
+    "content_types": "Konkretny typ"
   },
   "search_view": {
     "button_label": "Widok",

@@ -1539,7 +1539,12 @@
             "medium": "一般（2–10 MB）",
             "large": "較大（10–20 MB）",
             "huge": "極大（> 20 MB）"
-        }
+        },
+        "any": "不限",
+        "search_placeholder": "搜尋{{field}}...",
+        "extension": "檔案副檔名",
+        "category": "附件分類",
+        "content_types": "具體類型"
     },
     "search_view": {
         "button_label": "檢視",

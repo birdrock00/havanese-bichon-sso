@@ -106,3 +106,31 @@ export const restore_message = async (accountId: number, envelopeIds: string[]) 
     });
     return response.data;
 };
+
+
+
+export interface AttachmentMetadata {
+    /**
+     * A collection of unique file extensions found in attachments.
+     * @example ["pdf", "docx", "png"]
+     */
+    extensions: string[];
+
+    /**
+     * A collection of high-level attachment categories.
+     * @example ["document", "image", "archive"]
+     */
+    categories: string[];
+
+    /**
+     * A collection of unique MIME types (Content-Type) for the attachments.
+     * @example ["application/pdf", "image/jpeg"]
+     */
+    content_types: string[];
+}
+
+
+export const get_attachment_meta = async () => {
+    const response = await axiosInstance.get<AttachmentMetadata>("api/v1/attachment_metadata");
+    return response.data;
+};

@@ -1539,7 +1539,12 @@
             "medium": "Mellem (2 – 10 MB)",
             "large": "Stor (10 – 20 MB)",
             "huge": "Meget stor (> 20 MB)"
-        }
+        },
+        "any": "Alle",
+        "search_placeholder": "Søg {{field}}...",
+        "extension": "Filendelse",
+        "category": "Vedhæftningskategori",
+        "content_types": "Specifik type"
     },
     "search_view": {
         "button_label": "Visning",

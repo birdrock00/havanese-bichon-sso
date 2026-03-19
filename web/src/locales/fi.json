@@ -1539,7 +1539,12 @@
             "medium": "Keskikokoinen (2 – 10 MB)",
             "large": "Suuri (10 – 20 MB)",
             "huge": "Erittäin suuri (> 20 MB)"
-        }
+        },
+        "any": "Mikä tahansa",
+        "search_placeholder": "Etsi {{field}}...",
+        "extension": "Tiedostopääte",
+        "category": "Liitekategoria",
+        "content_types": "Tarkka tyyppi"
     },
     "search_view": {
         "button_label": "Näkymä",

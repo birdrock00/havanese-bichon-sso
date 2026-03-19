@@ -160,7 +160,7 @@ fn extract_envelope_core(
                     )
                 })
                 .unwrap_or_else(|| "application/octet-stream".to_string());
-
+            //注意:有些附件是没有名字的，这样extension也就不存在，那么在获取附件的时候，就不能通过name定位    
             Some(AttachmentInfo {
                 filename: attachment
                     .attachment_name()

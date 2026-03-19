@@ -51,7 +51,7 @@ impl AttachmentInfo {
         std::path::Path::new(&self.filename)
             .extension()
             .and_then(|ext| ext.to_str())
-            .map(|ext| ext.to_lowercase())
+            .map(|ext| ext.to_ascii_lowercase())
             .unwrap_or_default()
     }
 

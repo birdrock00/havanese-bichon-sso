@@ -1539,7 +1539,12 @@
             "medium": "متوسط (2 – 10 ميغابايت)",
             "large": "كبير (10 – 20 ميغابايت)",
             "huge": "ضخم (> 20 ميغابايت)"
-        }
+        },
+        "any": "الكل",
+        "search_placeholder": "بحث {{field}}...",
+        "extension": "امتداد الملف",
+        "category": "فئة المرفق",
+        "content_types": "نوع محدد"
     },
     "search_view": {
         "button_label": "العرض",
