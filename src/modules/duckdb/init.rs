@@ -1168,6 +1168,18 @@ impl DuckDBManager {
             }
         }
 
+        if let Some(subject) = filter.subject {
+            let pattern = format!("(?i){}", subject);
+            base_sql.push_str(" AND regexp_matches(coalesce(e.subject, ''), ?)");
+            args.push(pattern.into());
+        }
+
+        if let Some(body) = filter.body {
+            let pattern = format!("(?i){}", body);
+            base_sql.push_str(" AND regexp_matches(coalesce(e.body, ''), ?)");
+            args.push(pattern.into());
+        }
+
         if let Some(text) = filter.text {
             let pattern = format!("(?i){}", text);
             base_sql.push_str(
@@ -1175,9 +1187,13 @@ impl DuckDBManager {
             AND (
                 regexp_matches(coalesce(e.subject, ''), ?)
                 OR regexp_matches(coalesce(e.body, ''), ?)
+                OR regexp_matches(coalesce(e.sender, ''), ?)
+                OR regexp_matches(array_to_string(e.recipients, ','), ?)
             )
             ",
             );
+            args.push(pattern.clone().into());
+            args.push(pattern.clone().into());
             args.push(pattern.clone().into());
             args.push(pattern.into());
         }

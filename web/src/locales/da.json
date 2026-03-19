@@ -1555,6 +1555,9 @@
         "recent_title": "Seneste søgninger",
         "clear_history": "Ryd historik",
         "no_history": "Ingen søgehistorik",
-        "hint": "Standard søgeområde: emne, indhold og vedhæftningsnavne"
+        "all": "Alle",
+        "all_fields_desc": "Matcher emne, indhold, afsender og modtagere",
+        "subject": "Emne",
+        "body": "Indhold"
     }
 }

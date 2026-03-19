@@ -8,7 +8,7 @@ export function FilterResetButton() {
     const { filter, setFilter } = useSearchContext();
     const { t } = useTranslation()
     const { q, ...restFilters } = filter;
-    
+
     const activeFiltersCount = Object.keys(restFilters).filter(key => {
         const value = restFilters[key];
         if (Array.isArray(value)) return value.length > 0;
@@ -19,7 +19,7 @@ export function FilterResetButton() {
 
     return (
         <Button
-            variant="ghost"
+            variant="default"
             size="sm"
             onClick={() => setFilter(q ? { q } : {})}
             className={cn(

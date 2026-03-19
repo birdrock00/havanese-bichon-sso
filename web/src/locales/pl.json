@@ -1555,6 +1555,9 @@
     "recent_title": "Ostatnie wyszukiwania",
     "clear_history": "Wyczyść historię",
     "no_history": "Brak historii wyszukiwania",
-    "hint": "Domyślny zakres wyszukiwania: temat, treść i nazwy załączników"
+    "all": "Wszystkie",
+    "all_fields_desc": "Dopasowuje temat, treść, nadawcę i odbiorców",
+    "subject": "Temat",
+    "body": "Treść"
   }
 }

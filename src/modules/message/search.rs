@@ -34,6 +34,8 @@ use crate::{
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, Object)]
 pub struct SearchFilter {
     pub text: Option<String>,
+    pub subject: Option<String>,
+    pub body: Option<String>,
     pub from: Option<String>,
     pub to: Option<String>,
     pub cc: Option<String>,
@@ -80,15 +82,23 @@ impl SearchRequest {
             ));
         }
 
-        if let Some(ref pattern) = self.filter.text {
-            if let Err(_) = duckdb()?.validate_regex(pattern) {
-                return Err(raise_error!(
-                    "Invalid search pattern: The regular expression is not supported by DuckDB."
-                        .into(),
-                    ErrorCode::InvalidParameter
-                ));
+        let validate = |pattern: &Option<String>| -> BichonResult<()> {
+            if let Some(ref p) = pattern {
+                if duckdb()?.validate_regex(p).is_err() {
+                    return Err(raise_error!(
+                        "Invalid search pattern: The regular expression is not supported by DuckDB.".into(),
+                        ErrorCode::InvalidParameter
+                    ));
+                }
             }
-        }
+            Ok(())
+        };
+
+        validate(&self.filter.text)?;
+        validate(&self.filter.subject)?;
+        validate(&self.filter.body)?;
+        validate(&self.filter.from)?;
+        validate(&self.filter.to)?;
 
         Ok(())
     }

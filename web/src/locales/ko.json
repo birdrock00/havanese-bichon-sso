@@ -1555,6 +1555,9 @@
         "recent_title": "최근 검색",
         "clear_history": "기록 지우기",
         "no_history": "검색 기록 없음",
-        "hint": "기본 검색 범위: 제목, 본문 및 첨부파일 이름"
+        "all": "전체",
+        "all_fields_desc": "제목, 본문, 발신자 및 수신자를 검색합니다",
+        "subject": "제목",
+        "body": "본문"
     }
 }

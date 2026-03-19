@@ -1555,6 +1555,9 @@
         "recent_title": "Viimeisimmät haut",
         "clear_history": "Tyhjennä historia",
         "no_history": "Ei hakuhistoriaa",
-        "hint": "Oletushakualue: otsikko, sisältö ja liitteiden nimet"
+        "all": "Kaikki",
+        "all_fields_desc": "Hakee aiheesta, tekstistä, lähettäjästä ja vastaanottajista",
+        "subject": "Aihe",
+        "body": "Viestiosa"
     }
 }

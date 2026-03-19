@@ -1555,6 +1555,9 @@
         "recent_title": "最近の検索",
         "clear_history": "履歴をクリア",
         "no_history": "履歴なし",
-        "hint": "検索対象：件名・本文・添付ファイル名"
+        "all": "すべて",
+        "all_fields_desc": "件名、本文、送信者、受信者に一致します",
+        "subject": "件名",
+        "body": "本文"
     }
 }

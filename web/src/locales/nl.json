@@ -1555,6 +1555,9 @@
         "recent_title": "Recente zoekopdrachten",
         "clear_history": "Geschiedenis wissen",
         "no_history": "Geen zoekgeschiedenis",
-        "hint": "Standaard zoekbereik: onderwerp, inhoud en bijlagenamen"
+        "all": "Alle velden",
+        "all_fields_desc": "Zoekt in onderwerp, tekst, afzender en ontvangers",
+        "subject": "Onderwerp",
+        "body": "Inhoud"
     }
 }

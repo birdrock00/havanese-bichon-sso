@@ -1555,6 +1555,9 @@
         "recent_title": "Pesquisas recentes",
         "clear_history": "Limpar histórico",
         "no_history": "Nenhum histórico de pesquisa",
-        "hint": "Escopo padrão: assunto, conteúdo e nomes dos anexos"
+        "all": "Todos os campos",
+        "all_fields_desc": "Corresponde ao assunto, corpo, remetente e destinatários",
+        "subject": "Assunto",
+        "body": "Corpo da mensagem"
     }
 }

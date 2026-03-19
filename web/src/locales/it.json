@@ -1555,6 +1555,9 @@
         "recent_title": "Ricerche recenti",
         "clear_history": "Cancella cronologia",
         "no_history": "Nessuna cronologia di ricerca",
-        "hint": "Ambito predefinito: oggetto, contenuto e nomi degli allegati"
+        "all": "Tutti i campi",
+        "all_fields_desc": "Cerca in oggetto, testo, mittente e destinatari",
+        "subject": "Oggetto",
+        "body": "Corpo del messaggio"
     }
 }

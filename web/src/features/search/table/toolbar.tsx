@@ -32,10 +32,10 @@ export function DataTableToolbar<TData>({
           <TagFilterPopover />
           <TimePopover />
           <MoreFiltersPopover />
-          <FilterResetButton />
+          <DataTableViewOptions table={table} />
         </div>
         <div className="flex-shrink-0 ml-auto lg:ml-0">
-          <DataTableViewOptions table={table} />
+          <FilterResetButton />
         </div>
       </div>
     </div>

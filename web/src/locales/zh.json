@@ -1555,6 +1555,9 @@
     "recent_title": "最近搜索",
     "clear_history": "清空记录",
     "no_history": "暂无搜索记录",
-    "hint": "默认搜索范围：邮件标题、正文及附件名称"
+    "all": "全部",
+    "all_fields_desc": "匹配邮件主题、正文、发件人及收件人",
+    "subject": "邮件主题",
+    "body": "邮件正文"
   }
 }

@@ -1555,6 +1555,9 @@
     "recent_title": "Recent searches",
     "clear_history": "Clear history",
     "no_history": "No search history",
-    "hint": "Default scope: subject, body and attachment names"
+    "all": "All Fields",
+    "all_fields_desc": "Matches subject, body, sender, and recipients",
+    "subject": "Subject",
+    "body": "Body"
   }
 }

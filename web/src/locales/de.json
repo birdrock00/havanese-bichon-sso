@@ -1555,6 +1555,9 @@
         "recent_title": "Letzte Suchanfragen",
         "clear_history": "Verlauf löschen",
         "no_history": "Kein Suchverlauf",
-        "hint": "Standard-Suchbereich: Betreff, Inhalt und Anhangnamen"
+        "all": "Alle Felder",
+        "all_fields_desc": "Matcht Betreff, Text, Absender und Empfänger",
+        "subject": "Betreff",
+        "body": "Inhalt"
     }
 }

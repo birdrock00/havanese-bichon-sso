@@ -1555,6 +1555,9 @@
         "recent_title": "Búsquedas recientes",
         "clear_history": "Borrar historial",
         "no_history": "Sin historial de búsqueda",
-        "hint": "Ámbito de búsqueda predeterminado: asunto, contenido y nombres de archivos adjuntos"
+        "all": "Todo",
+        "all_fields_desc": "Coincide con asunto, cuerpo, remitente y destinatarios",
+        "subject": "Asunto",
+        "body": "Cuerpo del mensaje"
     }
 }

@@ -1555,6 +1555,9 @@
         "recent_title": "Senaste sökningar",
         "clear_history": "Rensa historik",
         "no_history": "Ingen sökhistorik",
-        "hint": "Standardomfattning: ämne, innehåll och bilagenamn"
+        "all": "Alla",
+        "all_fields_desc": "Matchar ämne, innehåll, avsändare och mottagare",
+        "subject": "Ämne",
+        "body": "Innehåll"
     }
 }

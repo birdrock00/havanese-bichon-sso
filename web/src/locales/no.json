@@ -1555,6 +1555,9 @@
         "recent_title": "Nylige søk",
         "clear_history": "Tøm historikk",
         "no_history": "Ingen søkehistorikk",
-        "hint": "Standard søkeområde: emne, innhold og vedleggsnavn"
+        "all": "Alle",
+        "all_fields_desc": "Søker i emne, tekst, avsender og mottakere",
+        "subject": "Emne",
+        "body": "Innhold"
     }
 }

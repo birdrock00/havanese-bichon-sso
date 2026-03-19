@@ -1555,6 +1555,9 @@
         "recent_title": "最近搜尋",
         "clear_history": "清除紀錄",
         "no_history": "尚無搜尋紀錄",
-        "hint": "預設搜尋範圍：郵件標題、內容與附件名稱"
+        "all": "全部",
+        "all_fields_desc": "匹配郵件主題、正文、發件人及收件人",
+        "subject": "郵件主題",
+        "body": "郵件正文"
     }
 }

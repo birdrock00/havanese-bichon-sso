@@ -1555,6 +1555,9 @@
         "recent_title": "Recherches récentes",
         "clear_history": "Effacer l’historique",
         "no_history": "Aucun historique de recherche",
-        "hint": "Portée par défaut : objet, contenu et noms des pièces jointes"
+        "all": "Tous les champs",
+        "all_fields_desc": "Recherche dans l'objet, le corps, l'expéditeur et les destinataires",
+        "subject": "Objet",
+        "body": "Corps du message"
     }
 }
