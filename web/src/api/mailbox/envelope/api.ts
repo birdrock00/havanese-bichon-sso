@@ -34,16 +34,16 @@ export const get_thread_messages = async (accountId: number, thread_id: string, 
     return response.data;
 }
 
-export const download_attachment = async (accountId: number, id: string, attachmentFileName: string) => {
-    const response = await axiosInstance.get(`api/v1/download-attachment/${accountId}/${id}?name=${attachmentFileName}`, { responseType: 'blob' });
+export const download_attachment = async (accountId: number, id: string, content_hash: string, fileName: string) => {
+    const response = await axiosInstance.get(`api/v1/download-attachment/${accountId}/${id}?content_hash=${content_hash}`, { responseType: 'blob' });
     const blob = new Blob([response.data]);
-    saveAs(blob, attachmentFileName);
+    saveAs(blob, fileName);
 };
 
-export const download_nested_attachment = async (accountId: number, id: string, attachmentFileName: string, nestedAttachmentFileName: string) => {
-    const response = await axiosInstance.get(`api/v1/download-nested-attachment/${accountId}/${id}?name=${attachmentFileName}&nested_name=${nestedAttachmentFileName}`, { responseType: 'blob' });
+export const download_nested_attachment = async (accountId: number, id: string, content_hash: string, nested_content_hash: string) => {
+    const response = await axiosInstance.get(`api/v1/download-nested-attachment/${accountId}/${id}?content_hash=${content_hash}&nested_content_hash=${nested_content_hash}`, { responseType: 'blob' });
     const blob = new Blob([response.data]);
-    saveAs(blob, nestedAttachmentFileName);
+    saveAs(blob, nested_content_hash);
 };
 export interface AttachmentInfo {
     /** MIME content type of the attachment (e.g., `image/png`, `application/pdf`). */
@@ -56,7 +56,10 @@ export interface AttachmentInfo {
     filename: string;
     /** Size of the attachment in bytes. */
     size: number;
+    content_hash: string;
+    is_message: boolean
 }
+
 export interface MessageContentResponse {
     text?: string;
     html?: string;
@@ -84,8 +87,8 @@ export const load_message = async (accountId: number, id: string) => {
     return response.data;
 };
 
-export const load_nested_message = async (accountId: number, id: string, attachmentFileName: string) => {
-    const response = await axiosInstance.get<NestedMessageContentResponse>(`api/v1/nested-message-content/${accountId}/${id}?name=${attachmentFileName}`);
+export const load_nested_message = async (accountId: number, id: string, content_hash: string) => {
+    const response = await axiosInstance.get<NestedMessageContentResponse>(`api/v1/nested-message-content/${accountId}/${id}?content_hash=${content_hash}`);
     return response.data;
 };
 

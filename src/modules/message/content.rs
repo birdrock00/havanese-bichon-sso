@@ -18,16 +18,16 @@
 
 use crate::base64_encode;
 use crate::modules::account::migration::AccountModel;
-use crate::modules::envelope::extractor::extract_envelope_from_message;
+use crate::modules::envelope::extractor::{
+    extract_envelope_from_nested_message, reattach_eml_content,
+};
 use crate::modules::error::code::ErrorCode;
 use crate::modules::indexer::envelope::Envelope;
-use crate::modules::indexer::manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER};
+use crate::modules::utils::compute_content_hash;
 use crate::{modules::error::BichonResult, raise_error};
 use mail_parser::{MessageParser, MimeHeaders};
-
 use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
-
 /// Represents metadata of an attachment in a Gmail message.
 ///
 /// This struct stores information required to identify, download,
@@ -40,53 +40,56 @@ pub struct AttachmentInfo {
     /// Whether the attachment is marked as inline (true) or a regular file (false).
     pub inline: bool,
     /// Original filename of the attachment, if provided.
-    pub filename: String,
+    pub filename: Option<String>,
     /// Size of the attachment in bytes.
     pub size: usize,
     pub content_id: Option<String>,
+    /// Hash of the content.
+    pub content_hash: String,
+    pub is_message: bool,
 }
 
 impl AttachmentInfo {
-    pub fn get_extension(&self) -> String {
-        std::path::Path::new(&self.filename)
-            .extension()
+    pub fn get_extension(&self) -> Option<String> {
+        self.filename
+            .as_deref()
+            .and_then(|f| std::path::Path::new(f).extension())
             .and_then(|ext| ext.to_str())
             .map(|ext| ext.to_ascii_lowercase())
-            .unwrap_or_default()
     }
 
     pub fn get_category(&self) -> &'static str {
-        let ext = self.get_extension();
+        if let Some(ext) = self.get_extension() {
+            let category = match ext.as_str() {
+                "doc" | "docx" | "pdf" | "rtf" | "odt" | "pages" | "pptx" | "ppt" => {
+                    Some("document")
+                }
+                "xls" | "xlsx" | "ods" | "numbers" | "csv" => Some("spreadsheet"),
+                "ical" | "ics" | "vcs" | "ifb" | "icalendar" => Some("event"),
+                "txt" | "log" | "md" => Some("text"),
+                "jpg" | "jpeg" | "png" | "gif" | "bmp" | "tiff" | "avif" | "heic" | "heif"
+                | "webp" => Some("image"),
+                "mp4" | "mkv" | "mov" | "avi" | "webm" => Some("video"),
+                "wav" | "mp3" | "aac" | "ogg" | "wma" | "flac" | "aiff" => Some("audio"),
+                "psd" | "eps" | "svg" | "cdr" | "ai" => Some("graphics_2d"),
+                "stl" | "obj" | "3mf" | "amf" | "f3d" | "sldprt" | "stp" | "step" | "dwg"
+                | "x_t" | "x_b" | "sat" | "ipt" => Some("graphics_3d"),
+                "c" | "h" | "html" | "css" | "js" | "ts" | "vue" | "tsx" | "svelte" | "py"
+                | "java" | "cs" | "go" | "rb" | "php" | "swift" | "rs" | "r" | "jl" | "lua"
+                | "sql" => Some("code"),
+                "tsv" | "xml" | "json" | "yml" | "yaml" | "toml" | "env" | "ini" => Some("data"),
+                "ps1" | "sh" | "bat" | "cmd" | "exe" | "msi" | "dmg" | "pkg" | "deb" | "rpm" => {
+                    Some("executable")
+                }
+                "zip" | "gz" | "tgz" | "7z" | "rar" | "tar" | "bz2" | "zst" | "xz" | "iso"
+                | "img" => Some("archive"),
+                "eml" | "msg" => Some("message"),
+                _ => None,
+            };
 
-        let category = match ext.as_str() {
-            "doc" | "docx" | "pdf" | "rtf" | "odt" | "pages" | "pptx" | "ppt" => Some("document"),
-            "xls" | "xlsx" | "ods" | "numbers" | "csv" => Some("spreadsheet"),
-            "ical" | "ics" | "vcs" | "ifb" | "icalendar" => Some("event"),
-            "txt" | "log" | "md" => Some("text"),
-            "jpg" | "jpeg" | "png" | "gif" | "bmp" | "tiff" | "avif" | "heic" | "heif" | "webp" => {
-                Some("image")
+            if let Some(cat) = category {
+                return cat;
             }
-            "mp4" | "mkv" | "mov" | "avi" | "webm" => Some("video"),
-            "wav" | "mp3" | "aac" | "ogg" | "wma" | "flac" | "aiff" => Some("audio"),
-            "psd" | "eps" | "svg" | "cdr" | "ai" => Some("graphics_2d"),
-            "stl" | "obj" | "3mf" | "amf" | "f3d" | "sldprt" | "stp" | "step" | "dwg" | "x_t"
-            | "x_b" | "sat" | "ipt" => Some("graphics_3d"),
-            "c" | "h" | "html" | "css" | "js" | "ts" | "vue" | "tsx" | "svelte" | "py" | "java"
-            | "cs" | "go" | "rb" | "php" | "swift" | "rs" | "r" | "jl" | "lua" | "sql" => {
-                Some("code")
-            }
-            "tsv" | "xml" | "json" | "yml" | "yaml" | "toml" | "env" | "ini" => Some("data"),
-            "ps1" | "sh" | "bat" | "cmd" | "exe" | "msi" | "dmg" | "pkg" | "deb" | "rpm" => {
-                Some("executable")
-            }
-            "zip" | "gz" | "tgz" | "7z" | "rar" | "tar" | "bz2" | "zst" | "xz" | "iso" | "img" => {
-                Some("archive")
-            }
-            _ => None,
-        };
-
-        if let Some(cat) = category {
-            return cat;
         }
 
         let mime = self.file_type.to_lowercase();
@@ -102,16 +105,46 @@ impl AttachmentInfo {
         if mime.starts_with("text/") {
             return "text";
         }
+        if mime == "message/rfc822" {
+            return "message";
+        }
         if mime.contains("compressed") || mime.contains("zip") || mime.contains("archive") {
             return "archive";
         }
         if mime.contains("pdf") || mime.contains("msword") || mime.contains("officedocument") {
             return "document";
         }
+        if mime.contains("spreadsheet") || mime.contains("excel") {
+            return "spreadsheet";
+        }
 
         "other"
     }
 }
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct AttachmentDetail {
+    pub shard_id: usize,
+    pub info: AttachmentInfo,
+}
+
+impl AttachmentDetail {
+    pub fn from_row(row: &duckdb::Row) -> duckdb::Result<Self> {
+        Ok(Self {
+            shard_id: row.get("shard_id")?,
+            info: AttachmentInfo {
+                file_type: row.get("content_type")?,
+                inline: row.get("is_inline")?,
+                filename: row.get("filename")?,
+                size: row.get("size_bytes")?,
+                content_id: row.get("cid")?,
+                content_hash: row.get("content_hash")?,
+                is_message: row.get("is_message")?,
+            },
+        })
+    }
+}
+
 /// Represents the content of an email message in both plain text and HTML formats.
 ///
 /// This struct contains optional fields for plain text and HTML versions of
@@ -148,37 +181,10 @@ pub async fn retrieve_email_content(
     envelope_id: String,
 ) -> BichonResult<FullMessageContent> {
     AccountModel::check_account_exists(account_id).await?;
-    let envelope = ENVELOPE_INDEX_MANAGER
-        .get_envelope_by_id(account_id, envelope_id.clone())
-        .await?
-        .ok_or_else(|| {
-            raise_error!(
-                format!(
-                    "Email record not found: account_id={} id={}",
-                    account_id, &envelope_id
-                ),
-                ErrorCode::ResourceNotFound
-            )
-        })?;
-
-    let eml = EML_INDEX_MANAGER
-        .get(account_id, &envelope.content_hash)
-        .await?
-        .ok_or_else(|| {
-            raise_error!(
-                format!(
-                    "Email record not found: account_id={} id={}",
-                    account_id, &envelope_id
-                ),
-                ErrorCode::ResourceNotFound
-            )
-        })?;
+    let (envelope, eml) = reattach_eml_content(account_id, envelope_id).await?;
     let message = MessageParser::default().parse(&eml).ok_or_else(|| {
         raise_error!(
-            format!(
-                "Failed to parse EML data (id={}) — the message may be corrupted.",
-                &envelope_id
-            ),
+            "Failed to parse EML data — the message may be corrupted.".into(),
             ErrorCode::InternalError
         )
     })?;
@@ -190,24 +196,13 @@ pub async fn retrieve_email_content(
             raise_error!(
                 format!(
                     "Attachment is missing Content-Type (email id={})",
-                    &envelope_id
+                    &envelope.id
                 ),
                 ErrorCode::InternalError
             )
         })?;
-        let filename = attachment
-            .attachment_name()
-            .map(|name| name.to_string())
-            .unwrap_or_else(|| {
-                format!(
-                    "email{}_attachment{}",
-                    &envelope_id,
-                    attachment.raw_body_offset()
-                )
-            });
-
+        let filename = attachment.attachment_name().map(|name| name.to_string());
         let disposition = attachment.content_disposition();
-
         let file_type = format!(
             "{}/{}",
             content_type.c_type.as_ref(),
@@ -235,12 +230,15 @@ pub async fn retrieve_email_content(
         if inline && attachment.content_id().is_some() {
             continue;
         }
-
+        let is_message = attachment.is_message();
+        let content_hash = compute_content_hash(attachment.contents());
         attachments.push(AttachmentInfo {
-            filename,
+            filename: filename.or(Some(content_hash.clone())), //  Fallback to content_hash as the default filename if it is not provided.
             size: attachment.contents().len(),
             inline,
             file_type,
+            is_message,
+            content_hash,
             content_id: attachment.content_id().map(Into::into),
         });
     }
@@ -254,65 +252,87 @@ pub async fn retrieve_email_content(
 pub async fn retrieve_nested_eml_content(
     account_id: u64,
     envelope_id: String,
-    name: &str,
+    content_hash: &str,
 ) -> BichonResult<FullNestedMessageContent> {
-    let attachment_content = EML_INDEX_MANAGER
-        .get_attachment_content(account_id, envelope_id, name)
-        .await?;
-    let message = MessageParser::default().parse(&attachment_content).ok_or_else(|| {
+    let (_, eml) = reattach_eml_content(account_id, envelope_id).await?;
+    let parent_message = MessageParser::default().parse(&eml).ok_or_else(|| {
         raise_error!(
-            format!(
-                "Unable to parse '{}' as an email. It may not be in RFC822 format or the file is corrupted.",
-                name
-            ),
+            "Failed to parse parent EML".into(),
             ErrorCode::InternalError
         )
     })?;
 
-    let mut html: Option<String> = message.body_html(0).map(|cow| cow.into_owned());
-    let text: Option<String> = message.body_text(0).map(|cow| cow.into_owned());
+    let attachment_content = parent_message
+        .attachments()
+        .find(|att| compute_content_hash(att.contents()) == content_hash)
+        .map(|att| att.contents())
+        .ok_or_else(|| {
+            raise_error!(
+                "Target nested EML not found".into(),
+                ErrorCode::ResourceNotFound
+            )
+        })?;
+
+    let nested_message = MessageParser::default()
+        .parse(attachment_content)
+        .ok_or_else(|| {
+            raise_error!(
+                "Failed to parse nested EML".into(),
+                ErrorCode::InternalError
+            )
+        })?;
+
+    let mut html = nested_message.body_html(0).map(|c| c.into_owned());
+    let text = nested_message.body_text(0).map(|c| c.into_owned());
+
     let mut attachments = Vec::new();
 
-    for attachment in message.attachments() {
-        let content_type = attachment.content_type();
-        let file_type = content_type.map_or_else(
+    let has_html = html.is_some();
+
+    for attachment in nested_message.attachments() {
+        let cid = attachment.content_id();
+        let disposition = attachment.content_disposition();
+        let is_inline = disposition.map(|d| d.is_inline()).unwrap_or(false);
+
+        if has_html && is_inline && cid.is_some() {
+            let content_id = cid.unwrap();
+            let html_ref = html.as_mut().unwrap();
+
+            let cid_pattern = format!("cid:{}", content_id);
+            if html_ref.contains(&cid_pattern) {
+                let data = attachment.contents();
+                let ct = attachment
+                    .content_type()
+                    .map(|ct| format!("{}/{}", ct.c_type, ct.c_subtype.as_deref().unwrap_or("")))
+                    .unwrap_or_else(|| "image/png".to_string());
+
+                let base64_data = format!("data:{};base64,{}", ct, base64_encode!(data));
+                *html_ref = html_ref.replace(&cid_pattern, &base64_data);
+                continue;
+            }
+        }
+
+        let file_type = attachment.content_type().map_or_else(
             || "application/octet-stream".to_string(),
             |ct| format!("{}/{}", ct.c_type, ct.c_subtype.as_deref().unwrap_or("")),
         );
-
-        let filename = attachment
-            .attachment_name()
-            .map(|n| n.to_string())
-            .unwrap_or_else(|| format!("attached_file_{}", attachment.raw_body_offset()));
-
-        let disposition = attachment.content_disposition();
-        let is_inline = disposition.map(|d| d.is_inline()).unwrap_or(false);
-        let cid = attachment.content_id();
-
-        if is_inline && cid.is_some() {
-            if let (Some(html_str), Some(content_id)) = (html.as_mut(), cid) {
-                if html_str.contains(content_id) {
-                    let data = attachment.contents();
-                    let base64_encoded = base64_encode!(data);
-                    *html_str = html_str.replace(
-                        &format!("cid:{}", content_id),
-                        &format!("data:{};base64,{}", file_type, base64_encoded),
-                    );
-                }
-            }
-            continue;
-        }
-
+        let content_hash = compute_content_hash(attachment.contents());
         attachments.push(AttachmentInfo {
-            filename,
+            filename: attachment
+                .attachment_name()
+                .map(|n| n.to_string())
+                .or(Some(content_hash.clone())), // Fallback to content_hash as the default filename if it is not provided.
             size: attachment.contents().len(),
             inline: is_inline,
             file_type,
+            content_hash,
+            is_message: attachment.is_message(),
             content_id: cid.map(Into::into),
         });
     }
 
-    let envelope = extract_envelope_from_message(message, account_id)?;
+    let envelope = extract_envelope_from_nested_message(nested_message, account_id)?;
+
     Ok(FullNestedMessageContent {
         text,
         html,

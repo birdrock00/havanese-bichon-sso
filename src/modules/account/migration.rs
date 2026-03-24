@@ -35,7 +35,10 @@ use crate::{
         cache::imap::mailbox::MailBox,
         database::{list_all_impl, secondary_find_impl, with_transaction},
         error::BichonResult,
-        indexer::manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER},
+        indexer::{
+            attachment::ATTACHMENT_INDEX_MANAGER, eml::EML_INDEX_MANAGER,
+            manager::ENVELOPE_INDEX_MANAGER,
+        },
         users::{role::DEFAULT_ACCOUNT_MANAGER_ROLE_ID, UserModel, DEFAULT_ADMIN_USER_ID},
     },
     utc_now,
@@ -355,17 +358,15 @@ impl AccountV4 {
         if matches!(account.account_type, AccountType::IMAP) {
             SYNC_TASKS.stop(account.id).await?;
             AccountRunningState::delete(account.id).await?;
-            //BICHON_CONTEXT.clean_account(account.id).await?;
         }
         OAuth2AccessToken::try_delete(account.id).await?;
         UserModel::cleanup_account(account.id).await?;
         MailBox::clean(account.id).await?;
-        ENVELOPE_INDEX_MANAGER
+        let content_hashes = ENVELOPE_INDEX_MANAGER
             .delete_account_envelopes(account.id)
             .await?;
-        EML_INDEX_MANAGER
-            .delete_account_envelopes(account.id)
-            .await?;
+        EML_INDEX_MANAGER.delete(&content_hashes).await?;
+        ATTACHMENT_INDEX_MANAGER.delete(&content_hashes).await?;
         Self::delete_account(account.id).await?;
         info!("Sequential cleanup completed for account: {}", account.id);
         Ok(())

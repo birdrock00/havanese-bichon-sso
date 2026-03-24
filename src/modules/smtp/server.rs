@@ -22,9 +22,6 @@ use std::time::Duration;
 use crate::modules::cache::imap::mailbox::{Attribute, AttributeEnum};
 use crate::modules::envelope::extractor::extract_envelope_from_smtp;
 use crate::modules::error::BichonResult;
-use crate::modules::indexer::manager::EML_INDEX_MANAGER;
-use crate::modules::indexer::manager::ENVELOPE_INDEX_MANAGER;
-use crate::modules::indexer::schema::SchemaTools;
 use crate::modules::utils::create_hash;
 use crate::modules::{
     account::migration::AccountModel,
@@ -35,7 +32,6 @@ use crate::modules::{
     users::{permissions::Permission, UserModel},
 };
 use base64::{prelude::BASE64_STANDARD, Engine as _};
-use tantivy::doc;
 use tokio::time::timeout;
 use tokio::{
     io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt},
@@ -606,7 +602,6 @@ async fn read_data<R: AsyncBufReadExt + Unpin>(reader: &mut R) -> io::Result<Vec
 }
 
 async fn parse_email(data: &[u8], session: &Session) -> BichonResult<()> {
-    let fields = SchemaTools::fields();
     let rcpt = match session.rcpt_to.first() {
         Some(r) => r,
         None => {
@@ -637,29 +632,14 @@ async fn parse_email(data: &[u8], session: &Session) -> BichonResult<()> {
         return Err(e.into());
     }
 
-    let envelope = extract_envelope_from_smtp(data, rcpt.id, mailbox_id).map_err(|e| {
-        tracing::error!(
-            "SMTP: Envelope extraction failed for {}: {:?}",
-            rcpt.email,
+    extract_envelope_from_smtp(data, rcpt.id, mailbox_id)
+        .await
+        .map_err(|e| {
+            tracing::error!(
+                "SMTP: Envelope extraction failed for {}: {:?}",
+                rcpt.email,
+                e
+            );
             e
-        );
-        e
-    })?;
-
-    let content_hash = envelope.0.content_hash.clone();
-    ENVELOPE_INDEX_MANAGER.add_document(envelope).await;
-
-    EML_INDEX_MANAGER
-        .add_document(
-            content_hash.clone(),
-            doc!(
-                fields.f_id => content_hash,
-                fields.f_account_id => rcpt.id,
-                fields.f_mailbox_id => mailbox_id,
-                fields.f_blob => data
-            ),
-        )
-        .await;
-
-    Ok(())
+        })
 }

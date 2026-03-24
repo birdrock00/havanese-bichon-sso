@@ -42,11 +42,17 @@ pub struct Envelope {
     pub size: u32,
     pub thread_id: String,
     pub attachment_count: usize,
+    pub regular_attachment_count: usize,
     pub tags: Option<Vec<String>>,
+    /// Hash of the content.
     pub content_hash: String,
 }
 
 impl Envelope {
+    pub fn has_attachments(&self) -> bool {
+        self.attachment_count > 0
+    }
+
     pub fn from_row(row: &duckdb::Row) -> duckdb::Result<Self> {
         let get_list = |col_name: &str| -> Vec<String> {
             row.get::<_, Value>(col_name)
@@ -100,6 +106,7 @@ impl Envelope {
             size: row.get::<_, u64>("size_bytes")? as u32,
             thread_id: row.get("thread_id")?,
             attachment_count: row.get::<_, i32>("attachment_count")? as usize,
+            regular_attachment_count: row.get::<_, i32>("regular_attachment_count")? as usize,
             tags: {
                 let t = get_list("tags");
                 if t.is_empty() {

@@ -372,7 +372,7 @@ pub fn validate_tag(tag: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub fn content_hash(content: &[u8]) -> String {
+pub fn compute_content_hash(content: &[u8]) -> String {
     let hash = blake3::hash(content);
     hash.to_hex().to_string()
 }

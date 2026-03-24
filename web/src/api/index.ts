@@ -45,6 +45,7 @@ export interface EmailEnvelope {
   size: number;
   thread_id: string,
   attachment_count: number;
+  regular_attachment_count: number;
   tags: string[];
   content_hash: string;
 }

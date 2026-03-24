@@ -27,7 +27,10 @@ use crate::{
             SEMAPHORE,
         },
         error::{code::ErrorCode, BichonError, BichonResult},
-        indexer::manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER},
+        indexer::{
+            attachment::ATTACHMENT_INDEX_MANAGER, eml::EML_INDEX_MANAGER,
+            manager::ENVELOPE_INDEX_MANAGER,
+        },
     },
     raise_error,
 };
@@ -194,12 +197,15 @@ pub async fn rebuild_mailbox_cache(
     local_mailbox: &MailBox,
     remote_mailbox: &MailBox,
 ) -> BichonResult<()> {
-    ENVELOPE_INDEX_MANAGER
+    let content_hashes = ENVELOPE_INDEX_MANAGER
         .delete_mailbox_envelopes(account.id, vec![local_mailbox.id])
         .await?;
-    EML_INDEX_MANAGER
-        .delete_mailbox_envelopes(account.id, vec![local_mailbox.id])
-        .await?;
+
+    if !content_hashes.is_empty() {
+        EML_INDEX_MANAGER.delete(&content_hashes).await?;
+        ATTACHMENT_INDEX_MANAGER.delete(&content_hashes).await?;
+    }
+
     if remote_mailbox.exists == 0 {
         info!(
             "Account {}: Mailbox '{}' has no emails on the remote server. The mailbox is empty, no envelopes to fetch.",
@@ -225,12 +231,15 @@ pub async fn rebuild_mailbox_cache_by_date(
     remote: &MailBox,
     direction: FetchDirection,
 ) -> BichonResult<()> {
-    ENVELOPE_INDEX_MANAGER
+    let content_hashes = ENVELOPE_INDEX_MANAGER
         .delete_mailbox_envelopes(account.id, vec![local_mailbox_id])
         .await?;
-    EML_INDEX_MANAGER
-        .delete_mailbox_envelopes(account.id, vec![local_mailbox_id])
-        .await?;
+    
+    if !content_hashes.is_empty() {
+        EML_INDEX_MANAGER.delete(&content_hashes).await?;
+        ATTACHMENT_INDEX_MANAGER.delete(&content_hashes).await?;
+    }
+
     if remote.exists == 0 {
         info!(
             "Account {}: Mailbox '{}' has no emails on the remote server. The mailbox is empty, no envelopes to fetch.",

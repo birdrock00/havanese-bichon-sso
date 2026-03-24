@@ -19,8 +19,8 @@
 use std::sync::{Arc, LazyLock};
 
 use crate::modules::indexer::fields::*;
+use tantivy::schema::STRING;
 use tantivy::schema::{Schema, FAST, STORED};
-use tantivy::schema::{INDEXED, STRING};
 
 static BLOB_FIELDS: LazyLock<Arc<BlobFields>> = LazyLock::new(|| {
     let (_, fields) = SchemaTools::create_schema();
@@ -42,15 +42,8 @@ impl SchemaTools {
     pub fn create_schema() -> (Schema, BlobFields) {
         let mut builder = Schema::builder();
         let f_id = builder.add_text_field(F_ID, STRING | FAST);
-        let f_account_id = builder.add_u64_field(F_ACCOUNT_ID, INDEXED | STORED | FAST);
-        let f_mailbox_id = builder.add_u64_field(F_MAILBOX_ID, INDEXED | STORED | FAST);
         let f_blob = builder.add_bytes_field(F_BLOB, STORED);
-        let fields = BlobFields {
-            f_id,
-            f_account_id,
-            f_mailbox_id,
-            f_blob,
-        };
+        let fields = BlobFields { f_id, f_blob };
         (builder.build(), fields)
     }
 }

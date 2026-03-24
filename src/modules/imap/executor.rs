@@ -20,18 +20,15 @@ use crate::modules::account::migration::AccountModel;
 use crate::modules::account::state::AccountRunningState;
 use crate::modules::cache::imap::mailbox::MailBox;
 use crate::modules::cache::imap::sync::flow::{generate_uid_sequence_hashset, DEFAULT_BATCH_SIZE};
-use crate::modules::envelope::extractor::extract_envelope;
+use crate::modules::envelope::extractor::extract_envelope_and_store_it;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::imap::session::SessionStream;
-use crate::modules::indexer::manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER};
-use crate::modules::indexer::schema::SchemaTools;
 use crate::modules::{error::BichonResult, imap::manager::ImapConnectionManager};
 use crate::raise_error;
 use async_imap::types::Name;
 use async_imap::Session;
 use futures::TryStreamExt;
 use std::collections::HashSet;
-use tantivy::doc;
 use tracing::info;
 
 const BODY_FETCH_COMMAND: &str = "(UID INTERNALDATE RFC822.SIZE BODY.PEEK[])";
@@ -200,19 +197,12 @@ impl ImapExecutor {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
 
         let mut count = 0;
-        let fields = SchemaTools::fields();
         while let Some(fetch) = stream
             .try_next()
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
         {
-            let envelope = extract_envelope(&fetch, account_id, mailbox_id)?;
-            let content_hash = envelope.0.content_hash.clone();
-            ENVELOPE_INDEX_MANAGER.add_document(envelope).await;
-            let body = fetch.body().ok_or_else(|| {
-                raise_error!("missing a body".into(), ErrorCode::ImapUnexpectedResult)
-            })?;
-            EML_INDEX_MANAGER.add_document( content_hash.clone(), doc!(fields.f_id => content_hash, fields.f_account_id => account_id, fields.f_mailbox_id => mailbox_id, fields.f_blob => body)).await;
+            extract_envelope_and_store_it(&fetch, account_id, mailbox_id).await?;
             count += 1;
         }
         Ok(count)
@@ -234,19 +224,12 @@ impl ImapExecutor {
             .uid_fetch(uid_set, BODY_FETCH_COMMAND)
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
-        let fields = SchemaTools::fields();
         while let Some(fetch) = stream
             .try_next()
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
         {
-            let envelope = extract_envelope(&fetch, account_id, mailbox_id)?;
-            let content_hash = envelope.0.content_hash.clone();
-            ENVELOPE_INDEX_MANAGER.add_document(envelope).await;
-            let body = fetch.body().ok_or_else(|| {
-                raise_error!("missing a body".into(), ErrorCode::ImapUnexpectedResult)
-            })?;
-            EML_INDEX_MANAGER.add_document( content_hash.clone(), doc!(fields.f_id => content_hash, fields.f_account_id => account_id, fields.f_mailbox_id => mailbox_id, fields.f_blob => body)).await;
+            extract_envelope_and_store_it(&fetch, account_id, mailbox_id).await?;
         }
         Ok(())
     }

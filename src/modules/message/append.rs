@@ -2,9 +2,9 @@ use crate::{
     encode_mailbox_name,
     modules::{
         account::migration::{AccountModel, AccountType},
+        envelope::extractor::reattach_eml_content,
         error::{code::ErrorCode, BichonResult},
         imap::executor::ImapExecutor,
-        indexer::manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER},
     },
     raise_error,
 };
@@ -43,32 +43,7 @@ pub async fn restore_emails(account_id: u64, envelope_ids: Vec<String>) -> Bicho
     let mut session = ImapExecutor::create_connection(account_id).await?;
     for envelope_id in envelope_ids {
         let result: BichonResult<()> = async {
-            let eid = envelope_id.clone();
-            let envelope = ENVELOPE_INDEX_MANAGER
-                .get_envelope_by_id(account_id, eid)
-                .await?
-                .ok_or_else(|| {
-                    raise_error!(
-                        format!(
-                            "Envelope not found: account_id={} message_id={}",
-                            account_id, &envelope_id
-                        ),
-                        ErrorCode::ResourceNotFound
-                    )
-                })?;
-            let eml = EML_INDEX_MANAGER
-                .get(account_id, &envelope.content_hash)
-                .await?
-                .ok_or_else(|| {
-                    raise_error!(
-                        format!(
-                            "Eml not found: account_id={} id={}",
-                            account_id, &envelope_id
-                        ),
-                        ErrorCode::ResourceNotFound
-                    )
-                })?;
-
+            let (envelope, eml) = reattach_eml_content(account_id, envelope_id.clone()).await?;
             if let Some(mailbox_name) = envelope.mailbox_name {
                 ImapExecutor::append(
                     &mut session,

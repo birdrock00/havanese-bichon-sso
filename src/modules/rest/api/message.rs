@@ -18,11 +18,13 @@
 
 use crate::modules::account::migration::AccountModel;
 use crate::modules::common::auth::ClientContext;
+use crate::modules::indexer::eml::EML_INDEX_MANAGER;
 use crate::modules::indexer::envelope::Envelope;
-use crate::modules::indexer::manager::EML_INDEX_MANAGER;
 use crate::modules::indexer::manager::ENVELOPE_INDEX_MANAGER;
 use crate::modules::message::append::restore_emails;
 use crate::modules::message::append::RestoreMessagesRequest;
+use crate::modules::message::attachment::retrieve_attachment_content;
+use crate::modules::message::attachment::retrieve_nested_attachment_content;
 use crate::modules::message::attachment::AttachmentMetadata;
 use crate::modules::message::content::retrieve_nested_eml_content;
 use crate::modules::message::content::FullNestedMessageContent;
@@ -183,16 +185,16 @@ impl MessageApi {
         account_id: Path<u64>,
         /// The ID of the message to fetch.
         envelope_id: Path<String>,
-        name: Query<String>,
+        content_hash: Query<String>,
         context: ClientContext,
     ) -> ApiResult<Json<FullNestedMessageContent>> {
         let account_id = account_id.0;
         context
             .require_permission(Some(account_id), Permission::DATA_READ)
             .await?;
-        let name = name.0.trim();
+        let content_hash = content_hash.0.trim();
         Ok(Json(
-            retrieve_nested_eml_content(account_id, envelope_id.0, name).await?,
+            retrieve_nested_eml_content(account_id, envelope_id.0, content_hash).await?,
         ))
     }
 
@@ -292,23 +294,22 @@ impl MessageApi {
         account_id: Path<u64>,
         /// The ID of the message containing the attachment.
         envelope_id: Path<String>,
-        /// The filename of the attachment to download.
-        name: Query<String>,
+        /// The content_hash of the attachment to download.
+        content_hash: Query<String>,
         context: ClientContext,
     ) -> ApiResult<Attachment<Body>> {
         let account_id = account_id.0;
+        let envelope_id = envelope_id.0.trim().to_string();
         AccountModel::check_account_exists(account_id).await?;
         context
             .require_permission(Some(account_id), Permission::DATA_READ)
             .await?;
-        let name = name.0.trim();
-        let reader = EML_INDEX_MANAGER
-            .get_attachment(account_id, envelope_id.0, name)
-            .await?;
+        let content_hash = content_hash.0.trim();
+        let reader = retrieve_attachment_content(account_id, envelope_id, content_hash).await?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
             .attachment_type(AttachmentType::Attachment)
-            .filename(name);
+            .filename(content_hash);
         Ok(attachment)
     }
 
@@ -325,24 +326,29 @@ impl MessageApi {
         /// The ID of the message containing the attachment.
         envelope_id: Path<String>,
         /// The filename of the attachment to download.
-        name: Query<String>,
-        nested_name: Query<String>,
+        content_hash: Query<String>,
+        nested_content_hash: Query<String>,
         context: ClientContext,
     ) -> ApiResult<Attachment<Body>> {
         let account_id = account_id.0;
+        let envelope_id = envelope_id.0.trim().to_string();
         AccountModel::check_account_exists(account_id).await?;
         context
             .require_permission(Some(account_id), Permission::DATA_READ)
             .await?;
-        let name = name.0.trim();
-        let nested_name = nested_name.0.trim();
-        let reader = EML_INDEX_MANAGER
-            .get_nested_attachment(account_id, envelope_id.0, name, nested_name)
-            .await?;
+        let content_hash = content_hash.0.trim();
+        let nested_content_hash = nested_content_hash.0.trim();
+        let reader = retrieve_nested_attachment_content(
+            account_id,
+            envelope_id,
+            content_hash,
+            nested_content_hash,
+        )
+        .await?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
             .attachment_type(AttachmentType::Attachment)
-            .filename(name);
+            .filename(nested_content_hash);
         Ok(attachment)
     }
 

@@ -18,15 +18,10 @@
 
 use tantivy::schema::Field;
 
-pub const F_ACCOUNT_ID: &str = "account_id";
-pub const F_MAILBOX_ID: &str = "mailbox_id";
-
 pub const F_ID: &str = "id";
 pub const F_BLOB: &str = "blob";
 
 pub struct BlobFields {
     pub f_id: Field,
-    pub f_account_id: Field,
-    pub f_mailbox_id: Field,
     pub f_blob: Field,
 }

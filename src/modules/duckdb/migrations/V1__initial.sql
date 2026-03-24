@@ -36,11 +36,11 @@ CREATE TABLE IF NOT EXISTS envelopes (
     -- attachment summary
     has_attachment    BOOLEAN NOT NULL,
     attachment_count  INTEGER NOT NULL CHECK (attachment_count >= 0),
+    regular_attachment_count INTEGER NOT NULL CHECK (regular_attachment_count >= 0),
     tags              VARCHAR[],
     shard_id          UBIGINT NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_env_mailbox_sent ON envelopes(account_id, mailbox_id, sent_at);
 -- =========================
 -- envelope_attachments
 --
@@ -52,10 +52,12 @@ CREATE TABLE IF NOT EXISTS envelope_attachments (
     account_id       UBIGINT NOT NULL,
     mailbox_id       UBIGINT NOT NULL,
     -- Original attachment filename (for display)
-    filename         TEXT NOT NULL,
-
+    filename         TEXT,
+    is_message       BOOLEAN NOT NULL DEFAULT FALSE,
+    is_inline        BOOLEAN NOT NULL DEFAULT FALSE,
+    cid              TEXT,
     -- Normalized file extension (lowercase, without dot)
-    extension        TEXT NOT NULL,
+    extension        TEXT,
 
     -- Extension category (document / image / archive / ...)
     ext_category     TEXT NOT NULL,
@@ -64,7 +66,5 @@ CREATE TABLE IF NOT EXISTS envelope_attachments (
     -- 0 if unknown
     size_bytes       UBIGINT NOT NULL,
     content_hash         VARCHAR(64) NOT NULL,
-    shard_id      UBIGINT NOT NULL
+    shard_id      UINTEGER NOT NULL
 );
-
-CREATE INDEX IF NOT EXISTS idx_attachments_env_id ON envelope_attachments (envelope_id);

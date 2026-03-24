@@ -29,6 +29,7 @@ pub const META_FILE: &str = "meta.db";
 pub const MAILBOX_FILE: &str = "mailbox.db";
 const ENVELOPE_DIR: &str = "envelope";
 const EML_DIR: &str = "eml";
+const ATTACHMENT_DIR: &str = "attachment";
 const TMP_DIR: &str = "tmp";
 const LOG_DIR: &str = "logs";
 const TLS_CERT: &str = "cert.pem";
@@ -47,6 +48,7 @@ pub struct DataDirManager {
     pub tls_key: PathBuf,
     pub envelope_dir: PathBuf,
     pub eml_dir: PathBuf,
+    pub attachment_dir: PathBuf,
     pub log_dir: PathBuf,
 }
 
@@ -71,9 +73,15 @@ impl DataDirManager {
         };
 
         let eml_dir = if let Some(ref data_dir) = SETTINGS.bichon_data_dir {
-            PathBuf::from(data_dir)
+            PathBuf::from(data_dir).join(EML_DIR)
         } else {
             root_dir.join(EML_DIR)
+        };
+
+        let attachment_dir = if let Some(ref data_dir) = SETTINGS.bichon_data_dir {
+            PathBuf::from(data_dir).join(ATTACHMENT_DIR)
+        } else {
+            root_dir.join(ATTACHMENT_DIR)
         };
 
         Self {
@@ -86,6 +94,7 @@ impl DataDirManager {
             envelope_dir,
             temp_dir: root_dir.join(TMP_DIR),
             eml_dir,
+            attachment_dir,
         }
     }
 }

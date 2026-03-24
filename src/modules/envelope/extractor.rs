@@ -20,20 +20,26 @@ use crate::modules::common::AddrVec;
 use crate::modules::envelope::utils::normalize_subject;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::error::BichonResult;
+use crate::modules::indexer::attachment::ATTACHMENT_INDEX_MANAGER;
+use crate::modules::indexer::eml::EML_INDEX_MANAGER;
+use crate::modules::indexer::manager::ENVELOPE_INDEX_MANAGER;
+use crate::modules::indexer::schema::SchemaTools;
 use crate::modules::message::content::AttachmentInfo;
 use crate::modules::utils::html::extract_text;
-use crate::modules::utils::{content_hash, hex_hash};
+use crate::modules::utils::{compute_content_hash, hex_hash};
 use crate::{id, modules::indexer::envelope::Envelope};
 use crate::{raise_error, utc_now};
 use async_imap::types::Fetch;
 use mail_parser::{Address, HeaderName, Message, MessageParser, MimeHeaders};
+use tantivy::doc;
+use tracing::error;
 use uuid::Uuid;
 
-pub fn extract_envelope(
+pub async fn extract_envelope_and_store_it(
     fetch: &Fetch,
     account_id: u64,
     mailbox_id: u64,
-) -> BichonResult<(Envelope, Vec<AttachmentInfo>)> {
+) -> BichonResult<()> {
     let internal_date = fetch
         .internal_date()
         .map(|d| d.timestamp_millis())
@@ -43,30 +49,22 @@ pub fn extract_envelope(
         .body()
         .ok_or_else(|| raise_error!("No body available".into(), ErrorCode::InternalError))?;
     let size = fetch.size.unwrap_or(body.len() as u32);
-
-    extract_envelope_core(body, uid, size, internal_date, account_id, mailbox_id)
+    extract_envelope_core(body, uid, size, internal_date, account_id, mailbox_id).await
 }
 
-pub fn extract_envelope_from_eml(
+pub async fn extract_envelope_from_eml(
     body: &[u8],
     account_id: u64,
     mailbox_id: u64,
-) -> BichonResult<(Envelope, Vec<AttachmentInfo>)> {
-    extract_envelope_core(body, 0, body.len() as u32, 0, account_id, mailbox_id).map(
-        |(mut env, att)| {
-            if env.internal_date == 0 {
-                env.internal_date = env.date;
-            }
-            (env, att)
-        },
-    )
+) -> BichonResult<()> {
+    extract_envelope_core(body, 0, body.len() as u32, 0, account_id, mailbox_id).await
 }
 
-pub fn extract_envelope_from_smtp(
+pub async fn extract_envelope_from_smtp(
     body: &[u8],
     account_id: u64,
     mailbox_id: u64,
-) -> BichonResult<(Envelope, Vec<AttachmentInfo>)> {
+) -> BichonResult<()> {
     extract_envelope_core(
         body,
         0,
@@ -75,18 +73,19 @@ pub fn extract_envelope_from_smtp(
         account_id,
         mailbox_id,
     )
+    .await
 }
 
-fn extract_envelope_core(
+async fn extract_envelope_core(
     body: &[u8],
     uid: u32,
     size: u32,
     internal_date: i64,
     account_id: u64,
     mailbox_id: u64,
-) -> BichonResult<(Envelope, Vec<AttachmentInfo>)> {
-    let content_hash = content_hash(body);
-    let message = MessageParser::new().parse(body).ok_or_else(|| {
+) -> BichonResult<()> {
+    let email_content_hash = compute_content_hash(body);
+    let message: Message<'_> = MessageParser::new().parse(body).ok_or_else(|| {
         raise_error!(
             "Email header parse result is not available".into(),
             ErrorCode::InternalError
@@ -116,7 +115,11 @@ fn extract_envelope_core(
     }
 
     let date = message.date().map(|d| d.to_timestamp() * 1000).unwrap_or(0);
-
+    let internal_date = if internal_date == 0 {
+        date
+    } else {
+        internal_date
+    };
     let parse_addrs = |addrs: Option<&Address<'_>>| {
         addrs
             .map(|addr| {
@@ -138,42 +141,13 @@ fn extract_envelope_core(
         .and_then(|addr| AddrVec::from(addr).0.into_iter().next())
         .and_then(|add| add.address)
         .unwrap_or_else(|| "unknown".to_string());
-    let attachments: Vec<AttachmentInfo> = message
-        .attachments()
-        .filter_map(|attachment| {
-            let content_id = attachment.content_id().map(Into::into);
-            let inline = attachment
-                .content_disposition()
-                .map(|d| d.is_inline())
-                .unwrap_or(false);
-            if inline && content_id.is_some() {
-                return None;
-            }
+    let attachment_count = message.attachment_count();
+    let attachments = detach_and_store_attachments(body, &message, &email_content_hash).await;
 
-            let file_type = attachment
-                .content_type()
-                .map(|ct| {
-                    format!(
-                        "{}/{}",
-                        ct.c_type.as_ref(),
-                        ct.c_subtype.as_deref().unwrap_or("")
-                    )
-                })
-                .unwrap_or_else(|| "application/octet-stream".to_string());
-            //注意:有些附件是没有名字的，这样extension也就不存在，那么在获取附件的时候，就不能通过name定位    
-            Some(AttachmentInfo {
-                filename: attachment
-                    .attachment_name()
-                    .map(|name| name.to_string())
-                    .unwrap_or_default(),
-                size: attachment.contents().len(),
-                inline,
-                file_type,
-                content_id,
-            })
-        })
-        .collect();
-
+    let inline_with_id_count = attachments
+        .iter()
+        .filter(|a| a.inline && a.content_id.is_some())
+        .count();
     let envelope = Envelope {
         id: Uuid::new_v4().to_string(),
         message_id,
@@ -190,17 +164,20 @@ fn extract_envelope_core(
         internal_date,
         size,
         thread_id,
-        attachment_count: attachments.len(),
+        attachment_count,
+        regular_attachment_count: attachment_count - inline_with_id_count,
         tags: None,
         account_email: None,
         mailbox_name: None,
-        content_hash,
+        content_hash: email_content_hash,
     };
-
-    Ok((envelope, attachments))
+    ENVELOPE_INDEX_MANAGER
+        .add_document((envelope, attachments))
+        .await;
+    Ok(())
 }
 
-pub fn extract_envelope_from_message(
+pub fn extract_envelope_from_nested_message(
     message: Message<'_>,
     account_id: u64,
 ) -> BichonResult<Envelope> {
@@ -267,6 +244,7 @@ pub fn extract_envelope_from_message(
         size: Default::default(),
         thread_id,
         attachment_count: Default::default(),
+        regular_attachment_count: Default::default(),
         tags: Default::default(),
         account_email: Default::default(),
         mailbox_name: Default::default(),
@@ -301,6 +279,175 @@ fn extract_references(message: &Message<'_>) -> Option<Vec<String>> {
         }
         _ => None,
     }
+}
+
+pub async fn detach_and_store_attachments(
+    original_body: &[u8],
+    message: &Message<'_>,
+    eml_content_hash: &str,
+) -> Vec<AttachmentInfo> {
+    let mut stripped_eml = original_body.to_vec();
+    let mut attachment_infos = Vec::new();
+    // Step 1: Collect and sort attachment ranges in reverse to maintain offset integrity
+    let mut ranges: Vec<_> = message
+        .attachments()
+        .map(|att| {
+            (
+                att.raw_body_offset() as usize,
+                att.raw_end_offset() as usize,
+                att,
+            )
+        })
+        .collect();
+
+    ranges.sort_by(|a, b| b.0.cmp(&a.0));
+
+    let fields = SchemaTools::fields();
+    for (raw_start, raw_end, att) in ranges {
+        // Step 2: Extract raw bytes and store them as standalone documents
+        let raw_bytes = &original_body[raw_start..raw_end];
+        let content_hash = compute_content_hash(raw_bytes);
+
+        ATTACHMENT_INDEX_MANAGER
+            .add_document(
+                content_hash.clone(),
+                doc!(
+                    fields.f_id => content_hash.clone(),
+                    fields.f_blob => raw_bytes
+                ),
+            )
+            .await;
+        // Step 3: Replace raw attachment content with a hash-based placeholder
+        let placeholder = format!("<<BICHON_DETACH_HASH:{}>>", &content_hash);
+        let p_bytes = placeholder.as_bytes();
+        stripped_eml.splice(raw_start..raw_end, p_bytes.iter().cloned());
+
+        let info = AttachmentInfo {
+            filename: att.attachment_name().map(|n| n.to_string()),
+            size: att.contents().len(),
+            inline: att
+                .content_disposition()
+                .map(|d| d.is_inline())
+                .unwrap_or(false),
+            file_type: att
+                .content_type()
+                .map(|ct| {
+                    format!(
+                        "{}/{}",
+                        ct.c_type.as_ref(),
+                        ct.c_subtype.as_deref().unwrap_or("")
+                    )
+                })
+                .unwrap_or_else(|| "application/octet-stream".to_string()),
+            content_id: att.content_id().map(|id| id.to_string()),
+            content_hash: content_hash.clone(),
+            is_message: att.is_message(),
+        };
+
+        attachment_infos.push(info);
+    }
+    // Step 4: Store the final stripped EML content
+    EML_INDEX_MANAGER
+        .add_document(
+            eml_content_hash.to_string(),
+            doc!(
+                fields.f_id => eml_content_hash.to_string(),
+                fields.f_blob => stripped_eml
+            ),
+        )
+        .await;
+
+    attachment_infos
+}
+
+pub async fn reattach_eml_content(
+    account_id: u64,
+    envelope_id: String,
+) -> BichonResult<(Envelope, Vec<u8>)> {
+    let envelope = ENVELOPE_INDEX_MANAGER
+        .get_envelope_by_id(account_id, envelope_id.clone())
+        .await?
+        .ok_or_else(|| {
+            raise_error!(
+                format!(
+                    "Envelope not found: account_id={} envelope_id={}",
+                    account_id, &envelope_id
+                ),
+                ErrorCode::ResourceNotFound
+            )
+        })?;
+
+    let mut restored_eml = EML_INDEX_MANAGER
+        .get(&envelope.content_hash)
+        .await?
+        .ok_or_else(|| {
+            raise_error!(
+                format!(
+                    "Original email content not found: account_id={} envelope_id={} content_hash={}",
+                    account_id, &envelope_id, &envelope.content_hash
+                ),
+                ErrorCode::ResourceNotFound
+            )
+        })?;
+
+    if !envelope.has_attachments() {
+        return Ok((envelope, restored_eml));
+    }
+
+    let account_detail = ENVELOPE_INDEX_MANAGER
+        .get_attachments_by_envelope_id(account_id, envelope_id)
+        .await?;
+
+    if envelope.attachment_count != account_detail.len() {
+        return Err(raise_error!(
+            "Consistency check failed: attachment_count does not match account_detail length"
+                .into(),
+            ErrorCode::InternalError
+        ));
+    }
+
+    let mut tasks = Vec::new();
+    for detail in account_detail {
+        let placeholder_str = format!("<<BICHON_DETACH_HASH:{}>>", &detail.info.content_hash);
+        let pattern = placeholder_str.as_bytes();
+        let pattern_len = pattern.len();
+
+        let mut search_cursor = 0;
+        while let Some(pos) = restored_eml[search_cursor..]
+            .windows(pattern_len)
+            .position(|window| window == pattern)
+        {
+            let absolute_start = search_cursor + pos;
+            let absolute_end = absolute_start + pattern_len;
+
+            tasks.push((
+                absolute_start,
+                absolute_end,
+                detail.info.content_hash.clone(),
+            ));
+            search_cursor = absolute_end;
+        }
+    }
+
+    tasks.sort_by(|a, b| b.0.cmp(&a.0));
+
+    for (start, end, hash) in tasks {
+        if let Some(original_data) = ATTACHMENT_INDEX_MANAGER.get(&hash).await? {
+            let actual_hash = compute_content_hash(&original_data);
+            if actual_hash != hash {
+                error!(
+                    "[ERROR] Content Hash Mismatch! Expected: {}, Actual: {}",
+                    hash, actual_hash
+                );
+                continue;
+            }
+            restored_eml.splice(start..end, original_data.iter().cloned());
+        } else {
+            error!("[ERROR] Missing attachment blob for hash: {}", hash);
+        }
+    }
+
+    Ok((envelope, restored_eml))
 }
 
 #[cfg(test)]

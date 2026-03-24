@@ -33,12 +33,12 @@ use crate::{
         duckdb::{build::build_record_batch, refinery::DuckDBConnection},
         error::{code::ErrorCode, BichonResult},
         indexer::{
-            envelope::Envelope,
-            manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER},
+            attachment::ATTACHMENT_INDEX_MANAGER, eml::EML_INDEX_MANAGER, envelope::Envelope,
+            manager::ENVELOPE_INDEX_MANAGER,
         },
         message::{
             attachment::AttachmentMetadata,
-            content::AttachmentInfo,
+            content::{AttachmentDetail, AttachmentInfo},
             search::{SearchFilter, SortBy},
             tags::TagCount,
         },
@@ -133,90 +133,154 @@ impl DuckDBManager {
         Ok(())
     }
 
-    pub fn delete_envelopes_by_account(&self, account_id: u64) -> BichonResult<usize> {
+    pub fn delete_account_envelopes_with_orphans(
+        &self,
+        account_id: u64,
+    ) -> BichonResult<Vec<String>> {
         let mut conn = self.conn()?;
         let tx = conn
             .transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
+
+        let orphan_sql = r#"
+            WITH target_hashes AS (
+                SELECT content_hash FROM envelopes WHERE account_id = ?
+                UNION
+                SELECT content_hash FROM envelope_attachments WHERE account_id = ?
+            ),
+            active_hashes AS (
+                SELECT content_hash FROM envelopes WHERE account_id != ?
+                UNION
+                SELECT content_hash FROM envelope_attachments WHERE account_id != ?
+            )
+            SELECT content_hash FROM target_hashes
+            EXCEPT
+            SELECT content_hash FROM active_hashes
+        "#;
+
+        let mut stmt = tx
+            .prepare(orphan_sql)
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
+
+        let orphan_hashes: Vec<String> = stmt
+            .query_map([account_id, account_id, account_id, account_id], |row| {
+                row.get::<_, String>(0)
+            })
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
 
         tx.execute(
-            "DELETE FROM envelope_attachments WHERE account_id = ?;",
-            params![account_id],
+            "DELETE FROM envelope_attachments WHERE account_id = ?",
+            [account_id],
         )
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
 
-        let rows_deleted = tx
-            .execute(
-                "DELETE FROM envelopes WHERE account_id = ?;",
-                params![account_id],
-            )
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        let count = tx
+            .execute("DELETE FROM envelopes WHERE account_id = ?", [account_id])
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
 
         tx.commit()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
 
-        if rows_deleted > 0 {
+        if count > 0 {
             tracing::info!(
-                "Account cleanup: removed {} emails and their attachments for account {}",
-                rows_deleted,
-                account_id
+                "Account {} data cleared. Deleted {} envelopes, {} orphan hashes identified.",
+                account_id,
+                count,
+                orphan_hashes.len()
             );
         }
 
-        Ok(rows_deleted)
+        Ok(orphan_hashes)
     }
 
-    pub fn delete_mailbox_envelopes(
+    pub fn delete_mailbox_envelopes_with_orphans(
         &self,
         account_id: u64,
         mailbox_ids: Vec<u64>,
-    ) -> BichonResult<()> {
+    ) -> BichonResult<Vec<String>> {
         if mailbox_ids.is_empty() {
-            return Ok(());
+            return Ok(vec![]);
         }
+
         let mut conn = self.conn()?;
         let tx = conn
             .transaction()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        {
-            let placeholders = mailbox_ids
-                .iter()
-                .map(|_| "?")
-                .collect::<Vec<_>>()
-                .join(", ");
 
-            let mut sql_params: Vec<duckdb::types::Value> = vec![account_id.into()];
-            sql_params.extend(mailbox_ids.iter().map(|&id| duckdb::types::Value::from(id)));
-            let param_iter = duckdb::params_from_iter(sql_params);
+        let placeholders = mailbox_ids
+            .iter()
+            .map(|_| "?")
+            .collect::<Vec<_>>()
+            .join(", ");
+        let mut sql_params: Vec<duckdb::types::Value> = vec![account_id.into()];
+        sql_params.extend(mailbox_ids.iter().map(|&id| duckdb::types::Value::from(id)));
+        let param_iter = duckdb::params_from_iter(sql_params);
 
-            let delete_att_sql = format!(
-                "DELETE FROM envelope_attachments WHERE account_id = ? AND mailbox_id IN ({})",
-                placeholders
-            );
-            tx.execute(&delete_att_sql, param_iter.clone())
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        let orphan_sql = format!(
+            r#"
+            WITH target_hashes AS (
+                SELECT content_hash FROM envelopes WHERE account_id = ? AND mailbox_id IN ({0})
+                UNION
+                SELECT content_hash FROM envelope_attachments WHERE account_id = ? AND mailbox_id IN ({0})
+            ),
+            active_hashes AS (
+                SELECT content_hash FROM envelopes WHERE NOT (account_id = ? AND mailbox_id IN ({0}))
+                UNION
+                SELECT content_hash FROM envelope_attachments WHERE NOT (account_id = ? AND mailbox_id IN ({0}))
+            )
+            SELECT content_hash FROM target_hashes
+            EXCEPT
+            SELECT content_hash FROM active_hashes
+            "#,
+            placeholders
+        );
 
-            let delete_env_sql = format!(
-                "DELETE FROM envelopes WHERE account_id = ? AND mailbox_id IN ({})",
-                placeholders
-            );
-            let count = tx
-                .execute(&delete_env_sql, param_iter)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-
-            if count > 0 {
-                tracing::info!(
-                    "Deleted {} emails and their associated attachments for account: {}, mailboxes: {:?}",
-                    count,
-                    account_id,
-                    mailbox_ids
-                );
-            }
+        let mut query_params: Vec<duckdb::types::Value> = Vec::new();
+        for _ in 0..4 {
+            query_params.push(account_id.into());
+            query_params.extend(mailbox_ids.iter().map(|&id| duckdb::types::Value::from(id)));
         }
+
+        let mut stmt = tx
+            .prepare(&orphan_sql)
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
+        let orphan_hashes: Vec<String> = stmt
+            .query_map(duckdb::params_from_iter(query_params), |row| {
+                row.get::<_, String>(0)
+            })
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
+
+        let delete_att_sql = format!(
+            "DELETE FROM envelope_attachments WHERE account_id = ? AND mailbox_id IN ({})",
+            placeholders
+        );
+        tx.execute(&delete_att_sql, param_iter.clone())
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        let delete_env_sql = format!(
+            "DELETE FROM envelopes WHERE account_id = ? AND mailbox_id IN ({})",
+            placeholders
+        );
+        let count = tx
+            .execute(&delete_env_sql, param_iter)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         tx.commit()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Ok(())
+
+        if count > 0 {
+            tracing::info!(
+                "Deleted {} emails. Found {} orphan hashes to clean up.",
+                count,
+                orphan_hashes.len()
+            );
+        }
+
+        Ok(orphan_hashes)
     }
 
     pub fn append_envelopes_with_attachments(
@@ -245,12 +309,15 @@ impl DuckDBManager {
                             env.account_id,
                             env.mailbox_id,
                             att.filename,
+                            att.is_message,
+                            att.inline,
+                            att.content_id,
                             att.get_extension(),
                             att.get_category(),
                             att.file_type.to_ascii_lowercase(),
                             att.size as u64,
-                            env.content_hash.clone(), // It's the hash of the attachment content itself, not the hash of the full email.
-                            0,
+                            att.content_hash,
+                            0
                         ])
                         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
                 }
@@ -327,6 +394,46 @@ impl DuckDBManager {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         Ok(max_uid)
+    }
+
+    pub fn get_attachments_by_envelope_id(
+        &self,
+        account_id: u64,
+        envelope_id: String,
+    ) -> BichonResult<Vec<AttachmentDetail>> {
+        let conn = self.conn()?;
+
+        let mut stmt = conn
+            .prepare(
+                "SELECT * FROM envelope_attachments 
+             WHERE account_id = ? AND envelope_id = ?;",
+            )
+            .map_err(|e| {
+                raise_error!(
+                    format!("Prepare failed: {:#?}", e),
+                    ErrorCode::InternalError
+                )
+            })?;
+
+        let attachment_iter = stmt
+            .query_map(params![account_id, envelope_id], |row| {
+                AttachmentDetail::from_row(row)
+            })
+            .map_err(|e| {
+                raise_error!(format!("Query failed: {:#?}", e), ErrorCode::InternalError)
+            })?;
+
+        let mut attachments = Vec::new();
+        for att_res in attachment_iter {
+            attachments.push(att_res.map_err(|e| {
+                raise_error!(
+                    format!("Row mapping failed: {:#?}", e),
+                    ErrorCode::InternalError
+                )
+            })?);
+        }
+
+        Ok(attachments)
     }
 
     pub fn get_envelope_by_id(
@@ -558,9 +665,9 @@ impl DuckDBManager {
         let conn = self.conn()?;
         let mut sql = r#"
             SELECT 
-                CAST(array_agg(DISTINCT extension) AS JSON) AS extensions,
-                CAST(array_agg(DISTINCT ext_category) AS JSON) AS categories,
-                CAST(array_agg(DISTINCT content_type) AS JSON) AS content_types
+                COALESCE(CAST(array_agg(DISTINCT extension) FILTER (WHERE extension IS NOT NULL) AS JSON), '[]') AS extensions,
+                COALESCE(CAST(array_agg(DISTINCT ext_category) AS JSON), '[]') AS categories,
+                COALESCE(CAST(array_agg(DISTINCT content_type) AS JSON), '[]') AS content_types
             FROM envelope_attachments
         "#
         .to_string();
@@ -583,9 +690,10 @@ impl DuckDBManager {
 
         let result = stmt
             .query_row(duckdb::params_from_iter(params_vec), |row| {
-                let exts_raw: String = row.get(0)?;
-                let cats_raw: String = row.get(1)?;
-                let ctypes_raw: String = row.get(2)?;
+                let exts_raw: String = row.get(0).unwrap_or_else(|_| "[]".to_string());
+                let cats_raw: String = row.get(1).unwrap_or_else(|_| "[]".to_string());
+                let ctypes_raw: String = row.get(2).unwrap_or_else(|_| "[]".to_string());
+
                 let exts: Vec<String> = serde_json::from_str(&exts_raw).unwrap_or_default();
                 let cats: Vec<String> = serde_json::from_str(&cats_raw).unwrap_or_default();
                 let ctypes: Vec<String> = serde_json::from_str(&ctypes_raw).unwrap_or_default();
@@ -628,8 +736,8 @@ impl DuckDBManager {
 
                 let del_attachments_query = format!(
                     "DELETE FROM envelope_attachments 
-                 WHERE account_id = ? 
-                 AND envelope_id IN ({})",
+                    WHERE account_id = ? 
+                    AND envelope_id IN ({})",
                     placeholders
                 );
 
@@ -643,8 +751,8 @@ impl DuckDBManager {
 
                 let query = format!(
                     "DELETE FROM envelopes 
-                 WHERE account_id = ? 
-                 AND id IN ({})",
+                    WHERE account_id = ? 
+                    AND id IN ({})",
                     placeholders
                 );
 
@@ -657,6 +765,115 @@ impl DuckDBManager {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         Ok(())
+    }
+
+    pub fn get_orphan_hashes_in_memory(
+        &self,
+        deletes: HashMap<u64, Vec<String>>,
+    ) -> BichonResult<Vec<String>> {
+        let conn = self.conn()?;
+        let all_delete_ids: Vec<String> = deletes.values().flatten().cloned().collect();
+        if all_delete_ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        if all_delete_ids.len() > 100 {
+            return Err(raise_error!(
+                "Too many IDs for batch delete, please shrink the batch".into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+
+        let mut target_hashes = HashSet::new();
+        let placeholders = vec!["?"; all_delete_ids.len()].join(", ");
+        let params = duckdb::params_from_iter(&all_delete_ids);
+
+        let mut stmt = conn
+            .prepare(&format!(
+                "SELECT content_hash FROM envelopes WHERE id IN ({})",
+                placeholders
+            ))
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
+
+        let rows = stmt
+            .query_map(params.clone(), |r| r.get::<_, String>(0))
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
+
+        for h in rows {
+            target_hashes
+                .insert(h.map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?);
+        }
+
+        let mut stmt = conn
+            .prepare(&format!(
+                "SELECT content_hash FROM envelope_attachments WHERE envelope_id IN ({})",
+                placeholders
+            ))
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
+
+        let rows = stmt
+            .query_map(params, |r| r.get::<_, String>(0))
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
+        for h in rows {
+            target_hashes
+                .insert(h.map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?);
+        }
+
+        if target_hashes.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let hash_placeholders = vec!["?"; target_hashes.len()].join(", ");
+        let mut still_used_hashes = HashSet::new();
+
+        let mut check_params: Vec<Box<dyn duckdb::ToSql>> = Vec::new();
+        for id in &all_delete_ids {
+            check_params.push(Box::new(id.clone()));
+        }
+        for hash in &target_hashes {
+            check_params.push(Box::new(hash.clone()));
+        }
+        let check_params_refs: Vec<&dyn duckdb::ToSql> =
+            check_params.iter().map(|p| p.as_ref()).collect();
+
+        let mut stmt = conn
+                .prepare(&format!(
+            "SELECT DISTINCT content_hash FROM envelopes WHERE id NOT IN ({}) AND content_hash IN ({})",
+            placeholders, hash_placeholders
+        ))
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
+
+        let rows = stmt
+            .query_map(duckdb::params_from_iter(&check_params_refs), |r| {
+                r.get::<_, String>(0)
+            })
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
+        for h in rows {
+            still_used_hashes
+                .insert(h.map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?);
+        }
+
+        let mut stmt = conn.prepare(&format!(
+            "SELECT DISTINCT content_hash FROM envelope_attachments WHERE envelope_id NOT IN ({}) AND content_hash IN ({})",
+            placeholders, hash_placeholders
+        )).map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
+
+        let rows = stmt
+            .query_map(duckdb::params_from_iter(&check_params_refs), |r| {
+                r.get::<_, String>(0)
+            })
+            .map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?;
+        for h in rows {
+            still_used_hashes
+                .insert(h.map_err(|e| raise_error!(e.to_string(), ErrorCode::InternalError))?);
+        }
+
+        let orphans: Vec<String> = target_hashes
+            .into_iter()
+            .filter(|h| !still_used_hashes.contains(h))
+            .collect();
+
+        Ok(orphans)
     }
 
     pub fn top_10_largest_emails(
@@ -943,22 +1160,34 @@ impl DuckDBManager {
                 } else {
                     tracing::warn!(account_id, "account not found in top accounts query");
                     tokio::spawn(async move {
-                        if let Err(e) = ENVELOPE_INDEX_MANAGER
+                        let content_hashes = match ENVELOPE_INDEX_MANAGER
                             .delete_account_envelopes(account_id)
                             .await
                         {
-                            tracing::error!(
-                                account_id = account_id,
-                                error = %e,
-                                "failed to cleanup envelope index"
-                            );
-                        }
-                        if let Err(e) = EML_INDEX_MANAGER.delete_account_envelopes(account_id).await
-                        {
+                            Ok(content_hashes) => content_hashes,
+                            Err(e) => {
+                                tracing::error!(
+                                    account_id = account_id,
+                                    error = %e,
+                                    "failed to cleanup envelope index"
+                                );
+                                return;
+                            }
+                        };
+
+                        if let Err(e) = EML_INDEX_MANAGER.delete(&content_hashes).await {
                             tracing::error!(
                                 account_id = account_id,
                                 error = %e,
                                 "failed to cleanup eml index"
+                            );
+                        }
+
+                        if let Err(e) = ATTACHMENT_INDEX_MANAGER.delete(&content_hashes).await {
+                            tracing::error!(
+                                account_id = account_id,
+                                error = %e,
+                                "failed to cleanup attachment index"
                             );
                         }
                     });
@@ -1342,19 +1571,19 @@ impl DuckDBManager {
             base_sql.push_str(" AND a.filename ILIKE ? ");
             args.push(format!("%{}%", name).into());
         }
-
+        // Normalized to lowercase at write-time. LIKE is sufficient here instead of ILIKE.
         if let Some(ext) = filter.attachment_extension {
-            base_sql.push_str(" AND a.extension ILIKE ? ");
+            base_sql.push_str(" AND a.extension LIKE ? ");
             args.push(format!("%{}%", ext).into());
         }
-
+        // Normalized to lowercase at write-time. LIKE is sufficient here instead of ILIKE.
         if let Some(cat) = filter.attachment_category {
-            base_sql.push_str(" AND a.ext_category ILIKE ? ");
+            base_sql.push_str(" AND a.ext_category LIKE ? ");
             args.push(format!("%{}%", cat).into());
         }
-
+        // Normalized to lowercase at write-time. LIKE is sufficient here instead of ILIKE.
         if let Some(ctype) = filter.attachment_content_type {
-            base_sql.push_str(" AND a.content_type ILIKE ? ");
+            base_sql.push_str(" AND a.content_type LIKE ? ");
             args.push(format!("%{}%", ctype).into());
         }
 

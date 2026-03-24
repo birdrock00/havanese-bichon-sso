@@ -17,13 +17,19 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::modules::error::BichonResult;
-use crate::modules::indexer::manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER};
+use crate::modules::indexer::attachment::ATTACHMENT_INDEX_MANAGER;
+use crate::modules::indexer::eml::EML_INDEX_MANAGER;
+use crate::modules::indexer::manager::ENVELOPE_INDEX_MANAGER;
 use std::collections::HashMap;
 
 pub async fn delete_messages_impl(request: HashMap<u64, Vec<String>>) -> BichonResult<()> {
-    EML_INDEX_MANAGER
-        .delete_email_multi_account(&request)
+    let content_hashes = ENVELOPE_INDEX_MANAGER
+        .get_orphan_hashes_in_memory(request.clone())
         .await?;
+    if !content_hashes.is_empty() {
+        EML_INDEX_MANAGER.delete(&content_hashes).await?;
+        ATTACHMENT_INDEX_MANAGER.delete(&content_hashes).await?;
+    }
     ENVELOPE_INDEX_MANAGER
         .delete_envelopes_multi_account(request)
         .await

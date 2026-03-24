@@ -27,11 +27,7 @@ use crate::{
         account::migration::{AccountModel, AccountType},
         cache::imap::mailbox::{Attribute, AttributeEnum, MailBox},
         envelope::extractor::extract_envelope_from_eml,
-        error::{code::ErrorCode, BichonResult},
-        indexer::{
-            manager::{EML_INDEX_MANAGER, ENVELOPE_INDEX_MANAGER},
-            schema::SchemaTools,
-        },
+        error::{BichonResult, code::ErrorCode},
         utils::create_hash,
     },
     raise_error,
@@ -112,7 +108,6 @@ impl ImportEmls {
             },
         };
 
-        let fields = SchemaTools::fields();
         let account_id = account.id;
         let mut success_count = 0;
         let mut failed_details: Vec<FailedEmlDetail> = Vec::new(); // Store failure details
@@ -133,8 +128,10 @@ impl ImportEmls {
                 }
             };
 
-            let envelope = match extract_envelope_from_eml(&decoded, account_id, mailbox_id) {
-                Ok(env) => env,
+            match extract_envelope_from_eml(&decoded, account_id, mailbox_id).await {
+                Ok(_) => {
+                    success_count += 1;
+                },
                 Err(e) => {
                     let error_msg = format!(
                         "Failed to extract envelope from EML at index {}: {:?}",
@@ -148,24 +145,6 @@ impl ImportEmls {
                     continue;
                 }
             };
-            let content_hash = envelope.0.content_hash.clone();
-            ENVELOPE_INDEX_MANAGER
-                .add_document(envelope)
-                .await;
-
-            EML_INDEX_MANAGER
-                .add_document(
-                    content_hash.clone(),
-                    doc!(
-                        fields.f_id => content_hash,
-                        fields.f_account_id => account_id,
-                        fields.f_mailbox_id => mailbox_id,
-                        fields.f_blob => decoded
-                    ),
-                )
-                .await;
-
-            success_count += 1;
         }
 
         let failed_count = failed_details.len();

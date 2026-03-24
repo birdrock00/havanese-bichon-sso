@@ -17,7 +17,7 @@ const MessageHeader = ({
 }: {
     envelope: EmailEnvelope,
     attachments?: AttachmentInfo[],
-    onDownload: (fileName: string) => void
+    onDownload: (nested_content_hash: string) => void
 }) => {
     const { t } = useTranslation();
     const displayAttachments = attachments || [];
@@ -100,7 +100,7 @@ const MessageHeader = ({
                                 <Tooltip key={i}>
                                     <TooltipTrigger asChild>
                                         <button
-                                            onClick={() => onDownload(att.filename)}
+                                            onClick={() => onDownload(att.content_hash)}
                                             className="group flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-all text-slate-600 hover:text-blue-700"
                                         >
                                             <span className={`${color} p-0.5 rounded`}>{icon}</span>
@@ -126,11 +126,12 @@ const MessageHeader = ({
 
 
 
-export function NestedEmailDialog({ open, onOpenChange, accountId, envelopeId, fileName }: any) {
+export function NestedEmailDialog({ open, onOpenChange, accountId, envelopeId, fileName, content_hash }: any) {
+
     const { data, isLoading } = useQuery({
-        queryKey: ['nested-message', accountId, envelopeId, fileName],
-        queryFn: () => load_nested_message(accountId, envelopeId, fileName),
-        enabled: open && !!fileName,
+        queryKey: ['nested-message', accountId, envelopeId, content_hash],
+        queryFn: () => load_nested_message(accountId, envelopeId, content_hash),
+        enabled: open && !!content_hash,
     });
 
     return (
@@ -151,7 +152,7 @@ export function NestedEmailDialog({ open, onOpenChange, accountId, envelopeId, f
                             <MessageHeader
                                 envelope={data.envelope}
                                 attachments={data.attachments}
-                                onDownload={(nestedFileName) => download_nested_attachment(accountId, envelopeId, fileName, nestedFileName)}
+                                onDownload={(nested_content_hash) => download_nested_attachment(accountId, envelopeId, content_hash, nested_content_hash)}
                             />
 
                             <div className="mt-8 pt-8 border-t border-slate-100">

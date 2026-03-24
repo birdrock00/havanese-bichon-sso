@@ -126,13 +126,13 @@ export function MailMessageView({
   const [attachments, setAttachments] = useState<AttachmentInfo[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloadingAttachmentFileName, setDownloadingAttachmentFileName] = useState<string | null>(null);
-  const [nestedEmlFile, setNestedEmlFile] = useState<string | null>(null);
+  const [nestedEmlFile, setNestedEmlFile] = useState<AttachmentInfo | null>(null);
   const { getEmailById } = useMinimalAccountList();
   const [threadOpen, setThreadOpen] = useState(false);
 
   const downloadAttachmentMutation = useMutation({
-    mutationFn: ({ fileName }: { fileName: string }) =>
-      download_attachment(envelope.account_id, envelope.id, fileName),
+    mutationFn: ({ content_hash }: { content_hash: string }) =>
+      download_attachment(envelope.account_id, envelope.id, content_hash, downloadingAttachmentFileName!),
     onSuccess: () => setDownloadingAttachmentFileName(null),
     onError: (error: any) => {
       setDownloadingAttachmentFileName(null);
@@ -168,8 +168,8 @@ export function MailMessageView({
   }, [envelope.id]);
 
 
-  const handleViewNestedEml = (filename: string) => {
-    setNestedEmlFile(filename);
+  const handleViewNestedEml = (attachment: AttachmentInfo) => {
+    setNestedEmlFile(attachment);
   };
 
   const toggleToDelete = (accountId: number, mailId: string) => {
@@ -317,7 +317,7 @@ export function MailMessageView({
                 <div className="space-y-2">
                   {nonInline.map((attachment, i) => {
                     const { icon, color } = getFileConfig(attachment.file_type);
-                    const isNestedEmail = attachment.file_type.toLowerCase() === 'message/rfc822';
+                    const is_message = attachment.is_message;
 
                     return <div key={i} className="flex items-center">
                       <div className="group flex items-center gap-2 p-1 hover:bg-muted/60 rounded transition-colors min-w-0 w-full">
@@ -337,14 +337,16 @@ export function MailMessageView({
                         </div>
                       </div>
                       <div className="flex items-center space-x-3 ml-auto pr-1">
-                        {isNestedEmail && (
+                        {is_message && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 className="h-7 w-7 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                onClick={() => handleViewNestedEml(attachment.filename)}
+                                onClick={() => {
+                                  handleViewNestedEml(attachment);
+                                }}
                               >
                                 <MessageSquareMore className="h-4 w-4" />
                               </Button>
@@ -362,7 +364,7 @@ export function MailMessageView({
                             className="w-4 h-4 cursor-pointer"
                             onClick={() => {
                               setDownloadingAttachmentFileName(attachment.filename);
-                              downloadAttachmentMutation.mutate({ fileName: attachment.filename });
+                              downloadAttachmentMutation.mutate({ content_hash: attachment.content_hash });
                             }}
                           />
                         )}
@@ -407,7 +409,8 @@ export function MailMessageView({
         onOpenChange={(open: boolean) => !open && setNestedEmlFile(null)}
         accountId={envelope.account_id}
         envelopeId={envelope.id}
-        fileName={nestedEmlFile || ''}
+        fileName={nestedEmlFile?.filename || ''}
+        content_hash={nestedEmlFile?.content_hash}
       />
     </div>
   );

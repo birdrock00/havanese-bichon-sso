@@ -179,3 +179,25 @@ async fn test_bulk_attachment_stripping_blake3() {
 
     println!("✅ All attachments replaced successfully from back to front.");
 }
+
+#[tokio::test]
+async fn test_667() {
+    let path = r"C:\Users\polly\Downloads\test777.eml";
+    let input = std::fs::read(path).expect("Failed to read EML file");
+
+    let message = MessageParser::default()
+        .parse(&input)
+        .expect("Failed to parse EML");
+
+    for att in message.attachments() {
+        println!("name: {:#?}", att.attachment_name());
+        println!("content_type: {:#?}", att.content_type());
+        println!("is_message: {:#?}", att.is_message());
+        println!("content_disposition: {:#?}", att.content_disposition());
+        println!(
+            "content_transfer_encoding: {:#?}",
+            att.content_transfer_encoding()
+        );
+        println!("content_id: {:#?}", att.content_id());
+    }
+}

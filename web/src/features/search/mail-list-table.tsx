@@ -282,7 +282,7 @@ export function MailListTable({
     {
       id: "attachment_count",
       header: () => <Paperclip size={16} />,
-      cell: ({ row }) => <span className='text-xs'>{row.original.attachment_count}</span>,
+      cell: ({ row }) => <span className='text-xs'>{row.original.regular_attachment_count}</span>,
       meta: { className: 'text-left text-xs' },
       minSize: 40,
       maxSize: 40
