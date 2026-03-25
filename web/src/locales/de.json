@@ -1019,6 +1019,10 @@
             "performance": {
                 "title": "Leistung",
                 "desc": "Nebenläufigkeit & Kompression"
+            },
+            "smtp": {
+                "title": "SMTP-Server",
+                "desc": "Einstellungen für den Empfang eingehender E-Mails zur Echtzeit-Archivierung"
             }
         }
     },

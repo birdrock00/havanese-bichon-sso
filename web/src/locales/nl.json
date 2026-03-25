@@ -1019,6 +1019,10 @@
             "performance": {
                 "title": "Prestaties",
                 "desc": "Gelijktijdigheid & compressie"
+            },
+            "smtp": {
+                "title": "SMTP-server",
+                "desc": "Instellingen voor inkomende e-mailontvangst voor realtime archivering"
             }
         }
     },

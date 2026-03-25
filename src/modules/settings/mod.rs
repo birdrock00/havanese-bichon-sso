@@ -50,6 +50,24 @@ pub struct SystemConfigurations {
     pub bichon_enable_rest_https: bool,
     pub bichon_http_compression_enabled: bool,
     pub bichon_sync_concurrency: Option<u16>,
+
+    pub bichon_base_url: String,
+    pub bichon_index_dir: Option<String>,
+    pub bichon_data_dir: Option<String>,
+
+    pub bichon_duckdb_threads: Option<i64>,
+    pub bichon_duckdb_max_memory: Option<String>,
+    pub bichon_tantivy_threads: u16,
+    pub bichon_tantivy_buffer_size: usize,
+    pub bichon_eml_compression_level: u16,
+    pub bichon_eml_blocksize: usize,
+
+    pub bichon_enable_smtp: bool,
+    pub bichon_smtp_port: u16,
+    pub bichon_smtp_encryption: String,
+    pub bichon_smtp_auth_required: bool,
+    pub bichon_smtp_tls_key_path: Option<String>,
+    pub bichon_smtp_tls_cert_path: Option<String>,
 }
 
 impl From<&Settings> for SystemConfigurations {
@@ -77,6 +95,21 @@ impl From<&Settings> for SystemConfigurations {
             bichon_enable_rest_https: s.bichon_enable_rest_https,
             bichon_http_compression_enabled: s.bichon_http_compression_enabled,
             bichon_sync_concurrency: s.bichon_sync_concurrency,
+            bichon_base_url: s.bichon_base_url.clone(),
+            bichon_index_dir: s.bichon_index_dir.clone(),
+            bichon_data_dir: s.bichon_data_dir.clone(),
+            bichon_duckdb_threads: s.bichon_duckdb_threads,
+            bichon_duckdb_max_memory: s.bichon_duckdb_max_memory.clone(),
+            bichon_tantivy_threads: s.bichon_tantivy_threads,
+            bichon_tantivy_buffer_size: s.bichon_tantivy_buffer_size,
+            bichon_eml_compression_level: s.bichon_eml_compression_level,
+            bichon_eml_blocksize: s.bichon_eml_blocksize,
+            bichon_enable_smtp: s.bichon_enable_smtp,
+            bichon_smtp_port: s.bichon_smtp_port,
+            bichon_smtp_encryption: s.bichon_smtp_encryption.to_string(),
+            bichon_smtp_auth_required: s.bichon_smtp_auth_required,
+            bichon_smtp_tls_key_path: s.bichon_smtp_tls_key_path.clone(),
+            bichon_smtp_tls_cert_path: s.bichon_smtp_tls_cert_path.clone(),
         }
     }
 }

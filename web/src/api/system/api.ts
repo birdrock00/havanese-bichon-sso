@@ -100,21 +100,42 @@ export type ServerConfigurations = {
     bichon_log_level: string
     bichon_http_port: number
     bichon_bind_ip?: string | null
+    bichon_base_url: string
     bichon_public_url: string
+    bichon_enable_rest_https: boolean
+    bichon_http_compression_enabled: boolean
+
     bichon_cors_origins?: string[] | null
     bichon_cors_max_age: number
+
     bichon_ansi_logs: boolean
     bichon_log_to_file: boolean
     bichon_json_logs: boolean
     bichon_max_server_log_files: number
+
     bichon_encrypt_password_set: boolean
     bichon_webui_token_expiration_hours: number
+
     bichon_root_dir: string
-    bichon_metadata_cache_size?: number | null
-    bichon_envelope_cache_size?: number | null
-    bichon_enable_rest_https: boolean
-    bichon_http_compression_enabled: boolean
+    bichon_index_dir?: string | null
+    bichon_data_dir?: string | null
+    bichon_metadata_cache_size: number
+    bichon_envelope_cache_size: number
+
     bichon_sync_concurrency?: number | null
+    bichon_duckdb_threads?: number | null
+    bichon_duckdb_max_memory?: string | null
+    bichon_tantivy_threads: number
+    bichon_tantivy_buffer_size: number
+    bichon_eml_compression_level: number
+    bichon_eml_blocksize: number
+
+    bichon_enable_smtp: boolean
+    bichon_smtp_port: number
+    bichon_smtp_encryption: "none" | "starttls" | "tls"
+    bichon_smtp_auth_required: boolean
+    bichon_smtp_tls_key_path?: string | null
+    bichon_smtp_tls_cert_path?: string | null
 }
 
 export const get_dashboard_stats = async () => {

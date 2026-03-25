@@ -1019,6 +1019,10 @@
       "performance": {
         "title": "Wydajność",
         "desc": "Współbieżność i kompresja"
+      },
+      "smtp": {
+        "title": "Serwer SMTP",
+        "desc": "Ustawienia odbierania poczty przychodzącej do archiwizacji w czasie rzeczywistym"
       }
     }
   },

@@ -1019,6 +1019,10 @@
       "performance": {
         "title": "Performance",
         "desc": "Concurrency & compression"
+      },
+      "smtp": {
+        "title": "SMTP Server",
+        "desc": "Incoming mail reception settings for real-time archiving"
       }
     }
   },

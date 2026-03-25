@@ -1019,6 +1019,10 @@
             "performance": {
                 "title": "Suorituskyky",
                 "desc": "Samanaikaisuus ja pakkaus"
+            },
+            "smtp": {
+                "title": "SMTP-palvelin",
+                "desc": "Saapuvan postin vastaanottoasetukset reaaliaikaista arkistointia varten"
             }
         }
     },

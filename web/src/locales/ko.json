@@ -1019,6 +1019,10 @@
             "performance": {
                 "title": "성능",
                 "desc": "동시성 및 압축"
+            },
+            "smtp": {
+                "title": "SMTP 서버",
+                "desc": "실시간 아카이빙을 위한 수신 메일 설정"
             }
         }
     },

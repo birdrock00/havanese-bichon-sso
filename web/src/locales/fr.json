@@ -1019,6 +1019,10 @@
             "performance": {
                 "title": "Performance",
                 "desc": "Concurrence et compression"
+            },
+            "smtp": {
+                "title": "Serveur SMTP",
+                "desc": "Paramètres de réception du courrier entrant pour l'archivage en temps réel"
             }
         }
     },

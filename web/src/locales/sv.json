@@ -1019,6 +1019,10 @@
             "performance": {
                 "title": "Prestanda",
                 "desc": "Samtidighet & komprimering"
+            },
+            "smtp": {
+                "title": "SMTP-server",
+                "desc": "Inställningar för mottagning av inkommande e-post för realtidsarkivering"
             }
         }
     },

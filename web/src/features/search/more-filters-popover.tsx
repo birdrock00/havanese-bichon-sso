@@ -36,7 +36,7 @@ export function MoreFiltersPopover() {
     const { filter, setFilter } = useSearchContext();
     const [open, setOpen] = React.useState(false);
 
-    const { data: meta, isLoading: metaLoading } = useAttachmentMetadata();
+    const { data: meta, isLoading: metaLoading } = useAttachmentMetadata(open);
 
     const [localState, setLocalState] = React.useState({
         attachment_name: filter?.attachment_name || '',

@@ -1019,6 +1019,10 @@
             "performance": {
                 "title": "Ytelse",
                 "desc": "Samtidighet og komprimering"
+            },
+            "smtp": {
+                "title": "SMTP-server",
+                "desc": "Innstillinger for mottak av innkommende e-post for sanntidsarkivering"
             }
         }
     },
