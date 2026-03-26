@@ -114,10 +114,10 @@ export function TextSearchInput() {
                     <SelectTrigger
                         className={cn(
                             "h-9 w-[110px] md:w-[130px] border-r border-border rounded-r-none",
-                            "text-xs md:text-sm bg-transparent focus:ring-0 focus:ring-offset-0 shadow-none border-y-0 border-l-0"
+                            "text-xs md:text-xs bg-transparent focus:ring-0 focus:ring-offset-0 shadow-none border-y-0 border-l-0"
                         )}
                     >
-                        <SelectValue />
+                        <SelectValue/>
                     </SelectTrigger>
                     <SelectContent className="min-w-[240px]">
                         <SelectItem value="text" className="font-medium cursor-pointer text-xs">
@@ -192,7 +192,7 @@ export function TextSearchInput() {
                                     onClick={() => handleSelectHistory(term)}
                                 >
                                     <Search className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary" />
-                                    <span className="truncate flex-1">{term}</span>
+                                    <span className="truncate flex-1 text-xs">{term}</span>
                                 </button>
                             ))
                         ) : (

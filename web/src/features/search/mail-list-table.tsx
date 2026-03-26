@@ -113,7 +113,7 @@ export function MailListTable({
           </div>
         );
       },
-      meta: { className: 'w-[150px]' },
+      meta: { className: 'w-[150px] text-xs' },
       minSize: 150, maxSize: 150,
     },
     {
@@ -162,6 +162,7 @@ export function MailListTable({
           </div>
         );
       },
+      meta: { className: 'text-xs' },
       maxSize: 120,
     },
     {
