@@ -34,7 +34,6 @@ CREATE TABLE IF NOT EXISTS envelopes (
     message_id        TEXT,
 
     -- attachment summary
-    has_attachment    BOOLEAN NOT NULL,
     attachment_count  INTEGER NOT NULL CHECK (attachment_count >= 0),
     regular_attachment_count INTEGER NOT NULL CHECK (regular_attachment_count >= 0),
     tags              VARCHAR[],

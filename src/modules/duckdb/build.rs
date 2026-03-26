@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use arrow::array::{BooleanArray, Int32Array, Int64Array, ListBuilder, StringBuilder, UInt64Array};
+use arrow::array::{Int32Array, Int64Array, ListBuilder, StringBuilder, UInt64Array};
 use arrow::datatypes::{DataType, Field, Schema};
 use arrow::record_batch::RecordBatch;
 use std::sync::Arc;
@@ -57,7 +57,6 @@ pub fn build_record_batch(items: &[Envelope]) -> RecordBatch {
         Field::new("size_bytes", DataType::UInt64, true),
         Field::new("thread_id", DataType::Utf8, true),
         Field::new("message_id", DataType::Utf8, true),
-        Field::new("has_attachment", DataType::Boolean, false),
         Field::new("attachment_count", DataType::Int32, false),
         Field::new("regular_attachment_count", DataType::Int32, false),
         Field::new(
@@ -87,7 +86,6 @@ pub fn build_record_batch(items: &[Envelope]) -> RecordBatch {
     let mut size_b = UInt64Array::builder(capacity);
     let mut thread_id_b = StringBuilder::with_capacity(capacity, capacity * 20);
     let mut msg_id_b = StringBuilder::with_capacity(capacity, capacity * 30);
-    let mut has_att_b = BooleanArray::builder(capacity);
     let mut att_count_b = Int32Array::builder(capacity);
     let mut regular_att_count_b = Int32Array::builder(capacity);
     let mut tags_b = ListBuilder::new(StringBuilder::new());
@@ -119,7 +117,6 @@ pub fn build_record_batch(items: &[Envelope]) -> RecordBatch {
         size_b.append_value(e.size as u64);
         thread_id_b.append_value(&e.thread_id);
         msg_id_b.append_value(&e.message_id);
-        has_att_b.append_value(e.regular_attachment_count > 0);
         att_count_b.append_value(e.attachment_count as i32);
         regular_att_count_b.append_value(e.regular_attachment_count as i32);
         tags_b.append(true);
@@ -145,7 +142,6 @@ pub fn build_record_batch(items: &[Envelope]) -> RecordBatch {
             Arc::new(size_b.finish()),
             Arc::new(thread_id_b.finish()),
             Arc::new(msg_id_b.finish()),
-            Arc::new(has_att_b.finish()),
             Arc::new(att_count_b.finish()),
             Arc::new(regular_att_count_b.finish()),
             Arc::new(tags_b.finish()),

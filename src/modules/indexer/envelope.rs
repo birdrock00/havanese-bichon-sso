@@ -49,7 +49,7 @@ pub struct Envelope {
 }
 
 impl Envelope {
-    pub fn has_attachments(&self) -> bool {
+    pub fn has_any_attachments(&self) -> bool {
         self.attachment_count > 0
     }
 

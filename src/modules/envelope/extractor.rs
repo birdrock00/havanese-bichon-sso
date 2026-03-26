@@ -390,7 +390,7 @@ pub async fn reattach_eml_content(
             )
         })?;
 
-    if !envelope.has_attachments() {
+    if !envelope.has_any_attachments() {
         return Ok((envelope, restored_eml));
     }
 

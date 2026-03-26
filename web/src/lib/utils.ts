@@ -188,3 +188,14 @@ export function showNumbers(current: number, total: number) {
   }
   return result
 }
+
+
+export function toSearchParams(obj: Record<string, any>): URLSearchParams {
+  const params = new URLSearchParams();
+  Object.entries(obj).forEach(([key, value]) => {
+    if (value !== undefined && value !== null) {
+      params.append(key, String(value));
+    }
+  });
+  return params;
+}

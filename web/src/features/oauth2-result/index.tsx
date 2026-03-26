@@ -23,11 +23,12 @@ import { useLocation } from "@tanstack/react-router";
 import { AlertCircle, CheckCircle2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
+import { toSearchParams } from "@/lib/utils";
 
 export default function OAuth2Result() {
     const { t } = useTranslation();
     const { search } = useLocation();
-    const params = new URLSearchParams(search);
+    const params = toSearchParams(search);
     const error = params.get("error");
     const message = params.get("message");
     const success = params.get("success");

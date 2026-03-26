@@ -1212,7 +1212,7 @@ impl DuckDBManager {
         {
             let sql = format!(
                 r#"
-                SELECT has_attachment, COUNT(*) AS cnt
+                SELECT (regular_attachment_count > 0) AS has_attachment, COUNT(*) AS cnt
                 FROM envelopes
                 {account_filter}
                 GROUP BY has_attachment
@@ -1559,8 +1559,11 @@ impl DuckDBManager {
         }
 
         if let Some(has) = filter.has_attachment {
-            base_sql.push_str(" AND e.has_attachment = ? ");
-            args.push(has.into());
+            if has {
+                base_sql.push_str(" AND e.regular_attachment_count > 0 ");
+            } else {
+                base_sql.push_str(" AND e.regular_attachment_count = 0 ");
+            }
         }
 
         if let Some(tags) = filter.tags {

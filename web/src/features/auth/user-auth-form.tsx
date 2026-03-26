@@ -21,7 +21,7 @@ import { HTMLAttributes, useState } from 'react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { cn } from '@/lib/utils'
+import { cn, toSearchParams } from '@/lib/utils'
 import {
   Form,
   FormControl,
@@ -65,7 +65,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const { t } = useTranslation()
 
   const { search } = useLocation();
-  const redirect = new URLSearchParams(search).get('redirect') || '/';
+  const redirect = toSearchParams(search).get('redirect') || '/';
 
   const formSchema = getFormSchema(t)
   const form = useForm<z.infer<typeof formSchema>>({
@@ -92,11 +92,11 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
           if (result.theme) {
             setTheme(result.theme);
           }
-          
+
           if (result.language) {
             i18n.changeLanguage(result.language);
           }
-          
+
           navigate({ to: redirect });
         } else {
           toast({

@@ -25,13 +25,10 @@ import {
   ShieldCheck,
   Server,
   Database,
-  Globe,
-  Lock,
   Activity,
   InfoIcon,
   Mail,
-  Zap,
-  Cpu
+  Zap
 } from "lucide-react"
 import { get_system_configurations } from "@/api/system/api"
 import { useQuery } from "@tanstack/react-query"
