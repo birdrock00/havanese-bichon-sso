@@ -146,12 +146,18 @@ export function MailListTable({
               <span className="text-[11px] truncate font-medium leading-none">
                 {mailbox_name}
               </span>
-              {safeTags.length > 0 && (
-                <span className="text-[9px] text-primary/70 truncate leading-none mt-0.5">
-                  {visibleTags.join(' · ')}
-                  {safeTags.length > 2 && ` · +${safeTags.length - 2}`}
-                </span>
-              )}
+              <div className="flex flex-wrap gap-1 mt-1">
+                {visibleTags.map((tag, i) => (
+                  <span key={i} className="px-1.5 py-0.5 rounded-sm bg-primary/10 text-primary text-[9px] font-medium leading-none border border-primary/20 whitespace-nowrap">
+                    {tag}
+                  </span>
+                ))}
+                {safeTags.length > 2 && (
+                  <span className="px-1.5 py-0.5 rounded-sm bg-gray-100 text-gray-500 text-[9px] font-medium leading-none border border-gray-200">
+                    +{safeTags.length - 2}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         );
@@ -242,7 +248,7 @@ export function MailListTable({
       header: t('search.subject'),
       cell: ({ row }) => <LongText className='text-xs'>{row.original.subject}</LongText>,
       meta: { className: 'text-left text-xs' },
-      maxSize: 600,
+      maxSize: 450,
     },
     {
       id: "text_preview",
@@ -317,14 +323,14 @@ export function MailListTable({
         )
       },
       meta: { className: 'text-left text-xs' },
-      minSize: 100,
-      maxSize: 100,
+      minSize: 130,
+      maxSize: 130,
     },
     {
       id: 'actions',
       header: t('users.columns.actions'),
       cell: DataTableRowActions,
-      meta: { className: 'text-left text-xs' },
+      meta: { className: 'text-right text-xs' },
       minSize: 50,
       maxSize: 60,
     },

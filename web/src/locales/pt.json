@@ -482,6 +482,29 @@
             "save": "Salvar",
             "saving": "Salvando..."
         },
+        "updateTags": {
+            "overwriteWarning": "Aviso: isto substituirá todas as etiquetas existentes nos itens selecionados.",
+            "title": "Atualizar etiquetas",
+            "none": "Nenhuma etiqueta selecionada",
+            "searchPlaceholder": "Procurar ou criar nova etiqueta...",
+            "createHint": "Pressione Enter para criar nova etiqueta: \"{{tag}}\"",
+            "selectedCount": "{{count}} etiqueta(s) a aplicar",
+            "cancel": "Cancelar",
+            "invalidTitle": "Etiqueta inválida",
+            "updatedTitle": "Etiquetas atualizadas",
+            "updatedDesc": "Etiquetas atualizadas com sucesso.",
+            "updateFailedTitle": "Falha na atualização",
+            "tryAgain": "Por favor, tente novamente mais tarde.",
+            "actionAdd": "Adicionar",
+            "actionRemove": "Remover",
+            "actionOverwrite": "Substituir",
+            "submitAdd": "Adicionar etiquetas",
+            "submitRemove": "Remover etiquetas",
+            "submitOverwrite": "Substituir etiquetas",
+            "savingAdd": "Adicionando...",
+            "savingRemove": "Removendo...",
+            "savingOverwrite": "Substituindo..."
+        },
         "thread": {
             "title": "Tópico · {{count}} Mensagens",
             "error": "Falha ao carregar o tópico",
@@ -496,7 +519,8 @@
             "delete": "Excluir",
             "deleteDesc": "Excluir mensagens selecionadas",
             "selected": "{{count}} selecionadas",
-            "clear": "Limpar seleção"
+            "clear": "Limpar seleção",
+            "manageTags": "Gerenciar etiquetas"
         },
         "delete": {
             "title": "Excluir mensagens",

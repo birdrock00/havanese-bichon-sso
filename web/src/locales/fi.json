@@ -482,6 +482,29 @@
             "save": "Tallenna",
             "saving": "Tallennetaan..."
         },
+        "updateTags": {
+            "overwriteWarning": "Varoitus: Tämä korvaa kaikki valittujen kohteiden olemassa olevat tunnisteet.",
+            "title": "Päivitä tunnisteet",
+            "none": "Ei valittuja tunnisteita",
+            "searchPlaceholder": "Hae tai luo uusi tunniste...",
+            "createHint": "Paina Enter luodaksesi uuden tunnisteen: \"{{tag}}\"",
+            "selectedCount": "{{count}} tunniste(tta) otetaan käyttöön",
+            "cancel": "Peruuta",
+            "invalidTitle": "Virheellinen tunniste",
+            "updatedTitle": "Tunnisteet päivitetty",
+            "updatedDesc": "Tunnisteet on päivitetty onnistuneesti.",
+            "updateFailedTitle": "Päivitys epäonnistui",
+            "tryAgain": "Yritä myöhemmin uudelleen.",
+            "actionAdd": "Lisää",
+            "actionRemove": "Poista",
+            "actionOverwrite": "Korvaa",
+            "submitAdd": "Lisää tunnisteet",
+            "submitRemove": "Poista tunnisteet",
+            "submitOverwrite": "Korvaa tunnisteet",
+            "savingAdd": "Lisätään...",
+            "savingRemove": "Poistetaan...",
+            "savingOverwrite": "Korvataan..."
+        },
         "thread": {
             "title": "Keskusteluketju · {{count}} viestiä",
             "error": "Keskusteluketjun lataus epäonnistui",
@@ -496,7 +519,8 @@
             "delete": "Poista",
             "deleteDesc": "Poista valitut viestit",
             "selected": "{{count}} valittu",
-            "clear": "Tyhjennä valinnat"
+            "clear": "Tyhjennä valinnat",
+            "manageTags": "Hallitse tunnisteita"
         },
         "delete": {
             "title": "Poista viestit",

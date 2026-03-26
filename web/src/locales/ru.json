@@ -482,6 +482,29 @@
             "save": "Сохранить",
             "saving": "Сохранение..."
         },
+        "updateTags": {
+            "overwriteWarning": "Предупреждение: это перезапишет все существующие теги в выбранных элементах.",
+            "title": "Обновить теги",
+            "none": "Теги не выбраны",
+            "searchPlaceholder": "Поиск или создание тега...",
+            "createHint": "Нажмите Enter, чтобы создать тег: \"{{tag}}\"",
+            "selectedCount": "Будет применено тегов: {{count}}",
+            "cancel": "Отмена",
+            "invalidTitle": "Недопустимый тег",
+            "updatedTitle": "Теги обновлены",
+            "updatedDesc": "Теги были успешно обновлены.",
+            "updateFailedTitle": "Ошибка обновления",
+            "tryAgain": "Пожалуйста, попробуйте позже.",
+            "actionAdd": "Добавить",
+            "actionRemove": "Удалить",
+            "actionOverwrite": "Перезаписать",
+            "submitAdd": "Добавить теги",
+            "submitRemove": "Удалить теги",
+            "submitOverwrite": "Перезаписать теги",
+            "savingAdd": "Добавление...",
+            "savingRemove": "Удаление...",
+            "savingOverwrite": "Перезапись..."
+        },
         "thread": {
             "title": "Цепочка · {{count}} сообщений",
             "error": "Не удалось загрузить цепочку",
@@ -496,7 +519,8 @@
             "delete": "Удалить",
             "deleteDesc": "Удалить выбранные",
             "selected": "Выбрано: {{count}}",
-            "clear": "Очистить выбор"
+            "clear": "Очистить выбор",
+            "manageTags": "Управление тегами"
         },
         "delete": {
             "title": "Удалить сообщения",

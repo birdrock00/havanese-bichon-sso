@@ -482,6 +482,29 @@
             "save": "Guardar",
             "saving": "Guardando..."
         },
+        "updateTags": {
+            "overwriteWarning": "Advertencia: esto sobrescribirá todas las etiquetas existentes en los elementos seleccionados.",
+            "title": "Actualizar etiquetas",
+            "none": "No hay etiquetas seleccionadas",
+            "searchPlaceholder": "Buscar o crear nueva etiqueta...",
+            "createHint": "Presione Enter para crear una nueva etiqueta: \"{{tag}}\"",
+            "selectedCount": "{{count}} etiqueta(s) a aplicar",
+            "cancel": "Cancelar",
+            "invalidTitle": "Etiqueta inválida",
+            "updatedTitle": "Etiquetas actualizadas",
+            "updatedDesc": "Las etiquetas se han actualizado con éxito.",
+            "updateFailedTitle": "Error al actualizar",
+            "tryAgain": "Por favor, inténtelo de nuevo más tarde.",
+            "actionAdd": "Añadir",
+            "actionRemove": "Eliminar",
+            "actionOverwrite": "Sobrescribir",
+            "submitAdd": "Añadir etiquetas",
+            "submitRemove": "Eliminar etiquetas",
+            "submitOverwrite": "Sobrescribir etiquetas",
+            "savingAdd": "Añadiendo...",
+            "savingRemove": "Eliminando...",
+            "savingOverwrite": "Sobrescribiendo..."
+        },
         "thread": {
             "title": "Hilo de conversación · {{count}} mensajes",
             "error": "Error al cargar el hilo",
@@ -496,7 +519,8 @@
             "delete": "Eliminar",
             "deleteDesc": "Eliminar seleccionados",
             "selected": "{{count}} seleccionado(s)",
-            "clear": "Limpiar selección"
+            "clear": "Limpiar selección",
+            "manageTags": "Administrar etiquetas"
         },
         "delete": {
             "title": "Eliminar mensajes",

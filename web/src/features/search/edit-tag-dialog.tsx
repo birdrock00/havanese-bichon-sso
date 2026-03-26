@@ -107,6 +107,7 @@ export function EditTagsDialog({ open, onOpenChange }: Props) {
                 tags: inputValue.trim()
                     ? [...selectedTags, inputValue.toLowerCase().trim()]
                     : selectedTags,
+                action: "Overwrite"
             },
             {
                 onSuccess: () => {

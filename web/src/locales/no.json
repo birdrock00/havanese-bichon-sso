@@ -482,6 +482,29 @@
             "save": "Lagre",
             "saving": "Lagrer..."
         },
+        "updateTags": {
+            "overwriteWarning": "Advarsel: Dette vil overskrive alle eksisterende tagger på de valgte elementene.",
+            "title": "Oppdater tagger",
+            "none": "Ingen tagger valgt",
+            "searchPlaceholder": "Søk eller opprett ny tagg...",
+            "createHint": "Trykk Enter for å opprette ny tagg: \"{{tag}}\"",
+            "selectedCount": "{{count}} tag(g/er) vil bli brukt",
+            "cancel": "Avbryt",
+            "invalidTitle": "Ugyldig tagg",
+            "updatedTitle": "Tagger oppdatert",
+            "updatedDesc": "Tagger har blitt oppdatert.",
+            "updateFailedTitle": "Oppdatering mislyktes",
+            "tryAgain": "Vennligst prøv igjen senere.",
+            "actionAdd": "Legg til",
+            "actionRemove": "Fjern",
+            "actionOverwrite": "Overskriv",
+            "submitAdd": "Legg til tagger",
+            "submitRemove": "Fjern tagger",
+            "submitOverwrite": "Overskriv tagger",
+            "savingAdd": "Legger til...",
+            "savingRemove": "Fjerner...",
+            "savingOverwrite": "Overskriver..."
+        },
         "thread": {
             "title": "Tråd · {{count}} meldinger",
             "error": "Kunne ikke laste tråd",
@@ -496,7 +519,8 @@
             "delete": "Slett",
             "deleteDesc": "Slett valgte meldinger",
             "selected": "{{count}} valgt",
-            "clear": "Fjern valg"
+            "clear": "Fjern valg",
+            "manageTags": "Administrer tagger"
         },
         "delete": {
             "title": "Slett meldinger",

@@ -482,6 +482,29 @@
             "save": "Opslaan",
             "saving": "Bezig met opslaan..."
         },
+        "updateTags": {
+            "overwriteWarning": "Waarschuwing: dit overschrijft alle bestaande tags op de geselecteerde items.",
+            "title": "Tags bijwerken",
+            "none": "Geen tags geselecteerd",
+            "searchPlaceholder": "Zoek of maak nieuwe tag...",
+            "createHint": "Druk op Enter om nieuwe tag te maken: \"{{tag}}\"",
+            "selectedCount": "{{count}} tag(s) worden toegepast",
+            "cancel": "Annuleren",
+            "invalidTitle": "Ongeldige tag",
+            "updatedTitle": "Tags bijgewerkt",
+            "updatedDesc": "Tags zijn succesvol bijgewerkt.",
+            "updateFailedTitle": "Bijwerken mislukt",
+            "tryAgain": "Probeer het later opnieuw.",
+            "actionAdd": "Toevoegen",
+            "actionRemove": "Verwijderen",
+            "actionOverwrite": "Overschrijven",
+            "submitAdd": "Tags toevoegen",
+            "submitRemove": "Tags verwijderen",
+            "submitOverwrite": "Tags overschrijven",
+            "savingAdd": "Toevoegen...",
+            "savingRemove": "Verwijderen...",
+            "savingOverwrite": "Overschrijven..."
+        },
         "thread": {
             "title": "Draad · {{count}} berichten",
             "error": "Laden van draad mislukt",
@@ -496,7 +519,8 @@
             "delete": "Verwijderen",
             "deleteDesc": "Geselecteerde berichten verwijderen",
             "selected": "{{count}} geselecteerd",
-            "clear": "Selectie wissen"
+            "clear": "Selectie wissen",
+            "manageTags": "Tags beheren"
         },
         "delete": {
             "title": "Berichten verwijderen",

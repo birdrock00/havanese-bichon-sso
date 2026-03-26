@@ -482,6 +482,29 @@
             "save": "Enregistrer",
             "saving": "Enregistrement en cours..."
         },
+        "updateTags": {
+            "overwriteWarning": "Avertissement : cela écrasera tous les tags existants sur les éléments sélectionnés.",
+            "title": "Modifier les tags",
+            "none": "Aucun tag sélectionné",
+            "searchPlaceholder": "Rechercher ou créer un tag...",
+            "createHint": "Appuyez sur Entrée pour créer le tag : \"{{tag}}\"",
+            "selectedCount": "{{count}} tag(s) à appliquer",
+            "cancel": "Annuler",
+            "invalidTitle": "Tag invalide",
+            "updatedTitle": "Tags mis à jour",
+            "updatedDesc": "Les tags ont été mis à jour avec succès.",
+            "updateFailedTitle": "Échec de la mise à jour",
+            "tryAgain": "Veuillez réessayer plus tard.",
+            "actionAdd": "Ajouter",
+            "actionRemove": "Retirer",
+            "actionOverwrite": "Écraser",
+            "submitAdd": "Ajouter les tags",
+            "submitRemove": "Retirer les tags",
+            "submitOverwrite": "Écraser les tags",
+            "savingAdd": "Ajout...",
+            "savingRemove": "Retrait...",
+            "savingOverwrite": "Écrasement..."
+        },
         "thread": {
             "title": "Fil de discussion · {{count}} messages",
             "error": "Échec du chargement du fil de discussion",
@@ -496,7 +519,8 @@
             "delete": "Supprimer",
             "deleteDesc": "Supprimer les messages sélectionnés",
             "selected": "{{count}} sélectionné(s)",
-            "clear": "Effacer la sélection"
+            "clear": "Effacer la sélection",
+            "manageTags": "Gérer les tags"
         },
         "delete": {
             "title": "Supprimer les messages",

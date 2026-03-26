@@ -16,20 +16,28 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use std::collections::HashMap;
 
-use poem_openapi::Object;
+use poem_openapi::{Enum, Object};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, Object)]
-pub struct UpdateTagsRequest {
+pub struct TagsRequest {
     pub updates: HashMap<u64, Vec<String>>, // account_id -> envelope_ids
     pub tags: Vec<String>,
+    pub action: TagAction,
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, Object)]
 pub struct TagCount {
     pub tag: String,
     pub count: u64,
+}
+
+#[derive(Enum, Default, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum TagAction {
+    Add,
+    Remove,
+    #[default]
+    Overwrite,
 }

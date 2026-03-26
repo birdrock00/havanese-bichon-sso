@@ -33,7 +33,7 @@ use crate::modules::message::delete::delete_messages_impl;
 use crate::modules::message::list::{get_thread_messages, list_messages_impl};
 use crate::modules::message::search::{search_messages_impl, SearchRequest};
 use crate::modules::message::tags::TagCount;
-use crate::modules::message::tags::UpdateTagsRequest;
+use crate::modules::message::tags::TagsRequest;
 use crate::modules::rest::api::ApiTags;
 use crate::modules::rest::response::DataPage;
 use crate::modules::rest::ApiResult;
@@ -376,7 +376,7 @@ impl MessageApi {
     )]
     async fn update_envelope_tags(
         &self,
-        req: Json<UpdateTagsRequest>,
+        req: Json<TagsRequest>,
         context: ClientContext,
     ) -> ApiResult<()> {
         let req = req.0;
@@ -392,7 +392,7 @@ impl MessageApi {
         }
 
         ENVELOPE_INDEX_MANAGER
-            .update_envelope_tags(req.updates, req.tags)
+            .update_envelope_tags(req)
             .await?;
         Ok(())
     }

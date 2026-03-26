@@ -40,7 +40,7 @@ use crate::{
             attachment::AttachmentMetadata,
             content::{AttachmentDetail, AttachmentInfo},
             search::{SearchFilter, SortBy},
-            tags::TagCount,
+            tags::{TagAction, TagCount, TagsRequest},
         },
         rest::response::DataPage,
         settings::{cli::SETTINGS, dir::DATA_DIR_MANAGER},
@@ -611,20 +611,24 @@ impl DuckDBManager {
         Ok(contacts)
     }
 
-    pub fn update_envelope_tags(
-        &self,
-        updates: HashMap<u64, Vec<String>>,
-        tags: Vec<String>,
-    ) -> BichonResult<()> {
+    pub fn update_envelope_tags(&self, request: TagsRequest) -> BichonResult<()> {
         let mut conn = self.conn()?;
-        let tags_json = serde_json::to_string(&tags)
+        let tags_json = serde_json::to_string(&request.tags)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        let set_clause = match &request.action {
+            TagAction::Overwrite => "SET tags = ?::JSON::VARCHAR[]",
+            TagAction::Add => "SET tags = list_distinct(list_concat(tags, ?::JSON::VARCHAR[]))",
+            TagAction::Remove => {
+                "SET tags = list_filter(tags, x -> NOT list_contains(?::JSON::VARCHAR[], x))"
+            }
+        };
 
         let tx = conn
             .transaction()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
-        for (account_id, ids) in updates {
+        for (account_id, ids) in request.updates {
             if ids.is_empty() {
                 continue;
             }
@@ -633,23 +637,31 @@ impl DuckDBManager {
                 let placeholders = vec!["?"; chunk.len()].join(", ");
                 let query = format!(
                     "UPDATE envelopes 
-                 SET tags = CAST(json(?) AS VARCHAR[])
+                 {} 
                  WHERE account_id = ? 
                  AND id IN ({})",
-                    placeholders
+                    set_clause, placeholders
                 );
 
-                let mut params: Vec<Box<dyn duckdb::ToSql>> = Vec::new();
+                let mut params: Vec<Box<dyn duckdb::ToSql>> = Vec::with_capacity(chunk.len() + 2);
+
                 params.push(Box::new(tags_json.clone()));
                 params.push(Box::new(account_id));
+
                 for id in chunk {
                     params.push(Box::new(id.clone()));
                 }
 
                 let param_refs: Vec<&dyn duckdb::ToSql> =
                     params.iter().map(|p| p.as_ref()).collect();
+
                 tx.execute(&query, duckdb::params_from_iter(param_refs))
-                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                    .map_err(|e| {
+                        raise_error!(
+                            format!("Update failed. Account: {}, Error: {}", account_id, e),
+                            ErrorCode::InternalError
+                        )
+                    })?;
             }
         }
 

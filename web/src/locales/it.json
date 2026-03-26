@@ -482,6 +482,29 @@
             "save": "Salva",
             "saving": "Salvataggio in corso..."
         },
+        "updateTags": {
+            "overwriteWarning": "Avviso: questo sovrascriverà tutti i tag esistenti sugli elementi selezionati.",
+            "title": "Aggiorna tag",
+            "none": "Nessun tag selezionato",
+            "searchPlaceholder": "Cerca o crea un nuovo tag...",
+            "createHint": "Premi Invio per creare un nuovo tag: \"{{tag}}\"",
+            "selectedCount": "{{count}} tag da applicare",
+            "cancel": "Annulla",
+            "invalidTitle": "Tag non valido",
+            "updatedTitle": "Tag aggiornati",
+            "updatedDesc": "I tag sono stati aggiornati con successo.",
+            "updateFailedTitle": "Aggiornamento fallito",
+            "tryAgain": "Riprova più tardi.",
+            "actionAdd": "Aggiungi",
+            "actionRemove": "Rimuovi",
+            "actionOverwrite": "Sovrascrivi",
+            "submitAdd": "Aggiungi tag",
+            "submitRemove": "Rimuovi tag",
+            "submitOverwrite": "Sovrascrivi tag",
+            "savingAdd": "Aggiunta...",
+            "savingRemove": "Rimozione...",
+            "savingOverwrite": "Sovrascrittura..."
+        },
         "thread": {
             "title": "Thread · {{count}} messaggi",
             "error": "Caricamento thread fallito",
@@ -496,7 +519,8 @@
             "delete": "Elimina",
             "deleteDesc": "Elimina messaggi selezionati",
             "selected": "{{count}} selezionati",
-            "clear": "Annulla selezione"
+            "clear": "Annulla selezione",
+            "manageTags": "Gestisci tag"
         },
         "delete": {
             "title": "Elimina messaggi",

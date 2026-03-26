@@ -482,6 +482,29 @@
             "save": "Speichern",
             "saving": "Wird gespeichert..."
         },
+        "updateTags": {
+            "overwriteWarning": "Warnung: Dies überschreibt alle vorhandenen Tags der ausgewählten Elemente.",
+            "title": "Tags aktualisieren",
+            "none": "Keine Tags ausgewählt",
+            "searchPlaceholder": "Tag suchen oder erstellen...",
+            "createHint": "Eingabetaste drücken, um neuen Tag zu erstellen: \"{{tag}}\"",
+            "selectedCount": "{{count}} Tag(s) werden angewendet",
+            "cancel": "Abbrechen",
+            "invalidTitle": "Ungültiger Tag",
+            "updatedTitle": "Tags aktualisiert",
+            "updatedDesc": "Tags wurden erfolgreich aktualisiert.",
+            "updateFailedTitle": "Aktualisierung fehlgeschlagen",
+            "tryAgain": "Bitte versuchen Sie es später erneut.",
+            "actionAdd": "Hinzufügen",
+            "actionRemove": "Entfernen",
+            "actionOverwrite": "Überschreiben",
+            "submitAdd": "Tags hinzufügen",
+            "submitRemove": "Tags entfernen",
+            "submitOverwrite": "Tags überschreiben",
+            "savingAdd": "Wird hinzugefügt...",
+            "savingRemove": "Wird entfernt...",
+            "savingOverwrite": "Wird überschrieben..."
+        },
         "thread": {
             "title": "Konversations-Thread · {{count}} Nachrichten",
             "error": "Fehler beim Laden des Threads",
@@ -496,7 +519,8 @@
             "delete": "Löschen",
             "deleteDesc": "Ausgewählte Nachrichten löschen",
             "selected": "{{count}} ausgewählt",
-            "clear": "Auswahl aufheben"
+            "clear": "Auswahl aufheben",
+            "manageTags": "Tags verwalten"
         },
         "delete": {
             "title": "Nachrichten löschen",

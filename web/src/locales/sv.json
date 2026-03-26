@@ -482,6 +482,29 @@
             "save": "Spara",
             "saving": "Sparar..."
         },
+        "updateTags": {
+            "overwriteWarning": "Varning: Detta kommer att skriva över alla befintliga taggar på de valda objekten.",
+            "title": "Uppdatera taggar",
+            "none": "Inga taggar valda",
+            "searchPlaceholder": "Sök eller skapa ny tagg...",
+            "createHint": "Tryck på Enter för att skapa ny tagg: \"{{tag}}\"",
+            "selectedCount": "{{count}} tagg(ar) kommer att tillämpas",
+            "cancel": "Avbryt",
+            "invalidTitle": "Ogiltig tagg",
+            "updatedTitle": "Taggar uppdaterade",
+            "updatedDesc": "Taggarna har uppdaterats.",
+            "updateFailedTitle": "Uppdateringen misslyckades",
+            "tryAgain": "Försök igen senare.",
+            "actionAdd": "Lägg till",
+            "actionRemove": "Ta bort",
+            "actionOverwrite": "Skriv över",
+            "submitAdd": "Lägg till taggar",
+            "submitRemove": "Ta bort taggar",
+            "submitOverwrite": "Skriv över taggar",
+            "savingAdd": "Lägger till...",
+            "savingRemove": "Tar bort...",
+            "savingOverwrite": "Skriver över..."
+        },
         "thread": {
             "title": "Tråd · {{count}} meddelanden",
             "error": "Kunde inte ladda tråd",
@@ -496,7 +519,8 @@
             "delete": "Ta bort",
             "deleteDesc": "Ta bort valda meddelanden",
             "selected": "{{count}} valda",
-            "clear": "Rensa val"
+            "clear": "Rensa val",
+            "manageTags": "Hantera taggar"
         },
         "delete": {
             "title": "Ta bort meddelanden",

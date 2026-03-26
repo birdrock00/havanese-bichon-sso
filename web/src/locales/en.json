@@ -482,6 +482,29 @@
       "save": "Save",
       "saving": "Saving..."
     },
+    "updateTags": {
+      "overwriteWarning": "Warning: This will overwrite all existing tags on the selected items.",
+      "title": "Update Tags",
+      "none": "No tags selected",
+      "searchPlaceholder": "Search or create new tag...",
+      "createHint": "Press Enter to create new tag: \"{{tag}}\"",
+      "selectedCount": "{{count}} tag(s) to be applied",
+      "cancel": "Cancel",
+      "invalidTitle": "Invalid Tag",
+      "updatedTitle": "Tags Updated",
+      "updatedDesc": "Tags have been successfully updated.",
+      "updateFailedTitle": "Update Failed",
+      "tryAgain": "Please try again later.",
+      "actionAdd": "Add",
+      "actionRemove": "Remove",
+      "actionOverwrite": "Overwrite",
+      "submitAdd": "Add Tags",
+      "submitRemove": "Remove Tags",
+      "submitOverwrite": "Overwrite Tags",
+      "savingAdd": "Adding...",
+      "savingRemove": "Removing...",
+      "savingOverwrite": "Overwriting..."
+    },
     "thread": {
       "title": "Thread · {{count}} messages",
       "error": "Failed to load thread",
@@ -496,7 +519,8 @@
       "delete": "Delete",
       "deleteDesc": "Delete selected messages",
       "selected": "{{count}} selected",
-      "clear": "Clear selection"
+      "clear": "Clear selection",
+      "manageTags": "Manage Tags"
     },
     "delete": {
       "title": "Delete messages",

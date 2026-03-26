@@ -482,6 +482,29 @@
             "save": "保存",
             "saving": "保存中..."
         },
+        "updateTags": {
+            "overwriteWarning": "警告：この操作により、選択した項目の既存のタグがすべて上書きされます。",
+            "title": "タグを更新",
+            "none": "タグが選択されていません",
+            "searchPlaceholder": "タグを検索または作成...",
+            "createHint": "Enterキーを押して新しいタグを作成：\"{{tag}}\"",
+            "selectedCount": "{{count}} 個のタグを適用します",
+            "cancel": "キャンセル",
+            "invalidTitle": "無効なタグ",
+            "updatedTitle": "タグを更新しました",
+            "updatedDesc": "タグが正常に更新されました。",
+            "updateFailedTitle": "更新に失敗しました",
+            "tryAgain": "後でもう一度お試しください。",
+            "actionAdd": "追加",
+            "actionRemove": "削除",
+            "actionOverwrite": "上書き",
+            "submitAdd": "タグを追加",
+            "submitRemove": "タグを削除",
+            "submitOverwrite": "タグを上書き",
+            "savingAdd": "追加中...",
+            "savingRemove": "削除中...",
+            "savingOverwrite": "上書き中..."
+        },
         "thread": {
             "title": "スレッド · {{count}}件のメッセージ",
             "error": "スレッドの読み込みに失敗しました",
@@ -496,7 +519,8 @@
             "delete": "削除",
             "deleteDesc": "選択したメッセージを削除",
             "selected": "{{count}} 件選択済み",
-            "clear": "選択を解除"
+            "clear": "選択を解除",
+            "manageTags": "タグを管理"
         },
         "delete": {
             "title": "メッセージを削除",

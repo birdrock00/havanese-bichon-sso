@@ -482,6 +482,29 @@
             "save": "儲存",
             "saving": "正在儲存..."
         },
+        "updateTags": {
+            "overwriteWarning": "警告：此操作將覆蓋所選項目的所有現有標籤。",
+            "title": "更新標籤",
+            "none": "未選擇標籤",
+            "searchPlaceholder": "搜尋或建立新標籤...",
+            "createHint": "按 Enter 鍵建立新標籤：\"{{tag}}\"",
+            "selectedCount": "將套用 {{count}} 個標籤",
+            "cancel": "取消",
+            "invalidTitle": "標籤無效",
+            "updatedTitle": "標籤已更新",
+            "updatedDesc": "標籤已成功更新。",
+            "updateFailedTitle": "更新失敗",
+            "tryAgain": "請稍後再試。",
+            "actionAdd": "新增",
+            "actionRemove": "移除",
+            "actionOverwrite": "覆蓋",
+            "submitAdd": "新增標籤",
+            "submitRemove": "移除標籤",
+            "submitOverwrite": "覆蓋標籤",
+            "savingAdd": "正在新增...",
+            "savingRemove": "正在移除...",
+            "savingOverwrite": "正在覆蓋..."
+        },
         "thread": {
             "title": "串流 · {{count}} 則訊息",
             "error": "載入串流失敗",
@@ -496,7 +519,8 @@
             "delete": "刪除",
             "deleteDesc": "刪除選中的訊息",
             "selected": "已選擇 {{count}} 項",
-            "clear": "清除選取"
+            "clear": "清除選取",
+            "manageTags": "管理標籤"
         },
         "delete": {
             "title": "刪除訊息",

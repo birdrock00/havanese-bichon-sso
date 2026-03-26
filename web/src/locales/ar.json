@@ -482,6 +482,29 @@
             "save": "حفظ",
             "saving": "جارٍ الحفظ..."
         },
+        "updateTags": {
+            "overwriteWarning": "تحذير: سيؤدي هذا إلى الكتابة فوق جميع العلامات الموجودة في العناصر المختارة.",
+            "title": "تحديث العلامات",
+            "none": "لم يتم اختيار أي علامات",
+            "searchPlaceholder": "ابحث أو أنشئ علامة جديدة...",
+            "createHint": "اضغط Enter لإنشاء علامة جديدة: \"{{tag}}\"",
+            "selectedCount": "سيتم تطبيق {{count}} من العلامات",
+            "cancel": "إلغاء",
+            "invalidTitle": "علامة غير صالحة",
+            "updatedTitle": "تم تحديث العلامات",
+            "updatedDesc": "تم تحديث العلامات بنجاح.",
+            "updateFailedTitle": "فشل التحديث",
+            "tryAgain": "يرجى المحاولة مرة أخرى لاحقاً.",
+            "actionAdd": "إضافة",
+            "actionRemove": "إزالة",
+            "actionOverwrite": "استبدال",
+            "submitAdd": "إضافة علامات",
+            "submitRemove": "إزالة علامات",
+            "submitOverwrite": "استبدال العلامات",
+            "savingAdd": "جاري الإضافة...",
+            "savingRemove": "جاري الإزالة...",
+            "savingOverwrite": "جاري الاستبدال..."
+        },
         "thread": {
             "title": "المحادثة · {{count}} رسالة",
             "error": "فشل تحميل المحادثة",
@@ -496,7 +519,8 @@
             "delete": "حذف",
             "deleteDesc": "حذف الرسائل المحددة",
             "selected": "تم تحديد {{count}}",
-            "clear": "مسح التحديد"
+            "clear": "مسح التحديد",
+            "manageTags": "إدارة العلامات"
         },
         "delete": {
             "title": "حذف الرسائل",

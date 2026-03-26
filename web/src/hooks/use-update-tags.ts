@@ -21,9 +21,12 @@ import { update_tags } from '@/api/search/api';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from './use-toast';
 
+
+export type TagAction = 'Add' | 'Remove' | 'Overwrite';
 export interface UpdateTagsParams {
     updates: Record<number, string[]>;
     tags: string[];
+    action: TagAction;
 }
 
 export function useUpdateTags() {
@@ -31,12 +34,7 @@ export function useUpdateTags() {
 
     return useMutation({
         mutationFn: async (params: UpdateTagsParams) => {
-            const { updates, tags } = params;
-            const payload = {
-                updates,
-                tags
-            };
-            return update_tags(payload);
+            return update_tags(params);
         },
 
         onSuccess: () => {

@@ -28,7 +28,7 @@ use crate::modules::{
         attachment::AttachmentMetadata,
         content::{AttachmentDetail, AttachmentInfo},
         search::SortBy,
-        tags::TagCount,
+        tags::{TagCount, TagsRequest},
     },
 };
 use crate::{
@@ -204,16 +204,12 @@ impl EnvelopeIndexManager {
             .map_err(|e| raise_error!(format!("{:?}", e), ErrorCode::InternalError))?
     }
 
-    pub async fn update_envelope_tags(
-        &self,
-        updates: HashMap<u64, Vec<String>>, // HashMap<account_id, envelope_ids>
-        tags: Vec<String>,
-    ) -> BichonResult<()> {
-        if updates.is_empty() {
-            tracing::warn!("update_envelope_tags: updates is empty, nothing to update");
+    pub async fn update_envelope_tags(&self, request: TagsRequest) -> BichonResult<()> {
+        if request.updates.is_empty() {
+            tracing::warn!("update_envelope_tags: request is empty, nothing to update");
             return Ok(());
         }
-        tokio::task::spawn_blocking(move || duckdb()?.update_envelope_tags(updates, tags))
+        tokio::task::spawn_blocking(move || duckdb()?.update_envelope_tags(request))
             .await
             .map_err(|e| raise_error!(format!("{:?}", e), ErrorCode::InternalError))?
     }

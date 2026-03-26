@@ -482,6 +482,29 @@
             "save": "저장",
             "saving": "저장 중..."
         },
+        "updateTags": {
+            "overwriteWarning": "경고: 이 작업은 선택한 항목의 모든 기존 태그를 덮어씁니다.",
+            "title": "태그 업데이트",
+            "none": "선택된 태그 없음",
+            "searchPlaceholder": "태그 검색 또는 생성...",
+            "createHint": "Enter를 눌러 새 태그 생성: \"{{tag}}\"",
+            "selectedCount": "{{count}}개의 태그가 적용됩니다",
+            "cancel": "취소",
+            "invalidTitle": "유효하지 않은 태그",
+            "updatedTitle": "태그 업데이트됨",
+            "updatedDesc": "태그가 성공적으로 업데이트되었습니다.",
+            "updateFailedTitle": "업데이트 실패",
+            "tryAgain": "나중에 다시 시도해 주세요.",
+            "actionAdd": "추가",
+            "actionRemove": "제거",
+            "actionOverwrite": "덮어쓰기",
+            "submitAdd": "태그 추가",
+            "submitRemove": "태그 제거",
+            "submitOverwrite": "태그 덮어쓰기",
+            "savingAdd": "추가 중...",
+            "savingRemove": "제거 중...",
+            "savingOverwrite": "덮어쓰는 중..."
+        },
         "thread": {
             "title": "스레드 · {{count}}개 메시지",
             "error": "스레드 로드 실패",
@@ -496,7 +519,8 @@
             "delete": "삭제",
             "deleteDesc": "선택한 메시지 삭제",
             "selected": "{{count}}개 선택됨",
-            "clear": "선택 해제"
+            "clear": "선택 해제",
+            "manageTags": "태그 관리"
         },
         "delete": {
             "title": "메시지 삭제",

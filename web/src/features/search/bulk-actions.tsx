@@ -19,7 +19,7 @@
 
 
 import { useRef } from 'react'
-import { X, Trash2, Upload } from 'lucide-react'
+import { X, Trash2, Upload, TagIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -64,6 +64,11 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
     const handleRestore = () => {
         setCurrentEnvelope(undefined);
         setOpen('restore')
+    }
+
+
+    const handleUpdateTags = () => {
+        setOpen('update-tags')
     }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -174,7 +179,22 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
                             {t('restore_message.restore_to_imap', 'Restore Mail')}
                         </TooltipContent>
                     </Tooltip>
-
+                    <Separator orientation="vertical" className="h-5" />
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={handleUpdateTags}
+                                className="gap-1"
+                            >
+                                <TagIcon className="h-3.5 w-3.5" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            {t('search.bulkActions.manageTags')}
+                        </TooltipContent>
+                    </Tooltip>
                     <Separator orientation="vertical" className="h-5" />
                     <Tooltip>
                         <TooltipTrigger asChild>

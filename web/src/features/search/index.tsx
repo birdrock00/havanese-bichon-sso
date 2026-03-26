@@ -28,12 +28,13 @@ import { MailDisplayDrawer } from './mail-display-dialog';
 import { EnvelopeDeleteDialog } from './delete-dialog';
 import SearchProvider, { SearchDialogType } from './context';
 import useDialogState from '@/hooks/use-dialog-state';
-import { EditTagsDialog } from './add-tag-dialog';
+import { EditTagsDialog } from './edit-tag-dialog';
 import { useTranslation } from 'react-i18next';
 import { RestoreMessageDialog } from './restore-message-dialog';
 import { MailListTable } from './mail-list-table';
 import { SortingState } from '@tanstack/react-table';
 import { MailBoxDeleteDialog } from './delete-mailbox-dialog';
+import { UpdateTagsDialog } from './bulk-add-tag-dialog';
 
 export default function Search() {
   const { t } = useTranslation()
@@ -152,6 +153,12 @@ export default function Search() {
             key='edit-tags-dialog'
             open={open === 'edit-tags'}
             onOpenChange={() => setOpen('edit-tags')}
+          />
+
+          <UpdateTagsDialog
+            key='edit-tags-dialog'
+            open={open === 'update-tags'}
+            onOpenChange={() => setOpen('update-tags')}
           />
 
           <RestoreMessageDialog

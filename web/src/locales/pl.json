@@ -482,6 +482,29 @@
       "save": "Zapisz",
       "saving": "Zapisywanie..."
     },
+    "updateTags": {
+      "overwriteWarning": "Ostrzeżenie: to nadpisze wszystkie istniejące tagi w wybranych elementach.",
+      "title": "Aktualizuj tagi",
+      "none": "Nie wybrano żadnych tagów",
+      "searchPlaceholder": "Szukaj lub utwórz nowy tag...",
+      "createHint": "Naciśnij Enter, aby utworzyć nowy tag: \"{{tag}}\"",
+      "selectedCount": "Zostanie zastosowanych tagów: {{count}}",
+      "cancel": "Anuluj",
+      "invalidTitle": "Nieprawidłowy tag",
+      "updatedTitle": "Tagi zaktualizowane",
+      "updatedDesc": "Tagi zostały pomyślnie zaktualizowane.",
+      "updateFailedTitle": "Aktualizacja nie powiodła się",
+      "tryAgain": "Spróbuj ponownie później.",
+      "actionAdd": "Dodaj",
+      "actionRemove": "Usuń",
+      "actionOverwrite": "Nadpisz",
+      "submitAdd": "Dodaj tagi",
+      "submitRemove": "Usuń tagi",
+      "submitOverwrite": "Nadpisz tagi",
+      "savingAdd": "Dodawanie...",
+      "savingRemove": "Usuwanie...",
+      "savingOverwrite": "Nadpisywanie..."
+    },
     "thread": {
       "title": "Wątek · {{count}} wiadomości",
       "error": "Nie udało się załadować wątku",
@@ -496,7 +519,8 @@
       "delete": "Usuń",
       "deleteDesc": "Usuń wybrane wiadomości",
       "selected": "Wybrano {{count}}",
-      "clear": "Wyczyść zaznaczenie"
+      "clear": "Wyczyść zaznaczenie",
+      "manageTags": "Zarządzaj tagami"
     },
     "delete": {
       "title": "Usuń wiadomości",

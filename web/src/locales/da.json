@@ -482,6 +482,29 @@
             "save": "Gem",
             "saving": "Gemmer..."
         },
+        "updateTags": {
+            "overwriteWarning": "Advarsel: Dette vil overskrive alle eksisterende tags på de valgte elementer.",
+            "title": "Opdater tags",
+            "none": "Ingen tags valgt",
+            "searchPlaceholder": "Søg eller opret nyt tag...",
+            "createHint": "Tryk på Enter for at oprette nyt tag: \"{{tag}}\"",
+            "selectedCount": "{{count}} tag(s) vil blive anvendt",
+            "cancel": "Annuller",
+            "invalidTitle": "Ugyldigt tag",
+            "updatedTitle": "Tags opdateret",
+            "updatedDesc": "Tags er blevet opdateret korrekt.",
+            "updateFailedTitle": "Opdatering fejlede",
+            "tryAgain": "Prøv venligst igen senere.",
+            "actionAdd": "Tilføj",
+            "actionRemove": "Fjern",
+            "actionOverwrite": "Overskriv",
+            "submitAdd": "Tilføj tags",
+            "submitRemove": "Fjern tags",
+            "submitOverwrite": "Overskriv tags",
+            "savingAdd": "Tilføjer...",
+            "savingRemove": "Fjerner...",
+            "savingOverwrite": "Overskriver..."
+        },
         "thread": {
             "title": "Tråd · {{count}} meddelelser",
             "error": "Kunne ikke indlæse tråd",
@@ -496,7 +519,8 @@
             "delete": "Slet",
             "deleteDesc": "Slet valgte meddelelser",
             "selected": "{{count}} valgt",
-            "clear": "Ryd valg"
+            "clear": "Ryd valg",
+            "manageTags": "Administrer tags"
         },
         "delete": {
             "title": "Slet meddelelser",

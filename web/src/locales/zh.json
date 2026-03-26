@@ -482,6 +482,29 @@
       "save": "保存",
       "saving": "保存中..."
     },
+    "updateTags": {
+      "overwriteWarning": "警告：此操作将覆盖所选项目的所有现有标签。",
+      "title": "更新标签",
+      "none": "未选择标签",
+      "searchPlaceholder": "搜索或创建新标签...",
+      "createHint": "按回车键创建新标签：\"{{tag}}\"",
+      "selectedCount": "将应用 {{count}} 个标签",
+      "saving": "正在更新...",
+      "invalidTitle": "标签无效",
+      "updatedTitle": "标签已更新",
+      "updatedDesc": "标签已成功更新。",
+      "updateFailedTitle": "更新失败",
+      "tryAgain": "请稍后再试。",
+      "actionAdd": "追加",
+      "actionRemove": "移除",
+      "actionOverwrite": "覆盖",
+      "submitAdd": "追加标签",
+      "submitRemove": "移除标签",
+      "submitOverwrite": "覆盖标签",
+      "savingAdd": "正在追加...",
+      "savingRemove": "正在移除...",
+      "savingOverwrite": "正在覆盖..."
+    },
     "thread": {
       "title": "会话 · 共 {{count}} 封邮件",
       "error": "加载会话失败",
@@ -496,7 +519,8 @@
       "delete": "删除",
       "deleteDesc": "删除选中的消息",
       "selected": "已选择 {{count}} 项",
-      "clear": "清除选择"
+      "clear": "清除选择",
+      "manageTags": "管理标签"
     },
     "delete": {
       "title": "删除消息",
