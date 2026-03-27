@@ -52,7 +52,7 @@ const profileSchema = (t: (key: string) => string) => z.object({
     .string({
       required_error: t('settings.profile.validation.username.required'),
     })
-    .min(5, {
+    .min(3, {
       message: t('settings.profile.validation.username.min'),
     })
     .max(32, {
