@@ -388,7 +388,7 @@ where
                 .await?;
         } else {
             let addr = extract_address(&trimmed[8..]);
-            println!("DEBUG: SMTP RCPT TO extracted address -> '{}'", addr);
+            //println!("DEBUG: SMTP RCPT TO extracted address -> '{}'", addr);
             let account_result = AccountModel::find_by_email(addr.as_str()).await;
 
             match account_result {
@@ -479,7 +479,7 @@ where
                     stream
                         .write_all(b"250 2.0.0 OK: queued in Bichon\r\n")
                         .await?;
-                    tracing::info!(
+                    tracing::debug!(
                         "SMTP: Message accepted and archived for {} recipients",
                         session.rcpt_to.len()
                     );
