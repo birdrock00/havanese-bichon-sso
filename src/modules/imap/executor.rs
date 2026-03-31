@@ -202,7 +202,7 @@ impl ImapExecutor {
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
         {
-            extract_envelope_and_store_it(&fetch, account_id, mailbox_id).await?;
+            extract_envelope_and_store_it(fetch, account_id, mailbox_id).await?;
             count += 1;
         }
         Ok(count)
@@ -229,7 +229,7 @@ impl ImapExecutor {
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
         {
-            extract_envelope_and_store_it(&fetch, account_id, mailbox_id).await?;
+            extract_envelope_and_store_it(fetch, account_id, mailbox_id).await?;
         }
         Ok(())
     }

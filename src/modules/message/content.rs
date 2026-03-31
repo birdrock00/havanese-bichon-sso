@@ -22,7 +22,7 @@ use crate::modules::envelope::extractor::{
     extract_envelope_from_nested_message, reattach_eml_content,
 };
 use crate::modules::error::code::ErrorCode;
-use crate::modules::indexer::envelope::Envelope;
+use crate::modules::blob::envelope::Envelope;
 use crate::modules::utils::compute_content_hash;
 use crate::{modules::error::BichonResult, raise_error};
 use mail_parser::{MessageParser, MimeHeaders};

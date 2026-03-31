@@ -16,27 +16,25 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::modules::blob::manager::ENVELOPE_INDEX_MANAGER;
+use crate::modules::blob::storage::{DetachedEmail, BLOB_MANAGER};
 use crate::modules::common::AddrVec;
 use crate::modules::envelope::utils::normalize_subject;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::error::BichonResult;
-use crate::modules::indexer::attachment::ATTACHMENT_INDEX_MANAGER;
-use crate::modules::indexer::eml::EML_INDEX_MANAGER;
-use crate::modules::indexer::manager::ENVELOPE_INDEX_MANAGER;
-use crate::modules::indexer::schema::SchemaTools;
 use crate::modules::message::content::AttachmentInfo;
 use crate::modules::utils::html::extract_text;
 use crate::modules::utils::{compute_content_hash, hex_hash};
-use crate::{id, modules::indexer::envelope::Envelope};
+use crate::{id, modules::blob::envelope::Envelope};
 use crate::{raise_error, utc_now};
 use async_imap::types::Fetch;
+use bytes::Bytes;
 use mail_parser::{Address, HeaderName, Message, MessageParser, MimeHeaders};
-use tantivy::doc;
 use tracing::error;
 use uuid::Uuid;
 
 pub async fn extract_envelope_and_store_it(
-    fetch: &Fetch,
+    fetch: Fetch,
     account_id: u64,
     mailbox_id: u64,
 ) -> BichonResult<()> {
@@ -301,22 +299,14 @@ pub async fn detach_and_store_attachments(
         .collect();
 
     ranges.sort_by(|a, b| b.0.cmp(&a.0));
-
-    let fields = SchemaTools::fields();
+    let mut attachments = Vec::with_capacity(ranges.len());
     for (raw_start, raw_end, att) in ranges {
         // Step 2: Extract raw bytes and store them as standalone documents
         let raw_bytes = &original_body[raw_start..raw_end];
         let content_hash = compute_content_hash(raw_bytes);
 
-        ATTACHMENT_INDEX_MANAGER
-            .add_document(
-                content_hash.clone(),
-                doc!(
-                    fields.f_id => content_hash.clone(),
-                    fields.f_blob => raw_bytes
-                ),
-            )
-            .await;
+        attachments.push((content_hash.clone(), Bytes::copy_from_slice(raw_bytes)));
+
         // Step 3: Replace raw attachment content with a hash-based placeholder
         let placeholder = format!("<<BICHON_DETACH_HASH:{}>>", &content_hash);
         let p_bytes = placeholder.as_bytes();
@@ -347,14 +337,11 @@ pub async fn detach_and_store_attachments(
         attachment_infos.push(info);
     }
     // Step 4: Store the final stripped EML content
-    EML_INDEX_MANAGER
-        .add_document(
-            eml_content_hash.to_string(),
-            doc!(
-                fields.f_id => eml_content_hash.to_string(),
-                fields.f_blob => stripped_eml
-            ),
-        )
+    BLOB_MANAGER
+        .queue(DetachedEmail {
+            email: (eml_content_hash.to_string(), Bytes::from(stripped_eml)),
+            attachments: Some(attachments),
+        })
         .await;
 
     attachment_infos
@@ -363,7 +350,7 @@ pub async fn detach_and_store_attachments(
 pub async fn reattach_eml_content(
     account_id: u64,
     envelope_id: String,
-) -> BichonResult<(Envelope, Vec<u8>)> {
+) -> BichonResult<(Envelope, Bytes)> {
     let envelope = ENVELOPE_INDEX_MANAGER
         .get_envelope_by_id(account_id, envelope_id.clone())
         .await?
@@ -377,15 +364,14 @@ pub async fn reattach_eml_content(
             )
         })?;
 
-    let mut restored_eml = EML_INDEX_MANAGER
-        .get(&envelope.content_hash)
-        .await?
+    let restored_eml = BLOB_MANAGER
+        .get_email(&envelope.content_hash)?
         .ok_or_else(|| {
             raise_error!(
                 format!(
-                    "Original email content not found: account_id={} envelope_id={} content_hash={}",
-                    account_id, &envelope_id, &envelope.content_hash
-                ),
+                "Original email content not found: account_id={} envelope_id={} content_hash={}",
+                account_id, &envelope_id, &envelope.content_hash
+            ),
                 ErrorCode::ResourceNotFound
             )
         })?;
@@ -393,6 +379,8 @@ pub async fn reattach_eml_content(
     if !envelope.has_any_attachments() {
         return Ok((envelope, restored_eml));
     }
+
+    let mut restored_eml = restored_eml.to_vec();
 
     let account_detail = ENVELOPE_INDEX_MANAGER
         .get_attachments_by_envelope_id(account_id, envelope_id)
@@ -432,7 +420,7 @@ pub async fn reattach_eml_content(
     tasks.sort_by(|a, b| b.0.cmp(&a.0));
 
     for (start, end, hash) in tasks {
-        if let Some(original_data) = ATTACHMENT_INDEX_MANAGER.get(&hash).await? {
+        if let Some(original_data) = BLOB_MANAGER.get_attachment(&hash)? {
             let actual_hash = compute_content_hash(&original_data);
             if actual_hash != hash {
                 error!(
@@ -447,7 +435,7 @@ pub async fn reattach_eml_content(
         }
     }
 
-    Ok((envelope, restored_eml))
+    Ok((envelope, Bytes::from(restored_eml)))
 }
 
 #[cfg(test)]

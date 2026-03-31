@@ -19,7 +19,9 @@
 use bichon::{
     bichon_version,
     modules::{
-        common::rustls::RustMailerTls,
+        blob::{manager::ENVELOPE_INDEX_MANAGER, storage::BLOB_MANAGER},
+        cache::imap::task::SYNC_TASKS,
+        common::rustls::BichonTls,
         context::{executors::BichonContext, Initialize},
         duckdb::init::DuckDBManager,
         error::{code::ErrorCode, BichonResult},
@@ -64,6 +66,8 @@ async fn main() -> BichonResult<()> {
         return Err(error);
     }
 
+    let periodic_tasks = PeriodicTasks::setup();
+
     let mut smtp_service: Option<SmtpServer> = None;
     if SETTINGS.bichon_enable_smtp {
         info!("SMTP service is enabled, starting...");
@@ -82,6 +86,7 @@ async fn main() -> BichonResult<()> {
     }
 
     start_http_server().await?;
+    periodic_tasks.shutdown().await;
 
     if let Some(server) = smtp_service {
         info!("Shutting down SMTP server...");
@@ -89,19 +94,20 @@ async fn main() -> BichonResult<()> {
         info!("SMTP server stopped.");
     }
 
+    SYNC_TASKS.shutdown().await;
+    ENVELOPE_INDEX_MANAGER.shutdown().await;
+    BLOB_MANAGER.shutdown().await;
     info!("Bichon server stopped.");
     Ok(())
 }
 
 /// Initialize the system by validating settings and starting necessary tasks.
 async fn initialize() -> BichonResult<()> {
-    // SETTINGS.validate()?;
     SignalManager::initialize().await?;
     DataDirManager::initialize().await?;
     DuckDBManager::initialize().await?;
     UserManager::initialize().await?;
-    RustMailerTls::initialize().await?;
+    BichonTls::initialize().await?;
     BichonContext::initialize().await?;
-    PeriodicTasks::start_background_tasks();
     Ok(())
 }

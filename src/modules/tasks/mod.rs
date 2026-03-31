@@ -16,14 +16,24 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-use crate::modules::context::RustMailTask;
+use crate::modules::common::periodic::TaskHandle;
+use crate::modules::context::BichonTask;
 use crate::modules::oauth2::{refresh::OAuth2RefreshTask, task::OAuth2CleanTask};
-pub struct PeriodicTasks;
+pub struct PeriodicTasks {
+    tasks: Vec<TaskHandle>,
+}
 
 impl PeriodicTasks {
-    pub fn start_background_tasks() {
-        OAuth2CleanTask::start();
-        OAuth2RefreshTask::start();
+    pub fn setup() -> Self {
+        let mut tasks = Vec::new();
+        tasks.push(OAuth2CleanTask::start());
+        tasks.push(OAuth2RefreshTask::start());
+        Self { tasks }
+    }
+
+    pub async fn shutdown(self) {
+        for handle in self.tasks {
+            handle.stop().await;
+        }
     }
 }

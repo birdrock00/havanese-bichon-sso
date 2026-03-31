@@ -16,10 +16,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::modules::{common::signal::SIGNAL_MANAGER, error::BichonResult};
 use std::{future::Future, time::Duration};
-use tokio::{sync::oneshot, time::MissedTickBehavior};
+use tokio::{sync::oneshot, task::JoinHandle, time::MissedTickBehavior};
 use tracing::{info, warn};
 
 pub struct PeriodicTask {
@@ -28,7 +27,7 @@ pub struct PeriodicTask {
 
 pub struct TaskHandle {
     cancel_sender: Option<oneshot::Sender<()>>,
-    join_handle: tokio::task::JoinHandle<()>,
+    join_handle: JoinHandle<()>,
 }
 
 impl TaskHandle {
@@ -36,6 +35,10 @@ impl TaskHandle {
         if let Some(sender) = self.cancel_sender {
             let _ = sender.send(());
         }
+        let _ = self.join_handle.await;
+    }
+
+    pub async fn stop(self) {
         let _ = self.join_handle.await;
     }
 }
@@ -82,6 +85,14 @@ impl PeriodicTask {
             let mut cancel_receiver = cancel_receiver_opt;
 
             loop {
+                let cancel_fut = async {
+                    if let Some(ref mut rx) = cancel_receiver {
+                        rx.await.ok();
+                    } else {
+                        std::future::pending::<()>().await;
+                    }
+                };
+
                 tokio::select! {
                     _ = interval.tick() => {
                         match task(param).await {
@@ -92,13 +103,7 @@ impl PeriodicTask {
                         }
                     }
                     // only enabled if cancel_receiver is Some
-                    _ = async {
-                        if let Some(ref mut rx) = cancel_receiver {
-                            rx.await.ok()
-                        } else {
-                            futures::future::pending().await
-                        }
-                    } => {
+                    _ = cancel_fut => {
                         info!("Task '{}' received cancellation signal", name_clone);
                         break;
                     }

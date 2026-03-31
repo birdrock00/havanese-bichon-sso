@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::{
     modules::{
         context::Initialize,
@@ -25,9 +24,9 @@ use crate::{
     raise_error,
 };
 
-pub struct RustMailerTls;
+pub struct BichonTls;
 
-impl Initialize for RustMailerTls {
+impl Initialize for BichonTls {
     async fn initialize() -> BichonResult<()> {
         rustls::crypto::CryptoProvider::install_default(rustls::crypto::ring::default_provider())
             .map_err(|_| {
@@ -38,4 +37,3 @@ impl Initialize for RustMailerTls {
             })
     }
 }
- 

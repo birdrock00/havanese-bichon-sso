@@ -32,13 +32,10 @@ use crate::{
             since::{DateSince, RelativeDate},
             state::AccountRunningState,
         },
+        blob::{manager::ENVELOPE_INDEX_MANAGER, storage::BLOB_MANAGER},
         cache::imap::mailbox::MailBox,
         database::{list_all_impl, secondary_find_impl, with_transaction},
         error::BichonResult,
-        indexer::{
-            attachment::ATTACHMENT_INDEX_MANAGER, eml::EML_INDEX_MANAGER,
-            manager::ENVELOPE_INDEX_MANAGER,
-        },
         users::{role::DEFAULT_ACCOUNT_MANAGER_ROLE_ID, UserModel, DEFAULT_ADMIN_USER_ID},
     },
     utc_now,
@@ -365,8 +362,7 @@ impl AccountV4 {
         let content_hashes = ENVELOPE_INDEX_MANAGER
             .delete_account_envelopes(account.id)
             .await?;
-        EML_INDEX_MANAGER.delete(&content_hashes).await?;
-        ATTACHMENT_INDEX_MANAGER.delete(&content_hashes).await?;
+        BLOB_MANAGER.delete(&content_hashes, &content_hashes)?;
         Self::delete_account(account.id).await?;
         info!("Sequential cleanup completed for account: {}", account.id);
         Ok(())

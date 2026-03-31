@@ -33,39 +33,46 @@ use crate::modules::{
 };
 use crate::{
     modules::{
+        blob::envelope::Envelope,
         common::signal::SIGNAL_MANAGER,
         dashboard::{DashboardStats, LargestEmail},
         error::{code::ErrorCode, BichonResult},
-        indexer::envelope::Envelope,
         message::search::SearchFilter,
         rest::response::DataPage,
     },
     raise_error,
 };
 
-use tokio::{sync::mpsc, task};
+use tokio::{
+    sync::{mpsc, Mutex},
+    task::{self, JoinHandle},
+};
 
 pub static ENVELOPE_INDEX_MANAGER: LazyLock<EnvelopeIndexManager> =
     LazyLock::new(EnvelopeIndexManager::new);
 
-pub const ENVELOPE_BATCH_SIZE: usize = 500;
-pub const EML_BATCH_SIZE: usize = 100;
+pub const ENVELOPE_BATCH_SIZE: usize = 100;
 
 const MAX_BUFFER_DURATION: Duration = Duration::from_secs(10);
 
-pub enum MetadataOp {
-    Record((Envelope, Vec<AttachmentInfo>)),
-    Shutdown,
-}
-
 pub struct EnvelopeIndexManager {
-    sender: mpsc::Sender<MetadataOp>,
+    sender: mpsc::Sender<(Envelope, Vec<AttachmentInfo>)>,
+    handle: Mutex<Option<JoinHandle<()>>>,
 }
 
 impl EnvelopeIndexManager {
+    pub async fn shutdown(&self) {
+        let mut guard = self.handle.lock().await;
+        if let Some(handle) = guard.take() {
+            tracing::info!("Waiting for EnvelopeIndexManager to sync all data...");
+            let _ = handle.await;
+            tracing::info!("EnvelopeIndexManager synchronized and closed.");
+        }
+    }
+
     pub fn new() -> Self {
-        let (sender, mut receiver) = mpsc::channel::<MetadataOp>(1000);
-        task::spawn(async move {
+        let (sender, mut receiver) = mpsc::channel::<(Envelope, Vec<AttachmentInfo>)>(1000);
+        let handle = task::spawn(async move {
             let mut buffer: Vec<(Envelope, Vec<AttachmentInfo>)> =
                 Vec::with_capacity(ENVELOPE_BATCH_SIZE);
             let mut interval = tokio::time::interval(MAX_BUFFER_DURATION);
@@ -74,17 +81,19 @@ impl EnvelopeIndexManager {
                 tokio::select! {
                     maybe_msg = receiver.recv() => {
                         match maybe_msg {
-                            Some(MetadataOp::Record(doc)) => {
+                            Some(doc) => {
                                 buffer.push(doc);
                                 if buffer.len() >= ENVELOPE_BATCH_SIZE {
                                     ENVELOPE_INDEX_MANAGER.drain_and_commit(&mut buffer).await;
                                 }
                             }
-                            Some(MetadataOp::Shutdown) => {
-                                ENVELOPE_INDEX_MANAGER.drain_and_commit(&mut buffer).await;
+                            None => {
+                                if !buffer.is_empty() {
+                                    tracing::info!("Channel closed, flushing remaining {} items", buffer.len());
+                                    ENVELOPE_INDEX_MANAGER.drain_and_commit(&mut buffer).await;
+                                }
                                 break;
-                            }
-                            None => break,
+                            },
                         }
                     }
                     _ = interval.tick() => {
@@ -93,16 +102,20 @@ impl EnvelopeIndexManager {
                         }
                     }
                     _ = shutdown.recv() => {
-                        let _ = ENVELOPE_INDEX_MANAGER.sender.send(MetadataOp::Shutdown).await;
+                        ENVELOPE_INDEX_MANAGER.drain_and_commit(&mut buffer).await;
+                        break;
                     }
                 }
             }
         });
-        Self { sender }
+        Self {
+            sender,
+            handle: Mutex::new(Some(handle)),
+        }
     }
 
     pub async fn add_document(&self, doc: (Envelope, Vec<AttachmentInfo>)) {
-        let _ = self.sender.send(MetadataOp::Record(doc)).await;
+        let _ = self.sender.send(doc).await;
     }
 
     async fn drain_and_commit(&self, buffer: &mut Vec<(Envelope, Vec<AttachmentInfo>)>) {

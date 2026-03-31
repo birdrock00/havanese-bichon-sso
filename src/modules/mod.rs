@@ -29,7 +29,7 @@ pub mod envelope;
 pub mod error;
 pub mod imap;
 pub mod import;
-pub mod indexer;
+pub mod blob;
 pub mod logger;
 pub mod mailbox;
 pub mod message;

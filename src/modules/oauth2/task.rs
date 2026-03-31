@@ -16,9 +16,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::modules::{
-    common::periodic::PeriodicTask, context::RustMailTask, oauth2::pending::OAuth2PendingEntity,
+    common::periodic::{PeriodicTask, TaskHandle},
+    context::BichonTask,
+    oauth2::pending::OAuth2PendingEntity,
 };
 use std::time::Duration;
 
@@ -27,8 +28,8 @@ const TASK_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 ///This task cleans up expired OAuth2 pending authorizations that haven't been completed by users in a timely manner.
 pub struct OAuth2CleanTask;
 
-impl RustMailTask for OAuth2CleanTask {
-    fn start() {
+impl BichonTask for OAuth2CleanTask {
+    fn start() -> TaskHandle {
         let periodic_task = PeriodicTask::new("oauth2-pending-task-cleaner");
 
         let task = move |_: Option<u64>| {
@@ -38,6 +39,6 @@ impl RustMailTask for OAuth2CleanTask {
             })
         };
 
-        periodic_task.start(task, None, TASK_INTERVAL, false, false);
+        periodic_task.start(task, None, TASK_INTERVAL, false, false)
     }
 }

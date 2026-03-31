@@ -16,10 +16,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::modules::blob::manager::ENVELOPE_INDEX_MANAGER;
+use crate::modules::blob::storage::BLOB_MANAGER;
 use crate::modules::error::BichonResult;
-use crate::modules::indexer::attachment::ATTACHMENT_INDEX_MANAGER;
-use crate::modules::indexer::eml::EML_INDEX_MANAGER;
-use crate::modules::indexer::manager::ENVELOPE_INDEX_MANAGER;
 use std::collections::HashMap;
 
 pub async fn delete_messages_impl(request: HashMap<u64, Vec<String>>) -> BichonResult<()> {
@@ -27,8 +26,7 @@ pub async fn delete_messages_impl(request: HashMap<u64, Vec<String>>) -> BichonR
         .get_orphan_hashes_in_memory(request.clone())
         .await?;
     if !content_hashes.is_empty() {
-        EML_INDEX_MANAGER.delete(&content_hashes).await?;
-        ATTACHMENT_INDEX_MANAGER.delete(&content_hashes).await?;
+        BLOB_MANAGER.delete(&content_hashes, &content_hashes)?;
     }
     ENVELOPE_INDEX_MANAGER
         .delete_envelopes_multi_account(request)

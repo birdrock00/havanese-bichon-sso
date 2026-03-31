@@ -1,10 +1,7 @@
 use crate::modules::{
+    blob::{manager::ENVELOPE_INDEX_MANAGER, storage::BLOB_MANAGER},
     cache::imap::mailbox::MailBox,
     error::BichonResult,
-    indexer::{
-        attachment::ATTACHMENT_INDEX_MANAGER, eml::EML_INDEX_MANAGER,
-        manager::ENVELOPE_INDEX_MANAGER,
-    },
 };
 
 pub async fn delete_mailbox_impl(account_id: u64, mailbox_id: u64) -> BichonResult<()> {
@@ -33,7 +30,6 @@ pub async fn delete_mailbox_impl(account_id: u64, mailbox_id: u64) -> BichonResu
         .delete_mailbox_envelopes(account_id, ids_to_delete.clone())
         .await?;
 
-    EML_INDEX_MANAGER.delete(&content_hashes).await?;
-    ATTACHMENT_INDEX_MANAGER.delete(&content_hashes).await?;
+    BLOB_MANAGER.delete(&content_hashes, &content_hashes)?;
     Ok(())
 }

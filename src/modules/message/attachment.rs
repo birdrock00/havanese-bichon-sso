@@ -1,19 +1,17 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, io::Cursor};
 
 use crate::{
     modules::{
         envelope::extractor::reattach_eml_content,
         error::{code::ErrorCode, BichonResult},
-        settings::dir::DATA_DIR_MANAGER,
         utils::compute_content_hash,
     },
     raise_error,
 };
+use bytes::Bytes;
 use mail_parser::MessageParser;
 use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
-use tokio::fs::File;
-use tokio::io::AsyncWriteExt;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
 pub struct AttachmentMetadata {
@@ -34,8 +32,8 @@ pub async fn retrieve_attachment_content(
     account_id: u64,
     envelope_id: String,
     content_hash: &str,
-) -> BichonResult<File> {
-    let (envelope, eml) = reattach_eml_content(account_id, envelope_id).await?;
+) -> BichonResult<Cursor<Bytes>> {
+    let (_, eml) = reattach_eml_content(account_id, envelope_id).await?;
     let message = MessageParser::default().parse(&eml).ok_or_else(|| {
         raise_error!(
             "Failed to parse parent EML".into(),
@@ -53,20 +51,7 @@ pub async fn retrieve_attachment_content(
                 ErrorCode::ResourceNotFound
             )
         })?;
-    let mut path = DATA_DIR_MANAGER.temp_dir.clone();
-    path.push(format!("{}.eml", envelope.content_hash));
-    {
-        let mut file = File::create(&path)
-            .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        file.write_all(attachment_content)
-            .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    }
-    let file = File::open(&path)
-        .await
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    Ok(file)
+    Ok(Cursor::new(Bytes::copy_from_slice(attachment_content)))
 }
 
 pub async fn retrieve_nested_attachment_content(
@@ -74,7 +59,7 @@ pub async fn retrieve_nested_attachment_content(
     envelope_id: String,
     content_hash: &str,
     nested_content_hash: &str,
-) -> BichonResult<File> {
+) -> BichonResult<Cursor<Bytes>> {
     let (_, eml) = reattach_eml_content(account_id, envelope_id).await?;
     let parent_message = MessageParser::default().parse(&eml).ok_or_else(|| {
         raise_error!(
@@ -114,18 +99,5 @@ pub async fn retrieve_nested_attachment_content(
             )
         })?;
 
-    let mut path = DATA_DIR_MANAGER.temp_dir.clone();
-    path.push(format!("{}.eml", nested_content_hash));
-    {
-        let mut file = File::create(&path)
-            .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        file.write_all(attachment_content)
-            .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    }
-    let file = File::open(&path)
-        .await
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    Ok(file)
+    Ok(Cursor::new(Bytes::copy_from_slice(attachment_content)))
 }

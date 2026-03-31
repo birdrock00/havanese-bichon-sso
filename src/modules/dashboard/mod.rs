@@ -25,9 +25,9 @@ use crate::{
     bichon_version,
     modules::{
         account::migration::AccountModel,
+        blob::manager::ENVELOPE_INDEX_MANAGER,
         common::auth::ClientContext,
         error::{code::ErrorCode, BichonResult},
-        indexer::manager::ENVELOPE_INDEX_MANAGER,
         settings::dir::DATA_DIR_MANAGER,
         utils::get_total_size,
     },
@@ -81,9 +81,7 @@ impl DashboardStats {
 
         if has_all_accounts {
             stat.storage_usage_bytes = get_total_size(&DATA_DIR_MANAGER.eml_dir)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                + get_total_size(&DATA_DIR_MANAGER.attachment_dir)
-                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
             stat.index_usage_bytes = get_total_size(&DATA_DIR_MANAGER.envelope_dir)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;

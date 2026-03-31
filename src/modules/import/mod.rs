@@ -19,7 +19,6 @@
 
 use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
-use tantivy::doc;
 
 use crate::{
     base64_decode_url_safe,

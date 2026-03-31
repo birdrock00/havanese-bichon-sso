@@ -21,7 +21,7 @@ use arrow::datatypes::{DataType, Field, Schema};
 use arrow::record_batch::RecordBatch;
 use std::sync::Arc;
 
-use crate::modules::indexer::envelope::Envelope;
+use crate::modules::blob::envelope::Envelope;
 
 pub const DEFAULT_SHARD_ID: u64 = 0;
 

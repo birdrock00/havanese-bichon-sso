@@ -16,16 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use tantivy::TantivyDocument;
-
-pub mod attachment;
-pub mod eml;
 pub mod envelope;
-pub mod fields;
 pub mod manager;
-pub mod schema;
-
-pub enum DocumentOp {
-    Document((String, TantivyDocument)),
-    Shutdown,
-}
+pub mod storage;

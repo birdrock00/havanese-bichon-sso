@@ -17,10 +17,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::modules::account::migration::AccountModel;
+use crate::modules::blob::envelope::Envelope;
+use crate::modules::blob::manager::ENVELOPE_INDEX_MANAGER;
+use crate::modules::blob::storage::get_reader;
 use crate::modules::common::auth::ClientContext;
-use crate::modules::indexer::eml::EML_INDEX_MANAGER;
-use crate::modules::indexer::envelope::Envelope;
-use crate::modules::indexer::manager::ENVELOPE_INDEX_MANAGER;
 use crate::modules::message::append::restore_emails;
 use crate::modules::message::append::RestoreMessagesRequest;
 use crate::modules::message::attachment::retrieve_attachment_content;
@@ -252,9 +252,7 @@ impl MessageApi {
             .require_permission(Some(account_id), Permission::DATA_RAW_DOWNLOAD)
             .await?;
         let envelope_id = envelope_id.0;
-        let reader = EML_INDEX_MANAGER
-            .get_reader(account_id, envelope_id.clone())
-            .await?;
+        let reader = get_reader(account_id, envelope_id.clone()).await?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
             .attachment_type(AttachmentType::Attachment)
@@ -391,9 +389,7 @@ impl MessageApi {
                 .await?;
         }
 
-        ENVELOPE_INDEX_MANAGER
-            .update_envelope_tags(req)
-            .await?;
+        ENVELOPE_INDEX_MANAGER.update_envelope_tags(req).await?;
         Ok(())
     }
 

@@ -28,14 +28,11 @@ use std::{
 use crate::{
     modules::{
         account::migration::AccountModel,
+        blob::{envelope::Envelope, manager::ENVELOPE_INDEX_MANAGER, storage::BLOB_MANAGER},
         context::Initialize,
         dashboard::{DashboardStats, Group, LargestEmail, TimeBucket},
         duckdb::{build::build_record_batch, refinery::DuckDBConnection},
         error::{code::ErrorCode, BichonResult},
-        indexer::{
-            attachment::ATTACHMENT_INDEX_MANAGER, eml::EML_INDEX_MANAGER, envelope::Envelope,
-            manager::ENVELOPE_INDEX_MANAGER,
-        },
         message::{
             attachment::AttachmentMetadata,
             content::{AttachmentDetail, AttachmentInfo},
@@ -86,7 +83,7 @@ pub struct DuckDBManager {
 
 impl Initialize for DuckDBManager {
     async fn initialize() -> BichonResult<()> {
-        tracing::debug!("Initializing databases");
+        tracing::debug!("Initializing duckdb");
 
         if !&DATA_DIR_MANAGER.envelope_dir.exists() {
             std::fs::create_dir_all(&DATA_DIR_MANAGER.envelope_dir)
@@ -1187,19 +1184,11 @@ impl DuckDBManager {
                             }
                         };
 
-                        if let Err(e) = EML_INDEX_MANAGER.delete(&content_hashes).await {
+                        if let Err(e) = BLOB_MANAGER.delete(&content_hashes, &content_hashes) {
                             tracing::error!(
                                 account_id = account_id,
                                 error = %e,
-                                "failed to cleanup eml index"
-                            );
-                        }
-
-                        if let Err(e) = ATTACHMENT_INDEX_MANAGER.delete(&content_hashes).await {
-                            tracing::error!(
-                                account_id = account_id,
-                                error = %e,
-                                "failed to cleanup attachment index"
+                                "failed to cleanup eml"
                             );
                         }
                     });

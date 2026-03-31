@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::modules::account::entity::AuthType;
 use crate::modules::cache::imap::sync::execute_imap_sync;
 use crate::modules::common::periodic::{PeriodicTask, TaskHandle};
@@ -26,10 +25,11 @@ use crate::modules::{
     error::BichonResult,
 };
 use crate::utc_now;
-use dashmap::DashMap;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::{sync::LazyLock, time::Duration};
-use tracing::{error, warn};
+use tokio::sync::Mutex;
+use tracing::{error, info, warn};
 
 static _DESCRIPTION: &str = "This task periodically synchronizes mailbox data for a specified account, ensuring that all local data is up-to-date.";
 const TASK_INTERVAL: Duration = Duration::from_secs(10);
@@ -38,13 +38,13 @@ static LAST_WARN_TIME: AtomicI64 = AtomicI64::new(0);
 const WARN_INTERVAL_MS: i64 = 600_000;
 
 pub struct AccountSyncTask {
-    tasks: DashMap<u64, TaskHandle>,
+    tasks: Mutex<Option<HashMap<u64, TaskHandle>>>,
 }
 
 impl AccountSyncTask {
     pub fn new() -> Self {
         Self {
-            tasks: DashMap::new(),
+            tasks: Mutex::new(Some(HashMap::new())),
         }
     }
 
@@ -103,15 +103,48 @@ impl AccountSyncTask {
             })
         };
         let handler = periodic_task.start(task, Some(account_id), TASK_INTERVAL, true, true);
-        self.tasks.insert(account_id, handler);
+        self.add_task(account_id, handler).await;
+    }
+
+    pub async fn add_task(&self, account_id: u64, handler: TaskHandle) {
+        let mut guard = self.tasks.lock().await;
+        if let Some(map) = guard.as_mut() {
+            map.insert(account_id, handler);
+        } else {
+            tracing::error!("Failed to add task: HashMap has been taken during shutdown.");
+        }
     }
 
     pub async fn stop(&self, account_id: u64) -> BichonResult<()> {
-        if let Some((_, handler)) = self.tasks.remove(&account_id) {
-            handler.cancel().await;
+        let mut guard = self.tasks.lock().await;
+        if let Some(map) = guard.as_mut() {
+            if let Some(handler) = map.remove(&account_id) {
+                drop(guard);
+                handler.cancel().await;
+            } else {
+                warn!("No sync task found for account: {}", account_id);
+            }
         } else {
-            warn!("No sync task found for account: {}", account_id);
+            warn!(
+                "Stop called after global shutdown for account: {}",
+                account_id
+            );
         }
+
         Ok(())
+    }
+
+    pub async fn shutdown(&self) {
+        let mut guard = self.tasks.lock().await;
+        if let Some(map) = guard.take() {
+            drop(guard);
+            for (account_id, handler) in map {
+                info!("Shutdown: Waiting for account {} to sync...", account_id);
+                handler.stop().await;
+            }
+            info!("Shutdown: All sync tasks stopped successfully.");
+        } else {
+            warn!("Shutdown: Sync tasks were already shut down or never initialized.");
+        }
     }
 }

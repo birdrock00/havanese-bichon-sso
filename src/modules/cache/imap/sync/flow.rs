@@ -32,7 +32,7 @@ use crate::{
         },
         error::{code::ErrorCode, BichonError, BichonResult},
         imap::executor::ImapExecutor,
-        indexer::manager::ENVELOPE_INDEX_MANAGER,
+        blob::manager::ENVELOPE_INDEX_MANAGER,
     },
     raise_error,
 };

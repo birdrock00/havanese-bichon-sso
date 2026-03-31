@@ -28,8 +28,7 @@ use std::sync::LazyLock;
 pub const META_FILE: &str = "meta.db";
 pub const MAILBOX_FILE: &str = "mailbox.db";
 const ENVELOPE_DIR: &str = "envelope";
-const EML_DIR: &str = "eml";
-const ATTACHMENT_DIR: &str = "attachment";
+const EML_DIR: &str = "bichon-emls";
 const TMP_DIR: &str = "tmp";
 const LOG_DIR: &str = "logs";
 const TLS_CERT: &str = "cert.pem";
@@ -48,7 +47,6 @@ pub struct DataDirManager {
     pub tls_key: PathBuf,
     pub envelope_dir: PathBuf,
     pub eml_dir: PathBuf,
-    pub attachment_dir: PathBuf,
     pub log_dir: PathBuf,
 }
 
@@ -59,6 +57,8 @@ impl Initialize for DataDirManager {
         std::fs::create_dir_all(&DATA_DIR_MANAGER.log_dir)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         std::fs::create_dir_all(&DATA_DIR_MANAGER.temp_dir)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        std::fs::create_dir_all(&DATA_DIR_MANAGER.eml_dir)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         Ok(())
     }
@@ -78,12 +78,6 @@ impl DataDirManager {
             root_dir.join(EML_DIR)
         };
 
-        let attachment_dir = if let Some(ref data_dir) = SETTINGS.bichon_data_dir {
-            PathBuf::from(data_dir).join(ATTACHMENT_DIR)
-        } else {
-            root_dir.join(ATTACHMENT_DIR)
-        };
-
         Self {
             root_dir: root_dir.clone(),
             meta_db: root_dir.join(META_FILE),
@@ -94,7 +88,6 @@ impl DataDirManager {
             envelope_dir,
             temp_dir: root_dir.join(TMP_DIR),
             eml_dir,
-            attachment_dir,
         }
     }
 }

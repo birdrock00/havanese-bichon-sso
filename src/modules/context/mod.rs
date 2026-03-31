@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::modules::error::BichonResult;
+use crate::modules::{common::periodic::TaskHandle, error::BichonResult};
 
 pub mod controller;
 pub mod executors;
@@ -27,6 +27,6 @@ pub trait Initialize {
     async fn initialize() -> BichonResult<()>;
 }
 
-pub trait RustMailTask {
-    fn start();
+pub trait BichonTask {
+    fn start() -> TaskHandle;
 }

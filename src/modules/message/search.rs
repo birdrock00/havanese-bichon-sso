@@ -25,7 +25,7 @@ use crate::{
     modules::{
         duckdb::init::duckdb,
         error::{code::ErrorCode, BichonResult},
-        indexer::{envelope::Envelope, manager::ENVELOPE_INDEX_MANAGER},
+        blob::{envelope::Envelope, manager::ENVELOPE_INDEX_MANAGER},
         rest::response::DataPage,
     },
     raise_error,
