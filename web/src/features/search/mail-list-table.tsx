@@ -19,7 +19,7 @@
 
 import { dateFnsLocaleMap, formatBytes } from "@/lib/utils"
 import { format, formatDistanceToNow } from "date-fns"
-import { MessageSquareText, Paperclip, Search } from "lucide-react"
+import { MessageSquareText, Paperclip } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
 import { EmailEnvelope } from "@/api"
@@ -93,27 +93,26 @@ export function MailListTable({
         const { account_email, account_id } = row.original;
 
         return (
-          <div className="group relative flex items-center w-full min-w-0 h-full">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setFilter((prev: any) => ({
-                  ...prev,
-                  account_ids: [account_id],
-                  mailbox_ids: undefined
-                }));
-              }}
-              className="absolute left-0 z-10 opacity-0 group-hover:opacity-100 p-0.5 bg-background border rounded shadow-sm hover:bg-accent"
-            >
-              <Search size={12} className="text-primary" />
-            </button>
-            <span className="text-[11px] truncate group-hover:pl-5 transition-all duration-200">
-              {account_email}
+          <div
+            className="group relative flex items-center w-full h-full px-2 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              setFilter((prev: any) => ({
+                ...prev,
+                account_ids: [account_id],
+                mailbox_ids: undefined
+              }))
+            }}
+          >
+            <div className="absolute left-0 top-1 bottom-1 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+            <div className="absolute inset-x-2 bottom-0.5 h-[1px] bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
+            <span className="truncate flex-1 min-w-0 group-hover:text-primary transition-colors">
+              <LongText className='text-xs'>{account_email}</LongText>
             </span>
           </div>
         );
       },
-      meta: { className: 'w-[150px] text-xs' },
+      meta: { className: 'w-[150px]' },
       minSize: 150, maxSize: 150,
     },
     {
@@ -128,22 +127,22 @@ export function MailListTable({
         const visibleTags = safeTags.slice(0, 2);
 
         return (
-          <div className="group relative flex items-center w-full min-w-0 h-full">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setFilter((prev: any) => ({
-                  ...prev,
-                  account_ids: [account_id],
-                  mailbox_ids: [mailbox_id]
-                }));
-              }}
-              className="absolute left-0 z-10 opacity-0 group-hover:opacity-100 p-0.5 bg-background border rounded shadow-sm hover:bg-accent transition-all"
-            >
-              <Search size={11} className="text-primary" />
-            </button>
-            <div className="flex flex-col min-w-0 transition-all duration-200 group-hover:pl-5">
-              <span className="text-[11px] truncate font-medium leading-none">
+          <div
+            className="group relative flex items-center w-full min-w-0 h-full px-2 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              setFilter((prev: any) => ({
+                ...prev,
+                account_ids: [account_id],
+                mailbox_ids: [mailbox_id]
+              }))
+            }}
+          >
+            <div className="absolute left-0 top-1 bottom-1 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+            <div className="absolute inset-x-2 bottom-0.5 h-[1px] bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
+
+            <div className="flex flex-col min-w-0 flex-1">
+              <span className="text-[11px] truncate font-medium leading-none group-hover:text-primary transition-colors">
                 {mailbox_name}
               </span>
               <div className="flex flex-wrap gap-1 mt-1">
@@ -173,20 +172,16 @@ export function MailListTable({
         const { setFilter } = useSearchMessages();
 
         return (
-          <div className="group relative flex items-center w-full min-w-0">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setFilter((prev: Record<string, any>) => ({ ...prev, from: fromEmail }));
-              }}
-              className="absolute left-0 z-10 opacity-0 group-hover:opacity-100 p-1 bg-background/90 hover:bg-accent rounded shadow-sm transition-all cursor-pointer"
-              title={`Filter by ${fromEmail}`}
-            >
-              <Search size={12} className="text-primary" />
-            </button>
-            <LongText
-              className='text-xs pl-0 group-hover:pl-6 transition-all duration-200 ease-in-out'
-            >
+          <div
+            className="group relative flex items-center w-full min-w-0 h-full px-2 cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              setFilter((prev: Record<string, any>) => ({ ...prev, from: fromEmail }))
+            }}
+          >
+            <div className="absolute left-0 top-1 bottom-1 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+            <div className="absolute inset-x-2 bottom-0.5 h-[1px] bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
+            <LongText className="text-xs flex-1 truncate group-hover:text-primary transition-colors">
               {fromEmail}
             </LongText>
           </div>
@@ -204,20 +199,10 @@ export function MailListTable({
         const { setFilter } = useSearchMessages();
 
         return (
-          <div className="group relative flex items-center w-full min-w-0">
-            {recipients.length > 0 && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setFilter((prev: Record<string, any>) => ({ ...prev, to: recipients[0] }));
-                }}
-                className="absolute left-0 z-10 opacity-0 group-hover:opacity-100 p-1 bg-background/90 hover:bg-accent rounded shadow-sm transition-all cursor-pointer"
-                title={`${t('search.filter_by')} ${recipients[0]}`}
-              >
-                <Search size={12} className="text-primary" />
-              </button>
-            )}
-            <div className="text-xs transition-all duration-200 ease-in-out group-hover:pl-6 flex flex-wrap gap-x-1 min-w-0 overflow-hidden">
+          <div className="group relative flex items-center w-full min-w-0 h-full px-2 overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+
+            <div className="text-xs flex flex-wrap gap-x-1 min-w-0 flex-1">
               {recipients.map((email, index) => (
                 <span key={index} className="flex items-center">
                   <button
@@ -227,7 +212,6 @@ export function MailListTable({
                       setFilter((prev: Record<string, any>) => ({ ...prev, to: email }));
                     }}
                     className="hover:text-primary hover:underline transition-colors truncate max-w-[150px]"
-                    title={`${t('search.filter_by')} ${email}`}
                   >
                     {email}
                   </button>

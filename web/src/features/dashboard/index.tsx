@@ -22,7 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
-import { Mail, HardDrive, Database, Users, Inbox, Info, Search } from 'lucide-react';
+import { Mail, HardDrive, Database, Users, Inbox, Info } from 'lucide-react';
 import { formatBytes, formatNumber } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { get_dashboard_stats, INITIAL_DASHBOARD_STATS, TimeBucket } from '@/api/system/api';
@@ -408,14 +408,22 @@ export default function MailArchiveDashboard() {
                           {stats!.top_senders.map((s) => (
                             <TableRow
                               key={s.key}
-                              className="cursor-pointer hover:bg-accent/50 group"
+                              className="cursor-pointer hover:bg-accent/50 group relative"
                               onClick={() => handleQuickSearch({ from: s.key })}
                             >
-                              <TableCell className="font-medium max-w-[380px] truncate flex items-center gap-2">
-                                <Search size={12} className="opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
-                                <span title={s.key}>{s.key}</span>
+                              <TableCell className="font-medium max-w-[380px] truncate relative px-4 h-9">
+                                <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+                                <div className="absolute inset-x-4 bottom-1 h-[1px] bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
+                                <span
+                                  title={s.key}
+                                  className="group-hover:text-primary transition-colors duration-200"
+                                >
+                                  {s.key}
+                                </span>
                               </TableCell>
-                              <TableCell className="text-right">{formatNumber(s.count)}</TableCell>
+                              <TableCell className="text-right">
+                                {formatNumber(s.count)}
+                              </TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -443,13 +451,21 @@ export default function MailArchiveDashboard() {
                           {stats!.top_largest_emails.map((m, index) => (
                             <TableRow
                               key={index}
-                              className="cursor-pointer hover:bg-accent/50 group"
+                              className="cursor-pointer hover:bg-accent/50 group relative"
                               onClick={() => handleQuickSearch({ text: m.subject })}
                             >
-                              <TableCell className="max-w-[350px] truncate font-medium flex items-center gap-2" title={m.subject}>
-                                <Search size={12} className="opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
-                                <span>{m.subject || t('dashboard.noSubject')}</span>
+                              <TableCell
+                                className="max-w-[350px] truncate font-medium relative px-4"
+                                title={m.subject}
+                              >
+                                <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+                                <div className="absolute inset-x-4 bottom-1 h-[1px] bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
+
+                                <span className="group-hover:text-primary transition-colors duration-200">
+                                  {m.subject || t('dashboard.noSubject')}
+                                </span>
                               </TableCell>
+
                               <TableCell className="text-right font-mono text-orange-600">
                                 {formatBytes(m.size_bytes)}
                               </TableCell>
@@ -482,7 +498,7 @@ export default function MailArchiveDashboard() {
                             return (
                               <TableRow
                                 key={acc.key}
-                                className="group cursor-pointer hover:bg-accent/50 transition-colors"
+                                className="group cursor-pointer hover:bg-accent/50 transition-colors relative"
                                 onClick={() => {
                                   if (accountId) {
                                     handleQuickSearch({ account_ids: [accountId] });
@@ -491,11 +507,19 @@ export default function MailArchiveDashboard() {
                                   }
                                 }}
                               >
-                                <TableCell className="font-medium max-w-[300px] truncate flex items-center gap-2">
-                                  <Search size={12} className="opacity-0 group-hover:opacity-100 text-primary transition-opacity" />
-                                  <span title={acc.key}>{acc.key}</span>
+                                <TableCell className="font-medium max-w-[300px] truncate relative px-4 h-9">
+                                  <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
+                                  <div className="absolute inset-x-4 bottom-1 h-[1px] bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
+                                  <span
+                                    title={acc.key}
+                                    className="group-hover:text-primary transition-colors duration-200"
+                                  >
+                                    {acc.key}
+                                  </span>
                                 </TableCell>
-                                <TableCell className="text-right">{formatNumber(acc.count)}</TableCell>
+                                <TableCell className="text-right">
+                                  {formatNumber(acc.count)}
+                                </TableCell>
                               </TableRow>
                             );
                           })}
