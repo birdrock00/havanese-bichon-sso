@@ -153,7 +153,7 @@ async fn extract_envelope_core(
         mailbox_id,
         uid,
         subject,
-        text,
+        text: String::new(),//for test
         from,
         to,
         cc,
@@ -169,9 +169,7 @@ async fn extract_envelope_core(
         mailbox_name: None,
         content_hash: email_content_hash,
     };
-    ENVELOPE_INDEX_MANAGER
-        .add_document((envelope, attachments))
-        .await;
+    ENVELOPE_INDEX_MANAGER.queue((envelope, attachments)).await;
     Ok(())
 }
 

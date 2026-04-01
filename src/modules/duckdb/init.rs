@@ -1487,38 +1487,17 @@ impl DuckDBManager {
         }
 
         if let Some(to) = filter.to {
-            base_sql.push_str(
-                "
-            AND EXISTS (
-                SELECT 1 FROM UNNEST(e.recipients) r
-                WHERE r::VARCHAR ILIKE ?
-            )
-            ",
-            );
+            base_sql.push_str(" AND array_to_string(e.recipients, ',') ILIKE ?");
             args.push(format!("%{}%", to).into());
         }
 
         if let Some(cc) = filter.cc {
-            base_sql.push_str(
-                "
-            AND EXISTS (
-                SELECT 1 FROM UNNEST(e.cc) r
-                WHERE r::VARCHAR ILIKE ?
-            )
-            ",
-            );
+            base_sql.push_str(" AND array_to_string(e.cc, ',') ILIKE ?");
             args.push(format!("%{}%", cc).into());
         }
 
         if let Some(bcc) = filter.bcc {
-            base_sql.push_str(
-                "
-            AND EXISTS (
-                SELECT 1 FROM UNNEST(e.bcc) r
-                WHERE r::VARCHAR ILIKE ?
-            )
-            ",
-            );
+            base_sql.push_str(" AND array_to_string(e.bcc, ',') ILIKE ?");
             args.push(format!("%{}%", bcc).into());
         }
 

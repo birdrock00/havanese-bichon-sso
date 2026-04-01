@@ -84,13 +84,13 @@ impl EnvelopeIndexManager {
                             Some(doc) => {
                                 buffer.push(doc);
                                 if buffer.len() >= ENVELOPE_BATCH_SIZE {
-                                    ENVELOPE_INDEX_MANAGER.drain_and_commit(&mut buffer).await;
+                                    ENVELOPE_INDEX_MANAGER.flush(&mut buffer).await;
                                 }
                             }
                             None => {
                                 if !buffer.is_empty() {
                                     tracing::info!("Channel closed, flushing remaining {} items", buffer.len());
-                                    ENVELOPE_INDEX_MANAGER.drain_and_commit(&mut buffer).await;
+                                    ENVELOPE_INDEX_MANAGER.flush(&mut buffer).await;
                                 }
                                 break;
                             },
@@ -98,11 +98,11 @@ impl EnvelopeIndexManager {
                     }
                     _ = interval.tick() => {
                         if !buffer.is_empty() {
-                            ENVELOPE_INDEX_MANAGER.drain_and_commit(&mut buffer).await;
+                            ENVELOPE_INDEX_MANAGER.flush(&mut buffer).await;
                         }
                     }
                     _ = shutdown.recv() => {
-                        ENVELOPE_INDEX_MANAGER.drain_and_commit(&mut buffer).await;
+                        ENVELOPE_INDEX_MANAGER.flush(&mut buffer).await;
                         break;
                     }
                 }
@@ -114,11 +114,11 @@ impl EnvelopeIndexManager {
         }
     }
 
-    pub async fn add_document(&self, doc: (Envelope, Vec<AttachmentInfo>)) {
+    pub async fn queue(&self, doc: (Envelope, Vec<AttachmentInfo>)) {
         let _ = self.sender.send(doc).await;
     }
 
-    async fn drain_and_commit(&self, buffer: &mut Vec<(Envelope, Vec<AttachmentInfo>)>) {
+    async fn flush(&self, buffer: &mut Vec<(Envelope, Vec<AttachmentInfo>)>) {
         if buffer.is_empty() {
             return;
         }

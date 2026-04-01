@@ -83,8 +83,9 @@ impl DashboardStats {
             stat.storage_usage_bytes = get_total_size(&DATA_DIR_MANAGER.eml_dir)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
-            stat.index_usage_bytes = get_total_size(&DATA_DIR_MANAGER.envelope_dir)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            stat.index_usage_bytes =
+                get_total_size(&DATA_DIR_MANAGER.envelope_dir.join("envelopes.db"))
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         } else {
             stat.storage_usage_bytes = 0;
             stat.index_usage_bytes = 0;

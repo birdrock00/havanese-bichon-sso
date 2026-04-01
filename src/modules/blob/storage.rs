@@ -37,6 +37,45 @@ impl BlobManager {
         }
     }
 
+    fn process_detached_email(
+        eml: DetachedEmail,
+        store: &Database,
+        email_ks: &Keyspace,
+        attach_ks: &Keyspace,
+    ) {
+        let (email_hash, email_data) = eml.email;
+        let mut batch = store.batch();
+        let mut needs_commit = false;
+
+        match email_ks.contains_key(&email_hash) {
+            Ok(false) => {
+                batch.insert(email_ks, email_hash.as_bytes(), email_data);
+                needs_commit = true;
+            }
+            Err(e) => tracing::error!("Fjall email_ks error: {:?}", e),
+            _ => {}
+        }
+
+        if let Some(attachments) = eml.attachments {
+            for (a_hash, a_data) in attachments {
+                match attach_ks.contains_key(&a_hash) {
+                    Ok(false) => {
+                        batch.insert(attach_ks, a_hash.as_bytes(), a_data);
+                        needs_commit = true;
+                    }
+                    Err(e) => tracing::error!("Fjall attach_ks error: {:?}", e),
+                    _ => {}
+                }
+            }
+        }
+
+        if needs_commit {
+            if let Err(e) = batch.commit() {
+                tracing::error!("Fjall Batch Commit Error: {:?}", e);
+            }
+        }
+    }
+
     pub fn new() -> Self {
         let db = Database::builder(&DATA_DIR_MANAGER.eml_dir)
             .open()
@@ -74,27 +113,16 @@ impl BlobManager {
         let (sender, mut receiver) = mpsc::channel::<DetachedEmail>(100);
 
         let store = db.clone();
-        let email_keyspace_clone = email_keyspace.clone();
-        let attachments_keyspace_clone = attachments_keyspace.clone();
+        let email_ks = email_keyspace.clone();
+        let attach_ks = attachments_keyspace.clone();
         let handler = task::spawn(async move {
             let mut shutdown = SIGNAL_MANAGER.subscribe();
             loop {
                 tokio::select! {
                     res = receiver.recv() => {
                         match res {
-                            Some(email) => {
-                                let mut batch = store.batch();
-                                batch.insert(&email_keyspace_clone, email.email.0, email.email.1);
-                                if let Some(attachments) = email.attachments {
-                                    for a in attachments {
-                                        batch.insert(&attachments_keyspace_clone,a.0, a.1);
-                                    }
-                                }
-                                if let Err(e) = batch.commit() {
-                                    tracing::error!("Fjall Put Error {:?}",  e);
-                                } else {
-                                    tracing::info!("Fjall Put Success");
-                                }
+                            Some(eml) => {
+                                Self::process_detached_email(eml, &store, &email_ks, &attach_ks);
                             }
                             None => {
                                 tracing::info!("BlobManager: All senders dropped, closing storage.");
@@ -110,19 +138,8 @@ impl BlobManager {
                             remaining
                         );
 
-                        while let Some(email) = receiver.recv().await {
-                            let mut batch = store.batch();
-                                batch.insert(&email_keyspace_clone, email.email.0, email.email.1);
-                                if let Some(attachments) = email.attachments {
-                                    for a in attachments {
-                                        batch.insert(&attachments_keyspace_clone,a.0, a.1);
-                                    }
-                                }
-                                if let Err(e) = batch.commit() {
-                                    tracing::error!("Fjall Put Error {:?}",  e);
-                                } else {
-                                    tracing::info!("Fjall Put Success");
-                                }
+                        while let Some(eml) = receiver.recv().await {
+                            Self::process_detached_email(eml, &store, &email_ks, &attach_ks);
                         }
 
                         tracing::info!("BlobManager: All remaining tasks processed. Closing Fjall.");
