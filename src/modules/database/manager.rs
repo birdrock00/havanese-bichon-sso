@@ -95,9 +95,9 @@ impl DatabaseManager {
             .set_cache_size(
                 SETTINGS
                     .bichon_envelope_cache_size
-                    .unwrap_or(1073741824)
+                    .unwrap_or(134217728)
                     .max(67108864),
-            ) //default 1GB
+            ) //default 128MB
             .create(&MAILBOX_MODELS, DATA_DIR_MANAGER.mailbox_db.clone())
             .map_err(Self::handle_database_error)?;
 

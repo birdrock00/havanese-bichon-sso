@@ -125,10 +125,6 @@ export type ServerConfigurations = {
     bichon_sync_concurrency?: number | null
     bichon_duckdb_threads?: number | null
     bichon_duckdb_max_memory?: string | null
-    bichon_tantivy_threads: number
-    bichon_tantivy_buffer_size: number
-    bichon_eml_compression_level: number
-    bichon_eml_blocksize: number
 
     bichon_enable_smtp: boolean
     bichon_smtp_port: number

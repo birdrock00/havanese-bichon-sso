@@ -184,9 +184,6 @@ export default function ServerConfigurationsPage() {
             description={t("systemConfig.sections.performance.desc")}
           >
             <SettingRow label="bichon_duckdb_threads" value={data.bichon_duckdb_threads ?? t("systemConfig.status.auto")} />
-            <SettingRow label="bichon_tantivy_threads" value={data.bichon_tantivy_threads} />
-            <SettingRow label="bichon_tantivy_buffer_size" value={formatMB(data.bichon_tantivy_buffer_size)} />
-            <SettingRow label="bichon_eml_compression_level" value={data.bichon_eml_compression_level} />
             <SettingRow label="bichon_sync_concurrency" value={data.bichon_sync_concurrency ?? t("systemConfig.status.auto")} />
             <SettingRow
               label="bichon_http_compression_enabled"

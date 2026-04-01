@@ -224,7 +224,7 @@ pub struct Settings {
     #[clap(
         long,
         env,
-        default_value = "1073741824",
+        default_value = "134217728",
         help = "Set the cache size for envelope database in bytes"
     )]
     pub bichon_envelope_cache_size: Option<usize>,
@@ -272,44 +272,6 @@ pub struct Settings {
         help = "Maximum memory DuckDB may use (e.g. 512MB, 2GB, 80%)"
     )]
     pub bichon_duckdb_max_memory: Option<String>,
-
-    /// Number of Tantivy execution threads (default: 4)
-    #[clap(
-        long,
-        env,
-        default_value = "4",
-        help = "Number of Tantivy execution threads (default: 4)",
-        value_parser = clap::value_parser!(u16).range(1..)
-    )]
-    pub bichon_tantivy_threads: u16,
-
-    /// Tantivy indexer memory budget in bytes (default: 256MB)
-    #[clap(
-        long,
-        env,
-        default_value = "268435456",
-        help = "Set the memory budget for Tantivy indexer in bytes (default: 256MB)"
-    )]
-    pub bichon_tantivy_buffer_size: usize,
-
-    /// Zstd compression level for EML storage (default: 3)
-    #[clap(
-        long,
-        env,
-        default_value = "3",
-        help = "Set the Zstd compression level for EML storage (1-22)",
-        value_parser = clap::value_parser!(u16).range(1..22)
-    )]
-    pub bichon_eml_compression_level: u16,
-
-    /// Tantivy docstore block size in bytes (default: 1MB)
-    #[clap(
-        long,
-        env,
-        default_value = "2097152",
-        help = "Set the Tantivy docstore block size in bytes (default: 2MB)"
-    )]
-    pub bichon_eml_blocksize: usize,
 
     #[clap(
         long,

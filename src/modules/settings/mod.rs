@@ -57,10 +57,6 @@ pub struct SystemConfigurations {
 
     pub bichon_duckdb_threads: Option<i64>,
     pub bichon_duckdb_max_memory: Option<String>,
-    pub bichon_tantivy_threads: u16,
-    pub bichon_tantivy_buffer_size: usize,
-    pub bichon_eml_compression_level: u16,
-    pub bichon_eml_blocksize: usize,
 
     pub bichon_enable_smtp: bool,
     pub bichon_smtp_port: u16,
@@ -100,10 +96,6 @@ impl From<&Settings> for SystemConfigurations {
             bichon_data_dir: s.bichon_data_dir.clone(),
             bichon_duckdb_threads: s.bichon_duckdb_threads,
             bichon_duckdb_max_memory: s.bichon_duckdb_max_memory.clone(),
-            bichon_tantivy_threads: s.bichon_tantivy_threads,
-            bichon_tantivy_buffer_size: s.bichon_tantivy_buffer_size,
-            bichon_eml_compression_level: s.bichon_eml_compression_level,
-            bichon_eml_blocksize: s.bichon_eml_blocksize,
             bichon_enable_smtp: s.bichon_enable_smtp,
             bichon_smtp_port: s.bichon_smtp_port,
             bichon_smtp_encryption: s.bichon_smtp_encryption.to_string(),
