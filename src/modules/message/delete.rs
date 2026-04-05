@@ -16,19 +16,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::modules::blob::manager::ENVELOPE_INDEX_MANAGER;
-use crate::modules::blob::storage::BLOB_MANAGER;
 use crate::modules::error::BichonResult;
+use crate::modules::store::tantivy::manager::INDEX_MANAGER;
 use std::collections::HashMap;
 
 pub async fn delete_messages_impl(request: HashMap<u64, Vec<String>>) -> BichonResult<()> {
-    let content_hashes = ENVELOPE_INDEX_MANAGER
-        .get_orphan_hashes_in_memory(request.clone())
-        .await?;
-    if !content_hashes.is_empty() {
-        BLOB_MANAGER.delete(&content_hashes, &content_hashes)?;
-    }
-    ENVELOPE_INDEX_MANAGER
-        .delete_envelopes_multi_account(request)
-        .await
+    INDEX_MANAGER.delete_envelopes_multi_account(request).await
 }

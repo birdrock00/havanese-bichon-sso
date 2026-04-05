@@ -17,9 +17,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::modules::account::migration::AccountModel;
-use crate::modules::blob::envelope::Envelope;
-use crate::modules::blob::manager::ENVELOPE_INDEX_MANAGER;
-use crate::modules::blob::storage::get_reader;
 use crate::modules::common::auth::ClientContext;
 use crate::modules::message::append::restore_emails;
 use crate::modules::message::append::RestoreMessagesRequest;
@@ -30,7 +27,7 @@ use crate::modules::message::content::retrieve_nested_eml_content;
 use crate::modules::message::content::FullNestedMessageContent;
 use crate::modules::message::content::{retrieve_email_content, FullMessageContent};
 use crate::modules::message::delete::delete_messages_impl;
-use crate::modules::message::list::{get_thread_messages, list_messages_impl};
+use crate::modules::message::list::get_thread_messages;
 use crate::modules::message::search::{search_messages_impl, SearchRequest};
 use crate::modules::message::tags::TagCount;
 use crate::modules::message::tags::TagsRequest;
@@ -38,6 +35,9 @@ use crate::modules::rest::api::ApiTags;
 use crate::modules::rest::response::DataPage;
 use crate::modules::rest::ApiResult;
 use crate::modules::rest::ErrorCode;
+use crate::modules::store::envelope::Envelope;
+use crate::modules::store::storage::get_reader;
+use crate::modules::store::tantivy::manager::INDEX_MANAGER;
 use crate::modules::users::permissions::Permission;
 use crate::modules::utils::validate_tag;
 use crate::raise_error;
@@ -71,32 +71,6 @@ impl MessageApi {
                 .await?;
         }
         Ok(delete_messages_impl(request).await?)
-    }
-
-    /// Lists messages in a mailbox. Requires `mailbox_id`, `page`, and `page_size` query parameters.
-    #[oai(
-        path = "/list-messages/:account_id",
-        method = "get",
-        operation_id = "list_messages"
-    )]
-    async fn list_messages(
-        &self,
-        /// The ID of the account.
-        account_id: Path<u64>,
-        /// The ID of the mailbox to list messages from.
-        mailbox_id: Query<u64>,
-        page: Query<u64>,
-        page_size: Query<u64>,
-        context: ClientContext,
-    ) -> ApiResult<Json<DataPage<Envelope>>> {
-        let account_id = account_id.0;
-        let mailbox_id = mailbox_id.0;
-        context
-            .require_permission(Some(account_id), Permission::DATA_READ)
-            .await?;
-        Ok(Json(
-            list_messages_impl(account_id, mailbox_id, page.0, page_size.0).await?,
-        ))
     }
 
     /// Searches messages across all mailboxes using various filter criteria.
@@ -141,7 +115,7 @@ impl MessageApi {
         context: ClientContext,
     ) -> ApiResult<Json<DataPage<Envelope>>> {
         let account_id = account_id.0;
-        let thread_id = thread_id.0;
+        let thread_id = thread_id.0.trim();
         context
             .require_permission(Some(account_id), Permission::DATA_READ)
             .await?;
@@ -217,8 +191,8 @@ impl MessageApi {
             .require_permission(Some(account_id), Permission::DATA_READ)
             .await?;
         let envelope_id = envelope_id.0;
-        let envelope = ENVELOPE_INDEX_MANAGER
-            .get_envelope_by_id(account_id, envelope_id.clone())
+        let e = INDEX_MANAGER
+            .get_envelope_by_id(account_id, &envelope_id)
             .await?
             .ok_or_else(|| {
                 raise_error!(
@@ -229,7 +203,7 @@ impl MessageApi {
                     ErrorCode::ResourceNotFound
                 )
             })?;
-        Ok(Json(envelope))
+        Ok(Json(e.envelope))
     }
 
     /// Downloads the raw EML file of a specific email.
@@ -361,9 +335,7 @@ impl MessageApi {
         } else {
             Some(context.user.account_access_map.keys().cloned().collect())
         };
-        Ok(Json(
-            ENVELOPE_INDEX_MANAGER.get_all_tags(authorized_ids).await?,
-        ))
+        Ok(Json(INDEX_MANAGER.get_all_tags(authorized_ids).await?))
     }
 
     /// Adds or removes facet tags for multiple emails across accounts.
@@ -389,7 +361,7 @@ impl MessageApi {
                 .await?;
         }
 
-        ENVELOPE_INDEX_MANAGER.update_envelope_tags(req).await?;
+        INDEX_MANAGER.update_envelope_tags(req).await?;
         Ok(())
     }
 
@@ -408,11 +380,7 @@ impl MessageApi {
         } else {
             Some(context.user.account_access_map.keys().cloned().collect())
         };
-        Ok(Json(
-            ENVELOPE_INDEX_MANAGER
-                .get_all_contacts(authorized_ids)
-                .await?,
-        ))
+        Ok(Json(INDEX_MANAGER.get_all_contacts(authorized_ids).await?))
     }
 
     /// Retrieves unique metadata for all attachments across authorized accounts.
@@ -434,9 +402,7 @@ impl MessageApi {
             Some(context.user.account_access_map.keys().cloned().collect())
         };
         Ok(Json(
-            ENVELOPE_INDEX_MANAGER
-                .get_attachment_metadata(authorized_ids)
-                .await?,
+            INDEX_MANAGER.collect_attachment_metadata(authorized_ids)?,
         ))
     }
 }

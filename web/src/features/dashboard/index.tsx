@@ -445,7 +445,7 @@ export default function MailArchiveDashboard() {
                             <TableRow
                               key={index}
                               className="cursor-pointer hover:bg-accent/50 group relative"
-                              onClick={() => handleQuickSearch({ text: m.subject })}
+                              onClick={() => handleQuickSearch({ subject: `"${m.subject}"` })}
                             >
                               <TableCell
                                 className="max-w-[350px] truncate font-medium relative px-4"
@@ -527,11 +527,10 @@ export default function MailArchiveDashboard() {
             </TabsContent>
           </Tabs>
         </div>
-
-        <div className="p-6 md:p-8 pt-0 text-center text-xs text-muted-foreground">
-          © 2025-2026 <a href="https://rustmailer.com" target="_blank" rel="noopener noreferrer" className="hover:underline">rustmailer.com</a> - Bichon Email Archiving Project
-        </div>
       </Main>
+      <div className="mt-auto p-6 md:p-8 pt-0 text-center text-xs text-muted-foreground">
+        © 2025-2026 <a href="https://rustmailer.com" target="_blank" rel="noopener noreferrer" className="hover:underline">rustmailer.com</a> - Bichon Email Archiving Project
+      </div>
     </>
   );
 }

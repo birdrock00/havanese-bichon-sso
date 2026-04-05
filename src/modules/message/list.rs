@@ -16,53 +16,21 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{
-    modules::{
-        account::migration::AccountModel,
-        error::{code::ErrorCode, BichonResult},
-        blob::{envelope::Envelope, manager::ENVELOPE_INDEX_MANAGER},
-        rest::response::DataPage,
-    },
-    raise_error,
+use crate::modules::{
+    account::migration::AccountModel,
+    error::BichonResult,
+    rest::response::DataPage,
+    store::{envelope::Envelope, tantivy::manager::INDEX_MANAGER},
 };
-
-pub async fn list_messages_impl(
-    account_id: u64,
-    mailbox_id: u64,
-    page: u64,
-    page_size: u64,
-) -> BichonResult<DataPage<Envelope>> {
-    AccountModel::check_account_exists(account_id).await?;
-    validate_pagination_params(page, page_size)?;
-    ENVELOPE_INDEX_MANAGER
-        .list_mailbox_envelopes(account_id, mailbox_id, page, page_size, true)
-        .await
-}
-
-fn validate_pagination_params(page: u64, page_size: u64) -> BichonResult<()> {
-    if page == 0 || page_size == 0 {
-        return Err(raise_error!(
-            "Both page and page_size must be greater than 0.".into(),
-            ErrorCode::InvalidParameter
-        ));
-    }
-    if page_size > 500 {
-        return Err(raise_error!(
-            "The page_size exceeds the maximum allowed limit of 500.".into(),
-            ErrorCode::InvalidParameter
-        ));
-    }
-    Ok(())
-}
 
 pub async fn get_thread_messages(
     account_id: u64,
-    thread_id: String,
+    thread_id: &str,
     page: u64,
     page_size: u64,
 ) -> BichonResult<DataPage<Envelope>> {
     AccountModel::check_account_exists(account_id).await?;
-    ENVELOPE_INDEX_MANAGER
+    INDEX_MANAGER
         .list_thread_envelopes(account_id, thread_id, page, page_size, true)
         .await
 }

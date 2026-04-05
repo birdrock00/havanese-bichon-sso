@@ -16,8 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pub mod build;
-pub mod init;
-pub mod refinery;
-#[cfg(test)]
-mod tests;
+pub mod fields;
+pub mod manager;
+pub mod model;
+pub mod schema;

@@ -116,9 +116,7 @@ export function MailThreadDialog({ open, onOpenChange }: MailThreadDialogProps) 
             .sort((a, b) => a.date - b.date)
             .map((msg) => {
               const isExpanded = expandedIds.has(msg.id);
-              const preview =
-                msg.text?.slice(0, 120) +
-                (msg.text?.length > 120 ? '...' : '');
+              const preview = msg.preview;
               const date = new Date(msg.date);
               const formattedDate = isNaN(date.getTime())
                 ? t('search.thread.invalidDate')

@@ -35,7 +35,7 @@ export interface EmailEnvelope {
   mailbox_name?: string;
   uid: number;
   subject: string;
-  text: string;
+  preview: string;
   from: string;
   to: string[];
   cc: string[];

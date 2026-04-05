@@ -22,7 +22,7 @@ use crate::modules::envelope::extractor::{
     extract_envelope_from_nested_message, reattach_eml_content,
 };
 use crate::modules::error::code::ErrorCode;
-use crate::modules::blob::envelope::Envelope;
+use crate::modules::store::envelope::Envelope;
 use crate::modules::utils::compute_content_hash;
 use crate::{modules::error::BichonResult, raise_error};
 use mail_parser::{MessageParser, MimeHeaders};
@@ -121,30 +121,6 @@ impl AttachmentInfo {
         "other"
     }
 }
-
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct AttachmentDetail {
-    pub shard_id: usize,
-    pub info: AttachmentInfo,
-}
-
-impl AttachmentDetail {
-    pub fn from_row(row: &duckdb::Row) -> duckdb::Result<Self> {
-        Ok(Self {
-            shard_id: row.get("shard_id")?,
-            info: AttachmentInfo {
-                file_type: row.get("content_type")?,
-                inline: row.get("is_inline")?,
-                filename: row.get("filename")?,
-                size: row.get("size_bytes")?,
-                content_id: row.get("cid")?,
-                content_hash: row.get("content_hash")?,
-                is_message: row.get("is_message")?,
-            },
-        })
-    }
-}
-
 /// Represents the content of an email message in both plain text and HTML formats.
 ///
 /// This struct contains optional fields for plain text and HTML versions of

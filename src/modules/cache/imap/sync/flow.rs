@@ -32,7 +32,7 @@ use crate::{
         },
         error::{code::ErrorCode, BichonError, BichonResult},
         imap::executor::ImapExecutor,
-        blob::manager::ENVELOPE_INDEX_MANAGER,
+        store::tantivy::manager::INDEX_MANAGER,
     },
     raise_error,
 };
@@ -426,7 +426,7 @@ async fn perform_incremental_sync(
     remote_mailbox: &MailBox,
 ) -> BichonResult<()> {
     if remote_mailbox.exists > 0 {
-        let local_max_uid = ENVELOPE_INDEX_MANAGER
+        let local_max_uid = INDEX_MANAGER
             .get_max_uid(account.id, local_mailbox.id)
             .await?;
         match local_max_uid {

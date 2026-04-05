@@ -16,16 +16,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::modules::users::permissions::Permission;
+use crate::modules::{
+    store::tantivy::{manager::INDEX_MANAGER, schema::SchemaTools},
+    users::permissions::Permission,
+};
 use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use tantivy::{schema::Value, TantivyDocument};
 
 use crate::{
     bichon_version,
     modules::{
         account::migration::AccountModel,
-        blob::manager::ENVELOPE_INDEX_MANAGER,
         common::auth::ClientContext,
         error::{code::ErrorCode, BichonResult},
         settings::dir::DATA_DIR_MANAGER,
@@ -63,13 +66,9 @@ impl DashboardStats {
             Some(context.user.account_access_map.keys().cloned().collect())
         };
 
-        let mut stat = ENVELOPE_INDEX_MANAGER
-            .get_dashboard_stats(authorized_ids.clone())
-            .await?;
+        let mut stat = INDEX_MANAGER.get_dashboard_stats(&authorized_ids).await?;
 
-        stat.top_largest_emails = ENVELOPE_INDEX_MANAGER
-            .top_10_largest_emails(authorized_ids.clone())
-            .await?;
+        stat.top_largest_emails = INDEX_MANAGER.top_10_largest_emails(&authorized_ids).await?;
 
         stat.account_count = if has_all_accounts {
             AccountModel::count().await?
@@ -77,15 +76,14 @@ impl DashboardStats {
             authorized_ids.as_ref().map(|ids| ids.len()).unwrap_or(0)
         };
 
-        stat.email_count = ENVELOPE_INDEX_MANAGER.total_emails(authorized_ids).await?;
+        stat.email_count = INDEX_MANAGER.total_emails(&authorized_ids)?;
 
         if has_all_accounts {
             stat.storage_usage_bytes = get_total_size(&DATA_DIR_MANAGER.eml_dir)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
-            stat.index_usage_bytes =
-                get_total_size(&DATA_DIR_MANAGER.envelope_dir.join("envelopes.db"))
-                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            stat.index_usage_bytes = get_total_size(&&DATA_DIR_MANAGER.tantivy_dir)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         } else {
             stat.storage_usage_bytes = 0;
             stat.index_usage_bytes = 0;
@@ -115,4 +113,49 @@ pub struct LargestEmail {
     pub subject: String, // Email subject
     pub size_bytes: u64, // Email size in bytes
     pub id: String,
+}
+
+impl LargestEmail {
+    pub fn from_tantivy_doc(document: &TantivyDocument) -> BichonResult<Self> {
+        let fields = SchemaTools::email_fields();
+        let value = document.get_first(fields.f_size).ok_or_else(|| {
+            raise_error!(
+                "miss 'size' field in tantivy document".into(),
+                ErrorCode::InternalError
+            )
+        })?;
+        let size_bytes = value.as_u64().ok_or_else(|| {
+            raise_error!("'size' field is not a u64".into(), ErrorCode::InternalError)
+        })?;
+        let value = document.get_first(fields.f_subject).ok_or_else(|| {
+            raise_error!("'subject' field not found".into(), ErrorCode::InternalError)
+        })?;
+        let subject = value.as_str().map(|s| s.to_string()).ok_or_else(|| {
+            raise_error!(
+                "'subject' field is not a string".into(),
+                ErrorCode::InternalError
+            )
+        })?;
+
+        let value = document.get_first(fields.f_id).ok_or_else(|| {
+            raise_error!(
+                format!("'{}' field not found", stringify!(field)),
+                ErrorCode::InternalError
+            )
+        })?;
+        let id = value.as_str().map(|s| s.to_string()).ok_or_else(|| {
+            raise_error!(
+                format!("'{}' field is not a string", stringify!(field)),
+                ErrorCode::InternalError
+            )
+        })?;
+
+        let envelope = LargestEmail {
+            subject,
+            size_bytes,
+            id,
+        };
+
+        Ok(envelope)
+    }
 }

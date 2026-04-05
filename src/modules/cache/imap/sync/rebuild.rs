@@ -19,7 +19,6 @@
 use crate::{
     modules::{
         account::migration::AccountModel,
-        blob::{manager::ENVELOPE_INDEX_MANAGER, storage::BLOB_MANAGER},
         cache::{
             imap::{
                 mailbox::MailBox,
@@ -28,6 +27,7 @@ use crate::{
             SEMAPHORE,
         },
         error::{code::ErrorCode, BichonError, BichonResult},
+        store::tantivy::manager::INDEX_MANAGER,
     },
     raise_error,
 };
@@ -194,13 +194,9 @@ pub async fn rebuild_mailbox_cache(
     local_mailbox: &MailBox,
     remote_mailbox: &MailBox,
 ) -> BichonResult<()> {
-    let content_hashes = ENVELOPE_INDEX_MANAGER
+    INDEX_MANAGER
         .delete_mailbox_envelopes(account.id, vec![local_mailbox.id])
         .await?;
-    // todo  Distinguish these hashes to avoid mixing them
-    if !content_hashes.is_empty() {
-        BLOB_MANAGER.delete(&content_hashes, &content_hashes)?;
-    }
 
     if remote_mailbox.exists == 0 {
         info!(
@@ -227,14 +223,9 @@ pub async fn rebuild_mailbox_cache_by_date(
     remote: &MailBox,
     direction: FetchDirection,
 ) -> BichonResult<()> {
-    let content_hashes = ENVELOPE_INDEX_MANAGER
+    INDEX_MANAGER
         .delete_mailbox_envelopes(account.id, vec![local_mailbox_id])
         .await?;
-
-    if !content_hashes.is_empty() {
-        BLOB_MANAGER.delete(&content_hashes, &content_hashes)?;
-    }
-
     if remote.exists == 0 {
         info!(
             "Account {}: Mailbox '{}' has no emails on the remote server. The mailbox is empty, no envelopes to fetch.",

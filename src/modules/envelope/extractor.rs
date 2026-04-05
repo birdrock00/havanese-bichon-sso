@@ -16,16 +16,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::modules::blob::manager::ENVELOPE_INDEX_MANAGER;
-use crate::modules::blob::storage::{DetachedEmail, BLOB_MANAGER};
 use crate::modules::common::AddrVec;
 use crate::modules::envelope::utils::normalize_subject;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::error::BichonResult;
 use crate::modules::message::content::AttachmentInfo;
+use crate::modules::store::storage::{DetachedEmail, BLOB_MANAGER};
+use crate::modules::store::tantivy::manager::INDEX_MANAGER;
+use crate::modules::store::tantivy::model::EnvelopeWithAttachments;
 use crate::modules::utils::html::extract_text;
 use crate::modules::utils::{compute_content_hash, hex_hash};
-use crate::{id, modules::blob::envelope::Envelope};
+use crate::{id, modules::store::envelope::Envelope};
 use crate::{raise_error, utc_now};
 use async_imap::types::Fetch;
 use bytes::Bytes;
@@ -90,6 +91,7 @@ async fn extract_envelope_core(
         )
     })?;
 
+    let preview_limit = 100;
     let text = if let Some(text) = message.body_text(0).map(|cow| cow.into_owned()) {
         text
     } else if let Some(html) = message.body_html(0).map(|cow| cow.into_owned()) {
@@ -97,6 +99,16 @@ async fn extract_envelope_core(
     } else {
         String::new()
     };
+
+    let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+
+    let preview = if text.chars().count() > preview_limit {
+        text.chars().take(preview_limit).collect::<String>() + "..."
+    } else {
+        text.clone()
+    };
+
+    let body_text = text;
 
     let message_id = message
         .message_id()
@@ -153,13 +165,14 @@ async fn extract_envelope_core(
         mailbox_id,
         uid,
         subject,
-        text: String::new(),//for test
+        preview,
         from,
         to,
         cc,
         bcc,
         date,
         internal_date,
+        ingest_at: utc_now!(),
         size,
         thread_id,
         attachment_count,
@@ -169,7 +182,12 @@ async fn extract_envelope_core(
         mailbox_name: None,
         content_hash: email_content_hash,
     };
-    ENVELOPE_INDEX_MANAGER.queue((envelope, attachments)).await;
+    let ea = EnvelopeWithAttachments {
+        envelope,
+        attachments: Some(attachments),
+    };
+    let doc = ea.to_document(&body_text, 0)?;
+    INDEX_MANAGER.queue(doc).await;
     Ok(())
 }
 
@@ -230,13 +248,14 @@ pub fn extract_envelope_from_nested_message(
         mailbox_id: Default::default(),
         uid: Default::default(),
         subject,
-        text,
+        preview: text,
         from,
         to,
         cc,
         bcc,
         date,
         internal_date: Default::default(),
+        ingest_at: Default::default(),
         size: Default::default(),
         thread_id,
         attachment_count: Default::default(),
@@ -349,8 +368,8 @@ pub async fn reattach_eml_content(
     account_id: u64,
     envelope_id: String,
 ) -> BichonResult<(Envelope, Bytes)> {
-    let envelope = ENVELOPE_INDEX_MANAGER
-        .get_envelope_by_id(account_id, envelope_id.clone())
+    let e = INDEX_MANAGER
+        .get_envelope_by_id(account_id, &envelope_id)
         .await?
         .ok_or_else(|| {
             raise_error!(
@@ -363,38 +382,37 @@ pub async fn reattach_eml_content(
         })?;
 
     let restored_eml = BLOB_MANAGER
-        .get_email(&envelope.content_hash)?
+        .get_email(&e.envelope.content_hash)?
         .ok_or_else(|| {
             raise_error!(
                 format!(
                 "Original email content not found: account_id={} envelope_id={} content_hash={}",
-                account_id, &envelope_id, &envelope.content_hash
+                account_id, &envelope_id, &e.envelope.content_hash
             ),
                 ErrorCode::ResourceNotFound
             )
         })?;
 
-    if !envelope.has_any_attachments() {
-        return Ok((envelope, restored_eml));
+    if !e.envelope.has_any_attachments() {
+        return Ok((e.envelope, restored_eml));
     }
 
     let mut restored_eml = restored_eml.to_vec();
-
-    let account_detail = ENVELOPE_INDEX_MANAGER
-        .get_attachments_by_envelope_id(account_id, envelope_id)
-        .await?;
-
-    if envelope.attachment_count != account_detail.len() {
+    let actual_count = e.attachments.as_ref().map(|a| a.len()).unwrap_or(0);
+    if e.envelope.attachment_count != actual_count {
         return Err(raise_error!(
-            "Consistency check failed: attachment_count does not match account_detail length"
-                .into(),
+            format!(
+                "Consistency check failed: envelope.attachment_count ({}) does not match attachments.len ({})",
+                e.envelope.attachment_count, 
+                actual_count
+            ),
             ErrorCode::InternalError
         ));
     }
 
     let mut tasks = Vec::new();
-    for detail in account_detail {
-        let placeholder_str = format!("<<BICHON_DETACH_HASH:{}>>", &detail.info.content_hash);
+    for detail in e.attachments.unwrap() {
+        let placeholder_str = format!("<<BICHON_DETACH_HASH:{}>>", &detail.content_hash);
         let pattern = placeholder_str.as_bytes();
         let pattern_len = pattern.len();
 
@@ -409,7 +427,7 @@ pub async fn reattach_eml_content(
             tasks.push((
                 absolute_start,
                 absolute_end,
-                detail.info.content_hash.clone(),
+                detail.content_hash.clone(),
             ));
             search_cursor = absolute_end;
         }
@@ -433,7 +451,7 @@ pub async fn reattach_eml_content(
         }
     }
 
-    Ok((envelope, Bytes::from(restored_eml)))
+    Ok((e.envelope, Bytes::from(restored_eml)))
 }
 
 #[cfg(test)]

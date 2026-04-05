@@ -239,9 +239,9 @@ export function MailListTable({
       id: "text_preview",
       header: () => null,
       cell: ({ row }) => {
-        const text = row.original.text
+        const preview = row.original.preview
 
-        if (!text) return null
+        if (!preview) return null
 
         return (
           <HoverCard openDelay={200} closeDelay={150}>
@@ -260,7 +260,7 @@ export function MailListTable({
               align="start"
               className="max-w-[520px] max-h-[420px] overflow-auto whitespace-pre-wrap text-xs leading-relaxed"
             >
-              {text}
+              {preview}
             </HoverCardContent>
           </HoverCard>
         )

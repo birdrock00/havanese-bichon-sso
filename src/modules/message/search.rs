@@ -16,17 +16,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::collections::HashSet;
-
 use poem_openapi::{Enum, Object};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 use crate::{
     modules::{
-        duckdb::init::duckdb,
         error::{code::ErrorCode, BichonResult},
-        blob::{envelope::Envelope, manager::ENVELOPE_INDEX_MANAGER},
         rest::response::DataPage,
+        store::{envelope::Envelope, tantivy::manager::INDEX_MANAGER},
     },
     raise_error,
 };
@@ -85,24 +83,6 @@ impl SearchRequest {
             ));
         }
 
-        let validate = |pattern: &Option<String>| -> BichonResult<()> {
-            if let Some(ref p) = pattern {
-                if duckdb()?.validate_regex(p).is_err() {
-                    return Err(raise_error!(
-                        "Invalid search pattern: The regular expression is not supported by DuckDB.".into(),
-                        ErrorCode::InvalidParameter
-                    ));
-                }
-            }
-            Ok(())
-        };
-
-        validate(&self.filter.text)?;
-        validate(&self.filter.subject)?;
-        validate(&self.filter.body)?;
-        validate(&self.filter.from)?;
-        validate(&self.filter.to)?;
-
         Ok(())
     }
 }
@@ -112,7 +92,7 @@ pub async fn search_messages_impl(
     request: SearchRequest,
 ) -> BichonResult<DataPage<Envelope>> {
     request.validate()?;
-    ENVELOPE_INDEX_MANAGER
+    INDEX_MANAGER
         .search(
             accounts,
             request.filter,

@@ -19,16 +19,15 @@
 use bichon::{
     bichon_version,
     modules::{
-        blob::{manager::ENVELOPE_INDEX_MANAGER, storage::BLOB_MANAGER},
         cache::imap::task::SYNC_TASKS,
         common::rustls::BichonTls,
         context::{executors::BichonContext, Initialize},
-        duckdb::init::DuckDBManager,
         error::{code::ErrorCode, BichonResult},
         logger,
         rest::start_http_server,
         settings::cli::SETTINGS,
         smtp::{start_smtp_server, SmtpServer},
+        store::{storage::BLOB_MANAGER, tantivy::manager::INDEX_MANAGER},
         tasks::PeriodicTasks,
     },
     raise_error,
@@ -95,7 +94,7 @@ async fn main() -> BichonResult<()> {
     }
 
     SYNC_TASKS.shutdown().await;
-    ENVELOPE_INDEX_MANAGER.shutdown().await;
+    INDEX_MANAGER.shutdown().await;
     BLOB_MANAGER.shutdown().await;
     info!("Bichon server stopped.");
     Ok(())
@@ -105,7 +104,6 @@ async fn main() -> BichonResult<()> {
 async fn initialize() -> BichonResult<()> {
     SignalManager::initialize().await?;
     DataDirManager::initialize().await?;
-    DuckDBManager::initialize().await?;
     UserManager::initialize().await?;
     BichonTls::initialize().await?;
     BichonContext::initialize().await?;

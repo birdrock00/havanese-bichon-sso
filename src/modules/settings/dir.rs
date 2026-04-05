@@ -31,6 +31,7 @@ const ENVELOPE_DIR: &str = "envelope";
 const EML_DIR: &str = "bichon-emls";
 const TMP_DIR: &str = "tmp";
 const LOG_DIR: &str = "logs";
+const TANTIVY_DIR: &str = "tantivy";
 const TLS_CERT: &str = "cert.pem";
 const TLS_KEY: &str = "key.pem";
 
@@ -45,7 +46,7 @@ pub struct DataDirManager {
     pub temp_dir: PathBuf,
     pub tls_cert: PathBuf,
     pub tls_key: PathBuf,
-    pub envelope_dir: PathBuf,
+    pub tantivy_dir: PathBuf,
     pub eml_dir: PathBuf,
     pub log_dir: PathBuf,
 }
@@ -66,7 +67,7 @@ impl Initialize for DataDirManager {
 
 impl DataDirManager {
     pub fn new(root_dir: PathBuf) -> Self {
-        let envelope_dir = if let Some(ref index_dir) = SETTINGS.bichon_index_dir {
+        let index_dir = if let Some(ref index_dir) = SETTINGS.bichon_index_dir {
             PathBuf::from(index_dir)
         } else {
             root_dir.join(ENVELOPE_DIR)
@@ -85,7 +86,7 @@ impl DataDirManager {
             tls_key: root_dir.join(TLS_KEY),
             tls_cert: root_dir.join(TLS_CERT),
             log_dir: root_dir.join(LOG_DIR),
-            envelope_dir,
+            tantivy_dir: index_dir.join(TANTIVY_DIR),
             temp_dir: root_dir.join(TMP_DIR),
             eml_dir,
         }

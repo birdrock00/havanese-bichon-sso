@@ -1,11 +1,27 @@
+//
+// Copyright (c) 2025-2026 rustmailer.com (https://rustmailer.com)
+//
+// This file is part of the Bichon Email Archiving Project
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 use crate::modules::{
-    blob::{manager::ENVELOPE_INDEX_MANAGER, storage::BLOB_MANAGER},
-    cache::imap::mailbox::MailBox,
-    error::BichonResult,
+    cache::imap::mailbox::MailBox, error::BichonResult, store::tantivy::manager::INDEX_MANAGER,
 };
 
 pub async fn delete_mailbox_impl(account_id: u64, mailbox_id: u64) -> BichonResult<()> {
-    let mailbox = MailBox::get(mailbox_id).await?;
+    let mailbox = MailBox::async_get(mailbox_id).await?;
 
     let name = mailbox.name;
     let delimiter = mailbox.delimiter.unwrap_or("/".to_owned());
@@ -26,10 +42,8 @@ pub async fn delete_mailbox_impl(account_id: u64, mailbox_id: u64) -> BichonResu
         MailBox::delete(*id).await?;
     }
 
-    let content_hashes = ENVELOPE_INDEX_MANAGER
+    INDEX_MANAGER
         .delete_mailbox_envelopes(account_id, ids_to_delete.clone())
         .await?;
-
-    BLOB_MANAGER.delete(&content_hashes, &content_hashes)?;
     Ok(())
 }

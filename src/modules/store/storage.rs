@@ -1,3 +1,21 @@
+//
+// Copyright (c) 2025-2026 rustmailer.com (https://rustmailer.com)
+//
+// This file is part of the Bichon Email Archiving Project
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 use crate::modules::{
     common::signal::SIGNAL_MANAGER,
     envelope::extractor::reattach_eml_content,
@@ -6,7 +24,7 @@ use crate::modules::{
 };
 use crate::raise_error;
 use bytes::Bytes;
-use fjall::{CompressionType, Database, Keyspace, KeyspaceCreateOptions, KvSeparationOptions};
+use fjall::{CompressionType, Database, Keyspace, KeyspaceCreateOptions, KvSeparationOptions, config::{BlockSizePolicy, CompressionPolicy}};
 
 use std::{io::Cursor, sync::LazyLock};
 use tokio::{
@@ -78,35 +96,46 @@ impl BlobManager {
 
     pub fn new() -> Self {
         let db = Database::builder(&DATA_DIR_MANAGER.eml_dir)
+        .cache_size(64 * 1024 * 1024)
+        .max_cached_files(Some(400))
+        .max_journaling_size(256 * 1024 * 1024)
             .open()
             .expect("Failed to initialize Fjall database: Check if the directory exists and has write permissions.");
         let email_keyspace = db
             .keyspace("email", || {
                 KeyspaceCreateOptions::default()
-                    .with_kv_separation(Some(
-                        KvSeparationOptions::default()
-                            .separation_threshold(0)
-                            .compression(CompressionType::Lz4)
-                            .file_target_size(128 * 1024 * 1024)
-                            .staleness_threshold(0.5)
-                            .age_cutoff(0.6),
-                    ))
-                    .max_memtable_size(64 * 1024 * 1024)
+                .max_memtable_size(16 * 1024 * 1024)
+                .data_block_size_policy(BlockSizePolicy::all(4 * 1024))
+                .data_block_compression_policy(  
+                    CompressionPolicy::all(CompressionType::Lz4)  
+                )  
+                .with_kv_separation(Some(
+                    KvSeparationOptions::default()
+                        .separation_threshold(0)
+                        .compression(CompressionType::Lz4)
+                        .file_target_size(128 * 1024 * 1024)
+                        .staleness_threshold(0.5)
+                        .age_cutoff(0.6),
+                ))
             })
             .expect("Failed to open 'email' keyspace: The partition metadata might be corrupted or inaccessible.");
 
         let attachments_keyspace = db
             .keyspace("attachments", || {
                 KeyspaceCreateOptions::default()
-                    .with_kv_separation(Some(
-                        KvSeparationOptions::default()
-                            .separation_threshold(0)
-                            .compression(CompressionType::Lz4)
-                            .file_target_size(256 * 1024 * 1024)
-                            .staleness_threshold(0.5)
-                            .age_cutoff(0.6),
-                    ))
-                    .max_memtable_size(64 * 1024 * 1024)
+                .data_block_size_policy(BlockSizePolicy::all(4 * 1024))
+                .data_block_compression_policy(  
+                    CompressionPolicy::all(CompressionType::Lz4)  
+                )
+                .with_kv_separation(Some(
+                    KvSeparationOptions::default()
+                        .separation_threshold(0)
+                        .compression(CompressionType::Lz4)
+                        .file_target_size(256 * 1024 * 1024)
+                        .staleness_threshold(0.5)
+                        .age_cutoff(0.6),
+                ))
+                .max_memtable_size(16 * 1024 * 1024)
             })
             .expect("Failed to open 'attachments' keyspace: Check disk space for blob storage initialization.");
 
@@ -123,6 +152,9 @@ impl BlobManager {
                         match res {
                             Some(eml) => {
                                 Self::process_detached_email(eml, &store, &email_ks, &attach_ks);
+                                while let Ok(next_eml) = receiver.try_recv() {
+                                    Self::process_detached_email(next_eml, &store, &email_ks, &attach_ks);
+                                }
                             }
                             None => {
                                 tracing::info!("BlobManager: All senders dropped, closing storage.");
@@ -176,17 +208,22 @@ impl BlobManager {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
     }
 
-    pub fn delete(
+    pub fn delete<I1, I2>(
         &self,
-        email_content_hashes: &[String],
-        attachment_content_hashes: &[String],
-    ) -> BichonResult<()> {
+        email_content_hashes: I1,
+        attachment_content_hashes: I2,
+    ) -> BichonResult<()>
+    where
+        I1: IntoIterator,
+        I1::Item: AsRef<str>,
+        I2: IntoIterator,
+        I2::Item: AsRef<str> {
         let mut batch = self.db.batch();
         for hash in email_content_hashes {
-            batch.remove(&self.email_keyspace, hash);
+            batch.remove(&self.email_keyspace, hash.as_ref());
         }
         for hash in attachment_content_hashes {
-            batch.remove(&self.attachments_keyspace, hash);
+            batch.remove(&self.attachments_keyspace, hash.as_ref());
         }
         batch
             .commit()

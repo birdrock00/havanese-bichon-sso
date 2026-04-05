@@ -22,7 +22,7 @@ use crate::{
         database::{
             async_filter_by_secondary_key_impl, async_find_impl, batch_delete_impl,
             batch_insert_impl, batch_upsert_impl, delete_impl, filter_by_secondary_key_impl,
-            manager::DB_MANAGER,
+            find_impl, manager::DB_MANAGER,
         },
         error::{code::ErrorCode, BichonResult},
     },
@@ -72,8 +72,18 @@ impl MailBox {
         encode_mailbox_name!(&self.name)
     }
 
-    pub async fn get(id: u64) -> BichonResult<MailBox> {
+    pub async fn async_get(id: u64) -> BichonResult<MailBox> {
         let result = async_find_impl::<MailBox>(DB_MANAGER.envelope_db(), id).await?;
+        Ok(result.ok_or_else(|| {
+            raise_error!(
+                format!("mailbox {} not found", id),
+                ErrorCode::InternalError
+            )
+        })?)
+    }
+
+    pub fn get(id: u64) -> BichonResult<MailBox> {
+        let result = find_impl::<MailBox>(DB_MANAGER.envelope_db(), id)?;
         Ok(result.ok_or_else(|| {
             raise_error!(
                 format!("mailbox {} not found", id),
