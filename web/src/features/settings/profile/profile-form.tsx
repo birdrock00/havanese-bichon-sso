@@ -290,7 +290,7 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
                               {email.charAt(0).toUpperCase()}
                             </div>
                             <div className="flex flex-col min-w-0">
-                              <span className="text-sm font-semibold truncate">
+                              <span className="text-xs font-semibold truncate">
                                 {email}
                               </span>
                               <span className="text-[10px] text-muted-foreground font-mono">

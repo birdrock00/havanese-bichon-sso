@@ -57,18 +57,17 @@ impl BlobManager {
 
     fn process_detached_email(
         eml: DetachedEmail,
-        store: &Database,
         email_ks: &Keyspace,
         attach_ks: &Keyspace,
     ) {
         let (email_hash, email_data) = eml.email;
-        let mut batch = store.batch();
-        let mut needs_commit = false;
+
 
         match email_ks.contains_key(&email_hash) {
             Ok(false) => {
-                batch.insert(email_ks, email_hash.as_bytes(), email_data);
-                needs_commit = true;
+                if let Err(e) = email_ks.insert(email_hash, email_data) {
+                    tracing::error!("CRITICAL: Failed to insert email: {:?}",  e);
+                }
             }
             Err(e) => tracing::error!("Fjall email_ks error: {:?}", e),
             _ => {}
@@ -78,18 +77,13 @@ impl BlobManager {
             for (a_hash, a_data) in attachments {
                 match attach_ks.contains_key(&a_hash) {
                     Ok(false) => {
-                        batch.insert(attach_ks, a_hash.as_bytes(), a_data);
-                        needs_commit = true;
+                        if let Err(e) = attach_ks.insert(a_hash, a_data) {
+                            tracing::error!("CRITICAL: Failed to insert attachment: {:?}", e);
+                        }
                     }
                     Err(e) => tracing::error!("Fjall attach_ks error: {:?}", e),
                     _ => {}
                 }
-            }
-        }
-
-        if needs_commit {
-            if let Err(e) = batch.commit() {
-                tracing::error!("Fjall Batch Commit Error: {:?}", e);
             }
         }
     }
@@ -98,9 +92,12 @@ impl BlobManager {
         let db = Database::builder(&DATA_DIR_MANAGER.eml_dir)
         .cache_size(64 * 1024 * 1024)
         .max_cached_files(Some(400))
-        .max_journaling_size(256 * 1024 * 1024)
+        .journal_compression(CompressionType::None)
+        .max_journaling_size(64 * 1024 * 1024)
             .open()
             .expect("Failed to initialize Fjall database: Check if the directory exists and has write permissions.");
+
+
         let email_keyspace = db
             .keyspace("email", || {
                 KeyspaceCreateOptions::default()
@@ -111,15 +108,15 @@ impl BlobManager {
                 )  
                 .with_kv_separation(Some(
                     KvSeparationOptions::default()
-                        .separation_threshold(0)
+                        .separation_threshold(1024)
                         .compression(CompressionType::Lz4)
-                        .file_target_size(128 * 1024 * 1024)
+                        .file_target_size(512 * 1024 * 1024)
                         .staleness_threshold(0.5)
                         .age_cutoff(0.6),
                 ))
             })
             .expect("Failed to open 'email' keyspace: The partition metadata might be corrupted or inaccessible.");
-
+        
         let attachments_keyspace = db
             .keyspace("attachments", || {
                 KeyspaceCreateOptions::default()
@@ -129,19 +126,18 @@ impl BlobManager {
                 )
                 .with_kv_separation(Some(
                     KvSeparationOptions::default()
-                        .separation_threshold(0)
+                        .separation_threshold(1024)
                         .compression(CompressionType::Lz4)
-                        .file_target_size(256 * 1024 * 1024)
+                        .file_target_size(512 * 1024 * 1024)
                         .staleness_threshold(0.5)
                         .age_cutoff(0.6),
                 ))
                 .max_memtable_size(16 * 1024 * 1024)
             })
             .expect("Failed to open 'attachments' keyspace: Check disk space for blob storage initialization.");
-
+        
         let (sender, mut receiver) = mpsc::channel::<DetachedEmail>(100);
 
-        let store = db.clone();
         let email_ks = email_keyspace.clone();
         let attach_ks = attachments_keyspace.clone();
         let handler = task::spawn(async move {
@@ -151,9 +147,9 @@ impl BlobManager {
                     res = receiver.recv() => {
                         match res {
                             Some(eml) => {
-                                Self::process_detached_email(eml, &store, &email_ks, &attach_ks);
+                                Self::process_detached_email(eml, &email_ks, &attach_ks);
                                 while let Ok(next_eml) = receiver.try_recv() {
-                                    Self::process_detached_email(next_eml, &store, &email_ks, &attach_ks);
+                                    Self::process_detached_email(next_eml, &email_ks, &attach_ks);
                                 }
                             }
                             None => {
@@ -171,7 +167,7 @@ impl BlobManager {
                         );
 
                         while let Some(eml) = receiver.recv().await {
-                            Self::process_detached_email(eml, &store, &email_ks, &attach_ks);
+                            Self::process_detached_email(eml, &email_ks, &attach_ks);
                         }
 
                         tracing::info!("BlobManager: All remaining tasks processed. Closing Fjall.");
