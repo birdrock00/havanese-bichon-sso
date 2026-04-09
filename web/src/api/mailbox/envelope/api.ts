@@ -19,6 +19,7 @@
 
 import { EmailEnvelope, PaginatedResponse } from "@/api";
 import axiosInstance from "@/api/axiosInstance";
+import { Group } from "@/api/system/api";
 import { saveAs } from 'file-saver';
 
 export const get_thread_messages = async (accountId: number, thread_id: string, page: number, page_size: number) => {
@@ -114,22 +115,22 @@ export const restore_message = async (accountId: number, envelopeIds: string[]) 
 
 export interface AttachmentMetadata {
     /**
-     * A collection of unique file extensions found in attachments.
-     * @example ["pdf", "docx", "png"]
+     * Statistics of attachment file extensions (key + count).
+     * @example [{ key: "pdf", count: 10 }, { key: "png", count: 5 }]
      */
-    extensions: string[];
+    extensions: Group[];
 
     /**
-     * A collection of high-level attachment categories.
-     * @example ["document", "image", "archive"]
+     * Statistics of attachment categories (key + count).
+     * @example [{ key: "document", count: 8 }, { key: "image", count: 6 }]
      */
-    categories: string[];
+    categories: Group[];
 
     /**
-     * A collection of unique MIME types (Content-Type) for the attachments.
-     * @example ["application/pdf", "image/jpeg"]
+     * Statistics of attachment MIME types (Content-Type) (key + count).
+     * @example [{ key: "application/pdf", count: 10 }, { key: "image/jpeg", count: 5 }]
      */
-    content_types: string[];
+    content_types: Group[];
 }
 
 

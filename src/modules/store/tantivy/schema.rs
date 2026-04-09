@@ -84,14 +84,13 @@ impl SchemaTools {
         let f_attachments = builder.add_text_field(F_ATTACHMENTS, STORED);
         let f_attachment_content_hash =
             builder.add_text_field(F_ATTACHMENT_CONTENT_HASH, STRING | FAST | STORED);
-        let f_attachment_ext =
-            builder.add_facet_field(F_ATTACHMENT_EXT, FacetOptions::default().set_stored());
+
+        let f_attachment_ext = builder.add_text_field(F_ATTACHMENT_EXT, STRING | FAST | STORED);
         let f_attachment_category =
-            builder.add_facet_field(F_ATTACHMENT_CATEGORY, FacetOptions::default().set_stored());
-        let f_attachment_content_type = builder.add_facet_field(
-            F_ATTACHMENT_CONTENT_TYPE,
-            FacetOptions::default().set_stored(),
-        );
+            builder.add_text_field(F_ATTACHMENT_CATEGORY, STRING | FAST | STORED);
+        let f_attachment_content_type =
+            builder.add_text_field(F_ATTACHMENT_CONTENT_TYPE, STRING | FAST | STORED);
+        
         let f_tags = builder.add_facet_field(F_TAGS, FacetOptions::default().set_stored());
         let f_shard_id = builder.add_u64_field(F_SHARD_ID, INDEXED | STORED | FAST);
 

@@ -126,36 +126,54 @@ impl IndexManager {
         let handler = task::spawn(async move {
             let mut shutdown = SIGNAL_MANAGER.subscribe();
             let mut commit_interval = tokio::time::interval(Duration::from_secs(30));
+            let mut pending_count = 0;
+            let commit_threshold = 1000;
             loop {
                 tokio::select! {
                     maybe_msg = receiver.recv() => {
                         match maybe_msg {
                             Some(doc) => {
-                                let writer = writer.lock().await;
+                                let mut writer = writer.lock().await;
                                 if let Err(e) = writer.add_document(doc) {
                                     eprintln!("[ERROR] Failed to add document: {e:?}");
                                     tracing::error!("Tantivy: Failed to add document: {e:?}");
                                 }
+                                pending_count += 1;
                                 while let Ok(next_doc) = receiver.try_recv() {
                                     let _ = writer.add_document(next_doc);
+                                    pending_count += 1;
+                                }
+                                if pending_count >= commit_threshold {
+                                    tracing::info!("Tantivy: Reached threshold ({}), committing...", pending_count);
+                                    fatal_commit(&mut writer);
+                                    pending_count = 0;
+                                    commit_interval.reset();
                                 }
                             }
                             None => {
                                 tracing::info!("Tantivy: Receiver closed. Finalizing...");
-                                let mut writer = writer.lock().await;
-                                fatal_commit(&mut writer);
+                                if pending_count > 0 {
+                                    let mut writer = writer.lock().await;
+                                    fatal_commit(&mut writer);
+                                }
                                 break;
                             },
                         }
                     }
                     _ = commit_interval.tick() => {
-                        let mut writer = writer.lock().await;
-                        fatal_commit(&mut writer);
+                        if pending_count > 0 {
+                            let mut writer = writer.lock().await;
+                            fatal_commit(&mut writer);
+                            pending_count = 0;
+                            tracing::debug!("Tantivy: Periodic commit finished.");
+                        }
                     }
                     _ = shutdown.recv() => {
                         tracing::info!("Tantivy: Shutdown signal received. Performing final commit...");
-                        let mut writer = writer.lock().await;
-                        fatal_commit(&mut writer);
+                        if pending_count > 0 {
+                            let mut writer = writer.lock().await;
+                            fatal_commit(&mut writer);
+                        }
                         tracing::info!("Tantivy: Shutdown cleanup complete.");
                         break;
                     }
@@ -347,22 +365,21 @@ impl IndexManager {
         }
 
         if let Some(ref extension) = filter.attachment_extension {
-            if let Ok(query) = RegexQuery::from_pattern(extension.as_str(), f.f_attachment_glue) {
-                subqueries.push((Occur::Must, Box::new(query)));
-            }
+            let term = Term::from_field_text(f.f_attachment_ext, extension);
+            let query = TermQuery::new(term, IndexRecordOption::Basic);
+            subqueries.push((Occur::Must, Box::new(query)));
         }
 
         if let Some(ref category) = filter.attachment_category {
-            if let Ok(query) = RegexQuery::from_pattern(category.as_str(), f.f_attachment_glue) {
-                subqueries.push((Occur::Must, Box::new(query)));
-            }
+            let term = Term::from_field_text(f.f_attachment_category, category);
+            let query = TermQuery::new(term, IndexRecordOption::Basic);
+            subqueries.push((Occur::Must, Box::new(query)));
         }
 
         if let Some(ref content_type) = filter.attachment_content_type {
-            if let Ok(query) = RegexQuery::from_pattern(content_type.as_str(), f.f_attachment_glue)
-            {
-                subqueries.push((Occur::Must, Box::new(query)));
-            }
+            let term = Term::from_field_text(f.f_attachment_content_type, content_type);
+            let query = TermQuery::new(term, IndexRecordOption::Basic);
+            subqueries.push((Occur::Must, Box::new(query)));
         }
 
         let start_bound = if let Some(from) = filter.since {
@@ -1168,6 +1185,28 @@ impl IndexManager {
     ) -> BichonResult<AttachmentMetadata> {
         let searcher = self.create_searcher()?;
 
+        let aggregations: Aggregations = serde_json::from_value(json!({
+            "exts": {
+                "terms": {
+                    "field": F_ATTACHMENT_EXT,
+                    "size": 1000
+                }
+            },
+            "cats": {
+                "terms": {
+                    "field": F_ATTACHMENT_CATEGORY,
+                    "size": 1000
+                }
+            },
+            "content_types": {
+                "terms": {
+                    "field": F_ATTACHMENT_CONTENT_TYPE,
+                    "size": 1000
+                }
+            },
+        }))
+        .unwrap();
+
         let query: Box<dyn Query> = match accounts {
             Some(ref ids) if !ids.is_empty() => {
                 let mut subqueries = Vec::new();
@@ -1184,50 +1223,56 @@ impl IndexManager {
             None => Box::new(AllQuery),
         };
 
-        // Extension collector
-        let mut ext_collector = FacetCollector::for_field(F_ATTACHMENT_EXT);
-        ext_collector.add_facet("/");
-
-        // Category collector
-        let mut cat_collector = FacetCollector::for_field(F_ATTACHMENT_CATEGORY);
-        cat_collector.add_facet("/");
-
-        // Content-Type collector
-        let mut type_collector = FacetCollector::for_field(F_ATTACHMENT_CONTENT_TYPE);
-        type_collector.add_facet("/");
-
-        let ext_counts = searcher
-            .search(&query, &ext_collector)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        let cat_counts = searcher
-            .search(&query, &cat_collector)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        let type_counts = searcher
-            .search(&query, &type_collector)
+        let agg_collector = AggregationCollector::from_aggs(aggregations, Default::default());
+        let agg_results = searcher
+            .search(&query, &agg_collector)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
-        let mut metadata = AttachmentMetadata {
-            extensions: HashSet::new(),
-            categories: HashSet::new(),
-            content_types: HashSet::new(),
-        };
-
-        for (facet, _) in ext_counts.get("/") {
-            let val = facet.to_path_string().trim_start_matches('/').to_string();
-            metadata.extensions.insert(val);
+        let mut exts = Vec::with_capacity(20);
+        let extensions = agg_results.0.get("exts").unwrap();
+        if let AggregationResult::BucketResult(BucketResult::Terms { buckets, .. }) = extensions {
+            for entry in buckets {
+                if let Key::Str(ext) = &entry.key {
+                    exts.push(Group {
+                        key: ext.clone(),
+                        count: entry.doc_count,
+                    });
+                }
+            }
         }
 
-        for (facet, _) in cat_counts.get("/") {
-            let val = facet.to_path_string().trim_start_matches('/').to_string();
-            metadata.categories.insert(val);
+        let mut cats = Vec::with_capacity(20);
+        let categories = agg_results.0.get("cats").unwrap();
+        if let AggregationResult::BucketResult(BucketResult::Terms { buckets, .. }) = categories {
+            for entry in buckets {
+                if let Key::Str(cat) = &entry.key {
+                    cats.push(Group {
+                        key: cat.clone(),
+                        count: entry.doc_count,
+                    });
+                }
+            }
         }
 
-        for (facet, _) in type_counts.get("/") {
-            let val = facet.to_path_string().trim_start_matches('/').to_string();
-            metadata.content_types.insert(val);
+        let mut ctypes = Vec::with_capacity(20);
+        let content_types = agg_results.0.get("content_types").unwrap();
+        if let AggregationResult::BucketResult(BucketResult::Terms { buckets, .. }) = content_types
+        {
+            for entry in buckets {
+                if let Key::Str(content_type) = &entry.key {
+                    ctypes.push(Group {
+                        key: content_type.clone(),
+                        count: entry.doc_count,
+                    });
+                }
+            }
         }
 
-        Ok(metadata)
+        Ok(AttachmentMetadata {
+            extensions: exts,
+            categories: cats,
+            content_types: ctypes,
+        })
     }
 
     pub async fn get_dashboard_stats(
@@ -1385,16 +1430,6 @@ impl IndexManager {
                                         "failed to cleanup envelope index"
                                     );
                                 }
-                                //这里要删除eml和attachments, 要先得到content_hash, 似乎有点麻烦，因为id有点多
-                                // if let Err(e) =
-                                //     INDEX_MANAGER.delete_account_envelopes(account_id).await
-                                // {
-                                //     tracing::error!(
-                                //         account_id = account_id,
-                                //         error = %e,
-                                //         "failed to cleanup eml index"
-                                //     );
-                                // }
                             });
                         }
                     }

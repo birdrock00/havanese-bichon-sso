@@ -1,7 +1,8 @@
-use std::{collections::HashSet, io::Cursor};
+use std::io::Cursor;
 
 use crate::{
     modules::{
+        dashboard::Group,
         envelope::extractor::reattach_eml_content,
         error::{code::ErrorCode, BichonResult},
         utils::compute_content_hash,
@@ -15,17 +16,20 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
 pub struct AttachmentMetadata {
-    /// A collection of unique file extensions found in attachments.
-    /// Example: ["pdf", "docx", "png"]
-    pub extensions: HashSet<String>,
+    /// Statistics of attachment file extensions (key + count).
+    /// Each item represents a file extension and its occurrence count.
+    /// Example: [{ key: "pdf", count: 10 }, { key: "png", count: 5 }]
+    pub extensions: Vec<Group>,
 
-    /// A collection of high-level attachment categories.
-    /// Example: ["document", "image", "archive"]
-    pub categories: HashSet<String>,
+    /// Statistics of attachment categories (key + count).
+    /// Each item represents a high-level category and its occurrence count.
+    /// Example: [{ key: "document", count: 8 }, { key: "image", count: 6 }]
+    pub categories: Vec<Group>,
 
-    /// A collection of unique MIME types (Content-Type) for the attachments.
-    /// Example: ["application/pdf", "image/jpeg"]
-    pub content_types: HashSet<String>,
+    /// Statistics of attachment MIME types (Content-Type) (key + count).
+    /// Each item represents a MIME type and its occurrence count.
+    /// Example: [{ key: "application/pdf", count: 10 }, { key: "image/jpeg", count: 5 }]
+    pub content_types: Vec<Group>,
 }
 
 pub async fn retrieve_attachment_content(

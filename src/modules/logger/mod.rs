@@ -19,6 +19,7 @@
 use crate::modules::logger::file::setup_file_logger;
 use crate::modules::settings::cli::SETTINGS;
 use chrono::Local;
+use tracing_log::LogTracer;
 use std::process;
 use tracing::Level;
 use tracing_subscriber::fmt::{format::Writer, time::FormatTime};
@@ -34,6 +35,7 @@ impl FormatTime for LocalTimer {
 }
 
 pub fn initialize_logging() {
+    LogTracer::init().unwrap();
     if SETTINGS.bichon_log_to_file {
         setup_file_logger().unwrap();
     } else {

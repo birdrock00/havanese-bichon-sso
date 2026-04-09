@@ -1,9 +1,5 @@
 use std::collections::HashSet;
-
-use tantivy::{
-    schema::{Facet, Value},
-    TantivyDocument,
-};
+use tantivy::{schema::Value, TantivyDocument};
 
 use crate::{
     modules::{
@@ -66,21 +62,15 @@ impl EnvelopeWithAttachments {
 
                 if let Some(ext) = att.get_extension() {
                     search_terms.push(ext.clone());
-                    doc.add_facet(fields.f_attachment_ext, Facet::from(&format!("/{}", ext)));
+                    doc.add_text(fields.f_attachment_ext, ext);
                 }
                 let category = att.get_category().to_string();
                 search_terms.push(category.clone());
                 let file_type = att.file_type.to_lowercase();
                 search_terms.push(file_type.clone());
 
-                doc.add_facet(
-                    fields.f_attachment_category,
-                    Facet::from(&format!("/{}", category)),
-                );
-                doc.add_facet(
-                    fields.f_attachment_content_type,
-                    Facet::from(&format!("/{}", file_type)),
-                );
+                doc.add_text(fields.f_attachment_category, category);
+                doc.add_text(fields.f_attachment_content_type, file_type);
 
                 doc.add_text(fields.f_attachment_content_hash, &att.content_hash);
             }

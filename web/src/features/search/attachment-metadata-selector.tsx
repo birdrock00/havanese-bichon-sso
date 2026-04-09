@@ -1,14 +1,34 @@
+//
+// Copyright (c) 2025-2026 rustmailer.com (https://rustmailer.com)
+//
+// This file is part of the Bichon Email Archiving Project
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
 import * as React from "react"
 import { Check, X } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "react-i18next"
+import { Group } from "@/api/system/api"
 
 interface MetadataSelectorFieldProps {
     label: string
     value?: string
-    options: string[]
+    options: Group[]
     isLoading: boolean
     onSelect: (val: string | undefined) => void
     onReset: () => void
@@ -27,7 +47,7 @@ export function MetadataSelectorField({
 
     const filteredOptions = React.useMemo(() => {
         return options.filter(opt =>
-            opt.toLowerCase().includes(searchTerm.toLowerCase())
+            opt.key.toLowerCase().includes(searchTerm.toLowerCase())
         )
     }, [options, searchTerm])
 
@@ -76,19 +96,36 @@ export function MetadataSelectorField({
                         className="h-8"
                     />
                     <CommandList className="max-h-[240px]">
-                        {isLoading && <div className="p-4 text-[10px] text-center opacity-50">{t('common.loading')}</div>}
-                        <CommandEmpty className="text-[10px] p-2 text-center">{t('common.noData')}</CommandEmpty>
+                        {isLoading && (
+                            <div className="p-4 text-[10px] text-center opacity-50">
+                                {t('common.loading')}
+                            </div>
+                        )}
+                        <CommandEmpty className="text-[10px] p-2 text-center">
+                            {t('common.noData')}
+                        </CommandEmpty>
+
                         <CommandGroup>
                             {filteredOptions.map((opt) => (
                                 <CommandItem
-                                    key={opt}
+                                    key={opt.key}
                                     onSelect={() => {
-                                        value === opt ? onReset() : onSelect(opt);
+                                        value === opt.key ? onReset() : onSelect(opt.key)
                                     }}
                                     className="flex items-center justify-between py-2 px-3 cursor-pointer text-xs"
                                 >
-                                    <span className="truncate">{opt}</span>
-                                    {value === opt && <Check className="h-3 w-3 text-primary shrink-0" />}
+                                    <span className="truncate">{opt.key}</span>
+
+                                    <div className="flex items-center gap-2">
+                                        {/* count */}
+                                        <span className="text-[10px] text-muted-foreground">
+                                            {opt.count}
+                                        </span>
+
+                                        {value === opt.key && (
+                                            <Check className="h-3 w-3 text-primary shrink-0" />
+                                        )}
+                                    </div>
                                 </CommandItem>
                             ))}
                         </CommandGroup>
