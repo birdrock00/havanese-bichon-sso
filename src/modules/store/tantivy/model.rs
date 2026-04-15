@@ -53,28 +53,21 @@ impl EnvelopeWithAttachments {
         if let Some(ref atts) = self.attachments {
             let atts_json = serde_json::to_string(atts).unwrap_or_else(|_| "[]".to_string());
             doc.add_text(fields.f_attachments, atts_json);
-            let mut search_terms = Vec::new();
-
             for att in atts {
-                if let Some(ref filename) = att.filename {
-                    search_terms.push(filename.clone());
+                if !att.is_inline() {
+                    if let Some(ref filename) = att.filename {
+                        doc.add_text(fields.f_attachment_name, filename);
+                    }
+                    if let Some(ext) = att.get_extension() {
+                        doc.add_text(fields.f_attachment_ext, ext);
+                    }
+                    let category = att.get_category().to_string();
+                    doc.add_text(fields.f_attachment_category, category);
+                    let file_type = att.file_type.to_lowercase();
+                    doc.add_text(fields.f_attachment_content_type, file_type);
                 }
-
-                if let Some(ext) = att.get_extension() {
-                    search_terms.push(ext.clone());
-                    doc.add_text(fields.f_attachment_ext, ext);
-                }
-                let category = att.get_category().to_string();
-                search_terms.push(category.clone());
-                let file_type = att.file_type.to_lowercase();
-                search_terms.push(file_type.clone());
-
-                doc.add_text(fields.f_attachment_category, category);
-                doc.add_text(fields.f_attachment_content_type, file_type);
-
                 doc.add_text(fields.f_attachment_content_hash, &att.content_hash);
             }
-            doc.add_text(fields.f_attachment_glue, search_terms.join(" "));
         }
 
         doc.add_u64(

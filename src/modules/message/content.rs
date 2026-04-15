@@ -50,6 +50,10 @@ pub struct AttachmentInfo {
 }
 
 impl AttachmentInfo {
+    pub fn is_inline(&self) -> bool {
+        self.inline && self.content_id.is_some()
+    }
+
     pub fn get_extension(&self) -> Option<String> {
         self.filename
             .as_deref()

@@ -104,11 +104,15 @@
         "totalEmails": "Total de correos",
         "syncedLocally": "Sincronizado localmente",
         "totalEmailSize": "Tamaño total de correos",
-        "logicalVolume": "Volumen lógico",
+        "logicalVolume": "Tamaño original",
         "localDataFiles": "Archivos de datos locales",
         "actualDiskUsage": "Uso real de disco",
+        "efficiency": "Eficiencia",
+        "saved": "Ahorrado",
+        "dataStorage": "Almacenamiento",
+        "indexSize": "Tamaño índice",
         "metadataSize": "Tamaño de metadatos",
-        "duckdbDatabase": "Basado en el almacenamiento DuckDB",
+        "tantivyDatabase": "Basado en el motor de búsqueda Tantivy",
         "dayTrend": "Tendencia de 30 días",
         "attachments": "Archivos adjuntos",
         "topLists": "Listas principales",
@@ -195,7 +199,7 @@
         "edit": "Editar",
         "delete": "Eliminar",
         "detail": "Detalle",
-        "syncFolders": "Carpetas a sincronizar",
+        "selectMailboxes": "Elegir buzones",
         "oauth2Tokens": "Tokens OAuth2",
         "id": "ID",
         "enabled": "Habilitado",
@@ -223,16 +227,15 @@
         "accountCreationFailed": "Error al crear la cuenta",
         "updateFailed": "Error al actualizar, por favor, inténtalo de nuevo más tarde",
         "creationFailed": "Error al crear, por favor, inténtalo de nuevo más tarde",
-        "selectSyncFolders": "Selecciona carpetas a sincronizar",
         "allMailFolderSelected": "Advertencia: Carpeta 'Todo el correo' seleccionada",
         "accountSyncFoldersUpdated": "Carpetas de sincronización de cuenta actualizadas",
         "accountSyncFoldersUpdateFailed": "Error al actualizar las carpetas de sincronización de cuenta",
         "serverConfiguration": "Configuración del servidor (IMAP)",
-        "syncFoldersTitle": "Carpetas a sincronizar",
+        "selectedMailboxes": "Buzones seleccionados",
         "allMailFolderSelectedDesc": "Seleccionar carpetas con el atributo 'Todo el correo' probablemente resultará en la duplicación de mensajes ya sincronizados de carpetas como Bandeja de entrada y Enviados. Esto podría consumir significativamente más espacio de almacenamiento.",
         "allMailSkipped": "Carpetas predeterminadas seleccionadas. 'Todo el correo' omitido para evitar duplicados.",
         "selectAtLeastOneFolder": "Selecciona al menos una carpeta",
-        "chooseFoldersToSync": "Elige las carpetas a sincronizar para {{email}}. Las carpetas añadidas recientemente comenzarán a descargarse durante el próximo ciclo de sincronización.",
+        "chooseMailboxesToDownload": "Elige los buzones a descargar para {{email}}. Los nuevos buzones se descargarán en el próximo ciclo.",
         "accountDetails": "Detalles de la cuenta",
         "capabilities": "Capacidades",
         "folderLimit": "Límite de carpetas",
@@ -313,23 +316,38 @@
         },
         "viewDetails": "ver detalles",
         "runningState": {
-            "notStarted": "No iniciado",
-            "inProgress": "En curso",
-            "calculating": "Calculando...",
-            "initialSync": "Sincronización inicial",
-            "completed": "Completado",
-            "duration": "Duración",
-            "startTime": "Hora de inicio:",
-            "endTime": "Hora de finalización:",
-            "syncProgress": "Progreso de sincronización",
-            "incrementalSync": "Sincronización incremental",
-            "syncInterval": "Intervalo de sincronización:",
-            "everyMinutes": "Cada {{minutes}} minutos",
-            "errorLogs": "Registros de errores",
-            "noErrorLogs": "No hay registros de errores disponibles.",
-            "noActiveState": "No hay estado activo disponible",
-            "accountNotStarted": "La sincronización de la cuenta podría no haber comenzado todavía",
-            "close": "Cerrar"
+            "message": "Mensaje",
+            "account": {
+                "id": "ID de cuenta"
+            },
+            "tabs": {
+                "active_session": "Sesión activa",
+                "history": "Historial",
+                "global_errors": "Errores globales",
+                "folders": "Buzones",
+                "errors": "Errores"
+            },
+            "loading": {
+                "fetching_account_state": "Obteniendo estado de la cuenta..."
+            },
+            "empty": {
+                "no_active_download": "No hay descargas en curso",
+                "no_errors_current": "Sin errores en la sesión actual",
+                "no_errors_session": "Sin errores en esta sesión",
+                "no_global_errors": "Sin errores globales",
+                "no_history": "Sin historial"
+            },
+            "session": {
+                "status": "Estado",
+                "trigger": "Disparador",
+                "started_at": "Hora de inicio"
+            },
+            "common": {
+                "folders": "buzones",
+                "close": "Cerrar"
+            },
+            "latest": "RECIENTE",
+            "folders": "buzones"
         },
         "steps": {
             "complete": "Completado",

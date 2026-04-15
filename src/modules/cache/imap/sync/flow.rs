@@ -18,7 +18,10 @@
 
 use crate::{
     modules::{
-        account::{migration::AccountModel, state::AccountRunningState},
+        account::{
+            migration::AccountModel,
+            state::{DownloadState, DownloadStatus, FolderStatus},
+        },
         cache::{
             imap::{
                 find_intersecting_mailboxes, find_missing_mailboxes,
@@ -38,9 +41,10 @@ use crate::{
 };
 use std::{sync::Arc, time::Instant};
 use tokio::sync::Semaphore;
+use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
-pub const DEFAULT_BATCH_SIZE: u32 = 50;
+pub const DEFAULT_BATCH_SIZE: u32 = 30;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FetchDirection {
@@ -53,9 +57,26 @@ pub async fn fetch_and_save_by_date(
     date: &str,
     mailbox: &MailBox,
     direction: FetchDirection,
-) -> BichonResult<usize> {
+    token: CancellationToken,
+) -> BichonResult<()> {
     let account_id = account.id;
-    let mut session = ImapExecutor::create_connection(account_id).await?;
+    let mut session = match ImapExecutor::create_connection(account_id).await {
+        Ok(session) => session,
+        Err(e) => {
+            let err_msg = format!("Connection failed for this folder: {:#?}", e);
+            DownloadState::update_folder_progress(
+                account_id,
+                mailbox.name.clone(),
+                0,
+                0,
+                FolderStatus::Failed,
+                Some(err_msg.clone()),
+            )
+            .await?;
+            DownloadState::append_session_error(account_id, err_msg).await?;
+            return Err(e);
+        }
+    };
 
     let search_criteria = match direction {
         FetchDirection::Since => format!("SINCE {date}"),
@@ -63,11 +84,38 @@ pub async fn fetch_and_save_by_date(
     };
 
     let uid_list =
-        ImapExecutor::uid_search(&mut session, &mailbox.encoded_name(), &search_criteria).await?;
+        match ImapExecutor::uid_search(&mut session, &mailbox.encoded_name(), &search_criteria)
+            .await
+        {
+            Ok(uid_list) => uid_list,
+            Err(e) => {
+                let err_msg = format!("UID search failed in [{}]: {:#?}", mailbox.name, e);
+                DownloadState::update_folder_progress(
+                    account_id,
+                    mailbox.name.clone(),
+                    0,
+                    0,
+                    FolderStatus::Failed,
+                    Some(err_msg.clone()),
+                )
+                .await?;
+                DownloadState::append_session_error(account_id, err_msg).await?;
+                return Err(e);
+            }
+        };
 
     let len = uid_list.len();
     if len == 0 {
-        return Ok(0);
+        DownloadState::update_folder_progress(
+            account_id,
+            mailbox.name.clone(),
+            0,
+            0,
+            FolderStatus::Success,
+            None,
+        )
+        .await?;
+        return Ok(());
     }
 
     let folder_limit = account.folder_limit;
@@ -88,53 +136,156 @@ pub async fn fetch_and_save_by_date(
         }
     }
 
-    // let semaphore = Arc::new(Semaphore::new(5));
-
+    let planned = uid_vec.len() as u64;
     let uid_batches = generate_uid_sequence_hashset(
         uid_vec,
         account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE) as usize,
         false,
     );
-    AccountRunningState::set_initial_current_syncing_folder(
+    DownloadState::update_folder_progress(
         account_id,
         mailbox.name.clone(),
-        uid_batches.len() as u32,
+        planned,
+        0,
+        FolderStatus::Pending,
+        None,
     )
     .await?;
-    for (index, batch) in uid_batches.into_iter().enumerate() {
-        AccountRunningState::set_current_sync_batch_number(
-            account_id,
-            mailbox.name.clone(),
-            (index + 1) as u32,
-        )
-        .await?;
 
+    let mut current_processed = 0u64;
+    let mut has_error_or_cancel = false;
+    for (index, batch) in uid_batches.into_iter().enumerate() {
+        if token.is_cancelled() {
+            DownloadState::update_session_status(
+                account_id,
+                DownloadStatus::Cancelled,
+                Some("User stopped or system shutdown".to_string()),
+            )
+            .await?;
+            DownloadState::update_folder_progress(
+                account_id,
+                mailbox.name.clone(),
+                planned,
+                current_processed,
+                FolderStatus::Cancelled,
+                None,
+            )
+            .await?;
+            has_error_or_cancel = true;
+            break;
+        }
         // Fetch metadata for the current batch of UIDs
-        ImapExecutor::uid_batch_retrieve_emails(
+        match ImapExecutor::uid_batch_retrieve_emails(
             &mut session,
             account_id,
             mailbox.id,
-            &batch,
-            &mailbox.encoded_name(),
+            &batch.0,
+            token.clone(),
+        )
+        .await
+        {
+            Ok(_) => {
+                current_processed += batch.1;
+                DownloadState::update_folder_progress(
+                    account_id,
+                    mailbox.name.clone(),
+                    planned,
+                    current_processed,
+                    FolderStatus::Downloading,
+                    None,
+                )
+                .await?;
+            }
+            Err(e) => {
+                let err_msg = format!("Batch {} failed: {:#?}", index, e);
+                DownloadState::append_session_error(account_id, err_msg.clone()).await?;
+                DownloadState::update_folder_progress(
+                    account_id,
+                    mailbox.name.clone(),
+                    planned,
+                    current_processed,
+                    FolderStatus::Failed,
+                    Some(err_msg),
+                )
+                .await?;
+                has_error_or_cancel = true;
+                break;
+            }
+        }
+    }
+    if !has_error_or_cancel {
+        DownloadState::update_folder_progress(
+            account_id,
+            mailbox.name.clone(),
+            planned,
+            current_processed,
+            FolderStatus::Success,
+            None,
         )
         .await?;
     }
     session.logout().await.ok();
-    Ok(len)
+    Ok(())
 }
 
 pub async fn fetch_and_save_full_mailbox(
     account: &AccountModel,
     mailbox: &MailBox,
-    total: u32,
-) -> BichonResult<usize> {
+    token: CancellationToken,
+) -> BichonResult<()> {
     let mailbox_id = mailbox.id;
     let account_id = account.id;
+
+    let mut session = match ImapExecutor::create_connection(account_id).await {
+        Ok(session) => session,
+        Err(e) => {
+            let err_msg = format!("Connection failed for this folder: {:#?}", e);
+            DownloadState::update_folder_progress(
+                account_id,
+                mailbox.name.clone(),
+                0,
+                0,
+                FolderStatus::Failed,
+                Some(err_msg.clone()),
+            )
+            .await?;
+            DownloadState::append_session_error(account_id, err_msg).await?;
+            return Err(e);
+        }
+    };
+
+    let total = match session.examine(&mailbox.encoded_name()).await {
+        Ok(mailbox) => mailbox.exists as u64,
+        Err(e) => {
+            let err_msg = format!("Failed to examine folder [{}]: {:#?}", mailbox.name, e);
+            DownloadState::update_folder_progress(
+                account_id,
+                mailbox.name.clone(),
+                mailbox.exists as u64,
+                0,
+                FolderStatus::Failed,
+                Some(err_msg.clone()),
+            )
+            .await?;
+
+            DownloadState::append_session_error(account_id, err_msg).await?;
+            session.logout().await.ok();
+            return Err(raise_error!(
+                format!("{:#?}", e),
+                ErrorCode::ImapCommandFailed
+            ));
+        }
+    };
+
     let folder_limit = account.folder_limit;
     let total_to_fetch = match folder_limit {
-        Some(limit) if limit < total => total.min(limit.max(100)),
+        Some(limit) if (limit as u64) < total => {
+            let limit64 = limit as u64;
+            total.min(limit64.max(100))
+        }
         _ => total,
     };
+
     let page_size = if let Some(limit) = folder_limit {
         limit
             .max(100)
@@ -143,73 +294,102 @@ pub async fn fetch_and_save_full_mailbox(
         account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE)
     };
 
-    let total_batches = total_to_fetch.div_ceil(page_size);
+    let total_batches = total_to_fetch.div_ceil(page_size as u64);
     let desc = folder_limit.is_some();
 
-    let mut inserted_count = 0;
-
-    AccountRunningState::set_initial_current_syncing_folder(
-        account_id,
-        mailbox.name.clone(),
-        total_batches,
-    )
-    .await?;
     info!(
-        "Starting full mailbox sync for '{}', total={}, limit={:?}, batches={}, desc={}",
+        "Starting full mailbox download for '{}', total={}, limit={:?}, batches={}, desc={}",
         mailbox.name, total, folder_limit, total_batches, desc
     );
 
-    let mut session = ImapExecutor::create_connection(account_id).await?;
+    let mut current_processed = 0u64;
+    let mut has_error_or_cancel = false;
 
     for page in 1..=total_batches {
-        AccountRunningState::set_current_sync_batch_number(account_id, mailbox.name.clone(), page)
+        if token.is_cancelled() {
+            DownloadState::update_session_status(
+                account_id,
+                DownloadStatus::Cancelled,
+                Some("User stopped or system shutdown".to_string()),
+            )
             .await?;
-        let count = ImapExecutor::batch_retrieve_emails(
+            DownloadState::update_folder_progress(
+                account_id,
+                mailbox.name.clone(),
+                total_to_fetch,
+                current_processed,
+                FolderStatus::Cancelled,
+                None,
+            )
+            .await?;
+            has_error_or_cancel = true;
+            break;
+        }
+
+        match ImapExecutor::batch_retrieve_emails(
             &mut session,
             account_id,
             mailbox_id,
+            total_to_fetch,
             page as u64,
             page_size as u64,
             &mailbox.encoded_name(),
             desc,
+            token.clone(),
+        )
+        .await
+        {
+            Ok(count) => {
+                current_processed += count as u64;
+                DownloadState::update_folder_progress(
+                    account_id,
+                    mailbox.name.clone(),
+                    total_to_fetch,
+                    current_processed,
+                    FolderStatus::Downloading,
+                    None,
+                )
+                .await?;
+            }
+            Err(e) => {
+                let err_msg = format!("Batch {} failed: {:#?}", page, e);
+                DownloadState::append_session_error(account_id, err_msg.clone()).await?;
+                DownloadState::update_folder_progress(
+                    account_id,
+                    mailbox.name.clone(),
+                    total_to_fetch,
+                    current_processed,
+                    FolderStatus::Failed,
+                    Some(err_msg),
+                )
+                .await?;
+                has_error_or_cancel = true;
+                break;
+            }
+        };
+    }
+
+    if !has_error_or_cancel {
+        DownloadState::update_folder_progress(
+            account_id,
+            mailbox.name.clone(),
+            total_to_fetch,
+            current_processed,
+            FolderStatus::Success,
+            None,
         )
         .await?;
-        inserted_count += count;
-        info!(
-            "Batch insertion completed for mailbox: {}, current page: {}, inserted count: {}",
-            &mailbox.name, page, count
-        );
     }
     session.logout().await.ok();
-    Ok(inserted_count)
+    Ok(())
 }
 
-/// # Example
-///
-/// ```rust
-/// use std::collections::HashSet;
-///
-/// let mut uids = HashSet::new();
-/// uids.extend([1, 2, 3, 5, 6, 7, 9, 10, 11, 15]);
-///
-/// let chunks = generate_uid_sequence_hashset(uids, 6, false);
-/// assert_eq!(chunks, vec![
-///     "1:3,5:7".to_string(),
-///     "9:11,15".to_string()
-/// ]);
-/// ```
-///
-/// This splits the UIDs into chunks of 6, compresses each chunk into ranges,
-/// and returns a vector like: `["1:3,5:7", "9:11,15"]`.
-///
 pub fn generate_uid_sequence_hashset(
     unique_nums: Vec<u32>,
     chunk_size: usize,
     desc: bool,
-) -> Vec<String> {
+) -> Vec<(String, u64)> {
     assert!(!unique_nums.is_empty());
-    // let mut nums: Vec<u32> = unique_nums.into_iter().collect();
-    // nums.sort();
     let mut nums = unique_nums;
     if desc {
         nums.reverse();
@@ -218,8 +398,9 @@ pub fn generate_uid_sequence_hashset(
     let mut result = Vec::new();
 
     for chunk in nums.chunks(chunk_size) {
+        let size = chunk.len() as u64;
         let compressed = compress_uid_list(chunk.to_vec());
-        result.push(compressed);
+        result.push((compressed, size));
     }
 
     result
@@ -264,19 +445,50 @@ pub async fn reconcile_mailboxes(
     account: &AccountModel,
     remote_mailboxes: &[MailBox],
     local_mailboxes: &[MailBox],
+    token: CancellationToken,
 ) -> BichonResult<()> {
     let start_time = Instant::now();
     let existing_mailboxes = find_intersecting_mailboxes(local_mailboxes, remote_mailboxes);
     let account_id = account.id;
     if !existing_mailboxes.is_empty() {
         let mut mailboxes_to_update = Vec::with_capacity(existing_mailboxes.len());
+
+        DownloadState::init_folder_details(
+            account.id,
+            remote_mailboxes.iter().map(|m| m.name.clone()).collect(),
+        )
+        .await?;
+
         for (local_mailbox, remote_mailbox) in &existing_mailboxes {
+            if token.is_cancelled() {
+                DownloadState::update_session_status(
+                    account.id,
+                    DownloadStatus::Cancelled,
+                    Some("Received termination signal (User stop or System shutdown)".to_string()),
+                )
+                .await?;
+                break;
+            }
+
             if local_mailbox.uid_validity != remote_mailbox.uid_validity {
                 if remote_mailbox.uid_validity.is_none() {
-                    warn!(
-                        "Account {}: Mailbox '{}' has invalid uid_validity (None). Skipping sync for this mailbox.",
-                        account_id, local_mailbox.name
+                    let err_msg = format!(
+                        "Mailbox '{}' logic error: Server did not provide UIDVALIDITY.",
+                        local_mailbox.name
                     );
+
+                    warn!("Account {}: {}", account_id, err_msg);
+
+                    DownloadState::update_folder_progress(
+                        account_id,
+                        remote_mailbox.name.clone(),
+                        0,
+                        0,
+                        FolderStatus::Failed,
+                        Some(err_msg.clone()),
+                    )
+                    .await?;
+                    DownloadState::append_session_error(account_id, err_msg).await?;
                     continue;
                 }
                 info!(
@@ -284,6 +496,16 @@ pub async fn reconcile_mailboxes(
                     The mailbox data may be invalid, resetting its envelopes and rebuilding the cache.",
                     account_id, local_mailbox.name, &local_mailbox.uid_validity, &remote_mailbox.uid_validity
                 );
+
+                DownloadState::update_folder_progress(
+                    account_id,
+                    local_mailbox.name.clone(),
+                    remote_mailbox.exists as u64,
+                    0,
+                    FolderStatus::Downloading,
+                    Some("UID validity changed, rebuilding...".into()),
+                )
+                .await?;
 
                 match &account.date_since {
                     Some(date_since) => {
@@ -293,6 +515,7 @@ pub async fn reconcile_mailboxes(
                             &date_since.since_date()?,
                             remote_mailbox,
                             FetchDirection::Since,
+                            token.clone(),
                         )
                         .await?;
                     }
@@ -304,25 +527,24 @@ pub async fn reconcile_mailboxes(
                                 &r.calculate_date()?,
                                 remote_mailbox,
                                 FetchDirection::Before,
+                                token.clone(),
                             )
                             .await?;
                         }
                         None => {
-                            rebuild_mailbox_cache(account, local_mailbox, remote_mailbox).await?
+                            rebuild_mailbox_cache(
+                                account,
+                                local_mailbox,
+                                remote_mailbox,
+                                token.clone(),
+                            )
+                            .await?
                         }
                     },
                 }
             } else {
-                perform_incremental_sync(account, local_mailbox, remote_mailbox).await?;
-            }
-            if let Some(state) = AccountRunningState::get(account.id).await? {
-                if !state.is_initial_sync_completed {
-                    AccountRunningState::set_folder_initial_sync_completed(
-                        account_id,
-                        local_mailbox.name.clone(),
-                    )
+                perform_incremental_sync(account, local_mailbox, remote_mailbox, token.clone())
                     .await?;
-                }
             }
 
             mailboxes_to_update.push(remote_mailbox.clone());
@@ -339,17 +561,25 @@ pub async fn reconcile_mailboxes(
     );
 
     let missing_mailboxes = find_missing_mailboxes(local_mailboxes, remote_mailboxes);
+    //Mail folders that are not locally need to be downloaded.
     if !missing_mailboxes.is_empty() {
         MailBox::batch_insert(&missing_mailboxes).await?;
         let mut handles = Vec::new();
-
         for mailbox in &missing_mailboxes {
+            if token.is_cancelled() {
+                DownloadState::update_session_status(
+                    account.id,
+                    DownloadStatus::Cancelled,
+                    Some("Received termination signal (User stop or System shutdown)".to_string()),
+                )
+                .await?;
+                break;
+            }
             if mailbox.exists > 0 {
                 let account = account.clone();
                 let mailbox = mailbox.clone();
 
                 let local_semaphore = Arc::new(Semaphore::new(DEFAULT_MAX_CONCURRENT_PER_ACCOUNT));
-
                 let global_permit = match SEMAPHORE.clone().acquire_owned().await {
                     Ok(permit) => permit,
                     Err(err) => {
@@ -372,12 +602,11 @@ pub async fn reconcile_mailboxes(
                         continue;
                     }
                 };
-
+                let token_clone = token.clone();
                 let handle: tokio::task::JoinHandle<Result<(), BichonError>> =
                     tokio::spawn(async move {
                         let _global_permit = global_permit;
                         let _local_permit = local_permit;
-
                         match &account.date_since {
                             Some(date_since) => {
                                 rebuild_mailbox_cache_by_date(
@@ -386,6 +615,7 @@ pub async fn reconcile_mailboxes(
                                     &date_since.since_date()?,
                                     &mailbox,
                                     FetchDirection::Since,
+                                    token_clone,
                                 )
                                 .await
                             }
@@ -397,10 +627,14 @@ pub async fn reconcile_mailboxes(
                                         &r.calculate_date()?,
                                         &mailbox,
                                         FetchDirection::Before,
+                                        token_clone,
                                     )
                                     .await
                                 }
-                                None => rebuild_mailbox_cache(&account, &mailbox, &mailbox).await,
+                                None => {
+                                    rebuild_mailbox_cache(&account, &mailbox, &mailbox, token_clone)
+                                        .await
+                                }
                             },
                         }
                     });
@@ -408,12 +642,31 @@ pub async fn reconcile_mailboxes(
             }
         }
 
+        let mut has_error = false;
+        let mut last_err = None;
+
         for task in handles {
             match task.await {
-                Ok(Ok(())) => {}
-                Ok(Err(err)) => return Err(err),
-                Err(e) => return Err(raise_error!(format!("{:#?}", e), ErrorCode::InternalError)),
+                Ok(Ok(_)) => {}
+                Ok(Err(err)) => {
+                    has_error = true;
+                    tracing::error!("Folder sync task failed: {:#?}", err);
+                    last_err = Some(err);
+                }
+                Err(e) => {
+                    has_error = true;
+                    tracing::error!("Task panicked or runtime error: {:#?}", e);
+                }
             }
+        }
+        if has_error {
+            if let Some(e) = last_err {
+                return Err(e);
+            }
+            return Err(raise_error!(
+                "Some tasks failed".into(),
+                ErrorCode::InternalError
+            ));
         }
     }
     Ok(())
@@ -424,6 +677,7 @@ async fn perform_incremental_sync(
     account: &AccountModel,
     local_mailbox: &MailBox,
     remote_mailbox: &MailBox,
+    token: CancellationToken,
 ) -> BichonResult<()> {
     if remote_mailbox.exists > 0 {
         let local_max_uid = INDEX_MANAGER
@@ -444,6 +698,7 @@ async fn perform_incremental_sync(
                     local_mailbox,
                     max_uid + 1,
                     before_date.as_deref(),
+                    token,
                 )
                 .await?;
                 session.logout().await.ok();
@@ -460,12 +715,12 @@ async fn perform_incremental_sync(
                             date_since.since_date()?.as_str(),
                             remote_mailbox,
                             FetchDirection::Since,
+                            token,
                         )
                         .await?;
                     }
                     None => {
-                        fetch_and_save_full_mailbox(account, remote_mailbox, remote_mailbox.exists)
-                            .await?;
+                        fetch_and_save_full_mailbox(account, remote_mailbox, token).await?;
                     }
                 }
             }

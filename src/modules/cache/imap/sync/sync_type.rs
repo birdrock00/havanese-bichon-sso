@@ -18,47 +18,50 @@
 
 use crate::{
     modules::{
-        account::{migration::AccountModel, state::AccountRunningState},
+        account::{
+            migration::AccountModel,
+            state::{DownloadState, TriggerType},
+        },
         error::BichonResult,
     },
     utc_now,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum SyncType {
-    /// Initial sync, used when fetching all messages for the first time.
-    InitialSync,
-    /// Incremental synchronization, typically used for updates or fetching new data since the last sync.
-    IncrementalSync,
-    /// Skip synchronization, used when it's not yet time to perform the next sync.
-    SkipSync,
+pub enum DownloadTask {
+    FullFetch,
+    TraceFetch,
+    Idle,
 }
 
-pub async fn determine_sync_type(account: &AccountModel) -> BichonResult<SyncType> {
-    Ok(match AccountRunningState::get(account.id).await? {
-        Some(info) => {
-            let now = utc_now!();
-            let incremental_sync = is_time_for_incremental_sync(
-                now,
-                info.last_incremental_sync_start,
+pub async fn decide_next_download_task(account: &AccountModel) -> BichonResult<DownloadTask> {
+    Ok(match DownloadState::get(account.id).await? {
+        Some(state) => {
+            let should_trigger = should_trigger_next_download(
+                state.last_trigger_at,
+                state.last_finished_at.unwrap_or(0),
                 account.sync_interval_min.unwrap(),
             );
 
-            if incremental_sync {
-                SyncType::IncrementalSync
+            if should_trigger {
+                DownloadState::start_new_session(account.id, TriggerType::Scheduled).await?;
+                DownloadTask::TraceFetch
             } else {
-                SyncType::SkipSync
+                DownloadTask::Idle
             }
         }
-        None => SyncType::InitialSync,
+        None => {
+            DownloadState::init(account.id).await?;
+            DownloadTask::FullFetch
+        }
     })
 }
 
-/// Check if it's time for an incremental sync based on the provided interval.
-fn is_time_for_incremental_sync(
-    now: i64,
-    last_incremental_sync_at: i64,
+fn should_trigger_next_download(
+    last_trigger_at: i64,
+    last_finished_at: i64,
     sync_interval_min: i64,
 ) -> bool {
-    now - last_incremental_sync_at > (sync_interval_min * 60 * 1000)
+    let now = utc_now!();
+    now - last_trigger_at > (sync_interval_min * 60 * 1000) && now - last_finished_at > 60 * 1000
 }

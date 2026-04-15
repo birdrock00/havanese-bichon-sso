@@ -104,11 +104,15 @@
     "totalEmails": "Total Emails",
     "syncedLocally": "Synced locally",
     "totalEmailSize": "Total Email Size",
-    "logicalVolume": "Logical volume",
+    "logicalVolume": "Original Size",
     "localDataFiles": "Local Data Files",
     "actualDiskUsage": "Actual disk usage",
+    "efficiency": "Efficiency",
+    "saved": "Saved",
+    "dataStorage": "Storage",
+    "indexSize": "Index",
     "metadataSize": "Metadata Size",
-    "duckdbDatabase": "Based on DuckDB Storage",
+    "tantivyDatabase": "Based on Tantivy Search Engine",
     "dayTrend": "30-Day Trend",
     "attachments": "Attachments",
     "topLists": "Top Lists",
@@ -195,7 +199,7 @@
     "edit": "Edit",
     "delete": "Delete",
     "detail": "Detail",
-    "syncFolders": "Sync Folders",
+    "selectMailboxes": "Choose Mailboxes",
     "oauth2Tokens": "OAuth2 Tokens",
     "id": "ID",
     "enabled": "Enabled",
@@ -223,16 +227,15 @@
     "accountCreationFailed": "Account Creation Failed",
     "updateFailed": "Update failed, please try again later",
     "creationFailed": "Creation failed, please try again later",
-    "selectSyncFolders": "Select Sync Folders",
     "allMailFolderSelected": "Heads Up: \"All Mail\" Folder Selected",
     "accountSyncFoldersUpdated": "Account Sync Folders Updated",
     "accountSyncFoldersUpdateFailed": "Account Sync Folders Update Failed",
     "serverConfiguration": "Server Configuration (IMAP)",
-    "syncFoldersTitle": "Sync Folders",
+    "selectedMailboxes": "Selected Mailboxes",
     "allMailFolderSelectedDesc": "Selecting folders with the \"All Mail\" attribute will likely lead to duplicating messages already synced from folders like Inbox and Sent. This may consume significantly more storage space.",
     "allMailSkipped": "Selected standard folders. 'All Mail' was skipped to avoid duplicates.",
     "selectAtLeastOneFolder": "Please select at least one folder",
-    "chooseFoldersToSync": "Choose folders to sync for {{email}}, Newly added folders will begin downloading during the next sync cycle.",
+    "chooseMailboxesToDownload": "Choose mailboxes to download for {{email}}. Newly added mailboxes will be downloaded in the next cycle.",
     "accountDetails": "Account Details",
     "capabilities": "Capabilities",
     "folderLimit": "Folder Limit",
@@ -313,23 +316,38 @@
     },
     "viewDetails": "view details",
     "runningState": {
-      "notStarted": "Not Started",
-      "inProgress": "In Progress",
-      "calculating": "Calculating...",
-      "initialSync": "Initial Sync",
-      "completed": "Completed",
-      "duration": "Duration",
-      "startTime": "Start Time:",
-      "endTime": "End Time:",
-      "syncProgress": "Sync Progress",
-      "incrementalSync": "Incremental Sync",
-      "syncInterval": "Sync Interval:",
-      "everyMinutes": "Every {{minutes}} minutes",
-      "errorLogs": "Error Logs",
-      "noErrorLogs": "No error logs available.",
-      "noActiveState": "No active state available",
-      "accountNotStarted": "Account synchronization may not have started yet",
-      "close": "Close"
+      "message": "Message",
+      "account": {
+        "id": "Account ID"
+      },
+      "tabs": {
+        "active_session": "Active Session",
+        "history": "History",
+        "global_errors": "Global Errors",
+        "folders": "Mailboxes",
+        "errors": "Errors"
+      },
+      "loading": {
+        "fetching_account_state": "Fetching account state..."
+      },
+      "empty": {
+        "no_active_download": "No download in progress",
+        "no_errors_current": "No errors in current session",
+        "no_errors_session": "No errors in this session",
+        "no_global_errors": "No global errors",
+        "no_history": "No historical records found"
+      },
+      "session": {
+        "status": "Status",
+        "trigger": "Trigger",
+        "started_at": "Started At"
+      },
+      "common": {
+        "folders": "mailboxes",
+        "close": "Close"
+      },
+      "latest": "LATEST",
+      "folders": "mailboxes"
     },
     "steps": {
       "complete": "Complete",

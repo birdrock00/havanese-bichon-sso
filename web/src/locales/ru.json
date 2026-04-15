@@ -104,11 +104,15 @@
         "totalEmails": "Всего писем",
         "syncedLocally": "Синхронизировано локально",
         "totalEmailSize": "Общий размер писем",
-        "logicalVolume": "Логический объем",
+        "logicalVolume": "Оригинальный размер",
         "localDataFiles": "Локальные файлы данных",
         "actualDiskUsage": "Фактическое использование диска",
+        "efficiency": "Эффективность",
+        "saved": "Сэкономлено",
+        "dataStorage": "Хранилище",
+        "indexSize": "Размер индекса",
         "metadataSize": "Размер метаданных",
-        "duckdbDatabase": "На базе хранилища DuckDB",
+        "tantivyDatabase": "На базе поискового движка Tantivy",
         "dayTrend": "Тренд за 30 дней",
         "attachments": "Вложения",
         "topLists": "Топ списки",
@@ -195,7 +199,7 @@
         "edit": "Ред.",
         "delete": "Удалить",
         "detail": "Подробно",
-        "syncFolders": "Папки синхр.",
+        "selectMailboxes": "Выбрать почтовые ящики",
         "oauth2Tokens": "Токены OAuth2",
         "id": "ID",
         "enabled": "Включено",
@@ -223,16 +227,15 @@
         "accountCreationFailed": "Ошибка создания аккаунта",
         "updateFailed": "Ошибка обновления, попробуйте позже",
         "creationFailed": "Ошибка создания, попробуйте позже",
-        "selectSyncFolders": "Выберите папки для синхронизации",
         "allMailFolderSelected": "Внимание: Выбрана папка \"Вся почта\"",
         "accountSyncFoldersUpdated": "Папки синхронизации обновлены",
         "accountSyncFoldersUpdateFailed": "Не удалось обновить папки синхронизации",
         "serverConfiguration": "Конфигурация сервера (IMAP)",
-        "syncFoldersTitle": "Папки синхронизации",
+        "selectedMailboxes": "Выбранные почтовые ящики",
         "allMailFolderSelectedDesc": "Выбор папок с атрибутом \"Вся почта\" скорее всего приведет к дублированию сообщений, уже синхронизированных из папок \"Входящие\" и \"Отправленные\". Это может занять значительно больше места.",
         "allMailSkipped": "Выбраны стандартные папки. Папка 'Вся почта' пропущена во избежание дубликатов.",
         "selectAtLeastOneFolder": "Пожалуйста, выберите хотя бы одну папку",
-        "chooseFoldersToSync": "Выберите папки для синхронизации для {{email}}. Новые добавленные папки начнут загружаться во время следующего цикла синхронизации.",
+        "chooseMailboxesToDownload": "Выберите почтовые ящики для загрузки для {{email}}. Новые ящики будут загружены в следующем цикле.",
         "accountDetails": "Детали аккаунта",
         "capabilities": "Возможности",
         "folderLimit": "Лимит папки",
@@ -313,23 +316,38 @@
         },
         "viewDetails": "смотреть детали",
         "runningState": {
-            "notStarted": "Не начато",
-            "inProgress": "В процессе",
-            "calculating": "Вычисление...",
-            "initialSync": "Начальная синхронизация",
-            "completed": "Завершено",
-            "duration": "Длительность",
-            "startTime": "Время начала:",
-            "endTime": "Время окончания:",
-            "syncProgress": "Прогресс синхронизации",
-            "incrementalSync": "Инкрементальная синхронизация",
-            "syncInterval": "Интервал синхронизации:",
-            "everyMinutes": "Каждые {{minutes}} минут",
-            "errorLogs": "Журнал ошибок",
-            "noErrorLogs": "Журналы ошибок отсутствуют.",
-            "noActiveState": "Нет активного состояния",
-            "accountNotStarted": "Синхронизация аккаунта, возможно, еще не началась",
-            "close": "Закрыть"
+            "message": "Сообщение",
+            "account": {
+                "id": "ID аккаунта"
+            },
+            "tabs": {
+                "active_session": "Активная сессия",
+                "history": "История",
+                "global_errors": "Глобальные ошибки",
+                "folders": "Почтовые ящики",
+                "errors": "Ошибки"
+            },
+            "loading": {
+                "fetching_account_state": "Загрузка состояния аккаунта..."
+            },
+            "empty": {
+                "no_active_download": "Нет активных загрузок",
+                "no_errors_current": "Нет ошибок в текущей сессии",
+                "no_errors_session": "Нет ошибок в этой сессии",
+                "no_global_errors": "Нет глобальных ошибок",
+                "no_history": "Нет истории"
+            },
+            "session": {
+                "status": "Статус",
+                "trigger": "Триггер",
+                "started_at": "Время начала"
+            },
+            "common": {
+                "folders": "почтовые ящики",
+                "close": "Закрыть"
+            },
+            "latest": "ПОСЛЕДНЕЕ",
+            "folders": "почтовые ящики"
         },
         "steps": {
             "complete": "Завершено",

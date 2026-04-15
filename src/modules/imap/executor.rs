@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::modules::account::migration::AccountModel;
-use crate::modules::account::state::AccountRunningState;
+use crate::modules::account::state::{DownloadState, FolderStatus};
 use crate::modules::cache::imap::mailbox::MailBox;
 use crate::modules::cache::imap::sync::flow::{generate_uid_sequence_hashset, DEFAULT_BATCH_SIZE};
 use crate::modules::envelope::extractor::extract_envelope_and_store_it;
@@ -29,6 +29,7 @@ use async_imap::types::Name;
 use async_imap::Session;
 use futures::TryStreamExt;
 use std::collections::HashSet;
+use tokio_util::sync::CancellationToken;
 use tracing::info;
 
 const BODY_FETCH_COMMAND: &str = "(UID INTERNALDATE RFC822.SIZE BODY.PEEK[])";
@@ -85,6 +86,7 @@ impl ImapExecutor {
         mailbox: &MailBox,
         start_uid: u64,
         before: Option<&str>,
+        token: CancellationToken,
     ) -> BichonResult<()> {
         assert!(start_uid > 0, "start_uid must be greater than 0");
 
@@ -93,10 +95,39 @@ impl ImapExecutor {
             None => format!("UID {start_uid}:*"),
         };
 
-        let uid_list = Self::uid_search(session, &mailbox.encoded_name(), &query).await?;
+        let uid_list = match Self::uid_search(session, &mailbox.encoded_name(), &query).await {
+            Ok(uid_list) => uid_list,
+            Err(e) => {
+                let err_msg = format!("UID search failed in [{}]: {:#?}", mailbox.name, e);
+                DownloadState::update_folder_progress(
+                    account.id,
+                    mailbox.name.clone(),
+                    0,
+                    0,
+                    FolderStatus::Failed,
+                    Some(err_msg.clone()),
+                )
+                .await?;
+                DownloadState::append_session_error(account.id, err_msg).await?;
+                return Err(e);
+            }
+        };
 
         let len = uid_list.len();
         if len == 0 {
+            let msg = match before {
+                Some(date) => format!("No emails found before {}.", date),
+                None => "No new emails found.".into(),
+            };
+            DownloadState::update_folder_progress(
+                account.id,
+                mailbox.name.clone(),
+                0,
+                0,
+                FolderStatus::Success,
+                Some(msg),
+            )
+            .await?;
             return Ok(());
         }
         info!(
@@ -111,35 +142,63 @@ impl ImapExecutor {
             account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE) as usize,
             false,
         );
-
-        let too_many = len as u32 > 5 * account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE);
-        if too_many {
-            AccountRunningState::set_initial_current_syncing_folder(
-                account.id,
-                mailbox.name.clone(),
-                uid_batches.len() as u32,
-            )
-            .await?;
-        }
-
+        let mut current_processed = 0u64;
+        let mut has_error_or_cancel = false;
         for (index, batch) in uid_batches.into_iter().enumerate() {
-            if too_many {
-                AccountRunningState::set_current_sync_batch_number(
-                    account.id,
-                    mailbox.name.clone(),
-                    (index + 1) as u32,
-                )
-                .await?;
+            if token.is_cancelled() {
+                break;
             }
-            Self::uid_batch_retrieve_emails(
+            match Self::uid_batch_retrieve_emails(
                 session,
                 account.id,
                 mailbox.id,
-                &batch,
-                &mailbox.encoded_name(),
+                &batch.0,
+                token.clone(),
+            )
+            .await
+            {
+                Ok(_) => {
+                    current_processed += batch.1;
+                    DownloadState::update_folder_progress(
+                        account.id,
+                        mailbox.name.clone(),
+                        len as u64,
+                        current_processed,
+                        FolderStatus::Downloading,
+                        None,
+                    )
+                    .await?;
+                }
+                Err(e) => {
+                    let err_msg = format!("Batch {} failed: {:#?}", index, e);
+                    DownloadState::append_session_error(account.id, err_msg.clone()).await?;
+                    DownloadState::update_folder_progress(
+                        account.id,
+                        mailbox.name.clone(),
+                        len as u64,
+                        current_processed,
+                        FolderStatus::Failed,
+                        Some(err_msg),
+                    )
+                    .await?;
+                    has_error_or_cancel = true;
+                    break;
+                }
+            }
+        }
+
+        if !has_error_or_cancel {
+            DownloadState::update_folder_progress(
+                account.id,
+                mailbox.name.clone(),
+                len as u64,
+                current_processed,
+                FolderStatus::Success,
+                None,
             )
             .await?;
         }
+
         Ok(())
     }
 
@@ -147,23 +206,15 @@ impl ImapExecutor {
         session: &mut Session<Box<dyn SessionStream>>,
         account_id: u64,
         mailbox_id: u64,
+        total: u64,
         page: u64,
         page_size: u64,
         encoded_mailbox_name: &str,
         desc: bool,
+        token: CancellationToken,
     ) -> BichonResult<usize> {
         assert!(page > 0, "Page number must be greater than 0");
         assert!(page_size > 0, "Page size must be greater than 0");
-
-        let total = session
-            .examine(encoded_mailbox_name)
-            .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
-            .exists as u64;
-
-        if total == 0 {
-            return Ok(0);
-        }
 
         let (start, end) = if desc {
             // Fetch messages starting from the newest (descending order)
@@ -202,6 +253,13 @@ impl ImapExecutor {
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
         {
+            if token.is_cancelled() {
+                tracing::info!("Account {}: UID fetch stream interrupted.", account_id);
+                return Err(raise_error!(
+                    "Stream cancelled".into(),
+                    ErrorCode::InternalError
+                ));
+            }
             extract_envelope_and_store_it(fetch, account_id, mailbox_id).await?;
             count += 1;
         }
@@ -213,13 +271,8 @@ impl ImapExecutor {
         account_id: u64,
         mailbox_id: u64,
         uid_set: &str,
-        encoded_mailbox_name: &str,
+        token: CancellationToken,
     ) -> BichonResult<()> {
-        session
-            .examine(encoded_mailbox_name)
-            .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
-
         let mut stream = session
             .uid_fetch(uid_set, BODY_FETCH_COMMAND)
             .await
@@ -229,6 +282,13 @@ impl ImapExecutor {
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
         {
+            if token.is_cancelled() {
+                tracing::info!("Account {}: UID fetch stream interrupted.", account_id);
+                return Err(raise_error!(
+                    "Stream cancelled".into(),
+                    ErrorCode::InternalError
+                ));
+            }
             extract_envelope_and_store_it(fetch, account_id, mailbox_id).await?;
         }
         Ok(())

@@ -22,7 +22,7 @@ use tantivy::schema::{Schema, FAST, STORED, STRING, TEXT};
 
 use crate::modules::store::tantivy::fields::{
     EmailFields, F_ACCOUNT_ID, F_ATTACHMENTS, F_ATTACHMENT_CATEGORY, F_ATTACHMENT_CONTENT_HASH,
-    F_ATTACHMENT_CONTENT_TYPE, F_ATTACHMENT_COUNT, F_ATTACHMENT_EXT, F_ATTACHMENT_GLUE, F_BCC,
+    F_ATTACHMENT_CONTENT_TYPE, F_ATTACHMENT_COUNT, F_ATTACHMENT_EXT, F_ATTACHMENT_NAME, F_BCC,
     F_BODY, F_CC, F_CONTENT_HASH, F_DATE, F_FROM, F_ID, F_INGEST_AT, F_INTERNAL_DATE, F_MAILBOX_ID,
     F_MESSAGE_ID, F_PREVIEW, F_REGULAR_ATTACHMENT_COUNT, F_SHARD_ID, F_SIZE, F_SUBJECT, F_TAGS,
     F_THREAD_ID, F_TO, F_UID,
@@ -50,7 +50,7 @@ impl SchemaTools {
         vec![
             fields.f_subject,
             fields.f_body,
-            fields.f_attachment_glue,
+            fields.f_attachment_name,
             fields.f_from,
             fields.f_to,
         ]
@@ -80,7 +80,7 @@ impl SchemaTools {
         let f_attachment_count = builder.add_u64_field(F_ATTACHMENT_COUNT, INDEXED | STORED | FAST);
         let f_regular_attachment_count =
             builder.add_u64_field(F_REGULAR_ATTACHMENT_COUNT, INDEXED | STORED | FAST);
-        let f_attachment_glue = builder.add_text_field(F_ATTACHMENT_GLUE, TEXT);
+        let f_attachment_name = builder.add_text_field(F_ATTACHMENT_NAME, TEXT);
         let f_attachments = builder.add_text_field(F_ATTACHMENTS, STORED);
         let f_attachment_content_hash =
             builder.add_text_field(F_ATTACHMENT_CONTENT_HASH, STRING | FAST | STORED);
@@ -116,7 +116,7 @@ impl SchemaTools {
             f_attachment_count,
             f_regular_attachment_count,
             f_attachments,
-            f_attachment_glue,
+            f_attachment_name,
             f_attachment_content_hash,
             f_attachment_ext,
             f_attachment_category,

@@ -104,11 +104,15 @@
         "totalEmails": "Samlet antal e-mails",
         "syncedLocally": "Synkroniseret lokalt",
         "totalEmailSize": "Samlet e-mailstørrelse",
-        "logicalVolume": "Logisk volumen",
+        "logicalVolume": "Oprindelig størrelse",
         "localDataFiles": "Lokale datafiler",
         "actualDiskUsage": "Faktisk diskforbrug",
+        "efficiency": "Lagringseffektivitet",
+        "saved": "Sparet",
+        "dataStorage": "Datalagring",
+        "indexSize": "Indeksstørrelse",
         "metadataSize": "Metadatastørrelse",
-        "duckdbDatabase": "Baseret på DuckDB-lager",
+        "tantivyDatabase": "Baseret på Tantivy-søgemaskine",
         "dayTrend": "30-dages trend",
         "attachments": "Vedhæftninger",
         "topLists": "Toplister",
@@ -195,7 +199,7 @@
         "edit": "Rediger",
         "delete": "Slet",
         "detail": "Detaljer",
-        "syncFolders": "Synkroniser mapper",
+        "selectMailboxes": "Vælg postkasser",
         "oauth2Tokens": "OAuth2-tokens",
         "id": "ID",
         "enabled": "Aktiveret",
@@ -223,16 +227,15 @@
         "accountCreationFailed": "Kontooprettelse mislykkedes",
         "updateFailed": "Opdatering mislykkedes, prøv venligst igen senere",
         "creationFailed": "Oprettelse mislykkedes, prøv venligst igen senere",
-        "selectSyncFolders": "Vælg mapper til synkronisering",
         "allMailFolderSelected": "Bemærk: Mappen \"Al mail\" er valgt",
         "accountSyncFoldersUpdated": "Synkroniseringsmapper opdateret",
         "accountSyncFoldersUpdateFailed": "Opdatering af synkroniseringsmapper mislykkedes",
         "serverConfiguration": "Serverkonfiguration (IMAP)",
-        "syncFoldersTitle": "Synkroniser mapper",
+        "selectedMailboxes": "Valgte postkasser",
         "allMailFolderSelectedDesc": "Valg af mapper med attributtet \"Al mail\" vil sandsynligvis resultere i duplikerede meddelelser, der allerede er synkroniseret fra mapper som Indbakke og Sendt. Dette kan optage betydeligt mere lagerplads.",
         "allMailSkipped": "Valgte standardmapper. \"Al mail\" blev sprunget over for at undgå dubletter.",
         "selectAtLeastOneFolder": "Vælg venligst mindst én mappe",
-        "chooseFoldersToSync": "Vælg mapper til synkronisering for {{email}}. Nytilføjede mapper begynder at downloade ved næste synkroniseringscyklus.",
+        "chooseMailboxesToDownload": "Vælg postkasser til download for {{email}}. Nye postkasser hentes i næste cyklus.",
         "accountDetails": "Kontodetaljer",
         "capabilities": "Funktioner",
         "folderLimit": "Mappegrænse",
@@ -313,23 +316,38 @@
         },
         "viewDetails": "vis detaljer",
         "runningState": {
-            "notStarted": "Ikke startet",
-            "inProgress": "I gang",
-            "calculating": "Beregner...",
-            "initialSync": "Initial synkronisering",
-            "completed": "Fuldført",
-            "duration": "Varighed",
-            "startTime": "Starttid:",
-            "endTime": "Sluttid:",
-            "syncProgress": "Synkroniseringsforløb",
-            "incrementalSync": "Inkrementel synkronisering",
-            "syncInterval": "Synkroniseringsinterval:",
-            "everyMinutes": "Hvert {{minutes}} minut",
-            "errorLogs": "Fejllogs",
-            "noErrorLogs": "Ingen fejllogs tilgængelige.",
-            "noActiveState": "Ingen aktiv tilstand tilgængelig",
-            "accountNotStarted": "Kontosynkronisering er muligvis ikke startet endnu",
-            "close": "Luk"
+            "message": "Besked",
+            "account": {
+                "id": "Konto-ID"
+            },
+            "tabs": {
+                "active_session": "Aktiv session",
+                "history": "Historik",
+                "global_errors": "Globale fejl",
+                "folders": "Postkasser",
+                "errors": "Fejl"
+            },
+            "loading": {
+                "fetching_account_state": "Henter kontostatus..."
+            },
+            "empty": {
+                "no_active_download": "Ingen aktiv download",
+                "no_errors_current": "Ingen fejl i nuværende session",
+                "no_errors_session": "Ingen fejl i denne session",
+                "no_global_errors": "Ingen globale fejl",
+                "no_history": "Ingen historik"
+            },
+            "session": {
+                "status": "Status",
+                "trigger": "Trigger",
+                "started_at": "Starttid"
+            },
+            "common": {
+                "folders": "postkasser",
+                "close": "Luk"
+            },
+            "latest": "SENESTE",
+            "folders": "postkasser"
         },
         "steps": {
             "complete": "Fuldfør",

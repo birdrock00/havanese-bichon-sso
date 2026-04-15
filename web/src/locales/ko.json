@@ -104,11 +104,15 @@
         "totalEmails": "총 이메일 수",
         "syncedLocally": "로컬 동기화됨",
         "totalEmailSize": "총 이메일 크기",
-        "logicalVolume": "논리 볼륨",
+        "logicalVolume": "원래 크기",
         "localDataFiles": "로컬 데이터 파일",
         "actualDiskUsage": "실제 디스크 사용량",
+        "efficiency": "압축 효율",
+        "saved": "절약됨",
+        "dataStorage": "데이터 스토리지",
+        "indexSize": "인덱스 크기",
         "metadataSize": "메타데이터 크기",
-        "duckdbDatabase": "DuckDB 스토리지 기반",
+        "tantivyDatabase": "Tantivy 검색 엔진 기반",
         "dayTrend": "30일 추세",
         "attachments": "첨부 파일",
         "topLists": "상위 목록",
@@ -195,7 +199,7 @@
         "edit": "편집",
         "delete": "삭제",
         "detail": "세부 정보",
-        "syncFolders": "동기화 폴더",
+        "selectMailboxes": "메일함 선택",
         "oauth2Tokens": "OAuth2 토큰",
         "id": "ID",
         "enabled": "활성화됨",
@@ -223,16 +227,15 @@
         "accountCreationFailed": "계정 생성 실패",
         "updateFailed": "업데이트에 실패했습니다. 나중에 다시 시도하십시오.",
         "creationFailed": "생성에 실패했습니다. 나중에 다시 시도하십시오.",
-        "selectSyncFolders": "동기화 폴더 선택",
         "allMailFolderSelected": "주의: '모든 메일' 폴더가 선택되었습니다",
         "accountSyncFoldersUpdated": "계정 동기화 폴더 업데이트됨",
         "accountSyncFoldersUpdateFailed": "계정 동기화 폴더 업데이트 실패",
         "serverConfiguration": "서버 구성 (IMAP)",
-        "syncFoldersTitle": "동기화 폴더",
+        "selectedMailboxes": "선택된 메일함",
         "allMailFolderSelectedDesc": "'모든 메일' 속성을 가진 폴더를 선택하면 받은 편지함이나 보낸 항목과 같은 폴더에서 이미 동기화된 메시지가 중복될 수 있습니다. 이로 인해 저장 공간이 상당히 많이 사용될 수 있습니다.",
         "allMailSkipped": "기본 폴더가 선택되었습니다. 중복을 방지하기 위해 '모든 메일'은 건너뛰었습니다.",
         "selectAtLeastOneFolder": "하나 이상의 폴더를 선택하십시오",
-        "chooseFoldersToSync": "{{email}}에 대해 동기화할 폴더를 선택하십시오. 새로 추가된 폴더는 다음 동기화 주기부터 다운로드되기 시작합니다.",
+        "chooseMailboxesToDownload": "{{email}}에 대해 다운로드할 메일함을 선택하세요. 새로 추가된 메일함은 다음 주기에서 다운로드됩니다.",
         "accountDetails": "계정 세부 정보",
         "capabilities": "기능",
         "folderLimit": "폴더 제한",
@@ -313,23 +316,38 @@
         },
         "viewDetails": "세부 정보 보기",
         "runningState": {
-            "notStarted": "시작되지 않음",
-            "inProgress": "진행 중",
-            "calculating": "계산 중...",
-            "initialSync": "초기 동기화",
-            "completed": "완료됨",
-            "duration": "기간",
-            "startTime": "시작 시간:",
-            "endTime": "종료 시간:",
-            "syncProgress": "동기화 진행률",
-            "incrementalSync": "증분 동기화",
-            "syncInterval": "동기화 간격:",
-            "everyMinutes": "매 {{minutes}}분",
-            "errorLogs": "오류 로그",
-            "noErrorLogs": "오류 로그가 없습니다.",
-            "noActiveState": "활성 상태 없음",
-            "accountNotStarted": "계정 동기화가 아직 시작되지 않았을 수 있습니다",
-            "close": "닫기"
+            "message": "메시지",
+            "account": {
+                "id": "계정 ID"
+            },
+            "tabs": {
+                "active_session": "현재 작업",
+                "history": "기록",
+                "global_errors": "전체 오류",
+                "folders": "메일함",
+                "errors": "오류"
+            },
+            "loading": {
+                "fetching_account_state": "계정 상태를 불러오는 중..."
+            },
+            "empty": {
+                "no_active_download": "진행 중인 다운로드가 없습니다",
+                "no_errors_current": "현재 작업에 오류가 없습니다",
+                "no_errors_session": "이 작업에 오류가 없습니다",
+                "no_global_errors": "전체 오류가 없습니다",
+                "no_history": "기록이 없습니다"
+            },
+            "session": {
+                "status": "상태",
+                "trigger": "트리거",
+                "started_at": "시작 시간"
+            },
+            "common": {
+                "folders": "메일함",
+                "close": "닫기"
+            },
+            "latest": "최신",
+            "folders": "메일함"
         },
         "steps": {
             "complete": "완료",

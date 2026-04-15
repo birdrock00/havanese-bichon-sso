@@ -104,11 +104,15 @@
         "totalEmails": "Totalt antal e-postmeddelanden",
         "syncedLocally": "Synkroniserat lokalt",
         "totalEmailSize": "Total e-poststorlek",
-        "logicalVolume": "Logisk volym",
+        "logicalVolume": "Ursprunglig storlek",
         "localDataFiles": "Lokala datafiler",
         "actualDiskUsage": "Faktisk diskanvändning",
+        "efficiency": "Lagringseffektivitet",
+        "saved": "Sparat",
+        "dataStorage": "Datalagring",
+        "indexSize": "Indexstorlek",
         "metadataSize": "Metadatastorlek",
-        "duckdbDatabase": "Baserat på DuckDB-lagring",
+        "tantivyDatabase": "Baserat på sökmotorn Tantivy",
         "dayTrend": "30-dagarstrend",
         "attachments": "Bilagor",
         "topLists": "Topplistor",
@@ -195,7 +199,7 @@
         "edit": "Redigera",
         "delete": "Ta bort",
         "detail": "Detaljer",
-        "syncFolders": "Synkronisera mappar",
+        "selectMailboxes": "Välj brevlådor",
         "oauth2Tokens": "OAuth2-tokens",
         "id": "ID",
         "enabled": "Aktiverad",
@@ -223,16 +227,15 @@
         "accountCreationFailed": "Kontoskapande misslyckades",
         "updateFailed": "Uppdatering misslyckades, försök igen senare",
         "creationFailed": "Skapande misslyckades, försök igen senare",
-        "selectSyncFolders": "Välj mappar att synkronisera",
         "allMailFolderSelected": "Observera: Mappen \"All e-post\" vald",
         "accountSyncFoldersUpdated": "Synkroniseringsmappar uppdaterade",
         "accountSyncFoldersUpdateFailed": "Uppdatering av synkroniseringsmappar misslyckades",
         "serverConfiguration": "Serverkonfiguration (IMAP)",
-        "syncFoldersTitle": "Synkronisera mappar",
+        "selectedMailboxes": "Valda brevlådor",
         "allMailFolderSelectedDesc": "Att välja mappar med attributet \"All e-post\" (All Mail) leder sannolikt till dubbletter av meddelanden som redan synkroniserats från mappar som Inkorg och Skickat. Detta kan ta upp betydligt mer lagringsutrymme.",
         "allMailSkipped": "Valde standardmappar. \"All e-post\" hoppades över för att undvika dubbletter.",
         "selectAtLeastOneFolder": "Vänligen välj minst en mapp",
-        "chooseFoldersToSync": "Välj mappar att synkronisera för {{email}}. Nyligen tillagda mappar börjar laddas ner vid nästa synkroniseringscykel.",
+        "chooseMailboxesToDownload": "Välj brevlådor att ladda ner för {{email}}. Nya brevlådor laddas ner i nästa cykel.",
         "accountDetails": "Kontodetaljer",
         "capabilities": "Funktioner",
         "folderLimit": "Mappgräns",
@@ -313,23 +316,38 @@
         },
         "viewDetails": "visa detaljer",
         "runningState": {
-            "notStarted": "Ej startad",
-            "inProgress": "Pågår",
-            "calculating": "Beräknar...",
-            "initialSync": "Initial synkronisering",
-            "completed": "Slutförd",
-            "duration": "Varaktighet",
-            "startTime": "Starttid:",
-            "endTime": "Sluttid:",
-            "syncProgress": "Synkroniseringsförlopp",
-            "incrementalSync": "Inkrementell synkronisering",
-            "syncInterval": "Synkroniseringsintervall:",
-            "everyMinutes": "Varje {{minutes}} minut",
-            "errorLogs": "Felloggar",
-            "noErrorLogs": "Inga felloggar tillgängliga.",
-            "noActiveState": "Inget aktivt tillstånd tillgängligt",
-            "accountNotStarted": "Kontosynkronisering har kanske inte startat ännu",
-            "close": "Stäng"
+            "message": "Meddelande",
+            "account": {
+                "id": "Kontots ID"
+            },
+            "tabs": {
+                "active_session": "Aktiv session",
+                "history": "Historik",
+                "global_errors": "Globala fel",
+                "folders": "Postlådor",
+                "errors": "Fel"
+            },
+            "loading": {
+                "fetching_account_state": "Hämtar kontostatus..."
+            },
+            "empty": {
+                "no_active_download": "Ingen aktiv nedladdning",
+                "no_errors_current": "Inga fel i aktuell session",
+                "no_errors_session": "Inga fel i denna session",
+                "no_global_errors": "Inga globala fel",
+                "no_history": "Ingen historik"
+            },
+            "session": {
+                "status": "Status",
+                "trigger": "Trigger",
+                "started_at": "Starttid"
+            },
+            "common": {
+                "folders": "postlådor",
+                "close": "Stäng"
+            },
+            "latest": "SENASTE",
+            "folders": "postlådor"
         },
         "steps": {
             "complete": "Slutför",

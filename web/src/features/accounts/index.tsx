@@ -37,7 +37,7 @@ import { useQuery } from '@tanstack/react-query'
 import { OAuth2TokensDialog } from './components/oauth2-tokens'
 import { RunningStateDialog } from './components/running-state-dialog'
 import { FixedHeader } from '@/components/layout/fixed-header'
-import { SyncFoldersDialog } from './components/sync-folders'
+import { DownloadFoldersDialog } from './components/download-folders'
 import { NoSyncAccountDialog } from './components/nosync-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useTranslation } from 'react-i18next'
@@ -192,7 +192,7 @@ export default function Accounts() {
             }}
             currentRow={currentRow}
           />
-          <SyncFoldersDialog
+          <DownloadFoldersDialog
             key={`sync-folders-${currentRow.id}`}
             open={open === 'sync-folders'}
             onOpenChange={() => {

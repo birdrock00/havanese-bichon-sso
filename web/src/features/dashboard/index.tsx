@@ -8,21 +8,13 @@
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
-//
-// You should have received a copy of the GNU Affero General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
-import { Mail, HardDrive, Database, Users, Inbox, Info } from 'lucide-react';
+import { Mail, Users, Inbox, Zap } from 'lucide-react';
 import { formatBytes, formatNumber } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { get_dashboard_stats, INITIAL_DASHBOARD_STATS, TimeBucket } from '@/api/system/api';
@@ -32,11 +24,31 @@ import { useTranslation } from 'react-i18next';
 import { getToken } from '@/stores/authStore';
 import { useNavigate } from '@tanstack/react-router';
 import useMinimalAccountList from '@/hooks/use-minimal-account-list';
+import { Badge } from '@/components/ui/badge';
 
 interface DailyActivity {
   date: string;
   count: number;
+  timestamp_ms: number;
 }
+
+const GithubIcon = ({ className }: { className?: string }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+    <path d="M9 18c-4.51 2-5-2-7-2" />
+  </svg>
+);
 
 function convertRecentActivity(timeBuckets: TimeBucket[], locale: string): DailyActivity[] {
   const dateFormatter = new Intl.DateTimeFormat(locale, {
@@ -65,7 +77,6 @@ const formatTooltipDate = (timestamp_ms: number, locale: string): string => {
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
-// Skeleton Components
 const MetricCardSkeleton = () => (
   <Card>
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -79,17 +90,6 @@ const MetricCardSkeleton = () => (
   </Card>
 );
 
-const ChartSkeleton = () => (
-  <div className="h-80 w-full flex items-center justify-center">
-    <div className="space-y-2 w-full px-4">
-      {[...Array(6)].map((_, i) => (
-        <Skeleton key={i} className="h-12 w-full" />
-      ))}
-    </div>
-  </div>
-);
-
-// Empty State Components
 const EmptyChart = ({ title }: { title: string }) => (
   <div className="h-80 flex flex-col items-center justify-center text-muted-foreground">
     <Inbox className="h-12 w-12 mb-3 opacity-40" />
@@ -113,11 +113,21 @@ export default function MailArchiveDashboard() {
     placeholderData: INITIAL_DASHBOARD_STATS,
   });
 
-
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
-
   const currentLocale = i18n.resolvedLanguage || i18n.language || navigator.language;
+
+  const logicalSize = stats?.total_size_bytes ?? 0;
+  const blobSize = stats?.storage_usage_bytes ?? 0;
+  const indexSize = stats?.index_usage_bytes ?? 0;
+  const physicalTotal = blobSize + indexSize;
+
+  const savingsPercent = logicalSize > 0
+    ? Math.max(0, ((1 - physicalTotal / logicalSize) * 100)).toFixed(1)
+    : "0.0";
+
+  const blobWidth = logicalSize > 0 ? (blobSize / logicalSize) * 100 : 0;
+  const indexWidth = logicalSize > 0 ? (indexSize / logicalSize) * 100 : 0;
 
   const totalAttachments = (stats?.with_attachment_count ?? 0) + (stats?.without_attachment_count ?? 0);
   const attachmentRatio = totalAttachments > 0 ? (stats?.with_attachment_count ?? 0) / totalAttachments : 0;
@@ -133,8 +143,6 @@ export default function MailArchiveDashboard() {
     const account = minimalList.find(a => a.email === email);
     return account ? account.id : null;
   };
-
-
 
   const handleQuickSearch = (filter: Record<string, any>) => {
     navigate({
@@ -161,32 +169,10 @@ export default function MailArchiveDashboard() {
   if (isLoading) {
     return (
       <div className="flex-1 space-y-6 p-6 md:p-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <Skeleton className="h-9 w-48 mb-2" />
-            <Skeleton className="h-4 w-64" />
-          </div>
-          <Skeleton className="h-7 w-28 rounded-full" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => <MetricCardSkeleton key={i} />)}
         </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
-          {[...Array(6)].map((_, i) => (
-            <MetricCardSkeleton key={i} />
-          ))}
-        </div>
-
-        <div className="space-y-4">
-          <Skeleton className="h-10 w-full max-w-md" />
-          <Card>
-            <CardHeader>
-              <Skeleton className="h-6 w-48 mb-2" />
-              <Skeleton className="h-4 w-64" />
-            </CardHeader>
-            <CardContent>
-              <ChartSkeleton />
-            </CardContent>
-          </Card>
-        </div>
+        <Skeleton className="h-80 w-full" />
       </div>
     );
   }
@@ -196,82 +182,92 @@ export default function MailArchiveDashboard() {
       <FixedHeader />
       <Main higher>
         <div className="flex-1 space-y-6 p-6 md:p-8">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
-            <Card>
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-12">
+            <Card className="md:col-span-2 lg:col-span-2">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{t('dashboard.mailAccounts')}</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatNumber(stats!.account_count)}</div>
+                <div className="text-4xl font-bold">{formatNumber(stats!.account_count)}</div>
                 <p className="text-xs text-muted-foreground">{t('dashboard.connected')}</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="md:col-span-3 lg:col-span-3">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{t('dashboard.totalEmails')}</CardTitle>
                 <Mail className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{formatNumber(stats!.email_count)}</div>
+                <div className="text-4xl font-bold">{formatNumber(stats!.email_count)}</div>
                 <p className="text-xs text-muted-foreground">{t('dashboard.syncedLocally')}</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-primary/20 bg-primary/[0.01] md:col-span-4 lg:col-span-4">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('dashboard.totalEmailSize')}</CardTitle>
-                <HardDrive className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-bold text-primary flex items-center gap-1 uppercase">
+                  <Zap className="h-3.5 w-3.5 fill-primary" />
+                  {t('dashboard.efficiency', 'Efficiency')}
+                </CardTitle>
+                <div className="flex flex-col items-end leading-none">
+                  <span className="text-xl font-black text-primary">{savingsPercent}%</span>
+                  <span className="text-[9px] font-bold text-primary uppercase">{t('dashboard.saved', 'Saved')}</span>
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatBytes(stats!.total_size_bytes)}</div>
-                <p className="text-xs text-muted-foreground">{t('dashboard.logicalVolume')}</p>
+              <CardContent className="py-2.5 space-y-2">
+                <div className="h-2 w-full bg-muted rounded-full overflow-hidden flex">
+                  <div className="h-full bg-primary transition-all" style={{ width: `${blobWidth}%` }} />
+                  <div className="h-full bg-orange-400 transition-all" style={{ width: `${indexWidth}%` }} />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <div className="flex justify-between items-center text-[11px]">
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <span className="text-muted-foreground uppercase text-[9px] shrink-0">{t('dashboard.logicalVolume')}:</span>
+                      <span className="font-bold tracking-tight truncate">{formatBytes(logicalSize)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 overflow-hidden ml-2">
+                      <span className="text-muted-foreground uppercase text-[9px] shrink-0">{t('dashboard.actualDiskUsage')}:</span>
+                      <span className="font-bold tracking-tight truncate">{formatBytes(physicalTotal)}</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center text-[10px]">
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                      <span className="text-muted-foreground truncate">
+                        {t('dashboard.dataStorage')}: <span className="text-foreground font-medium">{formatBytes(blobSize)}</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 overflow-hidden ml-2">
+                      <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" />
+                      <span className="text-muted-foreground truncate text-right">
+                        {t('dashboard.indexSize')}: <span className="text-foreground font-medium">{formatBytes(indexSize)}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('dashboard.localDataFiles')}</CardTitle>
-                <Database className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatBytes(stats!.storage_usage_bytes)}</div>
-                <p className="text-xs text-muted-foreground">{t('dashboard.actualDiskUsage')}</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{t('dashboard.metadataSize')}</CardTitle>
-                <Database className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatBytes(stats!.index_usage_bytes)}</div>
-                <p className="text-xs text-muted-foreground">{t('dashboard.duckdbDatabase')}</p>
-              </CardContent>
-            </Card>
-            <Card>
+            <Card className="md:col-span-3 lg:col-span-3">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">{t('dashboard.systemVersion')}</CardTitle>
-                <Info className="h-4 w-4 text-muted-foreground" />
+                <Badge variant="secondary" className="text-[9px] h-4.5 font-bold px-1.5 uppercase tracking-wider">Community</Badge>
               </CardHeader>
               <CardContent>
-                <div className='text-2xl font-bold'>
+                <div className='text-4xl font-bold truncate text-primary tracking-tighter'>
                   {stats!.system_version ? (
-                    <a
-                      href={`https://github.com/rustmailer/bichon/releases/tag/${stats!.system_version}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:underline"
-                    >
+                    <a href={`https://github.com/rustmailer/bichon/releases/tag/${stats!.system_version}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
                       {stats!.system_version}
                     </a>
                   ) : 'N/A'}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {stats!.commit_hash ?? 'N/A'}
-                </p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <GithubIcon className="h-5 w-5 text-muted-foreground" />
+                  <p className="text-[10px] text-muted-foreground font-mono truncate">{stats!.commit_hash?.substring(0, 7) ?? 'N/A'}</p>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -293,7 +289,7 @@ export default function MailArchiveDashboard() {
                   {hasRecentActivity ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={convertRecentActivity(stats!.recent_activity, currentLocale)} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                        <CartesianGrid strokeDasharray="3 3" />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                         <XAxis dataKey="date" tick={{ fontSize: 12 }} interval="preserveStart" tickCount={10} />
                         <YAxis tick={{ fontSize: 12 }} />
                         <Tooltip
@@ -311,13 +307,8 @@ export default function MailArchiveDashboard() {
                             }
                             return null;
                           }}
-                          contentStyle={{
-                            backgroundColor: 'hsl(var(--background))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px'
-                          }}
                         />
-                        <Bar dataKey="count" fill="#3b82f6" radius={[8, 8, 0, 0]} barSize={36} />
+                        <Bar dataKey="count" fill="currentColor" className="text-primary" radius={[4, 4, 0, 0]} barSize={28} />
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
@@ -348,6 +339,7 @@ export default function MailArchiveDashboard() {
                         outerRadius={100}
                         paddingAngle={5}
                         dataKey="value"
+                        stroke="none"
                       >
                         {attachmentData.map((entry, i) => (
                           <Cell key={`cell-${i}`} fill={entry.fill} />
@@ -356,67 +348,30 @@ export default function MailArchiveDashboard() {
                       <Tooltip formatter={(v) => totalAttachments > 0 ? `${((v as number) * 100).toFixed(1)}%` : '0%'} />
                     </PieChart>
                   </ResponsiveContainer>
-                  <div className="ml-8 space-y-2">
-                    {totalAttachments > 0 ? (
-                      <>
-                        <div className="flex items-center gap-2">
-                          <div className="h-3 w-3 rounded-full bg-green-500"></div>
-                          <span className="text-sm">
-                            {t('dashboard.withAttachments')} ({(attachmentRatio * 100).toFixed(1)}%)
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="h-3 w-3 rounded-full bg-gray-200"></div>
-                          <span className="text-sm">{t('dashboard.noAttachments')}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full bg-gray-200"></div>
-                        <span className="text-sm">{t('common.noData')}</span>
-                      </div>
-                    )}
-                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
             <TabsContent value="top" className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <Card className="md:col-span-1">
+                <Card>
                   <CardHeader>
-                    <CardTitle>{t('dashboard.top10Senders')}</CardTitle>
-                    <CardDescription>{t('dashboard.byMessageCount')}</CardDescription>
+                    <CardTitle className="text-sm font-bold uppercase">{t('dashboard.top10Senders')}</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-0">
                     {hasTopSenders ? (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>{t('dashboard.sender')}</TableHead>
-                            <TableHead className="text-right">{t('dashboard.count')}</TableHead>
+                            <TableHead className="text-xs">{t('dashboard.sender')}</TableHead>
+                            <TableHead className="text-right text-xs">{t('dashboard.count')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {stats!.top_senders.map((s) => (
-                            <TableRow
-                              key={s.key}
-                              className="cursor-pointer hover:bg-accent/50 group relative"
-                              onClick={() => handleQuickSearch({ from: s.key })}
-                            >
-                              <TableCell className="font-medium max-w-[380px] truncate relative px-4 h-9">
-                                <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
-                                <div className="absolute inset-x-4 bottom-1 h-[1px] bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
-                                <span
-                                  title={s.key}
-                                  className="group-hover:text-primary transition-colors duration-200"
-                                >
-                                  {s.key}
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {formatNumber(s.count)}
-                              </TableCell>
+                            <TableRow key={s.key} className="cursor-pointer hover:bg-accent/50 group" onClick={() => handleQuickSearch({ from: s.key })}>
+                              <TableCell className="max-w-[200px] truncate text-sm group-hover:text-primary transition-colors">{s.key}</TableCell>
+                              <TableCell className="text-right font-mono text-sm">{formatNumber(s.count)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -426,42 +381,25 @@ export default function MailArchiveDashboard() {
                     )}
                   </CardContent>
                 </Card>
-                <Card className="md:col-span-1">
+
+                <Card>
                   <CardHeader>
-                    <CardTitle>{t('dashboard.top10LargestEmails')}</CardTitle>
-                    <CardDescription>{t('dashboard.byMessageSize')}</CardDescription>
+                    <CardTitle className="text-sm font-bold uppercase">{t('dashboard.top10LargestEmails')}</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-0">
                     {hasTopEmails ? (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>{t('dashboard.subject')}</TableHead>
-                            <TableHead className="text-right">{t('dashboard.size')}</TableHead>
+                            <TableHead className="text-xs">{t('dashboard.subject')}</TableHead>
+                            <TableHead className="text-right text-xs">{t('dashboard.size')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {stats!.top_largest_emails.map((m, index) => (
-                            <TableRow
-                              key={index}
-                              className="cursor-pointer hover:bg-accent/50 group relative"
-                              onClick={() => handleQuickSearch({ subject: `"${m.subject}"` })}
-                            >
-                              <TableCell
-                                className="max-w-[350px] truncate font-medium relative px-4"
-                                title={m.subject}
-                              >
-                                <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
-                                <div className="absolute inset-x-4 bottom-1 h-[1px] bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
-
-                                <span className="group-hover:text-primary transition-colors duration-200">
-                                  {m.subject || t('dashboard.noSubject')}
-                                </span>
-                              </TableCell>
-
-                              <TableCell className="text-right font-mono text-orange-600">
-                                {formatBytes(m.size_bytes)}
-                              </TableCell>
+                          {stats!.top_largest_emails.map((m, i) => (
+                            <TableRow key={i} className="cursor-pointer hover:bg-accent/50 group" onClick={() => handleQuickSearch({ subject: m.subject })}>
+                              <TableCell className="max-w-[200px] truncate text-sm group-hover:text-primary transition-colors">{m.subject || t('dashboard.noSubject')}</TableCell>
+                              <TableCell className="text-right font-mono text-sm text-orange-600">{formatBytes(m.size_bytes)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -471,51 +409,27 @@ export default function MailArchiveDashboard() {
                     )}
                   </CardContent>
                 </Card>
-                <Card className="md:col-span-1">
+
+                <Card>
                   <CardHeader>
-                    <CardTitle>{t('dashboard.top10Accounts')}</CardTitle>
-                    <CardDescription>{t('dashboard.byMessageCount')}</CardDescription>
+                    <CardTitle className="text-sm font-bold uppercase">{t('dashboard.top10Accounts')}</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-0">
                     {hasTopAccounts ? (
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>{t('dashboard.account')}</TableHead>
-                            <TableHead className="text-right">{t('dashboard.emails')}</TableHead>
+                            <TableHead className="text-xs">{t('dashboard.account')}</TableHead>
+                            <TableHead className="text-right text-xs">{t('dashboard.emails')}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {stats!.top_accounts.map((acc) => {
-                            const accountId = getAccountIdByEmail(acc.key);
-                            return (
-                              <TableRow
-                                key={acc.key}
-                                className="group cursor-pointer hover:bg-accent/50 transition-colors relative"
-                                onClick={() => {
-                                  if (accountId) {
-                                    handleQuickSearch({ account_ids: [accountId] });
-                                  } else {
-                                    handleQuickSearch({ to: acc.key });
-                                  }
-                                }}
-                              >
-                                <TableCell className="font-medium max-w-[300px] truncate relative px-4 h-9">
-                                  <div className="absolute left-0 top-2 bottom-2 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
-                                  <div className="absolute inset-x-4 bottom-1 h-[1px] bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
-                                  <span
-                                    title={acc.key}
-                                    className="group-hover:text-primary transition-colors duration-200"
-                                  >
-                                    {acc.key}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {formatNumber(acc.count)}
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
+                          {stats!.top_accounts.map((acc) => (
+                            <TableRow key={acc.key} className="cursor-pointer hover:bg-accent/50 group" onClick={() => handleQuickSearch({ account_ids: [getAccountIdByEmail(acc.key) || 0] })}>
+                              <TableCell className="max-w-[200px] truncate text-sm group-hover:text-primary transition-colors">{acc.key}</TableCell>
+                              <TableCell className="text-right font-mono text-sm">{formatNumber(acc.count)}</TableCell>
+                            </TableRow>
+                          ))}
                         </TableBody>
                       </Table>
                     ) : (
@@ -528,7 +442,7 @@ export default function MailArchiveDashboard() {
           </Tabs>
         </div>
       </Main>
-      <div className="mt-auto p-6 md:p-8 pt-0 text-center text-xs text-muted-foreground">
+      <div className="mt-auto p-6 text-center text-xs text-muted-foreground border-t">
         © 2025-2026 <a href="https://rustmailer.com" target="_blank" rel="noopener noreferrer" className="hover:underline">rustmailer.com</a> - Bichon Email Archiving Project
       </div>
     </>

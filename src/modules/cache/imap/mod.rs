@@ -16,10 +16,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use std::sync::LazyLock;
 
-use crate::modules::{account::state::AccountRunningState, database::ModelsAdapter};
+use crate::modules::{
+    account::{state::DownloadState, old_state::AccountRunningState},
+    database::ModelsAdapter,
+};
 use ahash::{AHashMap, AHashSet};
 use mailbox::MailBox;
 use native_db::Models;
@@ -32,6 +34,7 @@ pub static MAILBOX_MODELS: LazyLock<Models> = LazyLock::new(|| {
     let mut adapter = ModelsAdapter::new();
     adapter.register_model::<MailBox>();
     adapter.register_model::<AccountRunningState>();
+    adapter.register_model::<DownloadState>();
     adapter.models
 });
 

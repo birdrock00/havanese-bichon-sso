@@ -29,8 +29,8 @@ use crate::{
     modules::{
         account::{
             entity::ImapConfig,
+            state::DownloadState,
             since::{DateSince, RelativeDate},
-            state::AccountRunningState,
         },
         cache::imap::mailbox::MailBox,
         database::{list_all_impl, secondary_find_impl, with_transaction},
@@ -46,7 +46,7 @@ use crate::modules::account::payload::AccountCreateRequest;
 use crate::modules::account::payload::AccountUpdateRequest;
 use crate::modules::account::payload::MinimalAccount;
 use crate::modules::cache::imap::task::SYNC_TASKS;
-use crate::modules::context::controller::SYNC_CONTROLLER;
+use crate::modules::context::controller::DOWNLOAD_CONTROLLER;
 use crate::modules::database::count_by_unique_secondary_key_impl;
 use crate::modules::database::delete_impl;
 use crate::modules::database::manager::DB_MANAGER;
@@ -305,7 +305,7 @@ impl AccountV4 {
         .await?;
 
         if matches!(cloned.account_type, AccountType::IMAP) {
-            SYNC_CONTROLLER
+            DOWNLOAD_CONTROLLER
                 .trigger_start(cloned.id, cloned.email.clone())
                 .await;
         }
@@ -354,7 +354,7 @@ impl AccountV4 {
     async fn cleanup_account_resources_sequential(account: &AccountModel) -> BichonResult<()> {
         if matches!(account.account_type, AccountType::IMAP) {
             SYNC_TASKS.stop(account.id).await?;
-            AccountRunningState::delete(account.id).await?;
+            DownloadState::delete(account.id).await?;
         }
         OAuth2AccessToken::try_delete(account.id).await?;
         UserModel::cleanup_account(account.id).await?;
@@ -365,16 +365,16 @@ impl AccountV4 {
         Ok(())
     }
 
-    pub async fn update_sync_folders(
+    pub async fn update_download_folders(
         account_id: u64,
-        sync_folders: Vec<String>,
+        download_folders: Vec<String>,
     ) -> BichonResult<()> {
         update_impl(DB_MANAGER.meta_db(), move |rw| {
             rw.get().secondary::<AccountModel>(AccountV4Key::id, account_id).map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-            .ok_or_else(|| raise_error!(format!("When trying to update account sync_folders, the corresponding record was not found. account_id={}", account_id), ErrorCode::ResourceNotFound))
+            .ok_or_else(|| raise_error!(format!("When trying to update account download folders, the corresponding record was not found. account_id={}", account_id), ErrorCode::ResourceNotFound))
         }, |current|{
             let mut updated = current.clone();
-            updated.sync_folders = Some(sync_folders);
+            updated.sync_folders = Some(download_folders);
             Ok(updated)
         }).await?;
         Ok(())

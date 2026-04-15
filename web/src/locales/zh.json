@@ -104,11 +104,15 @@
     "totalEmails": "邮件总数",
     "syncedLocally": "本地已同步",
     "totalEmailSize": "邮件总大小",
-    "logicalVolume": "逻辑卷",
+    "logicalVolume": "原始大小",
     "localDataFiles": "本地数据文件",
     "actualDiskUsage": "实际磁盘使用",
+    "efficiency": "压缩效率",
+    "saved": "节省空间",
+    "dataStorage": "数据存储",
+    "indexSize": "索引体积",
     "metadataSize": "元数据大小",
-    "duckdbDatabase": "基于 DuckDB 存储",
+    "tantivyDatabase": "基於 Tantivy 搜尋引擎",
     "dayTrend": "30天趋势",
     "attachments": "附件",
     "topLists": "排行榜",
@@ -195,7 +199,7 @@
     "edit": "编辑",
     "delete": "删除",
     "detail": "详情",
-    "syncFolders": "同步文件夹",
+    "selectMailboxes": "选择邮件夹",
     "oauth2Tokens": "OAuth2 令牌",
     "id": "ID",
     "enabled": "已启用",
@@ -223,16 +227,15 @@
     "accountCreationFailed": "账户创建失败",
     "updateFailed": "更新失败，请稍后重试",
     "creationFailed": "创建失败，请稍后重试",
-    "selectSyncFolders": "选择同步文件夹",
     "allMailFolderSelected": "提示：已选择\"所有邮件\"文件夹",
     "accountSyncFoldersUpdated": "账户同步文件夹已更新",
     "accountSyncFoldersUpdateFailed": "账户同步文件夹更新失败",
     "serverConfiguration": "服务器配置 (IMAP)",
-    "syncFoldersTitle": "同步文件夹",
+    "selectedMailboxes": "已选择的邮件夹",
     "allMailFolderSelectedDesc": "选择具有\"所有邮件\"属性的文件夹可能会导致重复已从收件箱和已发送等文件夹同步的消息。这可能会消耗更多的存储空间。",
     "allMailSkipped": "已选择标准文件夹。已跳过'所有邮件'以避免重复。",
     "selectAtLeastOneFolder": "请至少选择一个文件夹",
-    "chooseFoldersToSync": "选择要同步的文件夹（{{email}}），新添加的文件夹将在下一个同步周期开始下载。",
+    "chooseMailboxesToDownload": "为 {{email}} 选择要下载的邮件夹。新添加的邮件夹将在下一个周期下载。",
     "accountDetails": "账户详情",
     "capabilities": "功能",
     "folderLimit": "文件夹限制",
@@ -313,23 +316,38 @@
     },
     "viewDetails": "查看详情",
     "runningState": {
-      "notStarted": "未开始",
-      "inProgress": "进行中",
-      "calculating": "计算中...",
-      "initialSync": "初始同步",
-      "completed": "已完成",
-      "duration": "耗时",
-      "startTime": "开始时间：",
-      "endTime": "结束时间：",
-      "syncProgress": "同步进度",
-      "incrementalSync": "增量同步",
-      "syncInterval": "同步间隔：",
-      "everyMinutes": "每 {{minutes}} 分钟",
-      "errorLogs": "错误日志",
-      "noErrorLogs": "暂无错误日志",
-      "noActiveState": "暂无活动状态",
-      "accountNotStarted": "账户同步可能尚未开始",
-      "close": "关闭"
+      "message": "消息",
+      "account": {
+        "id": "账户 ID"
+      },
+      "tabs": {
+        "active_session": "当前任务",
+        "history": "历史记录",
+        "global_errors": "全局错误",
+        "folders": "邮件夹",
+        "errors": "错误"
+      },
+      "loading": {
+        "fetching_account_state": "正在获取账户状态..."
+      },
+      "empty": {
+        "no_active_download": "当前没有下载任务",
+        "no_errors_current": "当前任务无错误",
+        "no_errors_session": "该任务无错误",
+        "no_global_errors": "暂无全局错误",
+        "no_history": "暂无历史记录"
+      },
+      "session": {
+        "status": "状态",
+        "trigger": "触发方式",
+        "started_at": "开始时间"
+      },
+      "common": {
+        "folders": "个文件夹",
+        "close": "关闭"
+      },
+      "latest": "最新",
+      "folders": "个文件夹"
     },
     "steps": {
       "complete": "完成",

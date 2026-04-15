@@ -104,11 +104,15 @@
     "totalEmails": "Wszystkie wiadomości",
     "syncedLocally": "Synchronizowane lokalnie",
     "totalEmailSize": "Wielkość wszystkich wiadomości",
-    "logicalVolume": "Wielkość wolumenu",
+    "logicalVolume": "Oryginalny rozmiar",
     "localDataFiles": "Lokalne pliki danych",
     "actualDiskUsage": "Zajętość na dysku",
+    "efficiency": "Wydajność",
+    "saved": "Zaoszczędzone",
+    "dataStorage": "Magazyn danych",
+    "indexSize": "Rozmiar indeksu",
     "metadataSize": "Rozmiar metadanych",
-    "duckdbDatabase": "Oparte na pamięci DuckDB",
+    "tantivyDatabase": "Oparte na silniku wyszukiwania Tantivy",
     "dayTrend": "Trend z 30 dni",
     "attachments": "Załączniki",
     "topLists": "Lista TOP",
@@ -195,7 +199,7 @@
     "edit": "Edytuj",
     "delete": "Usuń",
     "detail": "Szczegóły",
-    "syncFolders": "Synchronizuj foldery",
+    "selectMailboxes": "Wybierz skrzynki",
     "oauth2Tokens": "Tokeny OAuth2",
     "id": "ID",
     "enabled": "Aktywne",
@@ -223,16 +227,15 @@
     "accountCreationFailed": "Bład podczas tworzenia konta",
     "updateFailed": "Bład aktulizacji, spróbuj później",
     "creationFailed": "Bład tworzenia, spróbuj później",
-    "selectSyncFolders": "Wybierz foldery do synchronizacji",
     "allMailFolderSelected": "Uwaga: folder \"Wszystkie wiadomości\" izostał zaznaczony",
     "accountSyncFoldersUpdated": "Zaktualizowano foldery synchronizacji kont",
     "accountSyncFoldersUpdateFailed": "Nie udało się zaktualizować folderiów synchronizacji kont",
     "serverConfiguration": "Konfiguracja serwera (IMAP)",
-    "syncFoldersTitle": "Synchronizcja folderów",
+    "selectedMailboxes": "Wybrane skrzynki",
     "allMailFolderSelectedDesc": "Wybierając foldery z atrybutem \"Wszystkie wiadomości\" prawdopodobnie spowoduje to duplikowanie się wiadomości już zsynchronizowanych z folderów takich jak Skrzynka odbiorcza i Wysłane. Może to zająć znacznie więcej miejsca",
     "allMailSkipped": "Wybrane foldery standardowe. Pominięto 'Wszystkie wiadomości', aby uniknąć duplikatów.",
     "selectAtLeastOneFolder": "Wybierz co najmniej jeden folder",
-    "chooseFoldersToSync": "Wybierz foldery do synchronizacji {{email}} a nowo dodane foldery zaczną być pobierane podczas kolejnej synchronizacji.",
+    "chooseMailboxesToDownload": "Wybierz skrzynki do pobrania dla {{email}}. Nowe skrzynki zostaną pobrane w następnym cyklu.",
     "accountDetails": "Szczegóły konta",
     "capabilities": "Możliwości",
     "folderLimit": "Limit folderu",
@@ -313,23 +316,38 @@
     },
     "viewDetails": "pokaż szczegóły",
     "runningState": {
-      "notStarted": "Nie uruchomione",
-      "inProgress": "W trakcie",
-      "calculating": "Obliczanie...",
-      "initialSync": "Synchronizacja początkowa",
-      "completed": "Wykonano",
-      "duration": "Czas trwania",
-      "startTime": "Czas rozpoczęcia:",
-      "endTime": "Czas zakończenia:",
-      "syncProgress": "Postęp synchronizacji",
-      "incrementalSync": "Synchronizacja przyrostowa",
-      "syncInterval": "Cykliczność synchronizacji:",
-      "everyMinutes": "Co {{minutes}} minut",
-      "errorLogs": "Dzienniki błędów",
-      "noErrorLogs": "Brak błędów w dziennikach logów.",
-      "noActiveState": "Brak wpisów",
-      "accountNotStarted": "Synchronizacja konta mogła się jeszcze nie rozpocząć",
-      "close": "Zamknij"
+      "message": "Wiadomość",
+      "account": {
+        "id": "ID konta"
+      },
+      "tabs": {
+        "active_session": "Aktywna sesja",
+        "history": "Historia",
+        "global_errors": "Błędy globalne",
+        "folders": "Skrzynki",
+        "errors": "Błędy"
+      },
+      "loading": {
+        "fetching_account_state": "Pobieranie stanu konta..."
+      },
+      "empty": {
+        "no_active_download": "Brak aktywnego pobierania",
+        "no_errors_current": "Brak błędów w bieżącej sesji",
+        "no_errors_session": "Brak błędów w tej sesji",
+        "no_global_errors": "Brak błędów globalnych",
+        "no_history": "Brak historii"
+      },
+      "session": {
+        "status": "Status",
+        "trigger": "Wyzwalacz",
+        "started_at": "Czas rozpoczęcia"
+      },
+      "common": {
+        "folders": "skrzynki",
+        "close": "Zamknij"
+      },
+      "latest": "NAJNOWSZE",
+      "folders": "skrzynki"
     },
     "steps": {
       "complete": "Zakończono",

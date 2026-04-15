@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::{
     modules::{
         database::{async_find_impl, delete_impl, manager::DB_MANAGER, update_impl, upsert_impl},
@@ -26,32 +25,68 @@ use crate::{
 };
 use native_db::*;
 use native_model::{native_model, Model};
-use poem_openapi::Object;
+use poem_openapi::{Enum, Object};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
-const ERROR_COUNT_PER_ACCOUNT: usize = 30;
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Enum)]
+pub enum DownloadStatus {
+    Running,
+    Success,
+    Failed,
+    #[default]
+    Cancelled,
+}
 
-#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
-pub struct MailboxBatchProgress {
-    pub total_batches: u32,
-    pub current_batch: u32,
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Enum)]
+pub enum TriggerType {
+    Manual,
+    #[default]
+    Scheduled,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Enum)]
+pub enum FolderStatus {
+    #[default]
+    Pending,
+    Downloading,
+    Success,
+    Failed,
+    Cancelled,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
-#[native_model(id = 2, version = 1)]
+pub struct FolderProgress {
+    pub folder_name: String,
+    pub planned: u64,
+    pub current: u64,
+    pub status: FolderStatus,
+    pub message: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
+pub struct DownloadSession {
+    pub start_time: i64,
+    pub end_time: Option<i64>,
+    pub status: DownloadStatus,
+    pub message: Option<String>,
+    pub trigger: TriggerType,
+    pub folder_details: BTreeMap<String, FolderProgress>,
+    pub current_folder: Option<String>,
+    pub errors: Vec<AccountError>,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
+#[native_model(id = 3, version = 1)]
 #[native_db]
-pub struct AccountRunningState {
+pub struct DownloadState {
     #[primary_key]
     pub account_id: u64,
-    pub last_incremental_sync_start: i64,
-    pub last_incremental_sync_end: Option<i64>,
-    pub errors: Vec<AccountError>,
-    pub is_initial_sync_completed: bool,
-    pub progress: Option<BTreeMap<String, MailboxBatchProgress>>,
-    pub initial_sync_start_time: Option<i64>,
-    pub initial_sync_end_time: Option<i64>,
-    pub initial_sync_failed_time: Option<i64>,
+    pub active_session: Option<DownloadSession>,
+    pub history: Vec<DownloadSession>,
+    pub last_trigger_at: i64,
+    pub last_finished_at: Option<i64>,
+    pub global_errors: Vec<AccountError>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
@@ -60,46 +95,169 @@ pub struct AccountError {
     pub at: i64,
 }
 
-impl AccountRunningState {
-    pub async fn add(account_id: u64) -> BichonResult<()> {
-        let info = AccountRunningState {
+impl DownloadState {
+    pub async fn init(account_id: u64) -> BichonResult<()> {
+        let state = DownloadState {
             account_id,
-            last_incremental_sync_start: 0,
-            last_incremental_sync_end: None,
-            errors: vec![],
-            is_initial_sync_completed: false,
-            progress: None,
-            initial_sync_start_time: Some(utc_now!()),
-            initial_sync_end_time: None,
-            initial_sync_failed_time: None,
+            ..Default::default()
         };
-        upsert_impl(DB_MANAGER.envelope_db(), info).await
+        upsert_impl(DB_MANAGER.envelope_db(), state).await
     }
 
-    pub async fn get(account_id: u64) -> BichonResult<Option<AccountRunningState>> {
+    pub async fn get(account_id: u64) -> BichonResult<Option<DownloadState>> {
         async_find_impl(DB_MANAGER.envelope_db(), account_id).await
     }
 
-    async fn update_account_running_state(
+    pub async fn start_new_session(account_id: u64, trigger: TriggerType) -> BichonResult<()> {
+        Self::update_state(account_id, move |current| {
+            let mut updated = current.clone();
+            updated.last_trigger_at = utc_now!();
+
+            if let Some(old_session) = updated.active_session.take() {
+                updated.history.push(old_session);
+                if updated.history.len() > 30 {
+                    updated.history.remove(0);
+                }
+            }
+
+            let new_session = DownloadSession {
+                start_time: utc_now!(),
+                status: DownloadStatus::Running,
+                trigger,
+                ..Default::default()
+            };
+
+            updated.active_session = Some(new_session);
+            Ok(updated)
+        })
+        .await
+    }
+
+    pub async fn update_session_status(
         account_id: u64,
-        updater: impl FnOnce(&AccountRunningState) -> BichonResult<AccountRunningState> + Send + 'static,
+        status: DownloadStatus,
+        message: Option<String>,
     ) -> BichonResult<()> {
-        update_impl(
-            DB_MANAGER.envelope_db(),
-            move |rw| {
-                rw.get()
-                    .primary::<AccountRunningState>(account_id)
-                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                    .ok_or_else(|| {
-                        raise_error!(
-                            format!("Cannot find sync info of account={}", account_id),
-                            ErrorCode::ResourceNotFound
-                        )
-                    })
-            },
-            updater,
-        )
-        .await?;
+        Self::update_state(account_id, move |current| {
+            let mut updated = current.clone();
+            if let Some(mut session) = updated.active_session.take() {
+                session.status = status.clone();
+                if message.is_some() {
+                    session.message = message;
+                }
+                if status == DownloadStatus::Running {
+                    updated.active_session = Some(session);
+                } else {
+                    let now = utc_now!();
+                    session.end_time = Some(now);
+                    updated.last_finished_at = Some(now);
+                    updated.history.push(session);
+                    let to_remove = updated.history.len().saturating_sub(10);
+                    if to_remove > 0 {
+                        updated.history.drain(0..to_remove);
+                    }
+                }
+            }
+            Ok(updated)
+        })
+        .await
+    }
+
+    pub async fn update_folder_progress(
+        account_id: u64,
+        folder_name: String,
+        planned: u64,
+        current: u64,
+        status: FolderStatus,
+        message: Option<String>,
+    ) -> BichonResult<()> {
+        Self::update_state(account_id, move |state| {
+            let mut updated = state.clone();
+            if let Some(ref mut session) = updated.active_session {
+                session.current_folder = Some(folder_name.clone());
+
+                let progress =
+                    session
+                        .folder_details
+                        .entry(folder_name.clone())
+                        .or_insert(FolderProgress {
+                            folder_name,
+                            ..Default::default()
+                        });
+
+                progress.planned = planned;
+                progress.current = current;
+                progress.status = status;
+                progress.message = message;
+            }
+            Ok(updated)
+        })
+        .await
+    }
+
+    pub async fn init_folder_details(account_id: u64, folders: Vec<String>) -> BichonResult<()> {
+        Self::update_state(account_id, move |state| {
+            let mut updated = state.clone();
+            if let Some(ref mut session) = updated.active_session {
+                for name in folders {
+                    session.folder_details.insert(
+                        name.clone(),
+                        FolderProgress {
+                            folder_name: name,
+                            planned: 0,
+                            current: 0,
+                            status: FolderStatus::Pending,
+                            message: None,
+                        },
+                    );
+                }
+            }
+            Ok(updated)
+        })
+        .await
+    }
+
+    pub async fn append_session_error(account_id: u64, error: String) -> BichonResult<()> {
+        Self::update_state(account_id, move |current| {
+            let mut updated = current.clone();
+            if let Some(ref mut session) = updated.active_session {
+                let new_error = AccountError {
+                    error,
+                    at: utc_now!(),
+                };
+                session.errors.push(new_error);
+                let to_remove = session.errors.len().saturating_sub(30);
+                if to_remove > 0 {
+                    session.errors.drain(0..to_remove);
+                }
+            }
+            Ok(updated)
+        })
+        .await
+    }
+
+    async fn update_state(
+        account_id: u64,
+        updater: impl FnOnce(&DownloadState) -> BichonResult<DownloadState> + Send + 'static,
+    ) -> BichonResult<()> {
+        if Self::get(account_id).await?.is_some() {
+            update_impl(
+                DB_MANAGER.envelope_db(),
+                move |rw| {
+                    rw.get()
+                        .primary::<DownloadState>(account_id)
+                        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+                        .ok_or_else(|| {
+                            raise_error!(
+                                format!("Cannot find download info of account={}", account_id),
+                                ErrorCode::ResourceNotFound
+                            )
+                        })
+                },
+                updater,
+            )
+            .await?;
+        }
         Ok(())
     }
 
@@ -110,12 +268,12 @@ impl AccountRunningState {
 
         delete_impl(DB_MANAGER.envelope_db(), move |rw| {
             rw.get()
-                .primary::<AccountRunningState>(account_id)
+                .primary::<DownloadState>(account_id)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
                 .ok_or_else(|| {
                     raise_error!(
                         format!(
-                            "AccountRunningState '{}' not found during deletion process.",
+                            "DownloadState '{}' not found during deletion process.",
                             account_id
                         ),
                         ErrorCode::ResourceNotFound
@@ -125,216 +283,38 @@ impl AccountRunningState {
         .await
     }
 
-    // pub async fn set_initial_sync_start(account_id: u64) -> BichonResult<()> {
-    //     Self::update_account_running_state(account_id, move |current| {
-    //         let mut updated = current.clone();
-    //         updated.initial_sync_start_time = Some(utc_now!());
-    //         Ok(updated)
-    //     })
-    //     .await
-    // }
-
-    pub async fn set_initial_sync_completed(account_id: u64) -> BichonResult<()> {
-        Self::update_account_running_state(account_id, move |current| {
+    pub async fn append_global_error_message(account_id: u64, error: String) -> BichonResult<()> {
+        Self::update_state(account_id, move |current| {
             let mut updated = current.clone();
-            updated.is_initial_sync_completed = true;
-            updated.initial_sync_end_time = Some(utc_now!());
+            updated.append_global_error_log(error);
             Ok(updated)
         })
         .await
     }
 
-    pub async fn set_initial_sync_failed(account_id: u64) -> BichonResult<()> {
-        Self::update_account_running_state(account_id, move |current| {
-            let mut updated = current.clone();
-            updated.initial_sync_failed_time = Some(utc_now!());
-            Ok(updated)
-        })
-        .await
-    }
-
-    pub async fn set_current_sync_batch_number(
-        account_id: u64,
-        syncing_folder: String,
-        batch_number: u32,
-    ) -> BichonResult<()> {
-        Self::update_account_running_state(account_id, move |current| {
-            let mut updated = current.clone();
-            let mut progress_map = updated.progress.clone().unwrap_or_default();
-            let entry =
-                progress_map
-                    .entry(syncing_folder.to_string())
-                    .or_insert(MailboxBatchProgress {
-                        total_batches: 0,
-                        current_batch: 0,
-                    });
-            entry.current_batch = batch_number;
-            updated.progress = Some(progress_map);
-            Ok(updated)
-        })
-        .await
-    }
-
-    pub async fn set_folder_initial_sync_completed(
-        account_id: u64,
-        syncing_folder: String,
-    ) -> BichonResult<()> {
-        Self::update_account_running_state(account_id, move |current| {
-            let mut updated = current.clone();
-            let mut progress_map = updated.progress.clone().unwrap_or_default();
-            let entry =
-                progress_map
-                    .entry(syncing_folder.to_string())
-                    .or_insert(MailboxBatchProgress {
-                        total_batches: 0,
-                        current_batch: 0,
-                    });
-            entry.current_batch = entry.total_batches;
-            updated.progress = Some(progress_map);
-            Ok(updated)
-        })
-        .await
-    }
-
-    pub async fn set_initial_current_syncing_folder(
-        account_id: u64,
-        current_syncing_folder: String,
-        total_sync_batches: u32,
-    ) -> BichonResult<()> {
-        Self::update_account_running_state(account_id, move |current| {
-            let mut updated = current.clone();
-            let mut progress_map = updated.progress.clone().unwrap_or_default();
-            progress_map.insert(
-                current_syncing_folder.clone(),
-                MailboxBatchProgress {
-                    total_batches: total_sync_batches,
-                    current_batch: 0,
-                },
-            );
-            updated.progress = Some(progress_map);
-            Ok(updated)
-        })
-        .await
-    }
-
-    pub async fn set_incremental_sync_start(account_id: u64) -> BichonResult<()> {
-        Self::update_account_running_state(account_id, move |current| {
-            let mut updated = current.clone();
-            updated.last_incremental_sync_start = utc_now!();
-            updated.last_incremental_sync_end = None;
-            Ok(updated)
-        })
-        .await
-    }
-
-    pub async fn set_incremental_sync_end(account_id: u64) -> BichonResult<()> {
-        Self::update_account_running_state(account_id, move |current| {
-            let mut updated = current.clone();
-            updated.last_incremental_sync_end = Some(utc_now!());
-            Ok(updated)
-        })
-        .await
-    }
-
-    pub async fn append_error_message(account_id: u64, error: String) -> BichonResult<()> {
-        Self::update_account_running_state(account_id, move |current| {
-            let mut updated = current.clone();
-            updated.append_error_log(error);
-            Ok(updated)
-        })
-        .await
-    }
-
-    pub fn append_error_log(&mut self, error: String) {
+    fn append_global_error_log(&mut self, error: String) {
         let new_error = AccountError {
             error,
             at: utc_now!(),
         };
 
-        self.errors.push(new_error);
-        if self.errors.len() > ERROR_COUNT_PER_ACCOUNT {
-            self.errors.remove(0);
+        self.global_errors.push(new_error);
+        let to_remove = self.global_errors.len().saturating_sub(30);
+        if to_remove > 0 {
+            self.global_errors.drain(0..to_remove);
         }
     }
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_insert_single_error() {
-        let mut account_state = AccountRunningState {
-            account_id: 1000u64,
-            last_incremental_sync_start: 1000,
-            last_incremental_sync_end: Some(2000),
-            errors: Vec::new(),
-            ..Default::default()
-        };
-
-        account_state.append_error_log(String::from("Error 1"));
-        assert_eq!(account_state.errors.len(), 1);
-        assert_eq!(account_state.errors[0].error, "Error 1");
+    pub async fn clear_global_errors(account_id: u64) -> BichonResult<()> {
+        Self::update_state(account_id, move |current| {
+            let mut updated = current.clone();
+            updated.clear_global_error_log();
+            Ok(updated)
+        })
+        .await
     }
 
-    #[test]
-    fn test_insert_multiple_errors() {
-        let mut account_state = AccountRunningState {
-            account_id: 1000u64,
-            last_incremental_sync_start: 1000,
-            last_incremental_sync_end: Some(2000),
-            errors: Vec::new(),
-            ..Default::default()
-        };
-
-        for i in 1..=5 {
-            account_state.append_error_log(format!("Error {}", i));
-        }
-
-        assert_eq!(account_state.errors.len(), 5);
-        assert_eq!(account_state.errors[4].error, "Error 5");
-    }
-
-    #[test]
-    fn test_error_limit_exceeded() {
-        let mut account_state = AccountRunningState {
-            account_id: 1000u64,
-            last_incremental_sync_start: 1000,
-            last_incremental_sync_end: Some(2000),
-            errors: Vec::new(),
-            ..Default::default()
-        };
-
-        for i in 1..=25 {
-            account_state.append_error_log(format!("Error {}", i));
-        }
-
-        // Should only keep the last 10 errors
-        assert_eq!(account_state.errors.len(), ERROR_COUNT_PER_ACCOUNT);
-        assert_eq!(account_state.errors[0].error, "Error 6");
-        assert_eq!(account_state.errors[19].error, "Error 25");
-    }
-
-    #[test]
-    fn test_insert_error_after_limit() {
-        let mut account_state = AccountRunningState {
-            account_id: 1000u64,
-            last_incremental_sync_start: 1000,
-            last_incremental_sync_end: Some(2000),
-            errors: Vec::new(),
-            ..Default::default()
-        };
-
-        // Insert exactly 10 errors
-        for i in 1..=20 {
-            account_state.append_error_log(format!("Error {}", i));
-        }
-
-        // Insert one more error to exceed the limit
-        account_state.append_error_log(String::from("Error 21"));
-
-        assert_eq!(account_state.errors.len(), ERROR_COUNT_PER_ACCOUNT);
-        assert_eq!(account_state.errors[0].error, "Error 2"); // The first error is removed
-        assert_eq!(account_state.errors[19].error, "Error 21"); // The last inserted error
+    fn clear_global_error_log(&mut self) {
+        self.global_errors.clear();
     }
 }

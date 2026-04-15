@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::modules::account::dispatcher::STATUS_DISPATCHER;
 use crate::modules::account::entity::AuthType;
 use crate::modules::account::migration::{AccountModel, AccountType};
 use crate::modules::error::code::ErrorCode;
@@ -102,12 +101,6 @@ impl ImapConnectionManager {
                     "Failed to create IMAP {}'s client: {:#?}",
                     &account.email, error
                 );
-                STATUS_DISPATCHER
-                    .append_error(
-                        account_id,
-                        format!("imap client connect error: {:#?}", error),
-                    )
-                    .await;
                 return Err(error);
             }
         };
@@ -116,12 +109,6 @@ impl ImapConnectionManager {
             Ok(session) => session,
             Err(error) => {
                 error!("Failed to authenticate IMAP session: {:#?}", error);
-                STATUS_DISPATCHER
-                    .append_error(
-                        account_id,
-                        format!("imap client authenticate error: {:#?}", error),
-                    )
-                    .await;
                 return Err(error);
             }
         };
@@ -132,12 +119,6 @@ impl ImapConnectionManager {
                 AccountModel::update_capabilities(account_id, to_save).await?;
                 if let Err(error) = check_capabilities(&capabilities) {
                     error!("Failed to check IMAP capabilities: {:#?}", error);
-                    STATUS_DISPATCHER
-                        .append_error(
-                            account_id,
-                            format!("imap client check capabilities error: {:#?}", error),
-                        )
-                        .await;
                     return Err(error);
                 }
 
@@ -156,12 +137,6 @@ impl ImapConnectionManager {
             }
             Err(error) => {
                 error!("Failed to fetch IMAP capabilities: {:#?}", error);
-                STATUS_DISPATCHER
-                    .append_error(
-                        account_id,
-                        format!("imap client fetch capabilities error: {:#?}", error),
-                    )
-                    .await;
                 return Err(error);
             }
         }

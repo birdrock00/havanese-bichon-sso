@@ -42,6 +42,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
       },
       enableSorting: false,
       enableHiding: false,
+      meta: { className: 'max-w-[120px]' },
     },
     {
       accessorKey: "email",
@@ -52,6 +53,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         return <LongText>{row.original.email}</LongText>
       },
       enableHiding: false,
+      meta: { className: 'max-w-[220px]' },
     },
     {
       accessorKey: "enabled",
@@ -59,7 +61,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         <DataTableColumnHeader className="justify-center" column={column} title={t('accounts.enabled')} />
       ),
       cell: EnableAction,
-      meta: { className: 'w-18 text-center' },
+      meta: { className: 'max-w-[86px] text-center' },
       enableHiding: false,
     },
     {
@@ -68,7 +70,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         <DataTableColumnHeader column={column} title={t('accounts.auth')} />
       ),
       cell: OAuth2Action,
-      meta: { className: 'text-center' },
+      meta: { className: 'text-center max-w-[86px]' },
       enableHiding: false,
       enableSorting: false
     },
@@ -80,7 +82,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
       cell: ({ row }) => {
         return <LongText>{row.original.account_type}</LongText>
       },
-      meta: { className: 'w-18' },
+      meta: { className: 'text-center max-w-[60px]' },
       enableHiding: false,
       enableSorting: false
     },
@@ -96,7 +98,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         }
         return <LongText className="text-center">{row.original.sync_interval_min} min</LongText>
       },
-      //meta: { className: 'w-18 text-center' },
+      meta: { className: 'text-center max-w-[120px]' },
       enableHiding: false,
     },
     {

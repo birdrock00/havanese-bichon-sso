@@ -104,11 +104,15 @@
         "totalEmails": "Email totali",
         "syncedLocally": "Sincronizzate localmente",
         "totalEmailSize": "Dimensione totale email",
-        "logicalVolume": "Volume logico",
+        "logicalVolume": "Dimensioni originali",
         "localDataFiles": "File di dati locali",
         "actualDiskUsage": "Uso effettivo del disco",
+        "efficiency": "Efficienza",
+        "saved": "Risparmiato",
+        "dataStorage": "Archiviazione",
+        "indexSize": "Dimens. indice",
         "metadataSize": "Dimensione metadati",
-        "duckdbDatabase": "Basato sull'archiviazione DuckDB",
+        "tantivyDatabase": "Basato sul motore di ricerca Tantivy",
         "dayTrend": "Tendenza a 30 giorni",
         "attachments": "Allegati",
         "topLists": "Liste Top",
@@ -195,7 +199,7 @@
         "edit": "Modifica",
         "delete": "Elimina",
         "detail": "Dettaglio",
-        "syncFolders": "Sincronizza Cartelle",
+        "selectMailboxes": "Scegli caselle",
         "oauth2Tokens": "Token OAuth2",
         "id": "ID",
         "enabled": "Abilitato",
@@ -223,16 +227,15 @@
         "accountCreationFailed": "Creazione Account Fallita",
         "updateFailed": "Aggiornamento fallito, riprova più tardi",
         "creationFailed": "Creazione fallita, riprova più tardi",
-        "selectSyncFolders": "Seleziona Cartelle di Sincronizzazione",
         "allMailFolderSelected": "Attenzione: Cartella 'Tutta la Posta' Selezionata",
         "accountSyncFoldersUpdated": "Cartelle di Sincronizzazione Account Aggiornate",
         "accountSyncFoldersUpdateFailed": "Aggiornamento Cartelle di Sincronizzazione Account Fallito",
         "serverConfiguration": "Configurazione Server (IMAP)",
-        "syncFoldersTitle": "Sincronizza Cartelle",
+        "selectedMailboxes": "Caselle selezionate",
         "allMailFolderSelectedDesc": "La selezione di cartelle con l'attributo 'Tutta la Posta' probabilmente causerà la duplicazione dei messaggi già sincronizzati da cartelle come Posta in arrivo e Posta inviata. Questo può consumare significativamente più spazio di archiviazione.",
         "allMailSkipped": "Cartelle predefinite selezionate. 'Tutta la Posta' è stata saltata per evitare duplicati.",
         "selectAtLeastOneFolder": "Seleziona almeno una cartella",
-        "chooseFoldersToSync": "Scegli le cartelle da sincronizzare per {{email}}. Le cartelle appena aggiunte inizieranno a essere scaricate durante il prossimo ciclo di sincronizzazione.",
+        "chooseMailboxesToDownload": "Scegli le caselle da scaricare per {{email}}. Le nuove caselle verranno scaricate nel prossimo ciclo.",
         "accountDetails": "Dettagli Account",
         "capabilities": "Capacità",
         "folderLimit": "Limite Cartelle",
@@ -313,23 +316,38 @@
         },
         "viewDetails": "visualizza dettagli",
         "runningState": {
-            "notStarted": "Non Avviato",
-            "inProgress": "In Corso",
-            "calculating": "Calcolo in corso...",
-            "initialSync": "Sincronizzazione Iniziale",
-            "completed": "Completato",
-            "duration": "Durata",
-            "startTime": "Ora di Inizio:",
-            "endTime": "Ora di Fine:",
-            "syncProgress": "Avanzamento Sincronizzazione",
-            "incrementalSync": "Sincronizzazione Incrementale",
-            "syncInterval": "Intervallo di Sincronizzazione:",
-            "everyMinutes": "Ogni {{minutes}} minuti",
-            "errorLogs": "Log Errori",
-            "noErrorLogs": "Nessun log errori disponibile.",
-            "noActiveState": "Nessuno stato attivo disponibile",
-            "accountNotStarted": "La sincronizzazione dell'account potrebbe non essere ancora iniziata",
-            "close": "Chiudi"
+            "message": "Messaggio",
+            "account": {
+                "id": "ID account"
+            },
+            "tabs": {
+                "active_session": "Sessione attiva",
+                "history": "Cronologia",
+                "global_errors": "Errori globali",
+                "folders": "Caselle di posta",
+                "errors": "Errori"
+            },
+            "loading": {
+                "fetching_account_state": "Caricamento stato account..."
+            },
+            "empty": {
+                "no_active_download": "Nessun download in corso",
+                "no_errors_current": "Nessun errore nella sessione corrente",
+                "no_errors_session": "Nessun errore in questa sessione",
+                "no_global_errors": "Nessun errore globale",
+                "no_history": "Nessuna cronologia disponibile"
+            },
+            "session": {
+                "status": "Stato",
+                "trigger": "Trigger",
+                "started_at": "Ora di inizio"
+            },
+            "common": {
+                "folders": "caselle di posta",
+                "close": "Chiudi"
+            },
+            "latest": "RECENTE",
+            "folders": "caselle di posta"
         },
         "steps": {
             "complete": "Completato",

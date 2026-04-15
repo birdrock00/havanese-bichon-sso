@@ -17,18 +17,17 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::modules::account::entity::AuthType;
-use crate::modules::cache::imap::sync::execute_imap_sync;
+use crate::modules::account::state::DownloadState;
+use crate::modules::cache::imap::sync::process_imap_download;
 use crate::modules::common::periodic::{PeriodicTask, TaskHandle};
 use crate::modules::oauth2::token::OAuth2AccessToken;
-use crate::modules::{
-    account::{dispatcher::STATUS_DISPATCHER, migration::AccountModel},
-    error::BichonResult,
-};
+use crate::modules::{account::migration::AccountModel, error::BichonResult};
 use crate::utc_now;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::{sync::LazyLock, time::Duration};
 use tokio::sync::Mutex;
+use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
 static _DESCRIPTION: &str = "This task periodically synchronizes mailbox data for a specified account, ensuring that all local data is up-to-date.";
@@ -38,7 +37,7 @@ static LAST_WARN_TIME: AtomicI64 = AtomicI64::new(0);
 const WARN_INTERVAL_MS: i64 = 600_000;
 
 pub struct AccountSyncTask {
-    tasks: Mutex<Option<HashMap<u64, TaskHandle>>>,
+    tasks: Mutex<Option<HashMap<u64, (TaskHandle, CancellationToken)>>>,
 }
 
 impl AccountSyncTask {
@@ -48,11 +47,16 @@ impl AccountSyncTask {
         }
     }
 
-    pub async fn start_account_sync_task(&self, account_id: u64, email: String) {
-        let task_name = format!("account-sync-task-{}-{}", account_id, &email);
+    pub async fn start_account_download_task(&self, account_id: u64, email: String) {
+        let task_name = format!("account-download-task-{}-{}", account_id, &email);
         let periodic_task = PeriodicTask::new(&task_name);
+
+        let cancel_token = CancellationToken::new();
+        let task_token = cancel_token.clone();
+
         let task = move |param: Option<u64>| {
             let account_id = param.unwrap();
+            let internal_token = task_token.clone();
             Box::pin(async move {
                 let account = AccountModel::async_get(account_id).await.ok();
                 match account {
@@ -63,7 +67,7 @@ impl AccountSyncTask {
                             if now - last >= WARN_INTERVAL_MS {
                                 LAST_WARN_TIME.store(now, Ordering::Relaxed);
                                 warn!(
-                                    "Account {}: Sync aborted. Account is currently disabled.",
+                                    "Account {}: download aborted. Account is currently disabled.",
                                     account_id
                                 );
                             }
@@ -72,21 +76,20 @@ impl AccountSyncTask {
                                 if let AuthType::OAuth2 = imap.auth.auth_type {
                                     if OAuth2AccessToken::get(account.id).await?.is_none() {
                                         if utc_now!() % 300_000 == 0 {
-                                            warn!("Account {}: Sync aborted. OAuth2 authorization not completed. Please visit the rustmailer admin page to authorize this account.", account_id);
+                                            warn!("Account {}: download aborted. OAuth2 authorization not completed. Please visit the rustmailer admin page to authorize this account.", account_id);
                                         }
                                         return Ok(());
                                     }
                                 }
                             }
-                            if let Err(e) = execute_imap_sync(&account).await {
-                                STATUS_DISPATCHER
-                                    .append_error(
-                                        account_id,
-                                        format!("error in account sync task: {:#?}", e),
-                                    )
-                                    .await;
+                            if let Err(e) = process_imap_download(&account, internal_token).await {
+                                DownloadState::append_global_error_message(
+                                    account.id,
+                                    format!("error in account download task: {:#?}", e),
+                                )
+                                .await?;
                                 error!(
-                                    "Failed to synchronize mailbox data for '{}': {:?}",
+                                    "Failed to download mailbox data for '{}': {:?}",
                                     account_id, e
                                 )
                             }
@@ -94,7 +97,7 @@ impl AccountSyncTask {
                     }
                     None => {
                         error!(
-                            "Account {}: Sync aborted. Account entity not found.",
+                            "Account {}: download aborted. Account entity not found.",
                             account_id
                         );
                     }
@@ -103,10 +106,10 @@ impl AccountSyncTask {
             })
         };
         let handler = periodic_task.start(task, Some(account_id), TASK_INTERVAL, true, true);
-        self.add_task(account_id, handler).await;
+        self.add_task(account_id, (handler, cancel_token)).await;
     }
 
-    pub async fn add_task(&self, account_id: u64, handler: TaskHandle) {
+    pub async fn add_task(&self, account_id: u64, handler: (TaskHandle, CancellationToken)) {
         let mut guard = self.tasks.lock().await;
         if let Some(map) = guard.as_mut() {
             map.insert(account_id, handler);
@@ -118,19 +121,12 @@ impl AccountSyncTask {
     pub async fn stop(&self, account_id: u64) -> BichonResult<()> {
         let mut guard = self.tasks.lock().await;
         if let Some(map) = guard.as_mut() {
-            if let Some(handler) = map.remove(&account_id) {
+            if let Some((handler, token)) = map.remove(&account_id) {
                 drop(guard);
+                token.cancel();
                 handler.cancel().await;
-            } else {
-                warn!("No sync task found for account: {}", account_id);
             }
-        } else {
-            warn!(
-                "Stop called after global shutdown for account: {}",
-                account_id
-            );
         }
-
         Ok(())
     }
 
@@ -138,13 +134,21 @@ impl AccountSyncTask {
         let mut guard = self.tasks.lock().await;
         if let Some(map) = guard.take() {
             drop(guard);
-            for (account_id, handler) in map {
-                info!("Shutdown: Waiting for account {} to sync...", account_id);
-                handler.stop().await;
+            for (account_id, (handler, token)) in map {
+                info!(
+                    "Shutdown: Sending cancel signal to account {}...",
+                    account_id
+                );
+                token.cancel();
+                if let Err(_) = tokio::time::timeout(Duration::from_secs(10), handler.stop()).await
+                {
+                    error!(
+                        "Shutdown: Account {} download task forced timeout.",
+                        account_id
+                    );
+                }
             }
-            info!("Shutdown: All sync tasks stopped successfully.");
-        } else {
-            warn!("Shutdown: Sync tasks were already shut down or never initialized.");
+            info!("Shutdown: All download tasks processed.");
         }
     }
 }

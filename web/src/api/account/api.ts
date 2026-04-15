@@ -31,28 +31,58 @@ export const minimal_account_list = async () => {
 };
 
 
-export interface ErrorMessage {
+export enum DownloadStatus {
+    Running = "Running",
+    Success = "Success",
+    Failed = "Failed",
+    Cancelled = "Cancelled",
+}
+
+export enum TriggerType {
+    Manual = "Manual",
+    Scheduled = "Scheduled",
+}
+
+export enum FolderStatus {
+    Pending = "Pending",
+    Downloading = "Downloading",
+    Success = "Success",
+    Failed = "Failed",
+    Cancelled = "Cancelled",
+}
+
+export interface FolderProgress {
+    folder_name: string;
+    planned: number;
+    current: number;
+    status: FolderStatus;
+    message: string | null;
+}
+
+
+export interface AccountError {
+    at: number;
     error: string;
-    at: number; // milliseconds timestamp
 }
 
-export type ProgressMap = Record<string, MailboxBatchProgress>;
+export interface DownloadSession {
+    start_time: number;
+    end_time: number | null;
+    status: DownloadStatus;
+    message: string | null;
+    trigger: TriggerType;
+    folder_details: Record<string, FolderProgress>;
+    current_folder: string | null;
+    errors: AccountError[];
+}
 
-export interface AccountRunningState {
+export interface DownloadState {
     account_id: number;
-    last_incremental_sync_start: number;
-    last_incremental_sync_end?: number,
-    errors: ErrorMessage[];
-    is_initial_sync_completed: boolean;
-    progress?: ProgressMap;
-    initial_sync_start_time?: number;
-    initial_sync_end_time?: number;
-}
-
-
-export interface MailboxBatchProgress {
-    total_batches: number;
-    current_batch: number;
+    active_session: DownloadSession | null;
+    history: DownloadSession[];
+    last_trigger_at: number;
+    last_finished_at: number | null;
+    global_errors: AccountError[];
 }
 
 
@@ -61,6 +91,7 @@ type Encryption = 'Ssl' | 'StartTls' | 'None';
 type AuthType = 'Password' | 'OAuth2';
 type Unit = 'Days' | 'Months' | 'Years';
 type AccountType = 'IMAP' | 'NoSync';
+
 // Interface definitions
 interface AuthConfig {
     auth_type: AuthType;
@@ -109,7 +140,7 @@ export interface AccountModel {
 }
 
 export const account_state = async (account_id: number) => {
-    const response = await axiosInstance.get<AccountRunningState>(`api/v1/account-state/${account_id}`);
+    const response = await axiosInstance.get<DownloadState>(`api/v1/account-state/${account_id}`);
     return response.data;
 };
 

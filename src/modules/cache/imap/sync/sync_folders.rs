@@ -32,7 +32,7 @@ use crate::{
 use async_imap::{types::Name, Session};
 use tracing::{debug, info, warn};
 
-pub async fn get_sync_folders(
+pub async fn get_download_folders(
     account: &AccountModel,
     session: &mut Session<Box<dyn SessionStream>>,
 ) -> BichonResult<Vec<MailBox>> {
@@ -110,7 +110,7 @@ pub async fn get_sync_folders(
                 .iter()
                 .map(|n| decode_mailbox_name!(n.name().to_string()))
                 .collect();
-            AccountModel::update_sync_folders(account.id, sync_folders).await?;
+            AccountModel::update_download_folders(account.id, sync_folders).await?;
         } else {
             warn!(
                 "Account {}: No subscribed mailboxes found. This is unexpected — IMAP server should at least provide INBOX.",
@@ -160,7 +160,7 @@ pub async fn detect_mailbox_changes(
             // Note: When all subscribed folders are deleted (remaining_sync_folders empty),
             // the system's default behavior is to automatically fall back to syncing
             // only the default folders (INBOX and Sent) in subsequent operations
-            AccountModel::update_sync_folders(account.id, remaining_sync_folders).await?;
+            AccountModel::update_download_folders(account.id, remaining_sync_folders).await?;
         }
 
         info!(

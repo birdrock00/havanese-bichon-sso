@@ -359,7 +359,7 @@ impl IndexManager {
         }
 
         if let Some(ref name) = filter.attachment_name {
-            if let Ok(query) = RegexQuery::from_pattern(name.as_str(), f.f_attachment_glue) {
+            if let Ok(query) = RegexQuery::from_pattern(name.as_str(), f.f_attachment_name) {
                 subqueries.push((Occur::Must, Box::new(query)));
             }
         }

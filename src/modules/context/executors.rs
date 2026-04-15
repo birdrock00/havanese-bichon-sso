@@ -20,7 +20,7 @@ use crate::modules::account::migration::AccountType;
 use crate::modules::context::Initialize;
 use crate::{
     modules::{
-        account::migration::AccountModel, context::controller::SYNC_CONTROLLER, error::BichonResult,
+        account::migration::AccountModel, context::controller::DOWNLOAD_CONTROLLER, error::BichonResult,
     },
     utc_now,
 };
@@ -65,7 +65,7 @@ impl BichonContext {
             active_accounts.len()
         );
         for account in active_accounts {
-            SYNC_CONTROLLER
+            DOWNLOAD_CONTROLLER
                 .trigger_start(account.id, account.email)
                 .await
         }

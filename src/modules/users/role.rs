@@ -336,7 +336,7 @@ impl UserRole {
         .await?;
         Ok(())
     }
-
+    
     pub async fn delete(id: u64) -> BichonResult<()> {
         if is_builtin(id) {
             return Err(raise_error!(

@@ -104,11 +104,15 @@
         "totalEmails": "إجمالي رسائل البريد الإلكتروني",
         "syncedLocally": "تمت مزامنته محليًا",
         "totalEmailSize": "الحجم الإجمالي لرسائل البريد الإلكتروني",
-        "logicalVolume": "الحجم المنطقي",
+        "logicalVolume": "الحجم الأصلي",
         "localDataFiles": "ملفات البيانات المحلية",
         "actualDiskUsage": "الاستخدام الفعلي للقرص",
+        "efficiency": "كفاءة التخزين",
+        "saved": "الموفرة",
+        "dataStorage": "تخزين البيانات",
+        "indexSize": "حجم الفهرس",
         "metadataSize": "حجم البيانات التعريفية",
-        "duckdbDatabase": "استناداً إلى تخزين DuckDB",
+        "tantivyDatabase": "تعتمد على محرك البحث Tantivy",
         "dayTrend": "اتجاه 30 يومًا",
         "attachments": "المرفقات",
         "topLists": "القوائم الأعلى",
@@ -195,7 +199,7 @@
         "edit": "تعديل",
         "delete": "حذف",
         "detail": "التفاصيل",
-        "syncFolders": "مجلدات المزامنة",
+        "selectMailboxes": "اختيار صناديق البريد",
         "oauth2Tokens": "رموز OAuth2",
         "id": "المعرّف",
         "enabled": "مفعل",
@@ -223,16 +227,15 @@
         "accountCreationFailed": "فشل إنشاء الحساب",
         "updateFailed": "فشل التحديث، يرجى المحاولة مرة أخرى لاحقًا",
         "creationFailed": "فشل الإنشاء، يرجى المحاولة مرة أخرى لاحقًا",
-        "selectSyncFolders": "تحديد مجلدات المزامنة",
         "allMailFolderSelected": "تنبيه: تم تحديد مجلد \"جميع رسائل البريد\"",
         "accountSyncFoldersUpdated": "تم تحديث مجلدات مزامنة الحساب",
         "accountSyncFoldersUpdateFailed": "فشل تحديث مجلدات مزامنة الحساب",
         "serverConfiguration": "تكوين الخادم (IMAP)",
-        "syncFoldersTitle": "مجلدات المزامنة",
+        "selectedMailboxes": "صناديق البريد المحددة",
         "allMailFolderSelectedDesc": "من المحتمل أن يؤدي تحديد المجلدات التي تحمل سمة \"جميع رسائل البريد\" إلى تكرار الرسائل التي تمت مزامنتها بالفعل من مجلدات مثل البريد الوارد والمرسل. قد يستهلك هذا مساحة تخزين أكبر بكثير.",
         "allMailSkipped": "تم تحديد المجلدات القياسية. تم تخطي 'جميع رسائل البريد' لتجنب التكرارات.",
         "selectAtLeastOneFolder": "يرجى تحديد مجلد واحد على الأقل",
-        "chooseFoldersToSync": "اختر المجلدات المراد مزامنتها لـ {{email}}، ستبدأ المجلدات المضافة حديثًا في التنزيل خلال دورة المزامنة التالية.",
+        "chooseMailboxesToDownload": "اختر صناديق البريد لتنزيلها لـ {{email}}. سيتم تنزيل الصناديق المضافة حديثًا في الدورة التالية.",
         "accountDetails": "تفاصيل الحساب",
         "capabilities": "الإمكانيات",
         "folderLimit": "حد المجلد",
@@ -313,23 +316,38 @@
         },
         "viewDetails": "عرض التفاصيل",
         "runningState": {
-            "notStarted": "لم تبدأ",
-            "inProgress": "قيد التقدم",
-            "calculating": "جارٍ الحساب...",
-            "initialSync": "المزامنة الأولية",
-            "completed": "مكتمل",
-            "duration": "المدة",
-            "startTime": "وقت البدء:",
-            "endTime": "وقت الانتهاء:",
-            "syncProgress": "تقدم المزامنة",
-            "incrementalSync": "المزامنة التزايدية",
-            "syncInterval": "فاصل المزامنة:",
-            "everyMinutes": "كل {{minutes}} دقيقة",
-            "errorLogs": "سجلات الأخطاء",
-            "noErrorLogs": "لا تتوفر سجلات أخطاء.",
-            "noActiveState": "لا توجد حالة نشطة متاحة",
-            "accountNotStarted": "قد لا تكون مزامنة الحساب قد بدأت بعد",
-            "close": "إغلاق"
+            "message": "رسالة",
+            "account": {
+                "id": "معرّف الحساب"
+            },
+            "tabs": {
+                "active_session": "الجلسة النشطة",
+                "history": "السجل",
+                "global_errors": "الأخطاء العامة",
+                "folders": "صناديق البريد",
+                "errors": "أخطاء"
+            },
+            "loading": {
+                "fetching_account_state": "جارٍ تحميل حالة الحساب..."
+            },
+            "empty": {
+                "no_active_download": "لا يوجد تنزيل نشط",
+                "no_errors_current": "لا توجد أخطاء في الجلسة الحالية",
+                "no_errors_session": "لا توجد أخطاء في هذه الجلسة",
+                "no_global_errors": "لا توجد أخطاء عامة",
+                "no_history": "لا يوجد سجل"
+            },
+            "session": {
+                "status": "الحالة",
+                "trigger": "المشغّل",
+                "started_at": "وقت البدء"
+            },
+            "common": {
+                "folders": "صناديق البريد",
+                "close": "إغلاق"
+            },
+            "latest": "الأحدث",
+            "folders": "صناديق البريد"
         },
         "steps": {
             "complete": "مكتمل",

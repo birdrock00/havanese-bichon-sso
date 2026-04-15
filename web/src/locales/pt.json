@@ -104,11 +104,15 @@
         "totalEmails": "Total de Emails",
         "syncedLocally": "Sincronizado Localmente",
         "totalEmailSize": "Tamanho Total do Email",
-        "logicalVolume": "Volume Lógico",
+        "logicalVolume": "Tamanho original",
         "localDataFiles": "Arquivos de Dados Locais",
         "actualDiskUsage": "Uso Real do Disco",
+        "efficiency": "Eficiência",
+        "saved": "Economizado",
+        "dataStorage": "Armazenamento",
+        "indexSize": "Tamanho índice",
         "metadataSize": "Tamanho dos metadatos",
-        "duckdbDatabase": "Baseado em armazenamento DuckDB",
+        "tantivyDatabase": "Baseado no motor de busca Tantivy",
         "dayTrend": "Tendência de 30 Dias",
         "attachments": "Anexos",
         "topLists": "Principais Listas",
@@ -195,7 +199,7 @@
         "edit": "Editar",
         "delete": "Excluir",
         "detail": "Detalhe",
-        "syncFolders": "Pastas de Sincronização",
+        "selectMailboxes": "Escolher caixas de correio",
         "oauth2Tokens": "Tokens OAuth2",
         "id": "ID",
         "enabled": "Ativo",
@@ -223,16 +227,15 @@
         "accountCreationFailed": "Falha ao Criar Conta",
         "updateFailed": "Falha na atualização, por favor, tente novamente mais tarde.",
         "creationFailed": "Falha na criação, por favor, tente novamente mais tarde.",
-        "selectSyncFolders": "Selecionar Pastas de Sincronização",
         "allMailFolderSelected": "Atenção: A pasta 'Todos os Emails' está selecionada",
         "accountSyncFoldersUpdated": "Pastas de Sincronização da Conta Atualizadas",
         "accountSyncFoldersUpdateFailed": "Falha ao Atualizar Pastas de Sincronização da Conta",
         "serverConfiguration": "Configuração do Servidor (IMAP)",
-        "syncFoldersTitle": "Pastas de Sincronização",
+        "selectedMailboxes": "Caixas de correio selecionadas",
         "allMailFolderSelectedDesc": "Selecionar uma pasta com o atributo 'Todos os Emails' pode duplicar mensagens já sincronizadas de pastas como Caixa de Entrada ou Itens Enviados. Isso pode consumir significativamente o seu armazenamento.",
         "allMailSkipped": "Pastas padrão selecionadas. 'Todos os Emails' foi ignorado para evitar duplicação.",
         "selectAtLeastOneFolder": "Por favor, selecione pelo menos uma pasta",
-        "chooseFoldersToSync": "Escolha as pastas para sincronizar para {{email}}. As pastas recém-adicionadas começarão a ser baixadas no próximo ciclo de sincronização.",
+        "chooseMailboxesToDownload": "Escolha as caixas de correio para baixar para {{email}}. Novas caixas serão baixadas no próximo ciclo.",
         "accountDetails": "Detalhes da Conta",
         "capabilities": "Capacidades",
         "folderLimit": "Limite de Pasta",
@@ -313,23 +316,38 @@
         },
         "viewDetails": "Ver Detalhes",
         "runningState": {
-            "notStarted": "Não Iniciado",
-            "inProgress": "Em Progresso",
-            "calculating": "Calculando...",
-            "initialSync": "Sincronização Inicial",
-            "completed": "Concluído",
-            "duration": "Duração",
-            "startTime": "Hora de Início:",
-            "endTime": "Hora de Término:",
-            "syncProgress": "Progresso da Sincronização",
-            "incrementalSync": "Sincronização Incremental",
-            "syncInterval": "Intervalo de Sincronização:",
-            "everyMinutes": "A cada {{minutes}} minutos",
-            "errorLogs": "Logs de Erro",
-            "noErrorLogs": "Nenhum log de erro.",
-            "noActiveState": "Nenhum estado ativo",
-            "accountNotStarted": "A sincronização da conta pode não ter começado ainda",
-            "close": "Fechar"
+            "message": "Mensagem",
+            "account": {
+                "id": "ID da conta"
+            },
+            "tabs": {
+                "active_session": "Sessão ativa",
+                "history": "Histórico",
+                "global_errors": "Erros globais",
+                "folders": "Caixas de correio",
+                "errors": "Erros"
+            },
+            "loading": {
+                "fetching_account_state": "Obtendo estado da conta..."
+            },
+            "empty": {
+                "no_active_download": "Nenhum download em andamento",
+                "no_errors_current": "Sem erros na sessão atual",
+                "no_errors_session": "Sem erros nesta sessão",
+                "no_global_errors": "Sem erros globais",
+                "no_history": "Sem histórico"
+            },
+            "session": {
+                "status": "Status",
+                "trigger": "Gatilho",
+                "started_at": "Hora de início"
+            },
+            "common": {
+                "folders": "caixas de correio",
+                "close": "Fechar"
+            },
+            "latest": "RECENTE",
+            "folders": "caixas de correio"
         },
         "steps": {
             "complete": "Concluído",

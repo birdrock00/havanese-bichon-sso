@@ -23,7 +23,7 @@ use crate::modules::account::migration::AccountModel;
 use crate::modules::account::payload::{
     filter_accessible_accounts, AccountCreateRequest, AccountUpdateRequest, MinimalAccount,
 };
-use crate::modules::account::state::AccountRunningState;
+use crate::modules::account::state::DownloadState;
 use crate::modules::account::view::AccountResp;
 use crate::modules::common::auth::ClientContext;
 use crate::modules::common::paginated::paginate_vec;
@@ -195,15 +195,15 @@ impl AccountApi {
         /// The account ID to check state for
         account_id: Path<u64>,
         context: ClientContext,
-    ) -> ApiResult<Json<AccountRunningState>> {
+    ) -> ApiResult<Json<DownloadState>> {
         let account_id = account_id.0;
         AccountModel::check_account_exists(account_id).await?;
         context
             .require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)
             .await?;
-        let state = AccountRunningState::get(account_id).await?.ok_or_else(|| {
+        let state = DownloadState::get(account_id).await?.ok_or_else(|| {
             raise_error!(
-                "account running state is not found".into(),
+                "account download state is not found".into(),
                 ErrorCode::ResourceNotFound
             )
         })?;

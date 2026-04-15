@@ -67,7 +67,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             <span className='sr-only'>{t('accounts.openMenu')}</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align='end' className='w-[160px]'>
+        <DropdownMenuContent align='end' className='w-[220px]'>
           {hasPermission && <DropdownMenuItem
             onClick={() => {
               setCurrentRow(row.original)
@@ -90,7 +90,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
               setOpen('sync-folders')
             }}
           >
-            {t('accounts.syncFolders')}
+            {t('accounts.selectMailboxes')}
             <DropdownMenuShortcut>
               <Mailbox size={16} />
             </DropdownMenuShortcut>

@@ -104,11 +104,15 @@
         "totalEmails": "Totaal aantal e-mails",
         "syncedLocally": "Lokaal gesynchroniseerd",
         "totalEmailSize": "Totale e-mailgrootte",
-        "logicalVolume": "Logisch volume",
+        "logicalVolume": "Oorspronkelijke grootte",
         "localDataFiles": "Lokale Gegevensbestanden",
         "actualDiskUsage": "Feitelijk schijfgebruik",
+        "efficiency": "Opslagefficiëntie",
+        "saved": "Bespaard",
+        "dataStorage": "Gegevensopslag",
+        "indexSize": "Indexgrootte",
         "metadataSize": "Metadata grootte",
-        "duckdbDatabase": "Gebaseerd op DuckDB-opslag",
+        "tantivyDatabase": "Gebaseerd op de zoekmachine Tantivy",
         "dayTrend": "30-Dagen Trend",
         "attachments": "Bijlagen",
         "topLists": "Toplijsten",
@@ -195,7 +199,7 @@
         "edit": "Bewerken",
         "delete": "Verwijderen",
         "detail": "Detail",
-        "syncFolders": "Sync Mappen",
+        "selectMailboxes": "Mailboxen kiezen",
         "oauth2Tokens": "OAuth2 Tokens",
         "id": "ID",
         "enabled": "Ingeschakeld",
@@ -223,16 +227,15 @@
         "accountCreationFailed": "Account Aanmaken Mislukt",
         "updateFailed": "Bijwerken mislukt, probeer het later opnieuw",
         "creationFailed": "Aanmaken mislukt, probeer het later opnieuw",
-        "selectSyncFolders": "Selecteer Sync Mappen",
         "allMailFolderSelected": "Let Op: 'Alle Mail' Map Geselecteerd",
         "accountSyncFoldersUpdated": "Account Sync Mappen Bijgewerkt",
         "accountSyncFoldersUpdateFailed": "Account Sync Mappen Bijwerken Mislukt",
         "serverConfiguration": "Serverconfiguratie (IMAP)",
-        "syncFoldersTitle": "Sync Mappen",
+        "selectedMailboxes": "Geselecteerde mailboxen",
         "allMailFolderSelectedDesc": "Het selecteren van mappen met het 'Alle Mail'-kenmerk zal waarschijnlijk leiden tot dubbele berichten die al zijn gesynchroniseerd vanuit mappen zoals Postvak In en Verzonden. Dit kan aanzienlijk meer opslagruimte in beslag nemen.",
         "allMailSkipped": "Standaardmappen geselecteerd. 'Alle Mail' is overgeslagen om duplicaten te voorkomen.",
         "selectAtLeastOneFolder": "Selecteer alstublieft ten minste één map",
-        "chooseFoldersToSync": "Kies mappen om te synchroniseren voor {{email}}. Nieuw toegevoegde mappen beginnen met downloaden tijdens de volgende synchronisatiecyclus.",
+        "chooseMailboxesToDownload": "Kies mailboxen om te downloaden voor {{email}}. Nieuw toegevoegde mailboxen worden in de volgende cyclus gedownload.",
         "accountDetails": "Accountdetails",
         "capabilities": "Mogelijkheden",
         "folderLimit": "Mappenlimiet",
@@ -313,23 +316,38 @@
         },
         "viewDetails": "details bekijken",
         "runningState": {
-            "notStarted": "Niet Gestart",
-            "inProgress": "Bezig",
-            "calculating": "Bezig met berekenen...",
-            "initialSync": "Initiële Sync",
-            "completed": "Voltooid",
-            "duration": "Duur",
-            "startTime": "Starttijd:",
-            "endTime": "Eindtijd:",
-            "syncProgress": "Sync Voortgang",
-            "incrementalSync": "Incrementale Sync",
-            "syncInterval": "Sync Interval:",
-            "everyMinutes": "Elke {{minutes}} minuten",
-            "errorLogs": "Foutlogboeken",
-            "noErrorLogs": "Geen foutlogboeken beschikbaar.",
-            "noActiveState": "Geen actieve status beschikbaar",
-            "accountNotStarted": "Accountsynchronisatie is mogelijk nog niet gestart",
-            "close": "Sluiten"
+            "message": "Bericht",
+            "account": {
+                "id": "Account-ID"
+            },
+            "tabs": {
+                "active_session": "Actieve sessie",
+                "history": "Geschiedenis",
+                "global_errors": "Globale fouten",
+                "folders": "Mailboxen",
+                "errors": "Fouten"
+            },
+            "loading": {
+                "fetching_account_state": "Accountstatus ophalen..."
+            },
+            "empty": {
+                "no_active_download": "Geen actieve download",
+                "no_errors_current": "Geen fouten in huidige sessie",
+                "no_errors_session": "Geen fouten in deze sessie",
+                "no_global_errors": "Geen globale fouten",
+                "no_history": "Geen geschiedenis beschikbaar"
+            },
+            "session": {
+                "status": "Status",
+                "trigger": "Trigger",
+                "started_at": "Starttijd"
+            },
+            "common": {
+                "folders": "mailboxen",
+                "close": "Sluiten"
+            },
+            "latest": "RECENT",
+            "folders": "mailboxen"
         },
         "steps": {
             "complete": "Voltooid",

@@ -39,7 +39,7 @@ pub const F_THREAD_ID: &str = "thread_id";
 pub const F_ATTACHMENT_COUNT: &str = "attachment_count";
 pub const F_REGULAR_ATTACHMENT_COUNT: &str = "regular_attachment_count";
 pub const F_ATTACHMENTS: &str = "attachments";
-pub const F_ATTACHMENT_GLUE: &str = "attachment_glue";
+pub const F_ATTACHMENT_NAME: &str = "attachment_name";
 pub const F_ATTACHMENT_CONTENT_HASH: &str = "attachment_content_hash";
 pub const F_ATTACHMENT_EXT: &str = "attachment_ext";
 pub const F_ATTACHMENT_CATEGORY: &str = "attachment_category";
@@ -70,7 +70,7 @@ pub struct EmailFields {
     pub f_attachment_count: Field,
     pub f_regular_attachment_count: Field,
     pub f_attachments: Field,
-    pub f_attachment_glue: Field,
+    pub f_attachment_name: Field,
     pub f_attachment_content_hash: Field,
     pub f_attachment_ext: Field,
     pub f_attachment_category: Field,

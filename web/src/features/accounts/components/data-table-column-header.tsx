@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useTranslation } from 'react-i18next'
+import LongText from '@/components/long-text'
 
 interface DataTableColumnHeaderProps<TData, TValue>
   extends React.HTMLAttributes<HTMLDivElement> {
@@ -59,7 +60,7 @@ export function DataTableColumnHeader<TData, TValue>({
             size='sm'
             className=' h-8 data-[state=open]:bg-accent'
           >
-            <span>{title}</span>
+            <LongText className='max-w-[80px]'>{title}</LongText>
             {column.getIsSorted() === 'desc' ? (
               <ArrowDownIcon className='ml-2 h-4 w-4' />
             ) : column.getIsSorted() === 'asc' ? (

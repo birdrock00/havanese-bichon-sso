@@ -145,7 +145,7 @@ interface Props {
     currentRow: AccountModel
 }
 
-export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
+export function DownloadFoldersDialog({ currentRow, open, onOpenChange }: Props) {
     const [selectedItems, setSelectedItems] = React.useState<string[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -382,9 +382,9 @@ export function SyncFoldersDialog({ currentRow, open, onOpenChange }: Props) {
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
                 <DialogHeader className="flex-shrink-0">
-                    <DialogTitle>{t('accounts.selectSyncFolders')}</DialogTitle>
+                    <DialogTitle>{t('accounts.selectMailboxes')}</DialogTitle>
                     <DialogDescription>
-                        {t('accounts.chooseFoldersToSync', { "email": currentRow.email })}
+                        {t('accounts.chooseMailboxesToDownload', { "email": currentRow.email })}
                     </DialogDescription>
                 </DialogHeader>
 

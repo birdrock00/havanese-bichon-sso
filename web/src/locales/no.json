@@ -104,11 +104,15 @@
         "totalEmails": "Totalt antall e-poster",
         "syncedLocally": "Synkronisert lokalt",
         "totalEmailSize": "Total e-poststørrelse",
-        "logicalVolume": "Logisk volum",
+        "logicalVolume": "Opprinnelig størrelse",
         "localDataFiles": "Lokale datafiler",
         "actualDiskUsage": "Faktisk diskbruk",
+        "efficiency": "Lagringseffektivitet",
+        "saved": "Spart",
+        "dataStorage": "Datalagring",
+        "indexSize": "Indeksstørrelse",
         "metadataSize": "Metadatastørrelse",
-        "duckdbDatabase": "Basert på DuckDB-lagring",
+        "tantivyDatabase": "Basert på søkemotoren Tantivy",
         "dayTrend": "30-dagers trend",
         "attachments": "Vedlegg",
         "topLists": "Topplister",
@@ -195,7 +199,7 @@
         "edit": "Rediger",
         "delete": "Slett",
         "detail": "Detaljer",
-        "syncFolders": "Synkroniser mapper",
+        "selectMailboxes": "Velg postbokser",
         "oauth2Tokens": "OAuth2-tokener",
         "id": "ID",
         "enabled": "Aktivert",
@@ -223,16 +227,15 @@
         "accountCreationFailed": "Kontoopprettelse mislyktes",
         "updateFailed": "Oppdatering mislyktes, prøv igjen senere",
         "creationFailed": "Opprettelse mislyktes, prøv igjen senere",
-        "selectSyncFolders": "Velg mapper for synkronisering",
         "allMailFolderSelected": "OBS: Mappen \"All e-post\" er valgt",
         "accountSyncFoldersUpdated": "Synkroniseringsmapper oppdatert",
         "accountSyncFoldersUpdateFailed": "Oppdatering av synkroniseringsmapper mislyktes",
         "serverConfiguration": "Serverkonfigurasjon (IMAP)",
-        "syncFoldersTitle": "Synkroniser mapper",
+        "selectedMailboxes": "Valgte postbokser",
         "allMailFolderSelectedDesc": "Å velge mapper med attributtet \"All e-post\" (All Mail) vil sannsynligvis føre til duplisering av meldinger som allerede er synkronisert fra mapper som Innboks og Sendt. Dette kan forbruke betydelig mer lagringsplass.",
         "allMailSkipped": "Valgte standardmapper. 'All e-post' ble hoppet over for å unngå duplikater.",
         "selectAtLeastOneFolder": "Vennligst velg minst én mappe",
-        "chooseFoldersToSync": "Velg mapper som skal synkroniseres for {{email}}. Nytilførte mapper vil begynne å lastes ned ved neste synkroniseringssyklus.",
+        "chooseMailboxesToDownload": "Velg postbokser som skal lastes ned for {{email}}. Nye postbokser lastes ned i neste syklus.",
         "accountDetails": "Kontodetaljer",
         "capabilities": "Funksjoner",
         "folderLimit": "Mappegrense",
@@ -313,23 +316,38 @@
         },
         "viewDetails": "se detaljer",
         "runningState": {
-            "notStarted": "Ikke startet",
-            "inProgress": "Pågår",
-            "calculating": "Beregner...",
-            "initialSync": "Første synkronisering",
-            "completed": "Fullført",
-            "duration": "Varighet",
-            "startTime": "Starttid:",
-            "endTime": "Sluttid:",
-            "syncProgress": "Synkroniseringsfremdrift",
-            "incrementalSync": "Inkrementell synkronisering",
-            "syncInterval": "Synkroniseringsintervall:",
-            "everyMinutes": "Hvert {{minutes}} minutt",
-            "errorLogs": "Feillogger",
-            "noErrorLogs": "Ingen feillogger tilgjengelig.",
-            "noActiveState": "Ingen aktiv tilstand tilgjengelig",
-            "accountNotStarted": "Kontosynkronisering har kanskje ikke startet ennå",
-            "close": "Lukk"
+            "message": "Melding",
+            "account": {
+                "id": "Konto-ID"
+            },
+            "tabs": {
+                "active_session": "Aktiv økt",
+                "history": "Historikk",
+                "global_errors": "Globale feil",
+                "folders": "Postbokser",
+                "errors": "Feil"
+            },
+            "loading": {
+                "fetching_account_state": "Henter kontostatus..."
+            },
+            "empty": {
+                "no_active_download": "Ingen aktiv nedlasting",
+                "no_errors_current": "Ingen feil i gjeldende økt",
+                "no_errors_session": "Ingen feil i denne økten",
+                "no_global_errors": "Ingen globale feil",
+                "no_history": "Ingen historikk"
+            },
+            "session": {
+                "status": "Status",
+                "trigger": "Trigger",
+                "started_at": "Starttid"
+            },
+            "common": {
+                "folders": "postbokser",
+                "close": "Lukk"
+            },
+            "latest": "NYEST",
+            "folders": "postbokser"
         },
         "steps": {
             "complete": "Fullfør",

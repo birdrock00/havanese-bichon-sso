@@ -104,11 +104,15 @@
         "totalEmails": "Gesamt-E-Mails",
         "syncedLocally": "Lokal synchronisiert",
         "totalEmailSize": "Gesamtgröße der E-Mails",
-        "logicalVolume": "Logisches Volumen",
+        "logicalVolume": "Originalgröße",
         "localDataFiles": "Lokale Datendateien",
         "actualDiskUsage": "Tatsächliche Festplattennutzung",
+        "efficiency": "Speichereffizienz",
+        "saved": "Eingespart",
+        "dataStorage": "Datenspeicher",
+        "indexSize": "Indexgröße",
         "metadataSize": "Metadatengröße",
-        "duckdbDatabase": "Basierend auf DuckDB-Speicher",
+        "tantivyDatabase": "Basiert auf der Tantivy-Suchmaschine",
         "dayTrend": "30-Tage-Trend",
         "attachments": "Anhänge",
         "topLists": "Top-Listen",
@@ -195,7 +199,7 @@
         "edit": "Bearbeiten",
         "delete": "Löschen",
         "detail": "Detail",
-        "syncFolders": "Zu synchronisierende Ordner",
+        "selectMailboxes": "Postfächer wählen",
         "oauth2Tokens": "OAuth2-Token",
         "id": "ID",
         "enabled": "Aktiviert",
@@ -223,16 +227,15 @@
         "accountCreationFailed": "Kontoerstellung fehlgeschlagen",
         "updateFailed": "Aktualisierung fehlgeschlagen, bitte versuchen Sie es später erneut",
         "creationFailed": "Erstellung fehlgeschlagen, bitte versuchen Sie es später erneut",
-        "selectSyncFolders": "Zu synchronisierende Ordner auswählen",
         "allMailFolderSelected": "Warnung: 'Alle E-Mails'-Ordner ausgewählt",
         "accountSyncFoldersUpdated": "Synchronisierungsordner des Kontos aktualisiert",
         "accountSyncFoldersUpdateFailed": "Aktualisierung der Synchronisierungsordner des Kontos fehlgeschlagen",
         "serverConfiguration": "Serverkonfiguration (IMAP)",
-        "syncFoldersTitle": "Zu synchronisierende Ordner",
+        "selectedMailboxes": "Ausgewählte Postfächer",
         "allMailFolderSelectedDesc": "Die Auswahl von Ordnern mit dem Attribut 'Alle E-Mails' führt wahrscheinlich zur Duplizierung von Nachrichten, die bereits aus Ordnern wie Posteingang und Gesendet synchronisiert wurden. Dies könnte erheblich mehr Speicherplatz verbrauchen.",
         "allMailSkipped": "Standardordner ausgewählt. 'Alle E-Mails' wurde übersprungen, um Duplikate zu vermeiden.",
         "selectAtLeastOneFolder": "Wählen Sie mindestens einen Ordner aus",
-        "chooseFoldersToSync": "Wählen Sie die zu synchronisierenden Ordner für {{email}}. Neu hinzugefügte Ordner beginnen mit dem Download während des nächsten Synchronisierungszyklus.",
+        "chooseMailboxesToDownload": "Wählen Sie Postfächer zum Herunterladen für {{email}}. Neue Postfächer werden im nächsten Zyklus heruntergeladen.",
         "accountDetails": "Kontodetails",
         "capabilities": "Funktionen",
         "folderLimit": "Ordnerlimit",
@@ -313,23 +316,38 @@
         },
         "viewDetails": "Details anzeigen",
         "runningState": {
-            "notStarted": "Nicht gestartet",
-            "inProgress": "In Bearbeitung",
-            "calculating": "Wird berechnet...",
-            "initialSync": "Erste Synchronisierung",
-            "completed": "Abgeschlossen",
-            "duration": "Dauer",
-            "startTime": "Startzeit:",
-            "endTime": "Endzeit:",
-            "syncProgress": "Synchronisierungsfortschritt",
-            "incrementalSync": "Inkrementelle Synchronisierung",
-            "syncInterval": "Synchronisierungsintervall:",
-            "everyMinutes": "Alle {{minutes}} Minuten",
-            "errorLogs": "Fehlerprotokolle",
-            "noErrorLogs": "Keine Fehlerprotokolle verfügbar.",
-            "noActiveState": "Kein aktiver Zustand verfügbar",
-            "accountNotStarted": "Die Kontosynchronisierung hat möglicherweise noch nicht begonnen",
-            "close": "Schließen"
+            "message": "Nachricht",
+            "account": {
+                "id": "Konto-ID"
+            },
+            "tabs": {
+                "active_session": "Aktive Sitzung",
+                "history": "Verlauf",
+                "global_errors": "Globale Fehler",
+                "folders": "Postfächer",
+                "errors": "Fehler"
+            },
+            "loading": {
+                "fetching_account_state": "Kontostatus wird geladen..."
+            },
+            "empty": {
+                "no_active_download": "Kein aktiver Download",
+                "no_errors_current": "Keine Fehler in der aktuellen Sitzung",
+                "no_errors_session": "Keine Fehler in dieser Sitzung",
+                "no_global_errors": "Keine globalen Fehler",
+                "no_history": "Kein Verlauf vorhanden"
+            },
+            "session": {
+                "status": "Status",
+                "trigger": "Auslöser",
+                "started_at": "Startzeit"
+            },
+            "common": {
+                "folders": "Postfächer",
+                "close": "Schließen"
+            },
+            "latest": "NEU",
+            "folders": "Postfächer"
         },
         "steps": {
             "complete": "Abgeschlossen",

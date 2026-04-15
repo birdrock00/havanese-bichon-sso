@@ -18,7 +18,10 @@
 
 use crate::{
     modules::{
-        account::migration::AccountModel,
+        account::{
+            migration::AccountModel,
+            state::{DownloadState, DownloadStatus, FolderStatus},
+        },
         cache::{
             imap::{
                 mailbox::MailBox,
@@ -31,29 +34,52 @@ use crate::{
     },
     raise_error,
 };
-use std::{sync::Arc, time::Instant};
+use std::sync::Arc;
 use tokio::sync::Semaphore;
+use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
 
-pub const DEFAULT_MAX_CONCURRENT_PER_ACCOUNT: usize = 5;
+pub const DEFAULT_MAX_CONCURRENT_PER_ACCOUNT: usize = 3;
 
 pub async fn rebuild_cache(
     account: &AccountModel,
     remote_mailboxes: &[MailBox],
+    token: CancellationToken,
 ) -> BichonResult<()> {
-    let start_time = Instant::now();
-    let mut total_inserted = 0;
     MailBox::batch_insert(remote_mailboxes).await?;
+    DownloadState::init_folder_details(
+        account.id,
+        remote_mailboxes.iter().map(|m| m.name.clone()).collect(),
+    )
+    .await?;
 
     let local_semaphore = Arc::new(Semaphore::new(DEFAULT_MAX_CONCURRENT_PER_ACCOUNT));
 
     let mut handles = Vec::new();
     for mailbox in remote_mailboxes {
+        if token.is_cancelled() {
+            DownloadState::update_session_status(
+                account.id,
+                DownloadStatus::Cancelled,
+                Some("Received termination signal (User stop or System shutdown)".to_string()),
+            )
+            .await?;
+            break;
+        }
         if mailbox.exists == 0 {
             info!(
                 "Account {}: Mailbox '{}' on the remote server has no emails. Skipping fetch for this mailbox.",
                 account.id, &mailbox.name
             );
+            DownloadState::update_folder_progress(
+                account.id,
+                mailbox.name.clone(),
+                0,
+                0,
+                FolderStatus::Success,
+                None,
+            )
+            .await?;
             continue;
         }
         let account = account.clone();
@@ -81,32 +107,41 @@ pub async fn rebuild_cache(
                 continue;
             }
         };
-
-        let handle: tokio::task::JoinHandle<Result<usize, BichonError>> =
-            tokio::spawn(async move {
-                let _global_permit = global_permit;
-                let _local_permit = local_permit;
-
-                fetch_and_save_full_mailbox(&account, &mailbox, mailbox.exists).await
-            });
+        let token_clone = token.clone();
+        let handle: tokio::task::JoinHandle<Result<(), BichonError>> = tokio::spawn(async move {
+            let _global_permit = global_permit;
+            let _local_permit = local_permit;
+            fetch_and_save_full_mailbox(&account, &mailbox, token_clone).await
+        });
         handles.push(handle);
     }
 
+    let mut has_error = false;
+    let mut last_err = None;
+
     for task in handles {
         match task.await {
-            Ok(Ok(count)) => {
-                total_inserted += count;
+            Ok(Ok(_)) => {}
+            Ok(Err(err)) => {
+                has_error = true;
+                tracing::error!("Folder sync task failed: {:#?}", err);
+                last_err = Some(err);
             }
-            Ok(Err(err)) => return Err(err),
-            Err(e) => return Err(raise_error!(format!("{:#?}", e), ErrorCode::InternalError)),
+            Err(e) => {
+                has_error = true;
+                tracing::error!("Task panicked or runtime error: {:#?}", e);
+            }
         }
     }
-    let elapsed_time = start_time.elapsed().as_secs();
-    info!(
-        "Rebuild account cache completed: {} envelopes inserted. {} secs elapsed. \
-        This is a full data fetch as there was no local cache data available.",
-        total_inserted, elapsed_time
-    );
+    if has_error {
+        if let Some(e) = last_err {
+            return Err(e);
+        }
+        return Err(raise_error!(
+            "Some tasks failed".into(),
+            ErrorCode::InternalError
+        ));
+    }
     Ok(())
 }
 
@@ -115,20 +150,43 @@ pub async fn rebuild_cache_by_date(
     remote_mailboxes: &[MailBox],
     date: &str,
     direction: FetchDirection,
+    token: CancellationToken,
 ) -> BichonResult<()> {
-    let start_time = Instant::now();
-    let mut total_inserted = 0;
     MailBox::batch_insert(remote_mailboxes).await?;
+    DownloadState::init_folder_details(
+        account.id,
+        remote_mailboxes.iter().map(|m| m.name.clone()).collect(),
+    )
+    .await?;
 
     let mut handles = Vec::new();
     let local_semaphore = Arc::new(Semaphore::new(DEFAULT_MAX_CONCURRENT_PER_ACCOUNT));
 
     for mailbox in remote_mailboxes {
+        if token.is_cancelled() {
+            DownloadState::update_session_status(
+                account.id,
+                DownloadStatus::Cancelled,
+                Some("Received termination signal (User stop or System shutdown)".to_string()),
+            )
+            .await?;
+            break;
+        }
         if mailbox.exists == 0 {
             info!(
                 "Account {}: Mailbox '{}' on the remote server has no emails. Skipping fetch for this mailbox.",
                 account.id, &mailbox.name
             );
+
+            DownloadState::update_folder_progress(
+                account.id,
+                mailbox.name.clone(),
+                0,
+                0,
+                FolderStatus::Success,
+                None,
+            )
+            .await?;
             continue;
         }
         let account = account.clone();
@@ -158,34 +216,44 @@ pub async fn rebuild_cache_by_date(
                 continue;
             }
         };
-
-        let handle: tokio::task::JoinHandle<Result<usize, BichonError>> =
+        let token_clone = token.clone();
+        let handle: tokio::task::JoinHandle<Result<(), BichonError>> =
             tokio::spawn(async move {
                 let _global_permit = global_permit;
                 let _local_permit = local_permit;
-                fetch_and_save_by_date(&account, date.as_str(), &mailbox, direction).await
+                fetch_and_save_by_date(&account, date.as_str(), &mailbox, direction, token_clone)
+                    .await
             });
         handles.push(handle);
     }
+
+    let mut has_error = false;
+    let mut last_err = None;
+
     for task in handles {
         match task.await {
-            Ok(Ok(count)) => {
-                total_inserted += count;
+            Ok(Ok(_)) => {}
+            Ok(Err(err)) => {
+                has_error = true;
+                tracing::error!("Folder sync task failed: {:#?}", err);
+                last_err = Some(err);
             }
-            Ok(Err(err)) => return Err(err),
-            Err(e) => return Err(raise_error!(format!("{:#?}", e), ErrorCode::InternalError)),
+            Err(e) => {
+                has_error = true;
+                tracing::error!("Task panicked or runtime error: {:#?}", e);
+            }
         }
     }
-    let elapsed_time = start_time.elapsed().as_secs();
-    let direction_desc = match direction {
-        FetchDirection::Since => "starting from the specified date",
-        FetchDirection::Before => "ending before the specified date",
-    };
-    info!(
-        "Rebuild account cache completed: {} envelopes inserted. {} secs elapsed. \
-     Data fetched from server {}: {}.",
-        total_inserted, elapsed_time, direction_desc, date
-    );
+    if has_error {
+        if let Some(e) = last_err {
+            return Err(e);
+        }
+        return Err(raise_error!(
+            "Some tasks failed".into(),
+            ErrorCode::InternalError
+        ));
+    }
+
     Ok(())
 }
 
@@ -193,6 +261,7 @@ pub async fn rebuild_mailbox_cache(
     account: &AccountModel,
     local_mailbox: &MailBox,
     remote_mailbox: &MailBox,
+    token: CancellationToken,
 ) -> BichonResult<()> {
     INDEX_MANAGER
         .delete_mailbox_envelopes(account.id, vec![local_mailbox.id])
@@ -204,15 +273,19 @@ pub async fn rebuild_mailbox_cache(
             account.id,
             &local_mailbox.name
         );
-        return Ok(()); // Skip if the mailbox has no emails
+        DownloadState::update_folder_progress(
+            account.id,
+            remote_mailbox.name.clone(),
+            0,
+            0,
+            FolderStatus::Success,
+            None,
+        )
+        .await?;
+        return Ok(());
     }
 
-    let inserted_count =
-        fetch_and_save_full_mailbox(account, remote_mailbox, remote_mailbox.exists).await?;
-    info!(
-        "Account {}: Successfully rebuild mailbox cache, inserted {} envelopes for mailbox '{}'.",
-        account.id, inserted_count, &local_mailbox.name
-    );
+    fetch_and_save_full_mailbox(account, remote_mailbox, token).await?;
     Ok(())
 }
 
@@ -222,6 +295,7 @@ pub async fn rebuild_mailbox_cache_by_date(
     date: &str,
     remote: &MailBox,
     direction: FetchDirection,
+    token: CancellationToken,
 ) -> BichonResult<()> {
     INDEX_MANAGER
         .delete_mailbox_envelopes(account.id, vec![local_mailbox_id])
@@ -232,13 +306,18 @@ pub async fn rebuild_mailbox_cache_by_date(
             account.id,
             &remote.name
         );
-        return Ok(()); // Skip if the mailbox has no emails
+        DownloadState::update_folder_progress(
+            account.id,
+            remote.name.clone(),
+            0,
+            0,
+            FolderStatus::Success,
+            None,
+        )
+        .await?;
+        return Ok(());
     }
 
-    let count = fetch_and_save_by_date(account, date, remote, direction).await?;
-    info!(
-        "Account {}: Successfully rebuild mailbox cache, inserted {} envelopes for mailbox '{}'.",
-        account.id, count, &remote.name
-    );
+    fetch_and_save_by_date(account, date, remote, direction, token).await?;
     Ok(())
 }

@@ -104,11 +104,15 @@
         "totalEmails": "Total des e-mails",
         "syncedLocally": "Synchronisés localement",
         "totalEmailSize": "Taille totale des e-mails",
-        "logicalVolume": "Volume logique",
+        "logicalVolume": "Taille originale",
         "localDataFiles": "Fichiers de données locaux",
         "actualDiskUsage": "Utilisation réelle du disque",
+        "efficiency": "Efficacité",
+        "saved": "Économisé",
+        "dataStorage": "Stockage",
+        "indexSize": "Taille d'index",
         "metadataSize": "Taille des métadonnées",
-        "duckdbDatabase": "Basé sur le stockage DuckDB",
+        "tantivyDatabase": "Basé sur le moteur de recherche Tantivy",
         "dayTrend": "Tendance sur 30 jours",
         "attachments": "Pièces jointes",
         "topLists": "Top Listes",
@@ -195,7 +199,7 @@
         "edit": "Modifier",
         "delete": "Supprimer",
         "detail": "Détail",
-        "syncFolders": "Synchroniser les Dossiers",
+        "selectMailboxes": "Choisir les boîtes mail",
         "oauth2Tokens": "Jetons OAuth2",
         "id": "ID",
         "enabled": "Activé",
@@ -223,16 +227,15 @@
         "accountCreationFailed": "Échec de la Création du Compte",
         "updateFailed": "La mise à jour a échoué, veuillez réessayer plus tard",
         "creationFailed": "La création a échoué, veuillez réessayer plus tard",
-        "selectSyncFolders": "Sélectionner les Dossiers de Synchronisation",
         "allMailFolderSelected": "Attention : Dossier 'Tous les messages' sélectionné",
         "accountSyncFoldersUpdated": "Dossiers de Synchronisation de Compte Mis à Jour",
         "accountSyncFoldersUpdateFailed": "Échec de la Mise à Jour des Dossiers de Synchronisation de Compte",
         "serverConfiguration": "Configuration du Serveur (IMAP)",
-        "syncFoldersTitle": "Synchroniser les Dossiers",
+        "selectedMailboxes": "Boîtes mail sélectionnées",
         "allMailFolderSelectedDesc": "La sélection de dossiers avec l'attribut 'Tous les messages' entraînera probablement la duplication des messages déjà synchronisés à partir de dossiers tels que Boîte de réception et Éléments envoyés. Cela peut consommer beaucoup plus d'espace de stockage.",
         "allMailSkipped": "Dossiers par défaut sélectionnés. 'Tous les messages' a été ignoré pour éviter les doublons.",
         "selectAtLeastOneFolder": "Veuillez sélectionner au moins un dossier",
-        "chooseFoldersToSync": "Choisissez les dossiers à synchroniser pour {{email}}. Les dossiers nouvellement ajoutés commenceront à être téléchargés lors du prochain cycle de synchronisation.",
+        "chooseMailboxesToDownload": "Choisissez les boîtes mail à télécharger pour {{email}}. Les nouvelles boîtes seront téléchargées au prochain cycle.",
         "accountDetails": "Détails du Compte",
         "capabilities": "Capacités",
         "folderLimit": "Limite de Dossiers",
@@ -313,23 +316,38 @@
         },
         "viewDetails": "voir les détails",
         "runningState": {
-            "notStarted": "Non Démarré",
-            "inProgress": "En Cours",
-            "calculating": "Calcul en cours...",
-            "initialSync": "Synchronisation Initiale",
-            "completed": "Terminé",
-            "duration": "Durée",
-            "startTime": "Heure de Début :",
-            "endTime": "Heure de Fin :",
-            "syncProgress": "Progression de la Synchronisation",
-            "incrementalSync": "Synchronisation Incrémentielle",
-            "syncInterval": "Intervalle de Synchronisation :",
-            "everyMinutes": "Toutes les {{minutes}} minutes",
-            "errorLogs": "Journaux d'Erreurs",
-            "noErrorLogs": "Aucun journal d'erreurs disponible.",
-            "noActiveState": "Aucun état actif disponible",
-            "accountNotStarted": "La synchronisation du compte n'a peut-être pas encore démarré",
-            "close": "Fermer"
+            "message": "Message",
+            "account": {
+                "id": "ID du compte"
+            },
+            "tabs": {
+                "active_session": "Session active",
+                "history": "Historique",
+                "global_errors": "Erreurs globales",
+                "folders": "Boîtes mail",
+                "errors": "Erreurs"
+            },
+            "loading": {
+                "fetching_account_state": "Chargement de l'état du compte..."
+            },
+            "empty": {
+                "no_active_download": "Aucun téléchargement en cours",
+                "no_errors_current": "Aucune erreur dans la session actuelle",
+                "no_errors_session": "Aucune erreur dans cette session",
+                "no_global_errors": "Aucune erreur globale",
+                "no_history": "Aucun historique disponible"
+            },
+            "session": {
+                "status": "Statut",
+                "trigger": "Déclencheur",
+                "started_at": "Heure de début"
+            },
+            "common": {
+                "folders": "boîtes mail",
+                "close": "Fermer"
+            },
+            "latest": "RÉCENT",
+            "folders": "boîtes mail"
         },
         "steps": {
             "complete": "Terminé",

@@ -182,6 +182,7 @@ async fn extract_envelope_core(
         mailbox_name: None,
         content_hash: email_content_hash,
     };
+    // 'attachments' contains both regular and inline attachments
     let ea = EnvelopeWithAttachments {
         envelope,
         attachments: Some(attachments),

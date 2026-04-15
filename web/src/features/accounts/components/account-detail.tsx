@@ -190,7 +190,7 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                 </Card>
                 <Card>
                   <CardHeader>
-                    <CardTitle>{t('accounts.syncFoldersTitle')}</CardTitle>
+                    <CardTitle>{t('accounts.selectedMailboxes')}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     {currentRow.sync_folders?.length ? (

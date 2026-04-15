@@ -104,11 +104,15 @@
         "totalEmails": "合計メール数",
         "syncedLocally": "ローカル同期済み",
         "totalEmailSize": "メール総容量",
-        "logicalVolume": "論理ボリューム",
+        "logicalVolume": "元のサイズ",
         "localDataFiles": "ローカルデータファイル",
         "actualDiskUsage": "実際のディスク使用量",
+        "efficiency": "圧縮効率",
+        "saved": "節約済み",
+        "dataStorage": "データストレージ",
+        "indexSize": "インデックスサイズ",
         "metadataSize": "メタデータサイズ",
-        "duckdbDatabase": "DuckDBストレージベース",
+        "tantivyDatabase": "Tantivy 検索エンジンを搭載",
         "dayTrend": "30日間トレンド",
         "attachments": "添付ファイル",
         "topLists": "トップリスト",
@@ -195,7 +199,7 @@
         "edit": "編集",
         "delete": "削除",
         "detail": "詳細",
-        "syncFolders": "同期フォルダー",
+        "selectMailboxes": "メールボックスを選択",
         "oauth2Tokens": "OAuth2トークン",
         "id": "ID",
         "enabled": "有効",
@@ -223,16 +227,15 @@
         "accountCreationFailed": "アカウントの作成に失敗しました",
         "updateFailed": "更新に失敗しました。しばらくしてからもう一度お試しください。",
         "creationFailed": "作成に失敗しました。しばらくしてからもう一度お試しください。",
-        "selectSyncFolders": "同期フォルダーを選択",
         "allMailFolderSelected": "ご注意: 「すべてのメール」フォルダーが選択されています",
         "accountSyncFoldersUpdated": "アカウント同期フォルダーが更新されました",
         "accountSyncFoldersUpdateFailed": "アカウント同期フォルダーの更新に失敗しました",
         "serverConfiguration": "サーバー設定 (IMAP)",
-        "syncFoldersTitle": "同期フォルダー",
+        "selectedMailboxes": "選択されたメールボックス",
         "allMailFolderSelectedDesc": "「すべてのメール」属性を持つフォルダーを選択すると、受信トレイや送信済みなどのフォルダーからすでに同期されているメッセージが重複する可能性があります。これにより、ストレージ容量が大幅に消費される可能性があります。",
         "allMailSkipped": "標準フォルダーが選択されました。「すべてのメール」は重複を避けるためにスキップされました。",
         "selectAtLeastOneFolder": "少なくとも1つのフォルダーを選択してください",
-        "chooseFoldersToSync": "{{email}}の同期フォルダーを選択してください。新たに追加されたフォルダーは、次回の同期サイクルでダウンロードが開始されます。",
+        "chooseMailboxesToDownload": "{{email}} のダウンロード対象メールボックスを選択してください。新しく追加されたメールボックスは次回のサイクルでダウンロードされます。",
         "accountDetails": "アカウント詳細",
         "capabilities": "機能",
         "folderLimit": "フォルダーの制限",
@@ -313,23 +316,38 @@
         },
         "viewDetails": "詳細を見る",
         "runningState": {
-            "notStarted": "未開始",
-            "inProgress": "進行中",
-            "calculating": "計算中...",
-            "initialSync": "初期同期",
-            "completed": "完了",
-            "duration": "期間",
-            "startTime": "開始時刻:",
-            "endTime": "終了時刻:",
-            "syncProgress": "同期進捗",
-            "incrementalSync": "増分同期",
-            "syncInterval": "同期間隔:",
-            "everyMinutes": "{{minutes}}分ごと",
-            "errorLogs": "エラーログ",
-            "noErrorLogs": "エラーログはありません。",
-            "noActiveState": "アクティブな状態はありません",
-            "accountNotStarted": "アカウント同期がまだ開始されていない可能性があります",
-            "close": "閉じる"
+            "message": "メッセージ",
+            "account": {
+                "id": "アカウントID"
+            },
+            "tabs": {
+                "active_session": "実行中タスク",
+                "history": "履歴",
+                "global_errors": "全体エラー",
+                "folders": "メールボックス",
+                "errors": "エラー"
+            },
+            "loading": {
+                "fetching_account_state": "アカウント状態を取得中..."
+            },
+            "empty": {
+                "no_active_download": "現在ダウンロード中のタスクはありません",
+                "no_errors_current": "現在のタスクにエラーはありません",
+                "no_errors_session": "このタスクにエラーはありません",
+                "no_global_errors": "全体エラーはありません",
+                "no_history": "履歴がありません"
+            },
+            "session": {
+                "status": "状態",
+                "trigger": "トリガー",
+                "started_at": "開始時刻"
+            },
+            "common": {
+                "folders": "メールボックス",
+                "close": "閉じる"
+            },
+            "latest": "最新",
+            "folders": "メールボックス"
         },
         "steps": {
             "complete": "完了",

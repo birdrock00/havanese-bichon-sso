@@ -104,11 +104,15 @@
         "totalEmails": "Sähköpostien kokonaismäärä",
         "syncedLocally": "Synkronoitu paikallisesti",
         "totalEmailSize": "Sähköpostien kokonaiskoko",
-        "logicalVolume": "Looginen tilavuus",
+        "logicalVolume": "Alkuperäinen koko",
         "localDataFiles": "Paikalliset datatiedostot",
         "actualDiskUsage": "Todellinen levynkäyttö",
+        "efficiency": "Tallennustehokkuus",
+        "saved": "Säästetty",
+        "dataStorage": "Tallennustila",
+        "indexSize": "Indeksikoko",
         "metadataSize": "Metatietojen koko",
-        "duckdbDatabase": "Perustuu DuckDB-tallennustilaan",
+        "tantivyDatabase": "Perustuu Tantivy-hakukoneeseen",
         "dayTrend": "30 päivän trendi",
         "attachments": "Liitteet",
         "topLists": "Parhaat listat",
@@ -195,7 +199,7 @@
         "edit": "Muokkaa",
         "delete": "Poista",
         "detail": "Tiedot",
-        "syncFolders": "Synkronoi kansiot",
+        "selectMailboxes": "Valitse postilaatikot",
         "oauth2Tokens": "OAuth2-tunnukset",
         "id": "ID",
         "enabled": "Käytössä",
@@ -223,16 +227,15 @@
         "accountCreationFailed": "Tilin luominen epäonnistui",
         "updateFailed": "Päivitys epäonnistui, yritä myöhemmin uudelleen",
         "creationFailed": "Luominen epäonnistui, yritä myöhemmin uudelleen",
-        "selectSyncFolders": "Valitse synkronoitavat kansiot",
         "allMailFolderSelected": "Varoitus: 'Kaikki sähköpostit' -kansio valittu",
         "accountSyncFoldersUpdated": "Tilin synkronointikansiot päivitetty",
         "accountSyncFoldersUpdateFailed": "Tilin synkronointikansioiden päivitys epäonnistui",
         "serverConfiguration": "Palvelinmääritys (IMAP)",
-        "syncFoldersTitle": "Synkronoi kansiot",
+        "selectedMailboxes": "Valitut postilaatikot",
         "allMailFolderSelectedDesc": "Kansioiden valitseminen, joilla on 'Kaikki sähköpostit' -attribuutti, johtaa todennäköisesti jo synkronoitujen viestien kahdentumiseen kansioista, kuten Saapuneet ja Lähetetyt. Tämä voi kuluttaa huomattavasti enemmän tallennustilaa.",
         "allMailSkipped": "Oletuskansiot valittu. 'Kaikki sähköpostit' ohitettiin päällekkäisyyksien välttämiseksi.",
         "selectAtLeastOneFolder": "Valitse vähintään yksi kansio",
-        "chooseFoldersToSync": "Valitse synkronoitavat kansiot {{email}}. Äskettäin lisätyt kansiot alkavat latautua seuraavan synkronointisyklin aikana.",
+        "chooseMailboxesToDownload": "Valitse ladattavat postilaatikot käyttäjälle {{email}}. Uudet postilaatikot ladataan seuraavassa kierrossa.",
         "accountDetails": "Tilin tiedot",
         "capabilities": "Ominaisuudet",
         "folderLimit": "Kansioraja",
@@ -313,23 +316,38 @@
         },
         "viewDetails": "katso tiedot",
         "runningState": {
-            "notStarted": "Ei aloitettu",
-            "inProgress": "Käynnissä",
-            "calculating": "Lasketaan...",
-            "initialSync": "Alkusynkronointi",
-            "completed": "Valmis",
-            "duration": "Kesto",
-            "startTime": "Aloitusaika:",
-            "endTime": "Päättymisaika:",
-            "syncProgress": "Synkronoinnin edistyminen",
-            "incrementalSync": "Lisäävä synkronointi",
-            "syncInterval": "Synkronointiväli:",
-            "everyMinutes": "Joka {{minutes}} minuutti",
-            "errorLogs": "Virhelokit",
-            "noErrorLogs": "Virhelokeja ei saatavilla.",
-            "noActiveState": "Ei aktiivista tilaa saatavilla",
-            "accountNotStarted": "Tilin synkronointi ei ehkä ole vielä alkanut",
-            "close": "Sulje"
+            "message": "Viesti",
+            "account": {
+                "id": "Tilin ID"
+            },
+            "tabs": {
+                "active_session": "Aktiivinen istunto",
+                "history": "Historia",
+                "global_errors": "Yleiset virheet",
+                "folders": "Postilaatikot",
+                "errors": "Virheet"
+            },
+            "loading": {
+                "fetching_account_state": "Haetaan tilan tietoja..."
+            },
+            "empty": {
+                "no_active_download": "Ei aktiivista latausta",
+                "no_errors_current": "Ei virheitä nykyisessä istunnossa",
+                "no_errors_session": "Ei virheitä tässä istunnossa",
+                "no_global_errors": "Ei yleisiä virheitä",
+                "no_history": "Ei historiaa"
+            },
+            "session": {
+                "status": "Tila",
+                "trigger": "Laukaisija",
+                "started_at": "Aloitusaika"
+            },
+            "common": {
+                "folders": "postilaatikot",
+                "close": "Sulje"
+            },
+            "latest": "UUSIN",
+            "folders": "postilaatikot"
         },
         "steps": {
             "complete": "Valmis",

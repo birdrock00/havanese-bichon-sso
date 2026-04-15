@@ -104,11 +104,15 @@
         "totalEmails": "郵件總數",
         "syncedLocally": "本地同步數量",
         "totalEmailSize": "郵件總容量",
-        "logicalVolume": "邏輯容量",
+        "logicalVolume": "原始大小",
         "localDataFiles": "本地資料檔案",
         "actualDiskUsage": "實際磁碟用量",
+        "efficiency": "壓縮效率",
+        "saved": "節省空間",
+        "dataStorage": "資料儲存",
+        "indexSize": "索引體積",
         "metadataSize": "元數據大小",
-        "duckdbDatabase": "基於 DuckDB 存儲",
+        "tantivyDatabase": "基于 Tantivy 搜索引擎",
         "dayTrend": "30 天趨勢",
         "attachments": "附件",
         "topLists": "排行榜",
@@ -195,7 +199,7 @@
         "edit": "編輯",
         "delete": "刪除",
         "detail": "詳細資訊",
-        "syncFolders": "同步資料夾",
+        "selectMailboxes": "選擇郵件夾",
         "oauth2Tokens": "OAuth2 權杖",
         "id": "ID",
         "enabled": "啟用",
@@ -223,16 +227,15 @@
         "accountCreationFailed": "帳號建立失敗",
         "updateFailed": "更新失敗，請稍後再試。",
         "creationFailed": "建立失敗，請稍後再試。",
-        "selectSyncFolders": "選擇同步資料夾",
         "allMailFolderSelected": "注意：「所有郵件」資料夾已選擇",
         "accountSyncFoldersUpdated": "帳號同步資料夾已更新",
         "accountSyncFoldersUpdateFailed": "帳號同步資料夾更新失敗",
         "serverConfiguration": "伺服器設定 (IMAP)",
-        "syncFoldersTitle": "同步資料夾",
+        "selectedMailboxes": "已選擇的郵件夾",
         "allMailFolderSelectedDesc": "選擇具有「所有郵件」屬性的資料夾可能會導致已從收件匣或寄件備份等資料夾同步的郵件重複。這可能會大幅增加您的儲存用量。",
         "allMailSkipped": "標準資料夾已選擇，為避免重複已跳過「所有郵件」。",
         "selectAtLeastOneFolder": "請至少選擇一個資料夾",
-        "chooseFoldersToSync": "請選擇要為 {{email}} 同步的資料夾。新新增的資料夾將在下一個同步週期開始下載。",
+        "chooseMailboxesToDownload": "為 {{email}} 選擇要下載的郵件夾。新加入的郵件夾會在下個週期下載。",
         "accountDetails": "帳號詳細資訊",
         "capabilities": "功能",
         "folderLimit": "資料夾限制",
@@ -313,23 +316,38 @@
         },
         "viewDetails": "檢視詳細資訊",
         "runningState": {
-            "notStarted": "未啟動",
-            "inProgress": "進行中",
-            "calculating": "正在計算...",
-            "initialSync": "初始同步",
-            "completed": "已完成",
-            "duration": "持續時間",
-            "startTime": "開始時間：",
-            "endTime": "結束時間：",
-            "syncProgress": "同步進度",
-            "incrementalSync": "增量同步",
-            "syncInterval": "同步間隔：",
-            "everyMinutes": "每 {{minutes}} 分鐘",
-            "errorLogs": "錯誤日誌",
-            "noErrorLogs": "無錯誤日誌。",
-            "noActiveState": "無活動狀態",
-            "accountNotStarted": "帳號同步可能尚未開始",
-            "close": "關閉"
+            "message": "訊息",
+            "account": {
+                "id": "帳戶 ID"
+            },
+            "tabs": {
+                "active_session": "目前任務",
+                "history": "歷史記錄",
+                "global_errors": "全域錯誤",
+                "folders": "郵件夾",
+                "errors": "錯誤"
+            },
+            "loading": {
+                "fetching_account_state": "正在取得帳戶狀態..."
+            },
+            "empty": {
+                "no_active_download": "目前沒有下載任務",
+                "no_errors_current": "目前任務沒有錯誤",
+                "no_errors_session": "此任務沒有錯誤",
+                "no_global_errors": "沒有全域錯誤",
+                "no_history": "沒有歷史記錄"
+            },
+            "session": {
+                "status": "狀態",
+                "trigger": "觸發方式",
+                "started_at": "開始時間"
+            },
+            "common": {
+                "folders": "個郵件夾",
+                "close": "關閉"
+            },
+            "latest": "最新",
+            "folders": "個郵件夾"
         },
         "steps": {
             "complete": "完成",

@@ -26,15 +26,27 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { useQuery } from '@tanstack/react-query'
-import { account_state, AccountModel } from '@/api/account/api'
-import { formatDistanceToNow, formatDuration, intervalToDuration } from 'date-fns'
+import { account_state, AccountModel, FolderProgress } from '@/api/account/api'
+import { format } from 'date-fns'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Skeleton } from '@/components/ui/skeleton'
-import { CheckCircle, Clock, Loader2, PlayCircle, FolderSync, FolderCheck } from 'lucide-react'
-import { FolderSyncProgress } from './folder-sync-progress'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import {
+  CheckCircle,
+  Clock,
+  Loader2,
+  Activity,
+  AlertTriangle,
+  Info,
+} from 'lucide-react'
+import LongText from '@/components/long-text'
 import { useTranslation } from 'react-i18next'
-import { dateFnsLocaleMap } from '@/lib/utils'
-import { enUS } from 'date-fns/locale'
 
 interface Props {
   open: boolean
@@ -42,238 +54,430 @@ interface Props {
   currentRow: AccountModel
 }
 
+function StatusBadge({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    Running: 'bg-blue-100 text-blue-700',
+    Downloading: 'bg-blue-100 text-blue-700',
+    Success: 'bg-green-100 text-green-700',
+    Failed: 'bg-red-100 text-red-700',
+    Cancelled: 'bg-gray-100 text-gray-700',
+    Pending: 'bg-amber-100 text-amber-700',
+  }
+  return (
+    <Badge variant="outline" className={`${map[status] || ''} border-none font-medium text-[11px] px-1.5 h-5 shrink-0`}>
+      {status}
+    </Badge>
+  )
+}
+
+function TriggerBadge({ trigger }: { trigger: string }) {
+  const isScheduled = trigger === 'Scheduled'
+  return (
+    <Badge variant="secondary" className={`${isScheduled ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-orange-50 text-orange-700 border-orange-100'} font-normal text-xs shrink-0`}>
+      {trigger}
+    </Badge>
+  )
+}
+
+
+function FolderDetailItem({ f, t }: { f: FolderProgress, t: (key: string) => string }) {
+  const percentage = Math.min(Math.round((f.current / f.planned) * 100), 100) || 0;
+
+  return (
+    <div className="border rounded-xl bg-card overflow-hidden mb-3 shadow-sm border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center p-4 gap-3 sm:gap-4 bg-white">
+        <div className="flex-1 min-w-0">
+          <LongText className="text-xs font-bold text-slate-900 tracking-tight">
+            {f.folder_name}
+          </LongText>
+        </div>
+        <div className="flex items-center justify-between sm:justify-end gap-4">
+          <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+            <div className="flex-1 sm:w-40 lg:w-48 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-blue-400 to-indigo-500"
+                style={{ width: `${percentage}%` }}
+              />
+            </div>
+            <span className="text-[10px] font-medium text-slate-400 w-7 shrink-0 text-right">{percentage}%</span>
+          </div>
+          <div className="flex items-center gap-4 shrink-0">
+            <div className="w-20 sm:w-24 text-right font-mono text-xs sm:text-sm text-slate-500">
+              <span className="font-bold text-slate-900">{f.current}</span>
+              <span className="mx-0.5 opacity-50">/</span>
+              {f.planned}
+            </div>
+            <div className="w-16 sm:w-20 flex justify-end">
+              <StatusBadge status={f.status} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {f.message && (
+        <div className="px-4 pb-4">
+          <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 flex gap-3 items-start">
+            <Info className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+            <div className="space-y-0.5">
+              <p className="text-[10px] font-bold text-slate-900">{t('accounts.runningState.message')}:</p>
+              <p className="text-[10px] font-medium text-slate-600 leading-relaxed">{f.message}</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
-  const { t, i18n } = useTranslation()
-  const locale = dateFnsLocaleMap[i18n.language.toLowerCase()] ?? enUS;
+  const { t } = useTranslation();
+
   const { data: state, isLoading } = useQuery({
     queryKey: ['running-state', currentRow.id],
     queryFn: () => account_state(currentRow.id),
-    retry: 0,
-    refetchOnWindowFocus: false,
     refetchInterval: 5000,
-    enabled: open && !!currentRow.id && currentRow.account_type != "NoSync",
+    enabled: open && !!currentRow.id,
   })
 
-  const calculateDuration = (start?: number, end?: number) => {
-    if (!start) {
-      return (
-        <span className="text-yellow-600 flex items-center gap-1">
-          <Clock className="w-4 h-4" /> {t('accounts.runningState.notStarted')}
-        </span>
-      )
-    }
-    if (!end) {
-      return (
-        <span className="text-blue-600 flex items-center gap-1">
-          <PlayCircle className="w-4 h-4" /> {t('accounts.runningState.inProgress')}
-        </span>
-      )
-    }
-    const duration = intervalToDuration({ start: new Date(start), end: new Date(end) })
-    return (
-      <span className="text-green-600 flex items-center gap-1">
-        <CheckCircle className="w-4 h-4" /> {formatDuration(duration, { format: ['hours', 'minutes', 'seconds'] })}
-      </span>
-    )
-  }
+  const session = state?.active_session
+  const history = state?.history || []
+  const globalErrors = state?.global_errors || []
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-7xl sm:rounded-xl p-0 overflow-hidden max-h-[90vh]">
-        <DialogHeader className="text-left space-y-2 px-4 sm:px-6 pt-4 sm:pt-6">
-          <DialogTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
-            <span className="text-blue-500 font-medium truncate">{currentRow.email}</span>
-          </DialogTitle>
+      <DialogContent className="max-w-5xl w-[95vw] sm:w-full p-0 flex flex-col h-[90vh] sm:h-[85vh] overflow-hidden gap-0 rounded-t-2xl sm:rounded-xl">
+        <DialogHeader className="px-4 py-3 sm:px-6 sm:py-4 border-b bg-muted/20 shrink-0">
+          <div className="space-y-0.5">
+            <DialogTitle className="text-base sm:text-xl font-bold flex items-center gap-2 text-blue-600 truncate">
+              <Activity className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+              <span className="truncate">{currentRow.email}</span>
+            </DialogTitle>
+            <p className="text-[9px] sm:text-[11px] text-muted-foreground font-mono uppercase tracking-widest opacity-70">
+              {t('accounts.runningState.account.id')}: {currentRow.id}
+            </p>
+          </div>
         </DialogHeader>
-        <ScrollArea className="max-h-[calc(90vh-8rem)] px-4 sm:px-6 pb-6">
-          {isLoading && (
-            <div className="space-y-4 py-6">
-              <Skeleton className="h-6 w-1/2" />
-              <Skeleton className="h-6 w-1/3" />
-              <div className="flex justify-center items-center py-4">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            </div>
-          )}
 
-          {!isLoading && state && (
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6 mt-4">
-              <div className="xl:col-span-2 space-y-1 sm:space-y-1">
-                {/* Initial Sync */}
-                <div className="p-4 border rounded-lg bg-card">
-                  <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
-                    <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
-                      {state.is_initial_sync_completed ? (
-                        <FolderCheck className="w-5 h-5 text-green-500" />
+        <Tabs defaultValue="active" className="flex-1 flex flex-col min-h-0">
+          <div className="px-4 sm:px-6 border-b bg-white shrink-0 overflow-x-auto no-scrollbar">
+            <TabsList className="h-12 w-full justify-start bg-transparent p-0 gap-6 sm:gap-8 flex-nowrap">
+              <TabsTrigger value="active" className="whitespace-nowrap data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full bg-transparent shadow-none px-0 text-xs sm:text-sm font-bold">
+                {t('accounts.runningState.tabs.active_session')}
+              </TabsTrigger>
+              <TabsTrigger value="history" className="whitespace-nowrap data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full bg-transparent shadow-none px-0 text-xs sm:text-sm font-bold">
+                {t('accounts.runningState.tabs.history')}
+                <Badge variant="secondary" className="ml-2 h-4 px-1 text-[10px] font-bold">{history.length}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="errors" className="whitespace-nowrap data-[state=active]:border-b-2 data-[state=active]:border-blue-600 rounded-none h-full bg-transparent shadow-none px-0 text-xs sm:text-sm font-bold">
+                {t('accounts.runningState.tabs.global_errors')}
+                {globalErrors.length > 0 && <Badge variant="destructive" className="ml-2 h-4 px-1 text-[10px] font-bold">{globalErrors.length}</Badge>}
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <div className="flex-1 bg-slate-50/50 min-h-0 overflow-hidden relative">
+            {isLoading ? (
+              <div className="h-full flex flex-col items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
+                <p className="text-sm text-slate-500 font-medium italic">{t('accounts.runningState.loading.fetching_account_state')}</p>
+              </div>
+            ) : (
+              <>
+                <TabsContent value="active" className="h-full m-0 data-[state=active]:flex flex-col">
+                  <ScrollArea className="flex-1">
+                    <div className="p-4 sm:p-6">
+                      {!session ? (
+                        <div className="flex flex-col items-center justify-center py-24 text-muted-foreground">
+                          <Clock className="w-12 h-12 opacity-10 mb-4" />
+                          <p className="italic text-sm">{t('accounts.runningState.empty.no_active_download')}</p>
+                        </div>
                       ) : (
-                        <FolderSync className="w-5 h-5 text-blue-500" />
-                      )}
-                      {t('accounts.runningState.initialSync')}
-                    </h3>
-                    {state.is_initial_sync_completed ? (
-                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                        {t('accounts.runningState.completed')}
-                      </span>
-                    ) : (
-                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                        {t('accounts.runningState.inProgress')}
-                      </span>
-                    )}
-                  </div>
-                  <div className="grid grid-cols-3 gap-6 w-full">
-                    {/* Start Time */}
-                    <div className="flex flex-col text-sm">
-                      <span className="text-muted-foreground">{t('accounts.runningState.startTime')}</span>
-                      <span className="font-medium">
-                        {state.initial_sync_start_time ? (
-                          <span className="text-green-600">
-                            {formatDistanceToNow(new Date(state.initial_sync_start_time), { addSuffix: true, locale })}
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-yellow-600">
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
-                            </span>
-                            {t('accounts.runningState.notStarted')}
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                    {/* End Time */}
-                    <div className="flex flex-col text-sm">
-                      <span className="text-muted-foreground">{t('accounts.runningState.endTime')}</span>
-                      <span className="font-medium">
-                        {state.initial_sync_end_time ? (
-                          <span className="text-green-600">
-                            {formatDistanceToNow(new Date(state.initial_sync_end_time), { addSuffix: true, locale })}
-                          </span>
-                        ) : state.initial_sync_start_time ? (
-                          <span className="flex items-center gap-1 text-blue-600">
-                            {t('accounts.runningState.inProgress')}
-                          </span>
-                        ) : (
-                          <span className="text-yellow-600">{t('accounts.runningState.notStarted')}</span>
-                        )}
-                      </span>
-                    </div>
-                    {/* Duration */}
-                    <div className="flex flex-col text-sm">
-                      <span className="text-muted-foreground">{t('accounts.runningState.duration')}</span>
-                      <span className="font-medium">
-                        {(() => {
-                          if (!state.initial_sync_start_time) return <span className="text-yellow-600">{t('accounts.runningState.notStarted')}</span>
-                          if (!state.initial_sync_end_time) return <span className="text-blue-600 animate-pulse">{t('accounts.runningState.calculating')}</span>
-                          const diff = new Date(state.initial_sync_end_time).getTime() - new Date(state.initial_sync_start_time).getTime()
-                          const h = Math.floor(diff / 3600000)
-                          const m = Math.floor((diff % 3600000) / 60000)
-                          const s = Math.floor((diff % 60000) / 1000)
-                          return <span className="text-foreground">{h}h {m}m {s}s</span>
-                        })()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-4 border rounded-lg bg-card">
-                  {state && (
-                    <div>
-                      <h3 className="text-base sm:text-lg font-semibold mb-3">{t('accounts.runningState.syncProgress')}</h3>
-                      <ScrollArea className="h-70 sm:h-70 border rounded-md p-2">
-                        <FolderSyncProgress progressMap={state.progress} />
-                      </ScrollArea>
-                    </div>
-                  )}
-                </div>
-
-                {/* Incremental Sync */}
-                <div className="p-4 border rounded-lg bg-card">
-                  <h3 className="text-base sm:text-lg font-semibold mb-3">{t('accounts.runningState.incrementalSync')}</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-3 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t('accounts.runningState.startTime')}</span>
-                        <span className="font-medium">
-                          {state.last_incremental_sync_start ? (
-                            formatDistanceToNow(new Date(state.last_incremental_sync_start), { addSuffix: true, locale })
-                          ) : (
-                            <span className="text-yellow-600">{t('accounts.runningState.notStarted')}</span>
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t('accounts.runningState.endTime')}</span>
-                        <span className="font-medium">
-                          {state.last_incremental_sync_end ? (
-                            formatDistanceToNow(new Date(state.last_incremental_sync_end), { addSuffix: true, locale })
-                          ) : state.last_incremental_sync_start ? (
-                            <span className="text-blue-600">{t('accounts.runningState.inProgress')}</span>
-                          ) : (
-                            <span className="text-yellow-600">{t('accounts.runningState.notStarted')}</span>
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="space-y-3 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t('accounts.runningState.duration')}</span>
-                        <span className="font-medium">
-                          {calculateDuration(state.last_incremental_sync_start, state.last_incremental_sync_end)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">{t('accounts.runningState.syncInterval')}</span>
-                        <span className="font-medium">
-                          {t('accounts.runningState.everyMinutes', { minutes: currentRow.sync_interval_min })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 border rounded-lg bg-card">
-                <h3 className="text-base sm:text-lg font-semibold mb-3">{t('accounts.runningState.errorLogs')}</h3>
-                <ScrollArea className="h-[20rem] sm:h-[32rem]">
-                  <div className="space-y-3">
-                    {state.errors.length ? (
-                      state.errors
-                        .sort((a, b) => b.at - a.at)
-                        .map((item, index) => (
-                          <div
-                            key={index}
-                            className="flex flex-col items-start gap-2 rounded-lg border p-3 text-left text-xs sm:text-sm transition-all hover:bg-accent"
-                          >
-                            <div className="flex w-full flex-col gap-1">
-                              <div className="text-xs font-medium text-muted-foreground">
-                                {formatDistanceToNow(new Date(item.at), { addSuffix: true, locale })}
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-2">
+                            <div className="p-3 sm:p-4 rounded-xl border bg-white shadow-sm flex items-center justify-between sm:block">
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">{t('accounts.runningState.session.status')}</p>
+                              <StatusBadge status={session.status} />
+                            </div>
+                            <div className="p-3 sm:p-4 rounded-xl border bg-white shadow-sm flex items-center justify-between sm:block">
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">{t('accounts.runningState.session.trigger')}</p>
+                              <TriggerBadge trigger={session.trigger} />
+                            </div>
+                            <div className="p-3 sm:p-4 rounded-xl border bg-white shadow-sm flex items-center justify-between sm:block">
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">{t('accounts.runningState.session.started_at')}</p>
+                              <div className="text-sm font-bold font-mono">
+                                {format(new Date(session.start_time), 'yyyy-MM-dd HH:mm:ss')}
                               </div>
-                              <div className="font-medium break-words">{item.error}</div>
                             </div>
                           </div>
-                        ))
-                    ) : (
-                      <div className="h-full flex justify-center items-center py-8">
-                        <p className="text-sm text-muted-foreground">{t('accounts.runningState.noErrorLogs')}</p>
-                      </div>
-                    )}
-                  </div>
-                </ScrollArea>
-              </div>
-            </div>
-          )}
+                          <Tabs defaultValue="folders" className="w-full">
+                            <TabsList className="bg-slate-100 mb-3 h-8">
+                              <TabsTrigger value="folders" className="text-[11px] font-bold">
+                                {t('accounts.runningState.tabs.folders')}
+                              </TabsTrigger>
+                              <TabsTrigger
+                                value="errors"
+                                className="text-[11px] font-bold text-red-600"
+                              >
+                                {t('accounts.runningState.tabs.errors')} ({session.errors?.length || 0})
+                              </TabsTrigger>
+                            </TabsList>
+                            <TabsContent value="folders" className="space-y-1">
+                              {Object.values(session.folder_details).map((f: FolderProgress) => (
+                                <FolderDetailItem key={f.folder_name} f={f} t={t} />
+                              ))}
+                            </TabsContent>
+                            <TabsContent value="errors">
+                              {(!session.errors || session.errors.length === 0) ? (
+                                <div className="text-center py-10 text-slate-400 italic text-xs">
+                                  {t('accounts.runningState.empty.no_errors_current')}
+                                </div>
+                              ) : (
+                                <div className="relative">
+                                  <div className="absolute left-[14px] top-1 bottom-1 w-0.5 bg-red-100" />
+                                  <div className="space-y-4">
+                                    {[...session.errors]
+                                      .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+                                      .map((err, ei) => (
+                                        <div key={ei} className="relative pl-8 min-w-0">
+                                          <div className="absolute left-0 top-2 w-[28px] flex justify-center">
+                                            {ei === 0 ? (
+                                              <span className="relative flex h-2.5 w-2.5">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600" />
+                                              </span>
+                                            ) : (
+                                              <div className="w-2 h-2 rounded-full bg-red-200 border border-white" />
+                                            )}
+                                          </div>
+                                          <div
+                                            className={`
+                                              p-3 border rounded-lg flex flex-col gap-2 min-w-0
+                                              ${ei === 0
+                                                ? 'bg-red-50 border-red-200 ring-1 ring-red-100'
+                                                : 'bg-white border-red-100'}
+                                            `}
+                                          >
+                                            <div className="flex justify-between items-start gap-2 min-w-0">
+                                              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                                {ei === 0 && (
+                                                  <Badge className="bg-red-600 text-[9px] h-4 px-1">
+                                                    {t('accounts.runningState.latest')}
+                                                  </Badge>
+                                                )}
+                                                <span className="text-[10px] font-mono text-red-400 font-bold break-all">
+                                                  {format(new Date(err.at), 'yyyy-MM-dd HH:mm:ss')}
+                                                </span>
+                                              </div>
+                                              <AlertTriangle
+                                                className={`w-4 h-4 shrink-0 ${ei === 0 ? 'text-red-600' : 'text-red-300'
+                                                  }`}
+                                              />
+                                            </div>
+                                            <p className="text-xs font-bold text-red-950 whitespace-pre-wrap break-all">
+                                              {err.error}
+                                            </p>
+                                          </div>
+                                        </div>
+                                      ))}
+                                  </div>
+                                </div>
+                              )}
+                            </TabsContent>
+                          </Tabs>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+                <TabsContent value="history" className="h-full m-0 data-[state=active]:flex flex-col">
+                  <ScrollArea className="flex-1">
+                    <div className="p-4 sm:p-6">
+                      {history.length === 0 ? (
+                        <div className="text-center py-20 text-slate-400 italic text-sm">{t('accounts.runningState.empty.no_history')}</div>
+                      ) : (
+                        <Accordion type="single" collapsible className="space-y-3">
+                          {[...history].reverse().map((h, i) => (
+                            <AccordionItem key={i} value={`history-${i}`} className="border rounded-xl bg-white shadow-sm px-4 border-slate-200 overflow-hidden">
+                              <AccordionTrigger className="hover:no-underline py-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full pr-4 gap-2">
+                                  <div className="flex items-center gap-3">
+                                    <div className="text-xs sm:text-xs font-bold font-mono text-slate-700">
+                                      {format(new Date(h.start_time), 'yyyy-MM-dd HH:mm:ss')}
+                                    </div>
+                                    <StatusBadge status={h.status} />
+                                    <div className="hidden xs:block"><TriggerBadge trigger={h.trigger} /></div>
+                                  </div>
+                                  <span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded-full self-start sm:self-auto">
+                                    {Object.keys(h.folder_details).length} {t('accounts.runningState.folders')}
+                                    <span className="mx-1 opacity-30">·</span>
+                                    {Object.values(h.folder_details).reduce((sum, f) => sum + (f.current || 0), 0)}
+                                    <span className="mx-0.5 opacity-50">/</span>
+                                    {Object.values(h.folder_details).reduce((sum, f) => sum + (f.planned || 0), 0)}
+                                  </span>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="pb-4 border-t pt-4 mt-1">
+                                <Tabs defaultValue="h-folders" className="w-full">
+                                  <TabsList className="bg-slate-100 mb-4 h-8">
+                                    <TabsTrigger value="h-folders" className="text-[11px] font-bold">{t('accounts.runningState.tabs.folders')}</TabsTrigger>
+                                    <TabsTrigger value="h-errors" className="text-[11px] font-bold text-red-600">
+                                      {t('accounts.runningState.tabs.errors')} ({h.errors?.length || 0})
+                                    </TabsTrigger>
+                                  </TabsList>
+                                  <TabsContent value="h-folders" className="space-y-1">
+                                    {Object.values(h.folder_details).map((f: any, idx) => (
+                                      <FolderDetailItem key={idx} f={f} t={t} />
+                                    ))}
+                                  </TabsContent>
+                                  <TabsContent value="h-errors">
+                                    {(!h.errors || h.errors.length === 0) ? (
+                                      <div className="text-center py-10 text-slate-400 italic text-xs">
+                                        {t('accounts.runningState.empty.no_errors_session')}
+                                      </div>
+                                    ) : (
+                                      <div className="relative">
+                                        <div className="absolute left-[14px] top-1 bottom-1 w-0.5 bg-red-100" />
+                                        <div className="space-y-4">
+                                          {[...h.errors]
+                                            .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+                                            .map((err, ei) => (
+                                              <div key={ei} className="relative pl-8 min-w-0">
+                                                <div className="absolute left-0 top-2 w-[28px] flex justify-center">
+                                                  {ei === 0 ? (
+                                                    <span className="relative flex h-2.5 w-2.5">
+                                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600"></span>
+                                                    </span>
+                                                  ) : (
+                                                    <div className="w-2 h-2 rounded-full bg-red-200 border border-white" />
+                                                  )}
+                                                </div>
+                                                <div
+                                                  className={`
+                                                  p-3 border rounded-lg flex flex-col gap-2 min-w-0
+                                                  ${ei === 0
+                                                      ? 'bg-red-50 border-red-200 ring-1 ring-red-100'
+                                                      : 'bg-white border-red-100'}
+                                                `}
+                                                >
+                                                  <div className="flex justify-between items-start gap-2 min-w-0">
+                                                    <div className="flex items-center gap-2 flex-wrap min-w-0">
+                                                      {ei === 0 && (
+                                                        <Badge className="bg-red-600 text-[9px] h-4 px-1">
+                                                          {t('accounts.runningState.latest')}
+                                                        </Badge>
+                                                      )}
+                                                      <span className="text-[10px] font-mono text-red-400 font-bold break-all">
+                                                        {format(new Date(err.at), 'yyyy-MM-dd HH:mm:ss')}
+                                                      </span>
+                                                    </div>
+                                                    <AlertTriangle
+                                                      className={`w-4 h-4 shrink-0 ${ei === 0 ? 'text-red-600' : 'text-red-300'
+                                                        }`}
+                                                    />
+                                                  </div>
+                                                  <p className="text-xs font-bold whitespace-pre-wrap break-all text-red-950">
+                                                    {err.error}
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </TabsContent>
+                                </Tabs>
+                              </AccordionContent>
+                            </AccordionItem>
+                          ))}
+                        </Accordion>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+                <TabsContent value="errors" className="h-full m-0 data-[state=active]:flex flex-col">
+                  <ScrollArea className="flex-1">
+                    <div className="p-4 sm:p-6">
+                      {globalErrors.length === 0 ? (
+                        <div className="py-32 text-center text-slate-300">
+                          <CheckCircle className="w-12 h-12 mx-auto mb-2 opacity-20" />
+                          <p className="font-medium italic text-sm">{t('accounts.runningState.empty.no_global_errors')}</p>
+                        </div>
+                      ) : (
+                        <div className="relative">
+                          <div className="absolute left-[19px] top-2 bottom-2 w-0.5 bg-red-100" />
+                          <div className="space-y-6">
+                            {[...globalErrors]
+                              .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+                              .map((e, i) => (
+                                <div key={i} className="relative pl-10 min-w-0">
+                                  <div className="absolute left-0 top-1.5 w-[40px] flex justify-center">
+                                    {i === 0 ? (
+                                      <span className="relative flex h-3 w-3">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
+                                      </span>
+                                    ) : (
+                                      <div className="w-2.5 h-2.5 rounded-full bg-red-200 border-2 border-white mt-0.5" />
+                                    )}
+                                  </div>
+                                  <div
+                                    className={`
+                                      p-4 border rounded-2xl shadow-sm transition-all min-w-0
+                                      ${i === 0
+                                        ? 'border-red-200 bg-red-50/80 ring-1 ring-red-100'
+                                        : 'border-slate-100 bg-white opacity-80'}
+                                    `}
+                                  >
+                                    <div className="flex items-start justify-between gap-3 mb-2 min-w-0">
+                                      <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                                        {i === 0 && (
+                                          <Badge className="bg-red-600 hover:bg-red-600 text-[9px] h-4 px-1">
+                                            {t('accounts.runningState.latest')}
+                                          </Badge>
+                                        )}
 
-          {!isLoading && !state && (
-            <div className="h-full flex flex-col justify-center items-center py-8 text-center space-y-2">
-              <p className="text-sm text-muted-foreground">{t('accounts.runningState.noActiveState')}</p>
-              <p className="text-xs text-muted-foreground">{t('accounts.runningState.accountNotStarted')}</p>
-            </div>
-          )}
-        </ScrollArea>
+                                        <div className="text-[10px] font-mono font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded break-all">
+                                          <span className="sm:hidden">
+                                            {format(new Date(e.at), 'HH:mm')}
+                                          </span>
+                                          <span className="hidden sm:inline">
+                                            {format(new Date(e.at), 'yyyy-MM-dd HH:mm:ss')}
+                                          </span>
+                                        </div>
+                                      </div>
 
-        <DialogFooter className="pt-4 px-4 sm:px-6 pb-4 border-t">
+                                      <AlertTriangle
+                                        className={`w-4 h-4 shrink-0 ${i === 0 ? 'text-red-600' : 'text-red-300'
+                                          }`}
+                                      />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <p
+                                        className={`
+                                          text-xs font-bold leading-relaxed whitespace-pre-wrap break-all min-w-0
+                                          ${i === 0 ? 'text-red-950' : 'text-slate-600'}
+                                        `}
+                                      >
+                                        {e.error}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </TabsContent>
+              </>
+            )}
+          </div>
+        </Tabs>
+        <DialogFooter className="px-4 py-3 sm:px-6 sm:py-4 border-t bg-card shrink-0">
           <DialogClose asChild>
-            <Button variant="outline" className="w-full sm:w-auto">{t('accounts.runningState.close')}</Button>
+            <Button variant="outline" className="w-full sm:w-24 font-bold border-2">{t('common.close')}</Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>
