@@ -52,7 +52,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
       cell: ({ row }) => {
         return <LongText>{row.original.account_name ?? "n/a"}</LongText>
       },
-      meta: { className: 'max-w-[100px]' },
+      meta: { className: 'max-w-[90px] text-center' },
     },
     {
       accessorKey: "email",
