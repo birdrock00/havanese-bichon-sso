@@ -85,7 +85,8 @@ const getDateSelectionSchema = (t: (key: string) => string) => z.union([
 ]);
 
 export type Account = {
-  name?: string;
+  login_name?: string;
+  account_name?: string;
   email: string;
   imap: {
     host: string;
@@ -111,13 +112,14 @@ export type Account = {
     value?: number;
   };
   folder_limit?: number;
-  sync_interval_min: number;
-  sync_batch_size: number;
+  download_interval_min: number;
+  download_batch_size: number;
 };
 
 const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
   z.object({
-    name: z.string().optional(),
+    account_name: z.string().optional(),
+    login_name: z.string().optional(),
     email: z.string({ required_error: t('validation.emailRequired') }).email({ message: t('validation.invalidEmail') }),
     imap: getImapConfigSchema(isEdit, t),
     enabled: z.boolean(),
@@ -130,8 +132,8 @@ const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
       .min(100, { message: t('validation.folderLimitMustBeAtLeast100') })
       .nullable()
       .optional(),
-    sync_interval_min: z.number({ invalid_type_error: t('validation.incrementalSyncMustBeNumber') }).int().min(10, { message: t('validation.incrementalSyncMustBeAtLeast10') }),
-    sync_batch_size: z
+    download_interval_min: z.number({ invalid_type_error: t('validation.incrementalSyncMustBeNumber') }).int().min(10, { message: t('validation.incrementalSyncMustBeAtLeast10') }),
+    download_batch_size: z
       .number({ invalid_type_error: t('validation.singleRequestBatchSizeMustBeNumber') })
       .int()
       .min(10, { message: t('validation.singleRequestBatchSizeTooSmall') })
@@ -147,9 +149,9 @@ type Step = {
 export type Steps = [...Step[]];
 
 const getSteps = (t: (key: string) => string): Steps => [
-  { id: "step-1", name: t('accounts.steps.emailAddress'), fields: ["email"] },
-  { id: "step-2", name: t('accounts.steps.imap'), fields: ["imap", "use_dangerous", "name"] },
-  { id: "step-3", name: t('accounts.steps.syncPreferences'), fields: ["enabled", "date_since", "date_before", "folder_limit", "sync_interval_min", "sync_batch_size"] },
+  { id: "step-1", name: t('accounts.steps.emailAddress'), fields: ["email", "account_name"] },
+  { id: "step-2", name: t('accounts.steps.imap'), fields: ["imap", "use_dangerous", "login_name"] },
+  { id: "step-3", name: t('accounts.steps.syncPreferences'), fields: ["enabled", "date_since", "date_before", "folder_limit", "download_interval_min", "download_batch_size"] },
   { id: "step-4", name: t('accounts.steps.summary'), fields: [] },
 ];
 
@@ -162,7 +164,8 @@ interface Props {
 }
 
 const defaultValues: Account = {
-  name: undefined,
+  login_name: undefined,
+  account_name: undefined,
   email: '',
   imap: {
     host: "",
@@ -179,8 +182,8 @@ const defaultValues: Account = {
   date_since: undefined,
   date_before: undefined,
   folder_limit: undefined,
-  sync_interval_min: 10,
-  sync_batch_size: 30,
+  download_interval_min: 10,
+  download_batch_size: 30,
 };
 
 const emptyImap: ImapConfig = {
@@ -199,7 +202,7 @@ const mapCurrentRowToFormValues = (currentRow: AccountModel): Account => {
   }
 
   return {
-    name: currentRow.name ?? undefined,
+    login_name: currentRow.login_name ?? undefined,
     email: currentRow.email,
     imap,
     enabled: currentRow.enabled,
@@ -207,8 +210,8 @@ const mapCurrentRowToFormValues = (currentRow: AccountModel): Account => {
     date_since: currentRow.date_since ?? undefined,
     date_before: currentRow.date_before ?? undefined,
     folder_limit: currentRow.folder_limit ?? undefined,
-    sync_interval_min: currentRow.sync_interval_min ?? 10,
-    sync_batch_size: currentRow.sync_batch_size ?? 50,
+    download_interval_min: currentRow.download_interval_min ?? 10,
+    download_batch_size: currentRow.download_batch_size ?? 30,
   };
 };
 
@@ -272,7 +275,8 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
     (data: Account) => {
       const commonData = {
         email: data.email,
-        name: data.name,
+        account_name: data.account_name,
+        login_name: data.login_name,
         imap: {
           ...data.imap,
           auth: {
@@ -287,8 +291,8 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
         date_since: data.date_since,
         date_before: data.date_before,
         folder_limit: data.folder_limit,
-        sync_interval_min: data.sync_interval_min,
-        sync_batch_size: data.sync_batch_size,
+        download_interval_min: data.download_interval_min,
+        download_batch_size: data.download_batch_size,
       };
       if (isEdit) {
         const isAllMode = !data.date_since && !data.date_before;
@@ -328,7 +332,7 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
       }
       setAutoConfigLoading(true);
       const email = form.getValues('email');
-
+      form.setValue('login_name', email);
       try {
         const result = await autoconfig(email);
         if (result) {

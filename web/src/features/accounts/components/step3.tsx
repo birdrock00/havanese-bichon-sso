@@ -82,32 +82,32 @@ export default function Step3() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                     control={control}
-                    name="sync_interval_min"
+                    name="download_interval_min"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>{t('accounts.incrementalSync')}</FormLabel>
+                            <FormLabel>{t('accounts.downloadInterval')}</FormLabel>
                             <FormControl>
                                 <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10))} />
                             </FormControl>
                             <FormMessage />
                             <FormDescription>
-                                {t('accounts.incrementalSyncDescription')}
+                                {t('accounts.downloadIntervalPlaceholder')}
                             </FormDescription>
                         </FormItem>
                     )}
                 />
                 <FormField
                     control={control}
-                    name="sync_batch_size"
+                    name="download_batch_size"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>{t('accounts.syncBatchSize')}</FormLabel>
+                            <FormLabel>{t('accounts.downloadBatchSize')}</FormLabel>
                             <FormControl>
                                 <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10))} />
                             </FormControl>
                             <FormMessage />
                             <FormDescription>
-                                {t('accounts.syncBatchSizeDescription')}
+                                {t('accounts.downloadBatchSizeDescription')}
                             </FormDescription>
                         </FormItem>
                     )}
@@ -133,19 +133,19 @@ export default function Step3() {
             <hr className="my-4" />
             <div className="space-y-4">
                 <FormItem>
-                    <FormLabel className="text-base font-semibold">{t('accounts.syncScope', 'Sync Strategy')}</FormLabel>
+                    <FormLabel className="text-base font-semibold">{t('accounts.downloadScope')}</FormLabel>
                     <FormDescription>
-                        {t('accounts.syncScopeDescription', 'Choose which emails should be indexed and archived.')}
+                        {t('accounts.downloadScopeDescription')}
                     </FormDescription>
                     <Select value={syncMode} onValueChange={(v) => handleModeChange(v as SyncMode)}>
                         <SelectTrigger className="w-full">
                             <SelectValue placeholder={t('accounts.selectMode')} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">{t('accounts.syncAll', 'Sync All Emails')}</SelectItem>
-                            <SelectItem value="since_fixed">{t('accounts.sinceFixed', 'Since Specific Date')}</SelectItem>
-                            <SelectItem value="since_relative">{t('accounts.sinceRelative', 'Keep Recent Emails')}</SelectItem>
-                            <SelectItem value="before_relative">{t('accounts.beforeRelative', 'Archive Old Emails Only')}</SelectItem>
+                            <SelectItem value="all">{t('accounts.downloadAll')}</SelectItem>
+                            <SelectItem value="since_fixed">{t('accounts.sinceFixed')}</SelectItem>
+                            <SelectItem value="since_relative">{t('accounts.sinceRelative')}</SelectItem>
+                            <SelectItem value="before_relative">{t('accounts.beforeRelative')}</SelectItem>
                         </SelectContent>
                     </Select>
                 </FormItem>

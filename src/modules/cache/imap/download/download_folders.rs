@@ -63,7 +63,7 @@ pub async fn get_download_folders(
     )
     .await?;
     let account = AccountModel::async_get(account.id).await?;
-    let subscribed = &account.sync_folders.unwrap_or_default();
+    let subscribed = &account.download_folders.unwrap_or_default();
     let is_noselect = |mailbox: &MailBox| {
         mailbox
             .attributes
@@ -140,19 +140,19 @@ pub async fn detect_mailbox_changes(
     let deleted_folders: Vec<String> = known_folders.difference(&all_names).cloned().collect();
 
     let has_changes = !new_folders.is_empty() || !deleted_folders.is_empty();
-    let sync_folders = account.sync_folders.as_deref().unwrap_or_default();
+    let download_folders = account.download_folders.as_deref().unwrap_or_default();
     // Handle deleted folders in sync_folders
     if !deleted_folders.is_empty() {
         // Check if any deleted folders are in sync_folders
-        let remaining_sync_folders: Vec<String> = sync_folders
+        let remaining_sync_folders: Vec<String> = download_folders
             .iter()
             .filter(|folder| !deleted_folders.contains(folder))
             .cloned()
             .collect();
 
         // If sync_folders changed, update them
-        if remaining_sync_folders.len() != sync_folders.len() {
-            let removed_count = sync_folders.len() - remaining_sync_folders.len();
+        if remaining_sync_folders.len() != download_folders.len() {
+            let removed_count = download_folders.len() - remaining_sync_folders.len();
             info!(
                 "Account {}: Removed {} deleted folders from sync_folders",
                 account.id, removed_count

@@ -40,7 +40,7 @@ pub async fn decide_next_download_task(account: &AccountModel) -> BichonResult<D
             let should_trigger = should_trigger_next_download(
                 state.last_trigger_at,
                 state.last_finished_at.unwrap_or(0),
-                account.sync_interval_min.unwrap(),
+                account.download_interval_min.unwrap(),
             );
 
             if should_trigger {

@@ -25,7 +25,7 @@ use crate::{
         cache::{
             imap::{
                 mailbox::MailBox,
-                sync::flow::{fetch_and_save_by_date, fetch_and_save_full_mailbox, FetchDirection},
+                download::flow::{fetch_and_save_by_date, fetch_and_save_full_mailbox, FetchDirection},
             },
             SEMAPHORE,
         },

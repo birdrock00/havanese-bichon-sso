@@ -182,10 +182,10 @@ export function DownloadFoldersDialog({ currentRow, open, onOpenChange }: Props)
                     const itemsWithChildren = getParentIds(tree);
                     setItemsWithChildren(itemsWithChildren);
                     setExpandedItems(itemsWithChildren);
-                    const sync_folders = data
-                        .filter(mailbox => currentRow.sync_folders.includes(mailbox.name))
+                    const download_folders = data
+                        .filter(mailbox => currentRow.download_folders.includes(mailbox.name))
                         .map(mailbox => mailbox.id.toString());
-                    setSelectedItems(sync_folders);
+                    setSelectedItems(download_folders);
                     setError(undefined);
                 }
             } catch (err: any) {

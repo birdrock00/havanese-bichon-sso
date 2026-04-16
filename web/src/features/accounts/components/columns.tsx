@@ -42,7 +42,17 @@ export function useColumns(): ColumnDef<AccountModel>[] {
       },
       enableSorting: false,
       enableHiding: false,
-      meta: { className: 'max-w-[120px]' },
+      meta: { className: 'max-w-[100px]' },
+    },
+    {
+      accessorKey: "account_name",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('accounts.name')} className="justify-center" />
+      ),
+      cell: ({ row }) => {
+        return <LongText>{row.original.account_name ?? "n/a"}</LongText>
+      },
+      meta: { className: 'max-w-[100px]' },
     },
     {
       accessorKey: "email",
@@ -96,7 +106,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         if (account_type === "NoSync") {
           return <LongText className="text-center">n/a</LongText>
         }
-        return <LongText className="text-center">{row.original.sync_interval_min} min</LongText>
+        return <LongText className="text-center">{row.original.download_interval_min} min</LongText>
       },
       meta: { className: 'text-center max-w-[120px]' },
       enableHiding: false,

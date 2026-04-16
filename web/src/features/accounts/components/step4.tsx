@@ -21,10 +21,12 @@ import { useFormContext } from "react-hook-form";
 import { Account } from "./action-dialog";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { useTranslation } from "react-i18next";
+import useProxyList from "@/hooks/use-proxy";
 
 export default function Step4() {
     const { t } = useTranslation();
     const { getValues } = useFormContext<Account>();
+    const { getUrlById } = useProxyList();
     const summaryData = getValues();
 
 
@@ -48,15 +50,20 @@ export default function Step4() {
 
     return (
         <div className="rounded-xl">
-            <Accordion type="multiple" defaultValue={['email', 'name', 'imap', 'date_since', 'folder_limit', 'sync_interval', 'sync_scope', 'sync_batch_size']}>
+            <Accordion type="multiple" defaultValue={['email', 'account_name', 'login_name', 'imap', 'date_since', 'folder_limit', 'sync_interval', 'sync_scope', 'sync_batch_size']}>
                 <AccordionItem key="email" value="email">
                     <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.email')}:</AccordionTrigger>
                     <AccordionContent>{summaryData.email}</AccordionContent>
                 </AccordionItem>
 
-                <AccordionItem key="name" value="name">
+                <AccordionItem key="account_name" value="account_name">
                     <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.name')}:</AccordionTrigger>
-                    <AccordionContent>{summaryData.name ?? t('accounts.notAvailable')}</AccordionContent>
+                    <AccordionContent>{summaryData.account_name ?? t('accounts.notAvailable')}</AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem key="login_name" value="login_name">
+                    <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.login_name')}:</AccordionTrigger>
+                    <AccordionContent>{summaryData.login_name ?? t('accounts.notAvailable')}</AccordionContent>
                 </AccordionItem>
 
                 <AccordionItem key="imap" value="imap">
@@ -93,7 +100,15 @@ export default function Step4() {
                                     )}
                                     <tr>
                                         <td className="px-6 py-2 whitespace-nowrap text-sm font-medium text-gray-600">{t('accounts.useProxyField')}:</td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm">{summaryData.imap.use_proxy ? t('common.yes') : t('common.no')}</td>
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm">
+                                            {(() => {
+                                                if (!summaryData.imap.use_proxy) {
+                                                    return t('accounts.useNoProxy');
+                                                }
+                                                const proxyUrl = getUrlById(summaryData.imap.use_proxy);
+                                                return proxyUrl || `${t('common.yes')} (${summaryData.imap.use_proxy})`;
+                                            })()}
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -103,7 +118,7 @@ export default function Step4() {
 
                 <AccordionItem key="sync_scope" value="sync_scope">
                     <AccordionTrigger className="font-medium capitalize text-gray-600">
-                        {t('accounts.syncScope')}:
+                        {t('accounts.downloadScope')}:
                     </AccordionTrigger>
 
                     <AccordionContent className="space-y-3">
@@ -131,8 +146,8 @@ export default function Step4() {
                         )}
 
                         {!hasSince && !hasBefore && (
-                            <span className="text-sm text-muted-foreground">
-                                {t('accounts.syncAll')}
+                            <span className="text-sm">
+                                {t('accounts.downloadAll')}
                             </span>
                         )}
                     </AccordionContent>
@@ -145,13 +160,13 @@ export default function Step4() {
                 </AccordionItem>
 
                 <AccordionItem key="sync_interval" value="sync_interval">
-                    <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.incrementalSync')}:</AccordionTrigger>
-                    <AccordionContent>{summaryData.sync_interval_min} {t('accounts.minutes')}</AccordionContent>
+                    <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.downloadInterval')}:</AccordionTrigger>
+                    <AccordionContent>{summaryData.download_interval_min} {t('accounts.minutes')}</AccordionContent>
                 </AccordionItem>
 
                 <AccordionItem key="sync_batch_size" value="sync_batch_size">
-                    <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.syncBatchSize')}:</AccordionTrigger>
-                    <AccordionContent>{summaryData.sync_batch_size}</AccordionContent>
+                    <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.downloadBatchSize')}:</AccordionTrigger>
+                    <AccordionContent>{summaryData.download_batch_size}</AccordionContent>
                 </AccordionItem>
             </Accordion>
         </div>

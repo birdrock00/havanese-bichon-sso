@@ -19,7 +19,7 @@
 use crate::modules::account::migration::AccountModel;
 use crate::modules::account::state::{DownloadState, FolderStatus};
 use crate::modules::cache::imap::mailbox::MailBox;
-use crate::modules::cache::imap::sync::flow::{generate_uid_sequence_hashset, DEFAULT_BATCH_SIZE};
+use crate::modules::cache::imap::download::flow::{generate_uid_sequence_hashset, DEFAULT_BATCH_SIZE};
 use crate::modules::envelope::extractor::extract_envelope_and_store_it;
 use crate::modules::error::code::ErrorCode;
 use crate::modules::imap::session::SessionStream;
@@ -139,7 +139,7 @@ impl ImapExecutor {
         uid_vec.sort();
         let uid_batches = generate_uid_sequence_hashset(
             uid_vec,
-            account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE) as usize,
+            account.download_batch_size.unwrap_or(DEFAULT_BATCH_SIZE) as usize,
             false,
         );
         let mut current_processed = 0u64;

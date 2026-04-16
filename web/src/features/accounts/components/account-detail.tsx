@@ -22,9 +22,10 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { useTranslation } from 'react-i18next'
 import { AccountModel } from '@/api/account/api'
+import useProxyList from '@/hooks/use-proxy'
 
 interface Props {
   open: boolean
@@ -34,9 +35,7 @@ interface Props {
 
 export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
   const { t } = useTranslation()
-
-
-
+  const { getUrlById } = useProxyList();
 
   const sinceText = (() => {
     if (currentRow.date_since?.fixed) {
@@ -56,8 +55,6 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
   const hasSince = !!currentRow.date_since;
   const hasBefore = !!currentRow.date_before?.value;
 
-
-
   return (
     <Dialog
       open={open}
@@ -71,13 +68,8 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
         </DialogHeader>
         <ScrollArea className="h-[35rem] w-full pr-4 -mr-4 py-1">
           <Tabs defaultValue="account" className="w-full">
-            <TabsList className="grid w-full grid-cols-1">
-              <TabsTrigger value="account">{t('accounts.accountDetails')}</TabsTrigger>
-            </TabsList>
-
             <TabsContent value="account">
               <div className="mt-4 space-y-6">
-                {/* Account Details Card */}
                 <Card>
                   <CardContent className="mt-4">
                     <div className="flex flex-col gap-2">
@@ -91,19 +83,19 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-muted-foreground">{t('accounts.name')}:</span>
-                        <span>{currentRow.name ?? t('accounts.notAvailable')}</span>
+                        <span>{currentRow.login_name ?? t('accounts.notAvailable')}</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-muted-foreground">{t('accounts.enabled')}:</span>
                         <Checkbox checked={currentRow.enabled} disabled />
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">{t('accounts.incrementalSyncInterval')}:</span>
-                        <span>{t('accounts.everyMinutes', { minutes: currentRow.sync_interval_min })}</span>
+                        <span className="text-muted-foreground">{t('accounts.downloadInterval')}:</span>
+                        <span>{t('accounts.everyMinutes', { minutes: currentRow.download_interval_min })}</span>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">{t('accounts.syncBatchSize')}:</span>
-                        <span>{currentRow.sync_batch_size}</span>
+                        <span className="text-muted-foreground">{t('accounts.downloadBatchSize')}:</span>
+                        <span>{currentRow.download_batch_size}</span>
                       </div>
                       <div className="flex flex-col gap-2">
                         <span className="text-muted-foreground">{t('accounts.capabilities')}:</span>
@@ -112,7 +104,7 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                         </code>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">{t('accounts.syncScope')}:</span>
+                        <span className="text-muted-foreground">{t('accounts.downloadScope')}:</span>
                         {hasSince && (
                           <div className="flex flex-col">
                             <span className="text-xs text-muted-foreground">
@@ -135,8 +127,8 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                           </div>
                         )}
                         {!hasSince && !hasBefore && (
-                          <span className="text-sm text-muted-foreground">
-                            {t('accounts.syncAll')}
+                          <span className="text-sm">
+                            {t('accounts.downloadAll')}
                           </span>
                         )}
                       </div>
@@ -183,7 +175,15 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-muted-foreground">{t('accounts.useProxyField')}:</span>
-                        <span>{currentRow.imap?.use_proxy ? "true" : "false"}</span>
+                        <span>
+                          {(() => {
+                            if (!currentRow.imap?.use_proxy) {
+                              return t('accounts.useNoProxy');
+                            }
+                            const proxyUrl = getUrlById(currentRow.imap?.use_proxy);
+                            return proxyUrl || `${t('common.yes')} (${currentRow.imap?.use_proxy})`;
+                          })()}
+                        </span>
                       </div>
                     </div>
                   </CardContent>
@@ -193,14 +193,14 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                     <CardTitle>{t('accounts.selectedMailboxes')}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {currentRow.sync_folders?.length ? (
+                    {currentRow.download_folders?.length ? (
                       <div className="space-y-2">
                         <div className="text-sm mt-2 text-muted-foreground">
-                          {t('accounts.foldersConfiguredForSync', { count: currentRow.sync_folders.length })}
+                          {t('accounts.foldersConfiguredForSync', { count: currentRow.download_folders.length })}
                         </div>
                         <ScrollArea className="h-[300px] rounded-md border">
                           <div className="p-2">
-                            {currentRow.sync_folders.map((folder, index) => (
+                            {currentRow.download_folders.map((folder, index) => (
                               <div
                                 key={index}
                                 className="flex items-center py-2 px-3 hover:bg-accent rounded-md transition-colors"

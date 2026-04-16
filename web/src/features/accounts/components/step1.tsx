@@ -55,7 +55,7 @@ export default function Step1({ isEdit }: StepProps) {
                                 {t('accounts.emailAddress')}:
                             </FormLabel>
                             <FormControl>
-                                <Input placeholder={t('accounts.emailPlaceholder')} readOnly={isEdit} {...field} />
+                                <Input placeholder={t('accounts.emailPlaceholder')} disabled={isEdit} {...field} />
                             </FormControl>
                             <FormMessage />
                             {isEdit && (
@@ -63,6 +63,22 @@ export default function Step1({ isEdit }: StepProps) {
                                     {t('accounts.emailCannotBeModified')}
                                 </FormDescription>
                             )}
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={control}
+                    name="account_name"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="flex items-center justify-between">
+                                {t('accounts.name')}:
+                            </FormLabel>
+                            <FormControl>
+                                <Input placeholder={t('accounts.namePlaceholder')} {...field} />
+                            </FormControl>
+                            <FormDescription>{t('accounts.optional')}</FormDescription>
+                            <FormMessage />
                         </FormItem>
                     )}
                 />

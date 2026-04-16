@@ -29,8 +29,8 @@ use crate::{
     modules::{
         account::{
             entity::ImapConfig,
-            state::DownloadState,
             since::{DateSince, RelativeDate},
+            state::DownloadState,
         },
         cache::imap::mailbox::MailBox,
         database::{list_all_impl, secondary_find_impl, with_transaction},
@@ -65,6 +65,15 @@ pub enum AccountType {
     #[default]
     IMAP,
     NoSync,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Enum)]
+pub enum QuotaWindow {
+    Hourly,
+    #[default]
+    Daily,
+    Weekly,
+    Monthly,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
@@ -170,15 +179,16 @@ pub struct AccountV4 {
     pub enabled: bool,
     #[oai(validator(custom = "crate::modules::common::validator::EmailValidator"))]
     pub email: String,
-    pub name: Option<String>,
+    pub account_name: Option<String>,
+    pub login_name: Option<String>,
     pub capabilities: Option<Vec<String>>,
     pub date_since: Option<DateSince>,
     pub date_before: Option<RelativeDate>,
     pub folder_limit: Option<u32>,
-    pub sync_folders: Option<Vec<String>>,
+    pub download_folders: Option<Vec<String>>,
     pub account_type: AccountType,
-    pub sync_interval_min: Option<i64>,
-    pub sync_batch_size: Option<u32>,
+    pub download_interval_min: Option<i64>,
+    pub download_batch_size: Option<u32>,
     pub known_folders: Option<BTreeSet<String>>,
     pub created_at: i64,
     pub updated_at: i64,
@@ -186,8 +196,9 @@ pub struct AccountV4 {
     pub use_proxy: Option<u64>,
     pub use_dangerous: bool,
     pub pgp_key: Option<String>,
-    pub imap_daily_quota_bytes: Option<u32>,
-    pub auto_sync_new_mailboxes: Option<bool>,
+    pub imap_quota_bytes: Option<u64>,
+    pub imap_quota_window: Option<QuotaWindow>,
+    pub auto_download_new_mailboxes: Option<bool>,
 }
 
 impl AccountV4 {
@@ -199,15 +210,16 @@ impl AccountV4 {
         Ok(Self {
             id: id!(64),
             email: request.email,
-            name: request.name,
+            login_name: request.login_name,
+            account_name: request.account_name,
             imap: request.imap.map(|i| i.try_encrypt_password()).transpose()?,
             enabled: request.enabled,
             capabilities: None,
             date_since: request.date_since,
-            sync_folders: None,
+            download_folders: None,
             known_folders: None,
             account_type: request.account_type,
-            sync_interval_min: request.sync_interval_min,
+            download_interval_min: request.download_interval_min,
             created_at: utc_now!(),
             updated_at: utc_now!(),
             use_proxy: request.use_proxy,
@@ -215,10 +227,11 @@ impl AccountV4 {
             use_dangerous: request.use_dangerous,
             pgp_key: request.pgp_key,
             created_by: user_id,
-            sync_batch_size: request.sync_batch_size,
+            download_batch_size: request.download_batch_size,
             date_before: request.date_before,
-            imap_daily_quota_bytes: request.imap_daily_quota_bytes,
-            auto_sync_new_mailboxes: request.auto_sync_new_mailboxes,
+            auto_download_new_mailboxes: request.auto_download_new_mailboxes,
+            imap_quota_bytes: request.imap_quota_bytes,
+            imap_quota_window: request.imap_quota_window,
         })
     }
 
@@ -374,7 +387,7 @@ impl AccountV4 {
             .ok_or_else(|| raise_error!(format!("When trying to update account download folders, the corresponding record was not found. account_id={}", account_id), ErrorCode::ResourceNotFound))
         }, |current|{
             let mut updated = current.clone();
-            updated.sync_folders = Some(download_folders);
+            updated.download_folders = Some(download_folders);
             Ok(updated)
         }).await?;
         Ok(())
@@ -490,14 +503,6 @@ impl AccountV4 {
             }
         }
 
-        if let Some(name) = &request.name {
-            if name.trim().is_empty() {
-                new.name = None;
-            } else {
-                new.name = Some(name.clone());
-            }
-        }
-
         if matches!(old.account_type, AccountType::IMAP) {
             if let Some(imap) = &request.imap {
                 if let Some(current_imap) = &mut new.imap {
@@ -514,14 +519,14 @@ impl AccountV4 {
             }
 
             if let Some(folder_names) = request.sync_folders {
-                new.sync_folders = Some(folder_names);
+                new.download_folders = Some(folder_names);
             }
-            if let Some(sync_interval_min) = &request.sync_interval_min {
-                new.sync_interval_min = Some(*sync_interval_min);
+            if let Some(sync_interval_min) = &request.download_interval_min {
+                new.download_interval_min = Some(*sync_interval_min);
             }
 
-            if let Some(sync_batch_size) = &request.sync_batch_size {
-                new.sync_batch_size = Some(*sync_batch_size);
+            if let Some(download_batch_size) = &request.download_batch_size {
+                new.download_batch_size = Some(*download_batch_size);
             }
 
             if let Some(use_proxy) = request.use_proxy {
@@ -547,12 +552,16 @@ impl AccountV4 {
             new.pgp_key = Some(pgp_key);
         }
 
-        if let Some(imap_daily_quota_bytes) = request.imap_daily_quota_bytes {
-            new.imap_daily_quota_bytes = Some(imap_daily_quota_bytes);
+        if let Some(imap_quota_bytes) = request.imap_quota_bytes {
+            new.imap_quota_bytes = Some(imap_quota_bytes);
         }
 
-        if let Some(auto_sync_new_mailboxes) = request.auto_sync_new_mailboxes {
-            new.auto_sync_new_mailboxes = Some(auto_sync_new_mailboxes);
+        if let Some(imap_quota_window) = request.imap_quota_window {
+            new.imap_quota_window = Some(imap_quota_window);
+        }
+
+        if let Some(auto_download_new_mailboxes) = request.auto_download_new_mailboxes {
+            new.auto_download_new_mailboxes = Some(auto_download_new_mailboxes);
         }
         new.updated_at = utc_now!();
         Ok(new)
@@ -663,15 +672,15 @@ impl From<AccountV4> for AccountV3 {
             imap: value.imap,
             enabled: value.enabled,
             email: value.email,
-            name: value.name,
+            name: value.login_name,
             capabilities: value.capabilities,
             date_since: value.date_since,
             date_before: value.date_before,
             folder_limit: value.folder_limit,
-            sync_folders: value.sync_folders,
+            sync_folders: value.download_folders,
             account_type: value.account_type,
-            sync_interval_min: value.sync_interval_min,
-            sync_batch_size: value.sync_batch_size,
+            sync_interval_min: value.download_interval_min,
+            sync_batch_size: value.download_batch_size,
             known_folders: value.known_folders,
             created_at: value.created_at,
             updated_at: value.updated_at,
@@ -690,15 +699,16 @@ impl From<AccountV3> for AccountV4 {
             imap: value.imap,
             enabled: value.enabled,
             email: value.email,
-            name: value.name,
+            account_name: None,
+            login_name: value.name,
             capabilities: value.capabilities,
             date_since: value.date_since,
             date_before: value.date_before,
             folder_limit: value.folder_limit,
-            sync_folders: value.sync_folders,
+            download_folders: value.sync_folders,
             account_type: value.account_type,
-            sync_interval_min: value.sync_interval_min,
-            sync_batch_size: value.sync_batch_size,
+            download_interval_min: value.sync_interval_min,
+            download_batch_size: value.sync_batch_size,
             known_folders: value.known_folders,
             created_at: value.created_at,
             updated_at: value.updated_at,
@@ -706,8 +716,9 @@ impl From<AccountV3> for AccountV4 {
             use_proxy: value.use_proxy,
             use_dangerous: value.use_dangerous,
             pgp_key: value.pgp_key,
-            imap_daily_quota_bytes: None,
-            auto_sync_new_mailboxes: None,
+            imap_quota_window: None,
+            imap_quota_bytes: None,
+            auto_download_new_mailboxes: None,
         }
     }
 }

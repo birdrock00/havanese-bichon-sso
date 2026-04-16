@@ -64,7 +64,7 @@ export default function Accounts() {
       <FixedHeader />
 
       <Main>
-        <div className="mx-auto w-full max-w-[88rem] px-4">
+        <div className="mx-auto w-full max-w-[108rem] px-4">
           <div className='mb-2 flex items-center justify-between flex-wrap gap-x-4 gap-y-2'>
             <div>
               <h2 className='text-2xl font-bold tracking-tight'>{t('accounts.title')}</h2>

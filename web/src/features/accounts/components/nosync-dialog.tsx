@@ -38,14 +38,14 @@ import { useTranslation } from 'react-i18next';
 
 const accountSchema = (t: (key: string) => string) =>
   z.object({
-    name: z.string().optional(),
+    account_name: z.string().optional(),
     email: z.string({ required_error: t('validation.emailRequired') }).email({ message: t('validation.invalidEmail') }),
     enabled: z.boolean()
   });
 
 
 export type NoSyncAccount = {
-  name?: string;
+  account_name?: string;
   email: string;
   enabled: boolean;
 };
@@ -60,7 +60,7 @@ interface Props {
 
 
 const defaultValues: NoSyncAccount = {
-  name: '',
+  account_name: '',
   email: '',
   enabled: true
 };
@@ -68,7 +68,7 @@ const defaultValues: NoSyncAccount = {
 
 const mapCurrentRowToFormValues = (currentRow: AccountModel): NoSyncAccount => {
   let account = {
-    name: currentRow.name === null ? '' : currentRow.name,
+    account_name: currentRow.account_name === null ? '' : currentRow.account_name,
     email: currentRow.email,
     enabled: currentRow.enabled
   };
@@ -132,7 +132,7 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
     (data: NoSyncAccount) => {
       const commonData = {
         email: data.email,
-        name: data.name,
+        account_name: data.account_name,
         enabled: data.enabled,
         use_dangerous: false
       };
@@ -164,7 +164,7 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
             {t('accounts.clickSaveWhenDone')}
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className='h-[13rem] w-full pr-4 -mr-4 py-1'>
+        <ScrollArea className='h-[20rem] w-full pr-4 -mr-4 py-1'>
           <Form {...form}>
             <form
               id='nosync-account-form'
@@ -189,9 +189,9 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
                   </FormItem>
                 )}
               />
-              {/* <FormField
+              <FormField
                 control={form.control}
-                name="name"
+                name="account_name"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center justify-between">
@@ -204,7 +204,7 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
                     <FormMessage />
                   </FormItem>
                 )}
-              /> */}
+              />
               <FormField
                 control={form.control}
                 name='enabled'

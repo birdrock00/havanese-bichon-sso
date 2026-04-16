@@ -27,7 +27,7 @@ use mailbox::MailBox;
 use native_db::Models;
 
 pub mod mailbox;
-pub mod sync;
+pub mod download;
 pub mod task;
 
 pub static MAILBOX_MODELS: LazyLock<Models> = LazyLock::new(|| {

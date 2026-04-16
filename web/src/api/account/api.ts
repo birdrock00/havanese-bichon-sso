@@ -116,27 +116,34 @@ interface DateSelection {
     relative?: RelativeDate;
 }
 
+
+export type QuotaWindow = 'hourly' | 'daily' | 'weekly' | 'monthly'
 export interface AccountModel {
     id: number;
     account_type: AccountType;
     imap?: ImapConfig;
     enabled: boolean;
-    name?: string,
+    login_name?: string,
+    account_name?: string,
     email: string;
     capabilities?: string[];
     date_since?: DateSelection;
     date_before?: RelativeDate;
     folder_limit?: number,
-    sync_folders: string[];
-    sync_interval_min?: number;
-    sync_batch_size?: number;
+    download_folders: string[];
+    download_interval_min?: number;
+    download_batch_size?: number;
     created_by: number;
     created_user_name: string;
     created_user_email: string;
     created_at: number;
     updated_at: number;
-    use_proxy?: number
-    use_dangerous: boolean
+    use_proxy?: number;
+    use_dangerous: boolean;
+    pgp_key?: string;
+    imap_quota_window?: QuotaWindow;
+    imap_quota_bytes?: number;
+    auto_download_new_mailboxes?: boolean;
 }
 
 export const account_state = async (account_id: number) => {

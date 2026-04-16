@@ -18,7 +18,7 @@
 
 use crate::modules::account::entity::AuthType;
 use crate::modules::account::state::DownloadState;
-use crate::modules::cache::imap::sync::process_imap_download;
+use crate::modules::cache::imap::download::process_imap_download;
 use crate::modules::common::periodic::{PeriodicTask, TaskHandle};
 use crate::modules::oauth2::token::OAuth2AccessToken;
 use crate::modules::{account::migration::AccountModel, error::BichonResult};

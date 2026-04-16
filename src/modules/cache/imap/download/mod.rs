@@ -21,22 +21,22 @@ use crate::modules::{
         migration::{AccountModel, AccountType},
         state::{DownloadState, DownloadStatus},
     },
-    cache::imap::{mailbox::MailBox, sync::flow::FetchDirection},
+    cache::imap::{mailbox::MailBox, download::flow::FetchDirection},
     error::BichonResult,
     imap::executor::ImapExecutor,
 };
 use flow::reconcile_mailboxes;
 use rebuild::{rebuild_cache, rebuild_cache_by_date};
 use std::time::Instant;
-use sync_folders::get_download_folders;
-use sync_type::{decide_next_download_task, DownloadTask};
+use download_folders::get_download_folders;
+use download_type::{decide_next_download_task, DownloadTask};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, warn};
 
 pub mod flow;
 pub mod rebuild;
-pub mod sync_folders;
-pub mod sync_type;
+pub mod download_folders;
+pub mod download_type;
 
 pub async fn process_imap_download(
     account: &AccountModel,

@@ -48,6 +48,7 @@ export default function Step2({ isEdit }: StepProps) {
     const { t } = useTranslation()
     const { control } = useFormContext<Account>();
     const { proxyOptions } = useProxyList();
+
     const imapAuthMethod = useWatch({
         control,
         name: "imap.auth.auth_type",
@@ -130,14 +131,14 @@ export default function Step2({ isEdit }: StepProps) {
                 />
                 <FormField
                     control={control}
-                    name="name"
+                    name="login_name"
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel className="flex items-center justify-between">
-                                {t('accounts.name')}:
+                                {t('accounts.login_name')}:
                             </FormLabel>
                             <FormControl>
-                                <Input placeholder={t('accounts.namePlaceholder')} {...field} />
+                                <Input placeholder={t('accounts.namePlaceholder')} {...field} disabled={isEdit} />
                             </FormControl>
                             <FormDescription>{t('accounts.nameDescription')}</FormDescription>
                             <FormMessage />
@@ -198,7 +199,9 @@ export default function Step2({ isEdit }: StepProps) {
                             <FormLabel className="flex items-center justify-between">{t('accounts.useProxy')} ({t('accounts.optional')}):</FormLabel>
                             <FormControl>
                                 <Select
-                                    onValueChange={(val) => field.onChange(Number(val))}
+                                    onValueChange={(val) => {
+                                        field.onChange(val === 'none' ? undefined : Number(val))
+                                    }}
                                     defaultValue={field.value?.toString()}
                                 >
                                     <FormControl>
@@ -207,14 +210,15 @@ export default function Step2({ isEdit }: StepProps) {
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {proxyOptions && proxyOptions.length > 0 ? (
+                                        <SelectItem key="none" value="none">
+                                            {t('accounts.useNoProxy')}
+                                        </SelectItem>
+                                        {proxyOptions && proxyOptions.length > 0 && (
                                             proxyOptions.map((option) => (
                                                 <SelectItem key={option.value} value={option.value.toString()}>
                                                     {option.label}
                                                 </SelectItem>
                                             ))
-                                        ) : (
-                                            <SelectItem disabled value="__none__">{t('settings.noProxies')}</SelectItem>
                                         )}
                                     </SelectContent>
                                 </Select>

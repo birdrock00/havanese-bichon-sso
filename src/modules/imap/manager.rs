@@ -53,7 +53,7 @@ impl ImapConnectionManager {
     ) -> BichonResult<Session<Box<dyn SessionStream>>> {
         assert_eq!(account.account_type, AccountType::IMAP);
         let imap = account.imap.as_ref().unwrap();
-        let username = account.name.clone().unwrap_or(account.email.clone());
+        let login_name = account.login_name.clone().unwrap_or(account.email.clone());
         match &imap.auth.auth_type {
             AuthType::Password => {
                 let password = &imap.auth.password.clone().ok_or_else(|| {
@@ -64,10 +64,10 @@ impl ImapConnectionManager {
                 })?;
 
                 let password = decrypt!(&password)?;
-                client.login(&username, &password).await.map_err(|e| {
+                client.login(&login_name, &password).await.map_err(|e| {
                     error!(
                         "IMAP password auth failed for username '{}': {}",
-                        username, e
+                        login_name, e
                     );
                     e
                 })
@@ -82,10 +82,10 @@ impl ImapConnectionManager {
                     )
                 })?;
                 client
-                    .authenticate(OAuth2::new(username.clone(), access_token))
+                    .authenticate(OAuth2::new(login_name.clone(), access_token))
                     .await
                     .map_err(|e| {
-                        error!("IMAP OAuth2 auth failed for username '{}': {}", username, e);
+                        error!("IMAP OAuth2 auth failed for username '{}': {}", login_name, e);
                         e
                     })
             }

@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::modules::account::entity::ImapConfig;
-use crate::modules::account::migration::{AccountModel, AccountType};
+use crate::modules::account::migration::{AccountModel, AccountType, QuotaWindow};
 use crate::modules::account::since::{DateSince, RelativeDate};
 use crate::modules::error::code::ErrorCode;
 use crate::modules::error::BichonResult;
@@ -29,7 +29,8 @@ use serde::{Deserialize, Serialize};
 pub struct AccountCreateRequest {
     #[oai(validator(custom = "crate::modules::common::validator::EmailValidator"))]
     pub email: String,
-    pub name: Option<String>,
+    pub login_name: Option<String>,
+    pub account_name: Option<String>,
     pub imap: Option<ImapConfig>,
     pub enabled: bool,
     pub date_since: Option<DateSince>,
@@ -38,14 +39,15 @@ pub struct AccountCreateRequest {
     #[oai(validator(minimum(value = "100")))]
     pub folder_limit: Option<u32>,
     #[oai(validator(minimum(value = "10")))]
-    pub sync_interval_min: Option<i64>,
+    pub download_interval_min: Option<i64>,
     #[oai(validator(minimum(value = "10"), maximum(value = "200")))]
-    pub sync_batch_size: Option<u32>,
+    pub download_batch_size: Option<u32>,
     pub use_proxy: Option<u64>,
     pub use_dangerous: bool,
     pub pgp_key: Option<String>,
-    pub imap_daily_quota_bytes: Option<u32>,
-    pub auto_sync_new_mailboxes: Option<bool>,
+    pub imap_quota_bytes: Option<u64>,
+    pub imap_quota_window: Option<QuotaWindow>,
+    pub auto_download_new_mailboxes: Option<bool>,
 }
 
 impl AccountCreateRequest {
@@ -54,6 +56,13 @@ impl AccountCreateRequest {
             return Err(raise_error!(
                 "date_before and date_since are mutually exclusive; specify only one time boundary"
                     .into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+
+        if self.imap_quota_bytes.is_some() ^ self.imap_quota_window.is_some() {
+            return Err(raise_error!(
+                "Quota bytes and quota window must be provided together or omitted together".into(),
                 ErrorCode::InvalidParameter
             ));
         }
@@ -77,7 +86,7 @@ impl AccountCreateRequest {
                         ))
                     }
                 }
-                if self.sync_interval_min.is_none() {
+                if self.download_interval_min.is_none() {
                     return Err(raise_error!(
                         "`sync_interval_min` is required for IMAP account type".into(),
                         ErrorCode::InvalidParameter
@@ -107,8 +116,7 @@ pub struct AccountUpdateRequest {
     /// and any attempts to access them should return an error indicating the account
     /// is inactive.
     pub enabled: Option<bool>,
-    /// Display name for the account (optional)
-    pub name: Option<String>,
+    pub account_name: Option<String>,
     /// IMAP server configuration
     pub imap: Option<ImapConfig>,
     /// Controls initial synchronization time range
@@ -146,9 +154,9 @@ pub struct AccountUpdateRequest {
     pub sync_folders: Option<Vec<String>>,
     /// Incremental sync interval (seconds)
     #[oai(validator(minimum(value = "10")))]
-    pub sync_interval_min: Option<i64>,
+    pub download_interval_min: Option<i64>,
     #[oai(validator(minimum(value = "10"), maximum(value = "200")))]
-    pub sync_batch_size: Option<u32>,
+    pub download_batch_size: Option<u32>,
     /// Optional proxy ID for establishing the connection to external APIs (e.g., Gmail, Outlook).
     /// - If `None` or not provided, the client will connect directly to the API server.
     /// - If `Some(proxy_id)`, the client will use the pre-configured proxy with the given ID for API requests.
@@ -157,8 +165,9 @@ pub struct AccountUpdateRequest {
     pub use_dangerous: Option<bool>,
 
     pub pgp_key: Option<String>,
-    pub imap_daily_quota_bytes: Option<u32>,
-    pub auto_sync_new_mailboxes: Option<bool>,
+    pub imap_quota_bytes: Option<u64>,
+    pub imap_quota_window: Option<QuotaWindow>,
+    pub auto_download_new_mailboxes: Option<bool>,
 }
 
 impl AccountUpdateRequest {
@@ -167,6 +176,13 @@ impl AccountUpdateRequest {
             return Err(raise_error!(
                 "date_before and date_since are mutually exclusive; specify only one time boundary"
                     .into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+
+        if self.imap_quota_bytes.is_some() ^ self.imap_quota_window.is_some() {
+            return Err(raise_error!(
+                "Quota bytes and quota window must be provided together or omitted together".into(),
                 ErrorCode::InvalidParameter
             ));
         }

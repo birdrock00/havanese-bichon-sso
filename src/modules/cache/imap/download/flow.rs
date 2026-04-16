@@ -26,7 +26,7 @@ use crate::{
             imap::{
                 find_intersecting_mailboxes, find_missing_mailboxes,
                 mailbox::MailBox,
-                sync::rebuild::{
+                download::rebuild::{
                     rebuild_mailbox_cache, rebuild_mailbox_cache_by_date,
                     DEFAULT_MAX_CONCURRENT_PER_ACCOUNT,
                 },
@@ -139,7 +139,7 @@ pub async fn fetch_and_save_by_date(
     let planned = uid_vec.len() as u64;
     let uid_batches = generate_uid_sequence_hashset(
         uid_vec,
-        account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE) as usize,
+        account.download_batch_size.unwrap_or(DEFAULT_BATCH_SIZE) as usize,
         false,
     );
     DownloadState::update_folder_progress(
@@ -289,9 +289,9 @@ pub async fn fetch_and_save_full_mailbox(
     let page_size = if let Some(limit) = folder_limit {
         limit
             .max(100)
-            .min(account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE))
+            .min(account.download_batch_size.unwrap_or(DEFAULT_BATCH_SIZE))
     } else {
-        account.sync_batch_size.unwrap_or(DEFAULT_BATCH_SIZE)
+        account.download_batch_size.unwrap_or(DEFAULT_BATCH_SIZE)
     };
 
     let total_batches = total_to_fetch.div_ceil(page_size as u64);
