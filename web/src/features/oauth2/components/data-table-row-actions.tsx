@@ -33,6 +33,7 @@ import { useOAuth2Context } from '../context'
 import { OAuth2Entity } from '../data/schema'
 import { WorkflowIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useCurrentUser } from '@/hooks/use-current-user'
 
 
 interface DataTableRowActionsProps {
@@ -42,6 +43,9 @@ interface DataTableRowActionsProps {
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const { t } = useTranslation()
   const { setOpen, setCurrentRow } = useOAuth2Context()
+  const { require_any_permission } = useCurrentUser()
+
+
   return (
     <>
       <DropdownMenu modal={false}>
@@ -56,6 +60,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end' className='w-[160px]'>
           <DropdownMenuItem
+            disabled={!require_any_permission(['system:root'])}
             onClick={() => {
               setCurrentRow(row.original)
               setOpen('edit')
@@ -80,6 +85,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
+            disabled={!require_any_permission(['system:root'])}
             onClick={() => {
               setCurrentRow(row.original)
               setOpen('delete')

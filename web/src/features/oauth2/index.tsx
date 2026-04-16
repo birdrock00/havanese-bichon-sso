@@ -37,12 +37,13 @@ import { TableSkeleton } from '@/components/table-skeleton'
 import { AuthorizeDialog } from './components/authorize-dialog'
 import { FixedHeader } from '@/components/layout/fixed-header'
 import { useTranslation } from 'react-i18next'
+import { useCurrentUser } from '@/hooks/use-current-user'
 
 export default function OAuth2() {
   const { t } = useTranslation()
   const [currentRow, setCurrentRow] = useState<OAuth2Entity | null>(null)
   const [open, setOpen] = useDialogState<OAuth2DialogType>(null)
-
+  const { require_any_permission } = useCurrentUser()
 
   const { data: oauth2List, isLoading } = useQuery({
     queryKey: ['oauth2-list'],
@@ -53,12 +54,9 @@ export default function OAuth2() {
 
   return (
     <OAuth2Provider value={{ open, setOpen, currentRow, setCurrentRow }}>
-      {/* ===== Top Heading ===== */}
       <FixedHeader />
-
       <Main>
-        <div className="mx-auto w-full max-w-6xl px-4">
-          {/* Header */}
+        <div className="mx-auto max-w-[88rem] px-4">
           <div className="mb-2 flex items-start flex-wrap gap-x-4 gap-y-2">
             <div className="flex-1 min-w-[300px]">
               <h2 className="text-2xl font-bold tracking-tight">{t('oauth2.title')}</h2>
@@ -67,13 +65,12 @@ export default function OAuth2() {
               </p>
             </div>
             <div className="flex gap-2 ml-auto">
-              <Button className="space-x-1" onClick={() => setOpen("add")}>
+              <Button className="space-x-1" disabled={!require_any_permission(['system:root'])} onClick={() => setOpen("add")}>
                 <span>{t('common.add')}</span>
                 <Plus size={18} />
               </Button>
             </div>
           </div>
-          {/* Table / Empty State */}
           <div className="flex-1 overflow-auto py-1 flex-row lg:space-x-12 space-y-0">
             {isLoading ? (
               <TableSkeleton columns={columns.length} rows={10} />
@@ -91,7 +88,7 @@ export default function OAuth2() {
                   <p className="mb-4 mt-2 text-sm text-muted-foreground">
                     {t('oauth2.noConfigurationsDesc')}
                   </p>
-                  <Button onClick={() => setOpen("add")}>{t('oauth2.addConfiguration')}</Button>
+                  <Button disabled={!require_any_permission(['system:root'])} onClick={() => setOpen("add")}>{t('oauth2.addConfiguration')}</Button>
                 </div>
               </div>
             )}

@@ -33,9 +33,9 @@ export const getColumns = (t: (key: string) => string): ColumnDef<OAuth2Entity>[
       <DataTableColumnHeader column={column} title={t('settings.id')} />
     ),
     cell: ({ row }) => {
-      return <LongText className='max-w-[100px]'>{row.original.id}</LongText>
+      return <LongText className='max-w-[140px]'>{row.original.id}</LongText>
     },
-    meta: { className: 'max-w-[100px]' },
+    meta: { className: 'max-w-[140px]' },
     enableHiding: false,
     enableSorting: false,
   },
@@ -92,9 +92,9 @@ export const getColumns = (t: (key: string) => string): ColumnDef<OAuth2Entity>[
       <DataTableColumnHeader column={column} title={t('settings.description')} />
     ),
     cell: ({ row }) => (
-      <LongText className='max-w-[200px]'>{row.original.description}</LongText>
+      <LongText className='max-w-[180px]'>{row.original.description}</LongText>
     ),
-    meta: { className: 'max-w-[200px]' },
+    meta: { className: 'max-w-[180px]' },
     enableHiding: true,
     enableSorting: false
   },

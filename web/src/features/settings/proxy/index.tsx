@@ -33,13 +33,14 @@ import Logo from '@/assets/logo.svg'
 import useProxyList from '@/hooks/use-proxy'
 import { useTranslation } from 'react-i18next'
 import { Proxy } from '@/api/system/api'
+import { useCurrentUser } from '@/hooks/use-current-user'
 
 
 export default function ProxyManagerPage() {
   const { t } = useTranslation()
   const [currentRow, setCurrentRow] = useState<Proxy | null>(null)
   const [open, setOpen] = useDialogState<ProxyDialogType>(null)
-
+  const { require_any_permission } = useCurrentUser()
   const { proxyList, isLoading } = useProxyList()
   const columns = getColumns(t)
 
@@ -49,7 +50,7 @@ export default function ProxyManagerPage() {
         <div>
           <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <div className="flex gap-2">
-              <Button className="space-x-1" onClick={() => setOpen('add')}>
+              <Button className="space-x-1" disabled={!require_any_permission(['system:root'])} onClick={() => setOpen('add')}>
                 <span>{t('settings.add')}</span> <Plus size={18} />
               </Button>
             </div>

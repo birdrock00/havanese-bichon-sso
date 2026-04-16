@@ -20,8 +20,8 @@ use crate::{
     encrypt, id,
     modules::{
         database::{
-            delete_impl, insert_impl, manager::DB_MANAGER, paginate_query_primary_scan_all_impl,
-            async_secondary_find_impl, update_impl,
+            async_secondary_find_impl, delete_impl, insert_impl, manager::DB_MANAGER,
+            paginate_query_primary_scan_all_impl, update_impl,
         },
         error::{code::ErrorCode, BichonResult},
         rest::response::DataPage,
@@ -109,9 +109,9 @@ impl OAuth2 {
 
         self.client_id = mask.to_string();
         self.client_secret = mask.to_string();
-        self.auth_url = mask.to_string();
-        self.token_url = mask.to_string();
-        self.redirect_uri = mask.to_string();
+        self.auth_url = self.auth_url.clone();
+        self.token_url = self.token_url.clone();
+        self.redirect_uri = self.redirect_uri.clone();
 
         self.scopes = None;
         self.extra_params = None;

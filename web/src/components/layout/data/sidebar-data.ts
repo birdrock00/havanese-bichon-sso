@@ -65,8 +65,7 @@ export function useSidebarData(): SidebarData {
           {
             title: t('navigation.oauth2'),
             url: '/oauth2',
-            icon: IdCard,
-            visible: require_any_permission(['system:root', 'account:create']),
+            icon: IdCard
           }
         ]
       },

@@ -27,7 +27,7 @@ import { useTranslation } from 'react-i18next'
 
 export default function Settings() {
   const { t } = useTranslation()
-  const { require_any_permission, canGlobal } = useCurrentUser()
+  const { canGlobal } = useCurrentUser()
 
 
   const sidebarNavItems = [
@@ -50,7 +50,6 @@ export default function Settings() {
       title: t('settings.sidebar.proxy'),
       icon: <Waypoints size={18} />,
       href: '/settings/proxy',
-      visible: require_any_permission(['system:root', 'account:create']),
     },
     {
       title: t('settings.sidebar.configurations'),

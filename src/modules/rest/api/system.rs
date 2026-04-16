@@ -69,13 +69,8 @@ impl SystemApi {
 
     /// Get the full list of SOCKS5 proxy configurations.
     #[oai(method = "get", path = "/list-proxy", operation_id = "list_proxy")]
-    async fn list_proxy(&self, context: ClientContext) -> ApiResult<Json<Vec<Proxy>>> {
-        context
-            .require_any_permission(vec![
-                (None, Permission::ACCOUNT_CREATE),
-                (None, Permission::ROOT),
-            ])
-            .await?;
+    async fn list_proxy(&self, _context: ClientContext) -> ApiResult<Json<Vec<Proxy>>> {
+        //The proxy list is visible to all users.
         let proxies = Proxy::list_all()
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
@@ -90,9 +85,7 @@ impl SystemApi {
         id: Path<u64>,
         context: ClientContext,
     ) -> ApiResult<()> {
-        context
-            .require_permission(None, Permission::ROOT)
-            .await?;
+        context.require_permission(None, Permission::ROOT).await?;
         Ok(Proxy::delete(id.0).await?)
     }
 
@@ -104,18 +97,14 @@ impl SystemApi {
         id: Path<u64>,
         context: ClientContext,
     ) -> ApiResult<Json<Proxy>> {
-        context
-            .require_permission(None, Permission::ROOT)
-            .await?;
+        context.require_permission(None, Permission::ROOT).await?;
         Ok(Json(Proxy::get(id.0).await?))
     }
 
     /// Create a new proxy configuration. Requires root permission.
     #[oai(path = "/proxy", method = "post", operation_id = "create_proxy")]
     async fn create_proxy(&self, url: PlainText<String>, context: ClientContext) -> ApiResult<()> {
-        context
-            .require_permission(None, Permission::ROOT)
-            .await?;
+        context.require_permission(None, Permission::ROOT).await?;
         let entity = Proxy::new(url.0);
         Ok(entity.save().await?)
     }
@@ -128,9 +117,7 @@ impl SystemApi {
         url: PlainText<String>,
         context: ClientContext,
     ) -> ApiResult<()> {
-        context
-            .require_permission(None, Permission::ROOT)
-            .await?;
+        context.require_permission(None, Permission::ROOT).await?;
         Ok(Proxy::update(id.0, url.0).await?)
     }
     /// Get system configurations.
@@ -146,9 +133,7 @@ impl SystemApi {
         &self,
         context: ClientContext,
     ) -> ApiResult<Json<SystemConfigurations>> {
-        context
-            .require_permission(None, Permission::ROOT)
-            .await?;
+        context.require_permission(None, Permission::ROOT).await?;
         let config: SystemConfigurations = SystemConfigurations::from(&*SETTINGS);
         Ok(Json(config))
     }

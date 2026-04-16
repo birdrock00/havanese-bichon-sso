@@ -35,10 +35,10 @@ pub struct OAuth2Api;
 
 #[OpenApi(prefix_path = "/api/v1", tag = "ApiTags::OAuth2")]
 impl OAuth2Api {
-    /// Retrieves the OAuth2 configuration for a specified name.
+    /// Retrieves the OAuth2 configuration for a specified id.
     ///
     /// Requires root privileges.
-    /// This endpoint fetches the OAuth2 configuration identified by the given name.
+    /// This endpoint fetches the OAuth2 configuration identified by the given id.
     #[oai(
         path = "/oauth2/:id",
         method = "get",
@@ -46,7 +46,7 @@ impl OAuth2Api {
     )]
     async fn get_oauth2_config(
         &self,
-        /// The name of the OAuth2 configuration to retrieve
+        /// The id of the OAuth2 configuration to retrieve
         id: Path<u64>,
         context: ClientContext,
     ) -> ApiResult<Json<OAuth2>> {
@@ -57,17 +57,9 @@ impl OAuth2Api {
                 ErrorCode::ResourceNotFound
             )
         })?;
-        if context
-            .has_permission(None, Permission::ROOT)
-            .await
-        {
+        if context.has_permission(None, Permission::ROOT).await {
             return Ok(Json(oauth2));
         }
-
-        context
-            .require_permission(None, Permission::ACCOUNT_CREATE)
-            .await?;
-
         oauth2.scrub_sensitive_fields();
         Ok(Json(oauth2))
     }
@@ -87,9 +79,7 @@ impl OAuth2Api {
         id: Path<u64>,
         context: ClientContext,
     ) -> ApiResult<()> {
-        context
-            .require_permission(None, Permission::ROOT)
-            .await?;
+        context.require_permission(None, Permission::ROOT).await?;
         Ok(OAuth2::delete(id.0).await?)
     }
 
@@ -108,9 +98,7 @@ impl OAuth2Api {
         request: Json<OAuth2CreateRequest>,
         context: ClientContext,
     ) -> ApiResult<()> {
-        context
-            .require_permission(None, Permission::ROOT)
-            .await?;
+        context.require_permission(None, Permission::ROOT).await?;
         let entity = OAuth2::new(request.0)?;
         Ok(entity.save().await?)
     }
@@ -132,9 +120,7 @@ impl OAuth2Api {
         payload: Json<OAuth2UpdateRequest>,
         context: ClientContext,
     ) -> ApiResult<()> {
-        context
-            .require_permission(None, Permission::ROOT)
-            .await?;
+        context.require_permission(None, Permission::ROOT).await?;
         Ok(OAuth2::update(id.0, payload.0).await?)
     }
 
@@ -158,17 +144,10 @@ impl OAuth2Api {
         context: ClientContext,
     ) -> ApiResult<Json<DataPage<OAuth2>>> {
         let mut list = OAuth2::paginate_list(page.0, page_size.0, desc.0).await?;
-        if context
-            .has_permission(None, Permission::ROOT)
-            .await
-        {
+        if context.has_permission(None, Permission::ROOT).await {
             return Ok(Json(list));
         }
-
-        context
-            .require_permission(None, Permission::ACCOUNT_CREATE)
-            .await?;
-
+        //Non-root users can only view masked data.
         for item in &mut list.items {
             item.scrub_sensitive_fields();
         }

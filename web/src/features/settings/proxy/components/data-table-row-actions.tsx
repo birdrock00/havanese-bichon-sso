@@ -32,6 +32,7 @@ import {
 import { useProxyContext } from '../context'
 import { useTranslation } from 'react-i18next'
 import { Proxy } from '@/api/system/api'
+import { useCurrentUser } from '@/hooks/use-current-user'
 
 
 interface DataTableRowActionsProps {
@@ -40,6 +41,7 @@ interface DataTableRowActionsProps {
 
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const { setOpen, setCurrentRow } = useProxyContext()
+  const { require_any_permission } = useCurrentUser()
   const { t } = useTranslation()
   return (
     <>
@@ -55,6 +57,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end' className='w-[160px]'>
           <DropdownMenuItem
+            disabled={!require_any_permission(['system:root'])}
             onClick={() => {
               setCurrentRow(row.original)
               setOpen('edit')
@@ -67,6 +70,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
+            disabled={!require_any_permission(['system:root'])}
             onClick={() => {
               setCurrentRow(row.original)
               setOpen('delete')
