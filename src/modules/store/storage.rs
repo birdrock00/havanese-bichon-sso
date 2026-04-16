@@ -61,8 +61,6 @@ impl BlobManager {
         attach_ks: &Keyspace,
     ) {
         let (email_hash, email_data) = eml.email;
-
-
         match email_ks.contains_key(&email_hash) {
             Ok(false) => {
                 if let Err(e) = email_ks.insert(email_hash, email_data) {

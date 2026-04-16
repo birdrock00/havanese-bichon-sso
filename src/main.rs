@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::sync::LazyLock;
+
 use bichon::{
     bichon_version,
     modules::{
@@ -66,7 +68,6 @@ async fn main() -> BichonResult<()> {
     }
 
     let periodic_tasks = PeriodicTasks::setup();
-
     let mut smtp_service: Option<SmtpServer> = None;
     if SETTINGS.bichon_enable_smtp {
         info!("SMTP service is enabled, starting...");
@@ -107,5 +108,6 @@ async fn initialize() -> BichonResult<()> {
     UserManager::initialize().await?;
     BichonTls::initialize().await?;
     BichonContext::initialize().await?;
+    LazyLock::force(&BLOB_MANAGER);
     Ok(())
 }

@@ -38,7 +38,6 @@ use poem_openapi::{Enum, Object};
 use serde::{Deserialize, Serialize};
 
 pub mod payload;
-pub mod root;
 pub mod view;
 
 // Starting from version 0.2.0, this model is deprecated/no longer used
