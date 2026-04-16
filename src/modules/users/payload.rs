@@ -340,7 +340,7 @@ pub struct UserUpdateRequest {
     pub avatar_base64: Option<String>,
     pub global_roles: Option<Vec<u64>>,
     /// Scoped Access
-    pub account_access_map: Option<BTreeMap<u64, u64>>,
+    pub account_access_map: Option<BTreeMap<u64, u64>>, 
     pub acl: Option<AccessControl>,
     pub description: Option<String>,
     pub theme: Option<String>,

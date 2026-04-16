@@ -20,8 +20,8 @@ use crate::{
     decrypt, encrypt, generate_token, id,
     modules::{
         database::{
-            async_find_impl, batch_delete_impl, delete_impl, list_all_impl, manager::DB_MANAGER,
-            async_secondary_find_impl, update_impl, with_transaction,
+            async_find_impl, async_secondary_find_impl, batch_delete_impl, delete_impl,
+            list_all_impl, manager::DB_MANAGER, update_impl, with_transaction,
         },
         error::{code::ErrorCode, BichonResult},
         token::{AccessTokenModel, AccessTokenModelKey, TokenType},
@@ -132,6 +132,17 @@ pub struct BichonUserV2 {
 }
 
 impl BichonUserV2 {
+    pub fn is_using_role(&self, role_id: u64) -> bool {
+        if self.global_roles.contains(&role_id) {
+            return true;
+        }
+
+        if self.account_access_map.values().any(|&id| id == role_id) {
+            return true;
+        }
+        false
+    }
+
     pub async fn list_all() -> BichonResult<Vec<UserModel>> {
         Ok(list_all_impl::<UserModel>(DB_MANAGER.meta_db()).await?)
     }

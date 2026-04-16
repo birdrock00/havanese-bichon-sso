@@ -37,6 +37,7 @@ use crate::{
         users::{
             payload::{RoleCreateRequest, RoleUpdateRequest},
             permissions::*,
+            UserModel,
         },
     },
     raise_error, utc_now,
@@ -336,7 +337,7 @@ impl UserRole {
         .await?;
         Ok(())
     }
-    
+
     pub async fn delete(id: u64) -> BichonResult<()> {
         if is_builtin(id) {
             return Err(raise_error!(
@@ -344,6 +345,25 @@ impl UserRole {
                 ErrorCode::InvalidParameter
             ));
         }
+
+        let all_users = UserModel::list_all().await?;
+        let active_users: Vec<String> = all_users
+            .iter()
+            .filter(|user| user.is_using_role(id))
+            .map(|user| user.username.clone())
+            .collect();
+
+        if !active_users.is_empty() {
+            let user_list = active_users.join(", ");
+            return Err(raise_error!(
+                format!(
+                    "Cannot delete role (ID: {}): It is still assigned to the following users: {}",
+                    id, user_list
+                ),
+                ErrorCode::PermissionDenied
+            ));
+        }
+
         delete_impl(DB_MANAGER.meta_db(), move |rw| {
             rw.get()
                 .primary::<UserRole>(id)
