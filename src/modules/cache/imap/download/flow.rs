@@ -24,23 +24,19 @@ use crate::{
         },
         cache::{
             imap::{
+                download::rebuild::{rebuild_mailbox_cache, rebuild_mailbox_cache_by_date},
                 find_intersecting_mailboxes, find_missing_mailboxes,
                 mailbox::MailBox,
-                download::rebuild::{
-                    rebuild_mailbox_cache, rebuild_mailbox_cache_by_date,
-                    DEFAULT_MAX_CONCURRENT_PER_ACCOUNT,
-                },
             },
             SEMAPHORE,
         },
-        error::{code::ErrorCode, BichonError, BichonResult},
+        error::{code::ErrorCode, BichonResult},
         imap::executor::ImapExecutor,
-        store::tantivy::manager::INDEX_MANAGER,
+        store::tantivy::envelope::ENVELOPE_MANAGER,
     },
     raise_error,
 };
-use std::{sync::Arc, time::Instant};
-use tokio::sync::Semaphore;
+use std::time::Instant;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
@@ -564,7 +560,9 @@ pub async fn reconcile_mailboxes(
     //Mail folders that are not locally need to be downloaded.
     if !missing_mailboxes.is_empty() {
         MailBox::batch_insert(&missing_mailboxes).await?;
-        let mut handles = Vec::new();
+
+        let mut has_error = false;
+        let mut last_err = None;
         for mailbox in &missing_mailboxes {
             if token.is_cancelled() {
                 DownloadState::update_session_status(
@@ -579,8 +577,7 @@ pub async fn reconcile_mailboxes(
                 let account = account.clone();
                 let mailbox = mailbox.clone();
 
-                let local_semaphore = Arc::new(Semaphore::new(DEFAULT_MAX_CONCURRENT_PER_ACCOUNT));
-                let global_permit = match SEMAPHORE.clone().acquire_owned().await {
+                let _global_permit = match SEMAPHORE.clone().acquire_owned().await {
                     Ok(permit) => permit,
                     Err(err) => {
                         error!(
@@ -591,74 +588,47 @@ pub async fn reconcile_mailboxes(
                     }
                 };
 
-                let local_permit = match local_semaphore.clone().acquire_owned().await {
-                    Ok(permit) => permit,
-                    Err(err) => {
-                        error!(
-                            "Failed to acquire local semaphore permit for account {} mailbox '{}': {:#?}",
-                            account.id, &mailbox.name, err
-                        );
-                        drop(global_permit);
-                        continue;
+                let result = match &account.date_since {
+                    Some(date_since) => {
+                        rebuild_mailbox_cache_by_date(
+                            &account,
+                            mailbox.id,
+                            &date_since.since_date()?,
+                            &mailbox,
+                            FetchDirection::Since,
+                            token.clone(),
+                        )
+                        .await
                     }
-                };
-                let token_clone = token.clone();
-                let handle: tokio::task::JoinHandle<Result<(), BichonError>> =
-                    tokio::spawn(async move {
-                        let _global_permit = global_permit;
-                        let _local_permit = local_permit;
-                        match &account.date_since {
-                            Some(date_since) => {
-                                rebuild_mailbox_cache_by_date(
-                                    &account,
-                                    mailbox.id,
-                                    &date_since.since_date()?,
-                                    &mailbox,
-                                    FetchDirection::Since,
-                                    token_clone,
-                                )
-                                .await
-                            }
-                            None => match &account.date_before {
-                                Some(r) => {
-                                    rebuild_mailbox_cache_by_date(
-                                        &account,
-                                        mailbox.id,
-                                        &r.calculate_date()?,
-                                        &mailbox,
-                                        FetchDirection::Before,
-                                        token_clone,
-                                    )
-                                    .await
-                                }
-                                None => {
-                                    rebuild_mailbox_cache(&account, &mailbox, &mailbox, token_clone)
-                                        .await
-                                }
-                            },
+                    None => match &account.date_before {
+                        Some(r) => {
+                            rebuild_mailbox_cache_by_date(
+                                &account,
+                                mailbox.id,
+                                &r.calculate_date()?,
+                                &mailbox,
+                                FetchDirection::Before,
+                                token.clone(),
+                            )
+                            .await
                         }
-                    });
-                handles.push(handle);
-            }
-        }
+                        None => {
+                            rebuild_mailbox_cache(&account, &mailbox, &mailbox, token.clone()).await
+                        }
+                    },
+                };
 
-        let mut has_error = false;
-        let mut last_err = None;
-
-        for task in handles {
-            match task.await {
-                Ok(Ok(_)) => {}
-                Ok(Err(err)) => {
-                    has_error = true;
-                    tracing::error!("Folder sync task failed: {:#?}", err);
-                    last_err = Some(err);
-                }
-                Err(e) => {
-                    has_error = true;
-                    tracing::error!("Task panicked or runtime error: {:#?}", e);
+                match result {
+                    Ok(_) => {}
+                    Err(err) => {
+                        has_error = true;
+                        tracing::error!("Folder sync task failed: {:#?}", err);
+                        last_err = Some(err);
+                    }
                 }
             }
         }
+
         if has_error {
             if let Some(e) = last_err {
                 return Err(e);
@@ -680,7 +650,7 @@ async fn perform_incremental_sync(
     token: CancellationToken,
 ) -> BichonResult<()> {
     if remote_mailbox.exists > 0 {
-        let local_max_uid = INDEX_MANAGER
+        let local_max_uid = ENVELOPE_MANAGER
             .get_max_uid(account.id, local_mailbox.id)
             .await?;
         match local_max_uid {

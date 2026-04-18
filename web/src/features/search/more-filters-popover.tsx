@@ -129,7 +129,7 @@ export function MoreFiltersPopover() {
                     variant="outline"
                     size="sm"
                     className={cn(
-                        "h-8 gap-2 px-3 rounded-none border-l-0",
+                        "h-6 gap-2 px-3 rounded-none border-l-0",
                         activeCount > 0 && "bg-primary/10 border-primary text-primary"
                     )}
                 >
@@ -218,7 +218,7 @@ export function MoreFiltersPopover() {
                         />
 
                         <MetadataSelectorField
-                            label={t('search_more.content_types')}
+                            label={t('search_more.content_type')}
                             value={localState.attachment_content_type}
                             options={meta?.content_types || []}
                             isLoading={metaLoading}

@@ -18,7 +18,7 @@
 
 
 import { createFileRoute } from '@tanstack/react-router'
-import Search from '@/features/search'
+import EmailSearch from '@/features/search'
 import { z } from 'zod'
 
 const searchSchema = z.object({
@@ -30,7 +30,7 @@ const searchSchema = z.object({
 })
 
 export const Route = createFileRoute('/_authenticated/search/')({
-  component: Search,
+  component: EmailSearch,
   validateSearch: (search) => {
     const result = searchSchema.parse(search);
     return {

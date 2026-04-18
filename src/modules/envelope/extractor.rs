@@ -22,8 +22,9 @@ use crate::modules::error::code::ErrorCode;
 use crate::modules::error::BichonResult;
 use crate::modules::message::content::AttachmentInfo;
 use crate::modules::store::storage::{DetachedEmail, BLOB_MANAGER};
-use crate::modules::store::tantivy::manager::INDEX_MANAGER;
-use crate::modules::store::tantivy::model::EnvelopeWithAttachments;
+use crate::modules::store::tantivy::attachment::ATTACHMENT_MANAGER;
+use crate::modules::store::tantivy::envelope::ENVELOPE_MANAGER;
+use crate::modules::store::tantivy::model::{AttachmentModel, EnvelopeWithAttachments};
 use crate::modules::utils::html::extract_text;
 use crate::modules::utils::{compute_content_hash, hex_hash};
 use crate::{id, modules::store::envelope::Envelope};
@@ -31,6 +32,7 @@ use crate::{raise_error, utc_now};
 use async_imap::types::Fetch;
 use bytes::Bytes;
 use mail_parser::{Address, HeaderName, Message, MessageParser, MimeHeaders};
+use tantivy::TantivyDocument;
 use tracing::error;
 use uuid::Uuid;
 
@@ -154,12 +156,43 @@ async fn extract_envelope_core(
     let attachment_count = message.attachment_count();
     let attachments = detach_and_store_attachments(body, &message, &email_content_hash).await;
 
-    let inline_with_id_count = attachments
+    let envelope_id = Uuid::new_v4().to_string();
+    let now = utc_now!();
+
+    let attachment_docs: Vec<TantivyDocument> = attachments
         .iter()
-        .filter(|a| a.inline && a.content_id.is_some())
-        .count();
+        .filter(|a| !a.inline || a.content_id.is_none())
+        .map(|a| AttachmentModel {
+            id: Uuid::new_v4().to_string(),
+            envelope_id: envelope_id.clone(),
+            account_id,
+            account_email: None,
+            mailbox_id,
+            mailbox_name: None,
+            subject: subject.clone(),
+            content_hash: a.content_hash.clone(),
+            from: from.clone(),
+            date,
+            ingest_at: now,
+            size: a.size as u64,
+            ext: a.get_extension(),
+            category: a.get_category().to_string(),
+            content_type: a.file_type.clone(),
+            shard_id: 0,
+            text: None,
+            has_text: false,
+            is_ocr: false,
+            page_count: None,
+            is_indexed: false,
+            is_message: a.is_message,
+            name: a.filename.clone(),
+            tags: None,
+            auto_tags: None,
+        }).map(|a|a.into_document())
+        .collect();
+
     let envelope = Envelope {
-        id: Uuid::new_v4().to_string(),
+        id: envelope_id,
         message_id,
         account_id,
         mailbox_id,
@@ -172,11 +205,11 @@ async fn extract_envelope_core(
         bcc,
         date,
         internal_date,
-        ingest_at: utc_now!(),
+        ingest_at: now,
         size,
         thread_id,
         attachment_count,
-        regular_attachment_count: attachment_count - inline_with_id_count,
+        regular_attachment_count: attachment_docs.len(),
         tags: None,
         account_email: None,
         mailbox_name: None,
@@ -188,7 +221,10 @@ async fn extract_envelope_core(
         attachments: Some(attachments),
     };
     let doc = ea.to_document(&body_text, 0)?;
-    INDEX_MANAGER.queue(doc).await;
+    ENVELOPE_MANAGER.queue(doc).await;
+    for doc in attachment_docs {
+        ATTACHMENT_MANAGER.queue(doc).await;
+    }
     Ok(())
 }
 
@@ -369,7 +405,7 @@ pub async fn reattach_eml_content(
     account_id: u64,
     envelope_id: String,
 ) -> BichonResult<(Envelope, Bytes)> {
-    let e = INDEX_MANAGER
+    let e = ENVELOPE_MANAGER
         .get_envelope_by_id(account_id, &envelope_id)
         .await?
         .ok_or_else(|| {

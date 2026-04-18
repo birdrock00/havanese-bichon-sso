@@ -21,7 +21,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { FixedHeader } from '@/components/layout/fixed-header';
 import { Main } from '@/components/layout/main';
 import { useSearchMessages } from '@/hooks/use-search-messages';
-import { EnvelopeListPagination } from '@/components/pagination';
+import { AttachmentListPagination } from '@/components/pagination';
 import React from 'react';
 import { EmailEnvelope } from '@/api';
 import { MailDisplayDrawer } from './mail-display-dialog';
@@ -36,7 +36,7 @@ import { SortingState } from '@tanstack/react-table';
 import { MailBoxDeleteDialog } from './delete-mailbox-dialog';
 import { UpdateTagsDialog } from './bulk-add-tag-dialog';
 
-export default function Search() {
+export default function EmailSearch() {
   const { t } = useTranslation()
   const [selectedEnvelope, setSelectedEnvelope] = React.useState<EmailEnvelope | undefined>(undefined);
   const [open, setOpen] = useDialogState<SearchDialogType>(null)
@@ -125,7 +125,7 @@ export default function Search() {
                   setSortBy={setSortBy}
                   setSortOrder={setSortOrder}
                 />
-                {total > 0 && <EnvelopeListPagination
+                {total > 0 && <AttachmentListPagination
                   totalItems={total}
                   hasNextPage={() => page < totalPages}
                   pageIndex={page - 1}
@@ -156,7 +156,7 @@ export default function Search() {
           />
 
           <UpdateTagsDialog
-            key='edit-tags-dialog'
+            key='update-tags-dialog'
             open={open === 'update-tags'}
             onOpenChange={() => setOpen('update-tags')}
           />

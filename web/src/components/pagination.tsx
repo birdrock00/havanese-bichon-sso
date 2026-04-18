@@ -45,7 +45,7 @@ interface PaginationProps {
   setPageSize: (pageSize: number) => void
 }
 
-export function EnvelopeListPagination({
+export function AttachmentListPagination({
   totalItems,
   pageIndex,
   pageSize,

@@ -27,11 +27,12 @@ use system::SystemApi;
 
 use crate::{
     bichon_version,
-    modules::rest::api::{import::ImportApi, users::UsersApi},
+    modules::rest::api::{attachment::AttachmentApi, import::ImportApi, users::UsersApi},
 };
 
 pub mod access_token;
 pub mod account;
+pub mod attachment;
 pub mod auto_config;
 pub mod import;
 pub mod mailbox;
@@ -43,6 +44,7 @@ pub mod users;
 #[derive(Tags)]
 pub enum ApiTags {
     AccessToken,
+    Attachment,
     AutoConfig,
     Account,
     Mailbox,
@@ -55,6 +57,7 @@ pub enum ApiTags {
 
 type RustMailOpenApi = (
     AccessTokenApi,
+    AttachmentApi,
     AutoConfigApi,
     AccountApi,
     SystemApi,
@@ -69,6 +72,7 @@ pub fn create_openapi_service() -> OpenApiService<RustMailOpenApi, ()> {
     OpenApiService::new(
         (
             AccessTokenApi,
+            AttachmentApi,
             AutoConfigApi,
             AccountApi,
             SystemApi,

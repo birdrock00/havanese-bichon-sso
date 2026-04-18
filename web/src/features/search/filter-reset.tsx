@@ -42,7 +42,7 @@ export function FilterResetButton() {
             size="sm"
             onClick={() => setFilter(q ? { q } : {})}
             className={cn(
-                "h-8 px-2 text-xs gap-1.5 font-normal",
+                "h-6 px-2 text-xs gap-1.5 font-normal",
                 "text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
             )}
             title={t('search_reset.tooltip')}

@@ -1,0 +1,71 @@
+//
+// Copyright (c) 2025-2026 rustmailer.com (https://rustmailer.com)
+//
+// This file is part of the Bichon Email Archiving Project
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+import { Row } from '@tanstack/react-table'
+import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useTranslation } from 'react-i18next'
+import { MoreVertical, TagIcon } from 'lucide-react'
+import { useSearchContext } from '../context'
+import { AttachmentModel } from '@/api/attachment/api'
+
+interface DataTableRowActionsProps {
+  row: Row<AttachmentModel>
+}
+
+export function DataTableRowActions({ row }: DataTableRowActionsProps) {
+  const { setOpen, setCurrentEnvelope, setSelected } = useSearchContext()
+  const { t } = useTranslation()
+
+  return (
+    <>
+      <DropdownMenu modal={false}>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant='ghost'
+            className='flex h-8 w-8 p-0 data-[state=open]:bg-muted'
+          >
+            <MoreVertical size={10} />
+            <span className='sr-only'>Open menu</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align='end' className='w-[160px]'>
+          <DropdownMenuItem
+            onClick={(e) => {
+              e.stopPropagation()
+              setCurrentEnvelope(row.original)
+              setOpen("edit-tags")
+            }}
+          >
+            {t('attachment.editTag')}
+            <DropdownMenuShortcut>
+              <TagIcon size={16} />
+            </DropdownMenuShortcut>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  )
+}

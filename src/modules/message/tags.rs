@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, Object)]
 pub struct TagsRequest {
-    pub updates: HashMap<u64, Vec<String>>, // account_id -> envelope_ids
+    pub updates: HashMap<u64, Vec<String>>,
     pub tags: Vec<String>,
     pub action: TagAction,
 }

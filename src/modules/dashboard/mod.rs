@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::modules::{
-    store::tantivy::{manager::INDEX_MANAGER, schema::SchemaTools},
+    store::tantivy::{envelope::ENVELOPE_MANAGER, fields::F_ID, schema::SchemaTools},
     users::permissions::Permission,
 };
 use poem_openapi::Object;
@@ -66,9 +66,9 @@ impl DashboardStats {
             Some(context.user.account_access_map.keys().cloned().collect())
         };
 
-        let mut stat = INDEX_MANAGER.get_dashboard_stats(&authorized_ids).await?;
+        let mut stat = ENVELOPE_MANAGER.get_dashboard_stats(&authorized_ids).await?;
 
-        stat.top_largest_emails = INDEX_MANAGER.top_10_largest_emails(&authorized_ids).await?;
+        stat.top_largest_emails = ENVELOPE_MANAGER.top_10_largest_emails(&authorized_ids).await?;
 
         stat.account_count = if has_all_accounts {
             AccountModel::count().await?
@@ -76,13 +76,13 @@ impl DashboardStats {
             authorized_ids.as_ref().map(|ids| ids.len()).unwrap_or(0)
         };
 
-        stat.email_count = INDEX_MANAGER.total_emails(&authorized_ids)?;
+        stat.email_count = ENVELOPE_MANAGER.total_emails(&authorized_ids)?;
 
         if has_all_accounts {
-            stat.storage_usage_bytes = get_total_size(&DATA_DIR_MANAGER.eml_dir)
+            stat.storage_usage_bytes = get_total_size(&DATA_DIR_MANAGER.storage_dir)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
-            stat.index_usage_bytes = get_total_size(&&DATA_DIR_MANAGER.tantivy_dir)
+            stat.index_usage_bytes = get_total_size(&&DATA_DIR_MANAGER.envelope_dir)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         } else {
             stat.storage_usage_bytes = 0;
@@ -139,19 +139,74 @@ impl LargestEmail {
 
         let value = document.get_first(fields.f_id).ok_or_else(|| {
             raise_error!(
-                format!("'{}' field not found", stringify!(field)),
+                format!("'{}' field not found", F_ID),
                 ErrorCode::InternalError
             )
         })?;
         let id = value.as_str().map(|s| s.to_string()).ok_or_else(|| {
             raise_error!(
-                format!("'{}' field is not a string", stringify!(field)),
+                format!("'{}' field is not a string", F_ID),
                 ErrorCode::InternalError
             )
         })?;
 
         let envelope = LargestEmail {
             subject,
+            size_bytes,
+            id,
+        };
+
+        Ok(envelope)
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
+pub struct LargestAttachment {
+    pub name: String,    // Attachment name
+    pub size_bytes: u64, // Attachment size in bytes
+    pub id: String,
+}
+
+impl LargestAttachment {
+    pub fn from_tantivy_doc(document: &TantivyDocument) -> BichonResult<Self> {
+        let fields = SchemaTools::attachment_fields();
+        let value = document.get_first(fields.f_size).ok_or_else(|| {
+            raise_error!(
+                "miss 'size' field in tantivy document".into(),
+                ErrorCode::InternalError
+            )
+        })?;
+        let size_bytes = value.as_u64().ok_or_else(|| {
+            raise_error!("'size' field is not a u64".into(), ErrorCode::InternalError)
+        })?;
+        let value = document.get_first(fields.f_name_exact).ok_or_else(|| {
+            raise_error!(
+                "'name_exact' field not found".into(),
+                ErrorCode::InternalError
+            )
+        })?;
+        let name = value.as_str().map(|s| s.to_string()).ok_or_else(|| {
+            raise_error!(
+                "'name_exact' field is not a string".into(),
+                ErrorCode::InternalError
+            )
+        })?;
+
+        let value = document.get_first(fields.f_id).ok_or_else(|| {
+            raise_error!(
+                format!("'{}' field not found", F_ID),
+                ErrorCode::InternalError
+            )
+        })?;
+        let id = value.as_str().map(|s| s.to_string()).ok_or_else(|| {
+            raise_error!(
+                format!("'{}' field is not a string", F_ID),
+                ErrorCode::InternalError
+            )
+        })?;
+
+        let envelope = LargestAttachment {
+            name,
             size_bytes,
             id,
         };

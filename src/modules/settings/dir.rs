@@ -27,11 +27,13 @@ use std::sync::LazyLock;
 
 pub const META_FILE: &str = "meta.db";
 pub const MAILBOX_FILE: &str = "mailbox.db";
-const ENVELOPE_DIR: &str = "envelope";
-const EML_DIR: &str = "bichon-emls";
+const INDICES: &str = "bichon-indices";
+const MAIL_METADATA: &str = "mail_metadata";
+const ATTACHMENT_METADATA: &str = "attachment_metadata";
+const STORAGE: &str = "bichon-storage";
 const TMP_DIR: &str = "tmp";
 const LOG_DIR: &str = "logs";
-const TANTIVY_DIR: &str = "tantivy";
+
 const TLS_CERT: &str = "cert.pem";
 const TLS_KEY: &str = "key.pem";
 
@@ -46,8 +48,9 @@ pub struct DataDirManager {
     pub temp_dir: PathBuf,
     pub tls_cert: PathBuf,
     pub tls_key: PathBuf,
-    pub tantivy_dir: PathBuf,
-    pub eml_dir: PathBuf,
+    pub envelope_dir: PathBuf,
+    pub attachment_dir: PathBuf,
+    pub storage_dir: PathBuf,
     pub log_dir: PathBuf,
 }
 
@@ -59,7 +62,7 @@ impl Initialize for DataDirManager {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         std::fs::create_dir_all(&DATA_DIR_MANAGER.temp_dir)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        std::fs::create_dir_all(&DATA_DIR_MANAGER.eml_dir)
+        std::fs::create_dir_all(&DATA_DIR_MANAGER.storage_dir)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         Ok(())
     }
@@ -68,15 +71,15 @@ impl Initialize for DataDirManager {
 impl DataDirManager {
     pub fn new(root_dir: PathBuf) -> Self {
         let index_dir = if let Some(ref index_dir) = SETTINGS.bichon_index_dir {
-            PathBuf::from(index_dir)
+            PathBuf::from(index_dir).join(INDICES)
         } else {
-            root_dir.join(ENVELOPE_DIR)
+            root_dir.join(INDICES)
         };
 
-        let eml_dir = if let Some(ref data_dir) = SETTINGS.bichon_data_dir {
-            PathBuf::from(data_dir).join(EML_DIR)
+        let storage_dir = if let Some(ref data_dir) = SETTINGS.bichon_data_dir {
+            PathBuf::from(data_dir).join(STORAGE)
         } else {
-            root_dir.join(EML_DIR)
+            root_dir.join(STORAGE)
         };
 
         Self {
@@ -86,9 +89,10 @@ impl DataDirManager {
             tls_key: root_dir.join(TLS_KEY),
             tls_cert: root_dir.join(TLS_CERT),
             log_dir: root_dir.join(LOG_DIR),
-            tantivy_dir: index_dir.join(TANTIVY_DIR),
+            envelope_dir: index_dir.join(MAIL_METADATA),
+            attachment_dir: index_dir.join(ATTACHMENT_METADATA),
             temp_dir: root_dir.join(TMP_DIR),
-            eml_dir,
+            storage_dir,
         }
     }
 }

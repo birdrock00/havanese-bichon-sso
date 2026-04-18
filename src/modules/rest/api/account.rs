@@ -27,13 +27,11 @@ use crate::modules::account::state::DownloadState;
 use crate::modules::account::view::AccountResp;
 use crate::modules::common::auth::ClientContext;
 use crate::modules::common::paginated::paginate_vec;
-use crate::modules::error::code::ErrorCode;
 use crate::modules::rest::api::ApiTags;
 use crate::modules::rest::response::DataPage;
 use crate::modules::rest::ApiResult;
 use crate::modules::users::permissions::Permission;
 use crate::modules::users::UserModel;
-use crate::raise_error;
 use poem_openapi::param::{Path, Query};
 use poem_openapi::payload::Json;
 use poem_openapi::OpenApi;
@@ -201,12 +199,8 @@ impl AccountApi {
         context
             .require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)
             .await?;
-        let state = DownloadState::get(account_id).await?.ok_or_else(|| {
-            raise_error!(
-                "account download state is not found".into(),
-                ErrorCode::ResourceNotFound
-            )
-        })?;
+        let state = DownloadState::get(account_id).await?;
+        let state = state.unwrap_or(DownloadState::empty(account_id));
         Ok(Json(state))
     }
 

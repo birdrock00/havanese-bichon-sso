@@ -23,13 +23,13 @@ use bichon::{
     modules::{
         cache::imap::task::SYNC_TASKS,
         common::rustls::BichonTls,
-        context::{executors::BichonContext, Initialize},
-        error::{code::ErrorCode, BichonResult},
+        context::{Initialize, executors::BichonContext},
+        error::{BichonResult, code::ErrorCode},
         logger,
         rest::start_http_server,
         settings::cli::SETTINGS,
-        smtp::{start_smtp_server, SmtpServer},
-        store::{storage::BLOB_MANAGER, tantivy::manager::INDEX_MANAGER},
+        smtp::{SmtpServer, start_smtp_server},
+        store::{storage::BLOB_MANAGER, tantivy::{attachment::ATTACHMENT_MANAGER, envelope::ENVELOPE_MANAGER}},
         tasks::PeriodicTasks,
     },
     raise_error,
@@ -95,7 +95,8 @@ async fn main() -> BichonResult<()> {
     }
 
     SYNC_TASKS.shutdown().await;
-    INDEX_MANAGER.shutdown().await;
+    ENVELOPE_MANAGER.shutdown().await;
+    ATTACHMENT_MANAGER.shutdown().await;
     BLOB_MANAGER.shutdown().await;
     info!("Bichon server stopped.");
     Ok(())

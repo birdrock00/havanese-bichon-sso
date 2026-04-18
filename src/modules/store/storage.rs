@@ -87,7 +87,7 @@ impl BlobManager {
     }
 
     pub fn new() -> Self {
-        let db = Database::builder(&DATA_DIR_MANAGER.eml_dir)
+        let db = Database::builder(&DATA_DIR_MANAGER.storage_dir)
         .cache_size(64 * 1024 * 1024)
         .max_cached_files(Some(400))
         .journal_compression(CompressionType::None)

@@ -24,22 +24,21 @@ use crate::{
         },
         cache::{
             imap::{
+                download::flow::{
+                    fetch_and_save_by_date, fetch_and_save_full_mailbox, FetchDirection,
+                },
                 mailbox::MailBox,
-                download::flow::{fetch_and_save_by_date, fetch_and_save_full_mailbox, FetchDirection},
             },
             SEMAPHORE,
         },
-        error::{code::ErrorCode, BichonError, BichonResult},
-        store::tantivy::manager::INDEX_MANAGER,
+        error::{code::ErrorCode, BichonResult},
+        store::tantivy::envelope::ENVELOPE_MANAGER,
     },
     raise_error,
 };
-use std::sync::Arc;
-use tokio::sync::Semaphore;
+
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info};
-
-pub const DEFAULT_MAX_CONCURRENT_PER_ACCOUNT: usize = 3;
 
 pub async fn rebuild_cache(
     account: &AccountModel,
@@ -53,9 +52,9 @@ pub async fn rebuild_cache(
     )
     .await?;
 
-    let local_semaphore = Arc::new(Semaphore::new(DEFAULT_MAX_CONCURRENT_PER_ACCOUNT));
+    let mut has_error = false;
+    let mut last_err = None;
 
-    let mut handles = Vec::new();
     for mailbox in remote_mailboxes {
         if token.is_cancelled() {
             DownloadState::update_session_status(
@@ -85,7 +84,7 @@ pub async fn rebuild_cache(
         let account = account.clone();
         let mailbox = mailbox.clone();
 
-        let global_permit = match SEMAPHORE.clone().acquire_owned().await {
+        let _global_permit = match SEMAPHORE.clone().acquire_owned().await {
             Ok(permit) => permit,
             Err(err) => {
                 error!(
@@ -96,43 +95,16 @@ pub async fn rebuild_cache(
             }
         };
 
-        let local_permit = match local_semaphore.clone().acquire_owned().await {
-            Ok(permit) => permit,
+        match fetch_and_save_full_mailbox(&account, &mailbox, token.clone()).await {
+            Ok(_) => {},
             Err(err) => {
-                error!(
-                    "Failed to acquire local semaphore permit for account {} mailbox '{}': {:#?}",
-                    account.id, &mailbox.name, err
-                );
-                drop(global_permit);
-                continue;
-            }
-        };
-        let token_clone = token.clone();
-        let handle: tokio::task::JoinHandle<Result<(), BichonError>> = tokio::spawn(async move {
-            let _global_permit = global_permit;
-            let _local_permit = local_permit;
-            fetch_and_save_full_mailbox(&account, &mailbox, token_clone).await
-        });
-        handles.push(handle);
-    }
-
-    let mut has_error = false;
-    let mut last_err = None;
-
-    for task in handles {
-        match task.await {
-            Ok(Ok(_)) => {}
-            Ok(Err(err)) => {
                 has_error = true;
                 tracing::error!("Folder sync task failed: {:#?}", err);
                 last_err = Some(err);
             }
-            Err(e) => {
-                has_error = true;
-                tracing::error!("Task panicked or runtime error: {:#?}", e);
-            }
         }
     }
+
     if has_error {
         if let Some(e) = last_err {
             return Err(e);
@@ -159,8 +131,8 @@ pub async fn rebuild_cache_by_date(
     )
     .await?;
 
-    let mut handles = Vec::new();
-    let local_semaphore = Arc::new(Semaphore::new(DEFAULT_MAX_CONCURRENT_PER_ACCOUNT));
+    let mut has_error = false;
+    let mut last_err = None;
 
     for mailbox in remote_mailboxes {
         if token.is_cancelled() {
@@ -194,7 +166,7 @@ pub async fn rebuild_cache_by_date(
         let date = date.to_string();
         let direction = direction.clone();
 
-        let global_permit = match SEMAPHORE.clone().acquire_owned().await {
+        let _global_permit = match SEMAPHORE.clone().acquire_owned().await {
             Ok(permit) => permit,
             Err(err) => {
                 error!(
@@ -204,46 +176,18 @@ pub async fn rebuild_cache_by_date(
                 continue;
             }
         };
-
-        let local_permit = match local_semaphore.clone().acquire_owned().await {
-            Ok(permit) => permit,
+        match fetch_and_save_by_date(&account, date.as_str(), &mailbox, direction, token.clone())
+            .await
+        {
+            Ok(_) => {}
             Err(err) => {
-                error!(
-                    "Failed to acquire local semaphore permit for account {} mailbox '{}': {:#?}",
-                    account.id, &mailbox.name, err
-                );
-                drop(global_permit);
-                continue;
-            }
-        };
-        let token_clone = token.clone();
-        let handle: tokio::task::JoinHandle<Result<(), BichonError>> =
-            tokio::spawn(async move {
-                let _global_permit = global_permit;
-                let _local_permit = local_permit;
-                fetch_and_save_by_date(&account, date.as_str(), &mailbox, direction, token_clone)
-                    .await
-            });
-        handles.push(handle);
-    }
-
-    let mut has_error = false;
-    let mut last_err = None;
-
-    for task in handles {
-        match task.await {
-            Ok(Ok(_)) => {}
-            Ok(Err(err)) => {
                 has_error = true;
                 tracing::error!("Folder sync task failed: {:#?}", err);
                 last_err = Some(err);
             }
-            Err(e) => {
-                has_error = true;
-                tracing::error!("Task panicked or runtime error: {:#?}", e);
-            }
         }
     }
+
     if has_error {
         if let Some(e) = last_err {
             return Err(e);
@@ -263,7 +207,7 @@ pub async fn rebuild_mailbox_cache(
     remote_mailbox: &MailBox,
     token: CancellationToken,
 ) -> BichonResult<()> {
-    INDEX_MANAGER
+    ENVELOPE_MANAGER
         .delete_mailbox_envelopes(account.id, vec![local_mailbox.id])
         .await?;
 
@@ -297,7 +241,7 @@ pub async fn rebuild_mailbox_cache_by_date(
     direction: FetchDirection,
     token: CancellationToken,
 ) -> BichonResult<()> {
-    INDEX_MANAGER
+    ENVELOPE_MANAGER
         .delete_mailbox_envelopes(account.id, vec![local_mailbox_id])
         .await?;
     if remote.exists == 0 {

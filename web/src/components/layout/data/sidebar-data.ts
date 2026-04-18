@@ -22,7 +22,7 @@ import {
   IconLayoutDashboard,
   IconSettings
 } from '@tabler/icons-react'
-import { IdCard, Inbox, Search, Users2 } from 'lucide-react'
+import { IdCard, Inbox, Paperclip, Search, Users2 } from 'lucide-react'
 import { type SidebarData } from '../types'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/use-current-user'
@@ -56,6 +56,11 @@ export function useSidebarData(): SidebarData {
             title: t('common.search'),
             url: '/search',
             icon: Search,
+          },
+          {
+            title: t('navigation.attachment'),
+            url: '/attachment',
+            icon: Paperclip,
           }
         ],
       },

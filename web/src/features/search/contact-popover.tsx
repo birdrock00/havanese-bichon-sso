@@ -62,7 +62,7 @@ export function MailFilterPopover() {
                     size="sm"
                     variant="outline"
                     className={cn(
-                        'h-8 rounded-none px-3 gap-1.5 transition-colors',
+                        'h-6 rounded-none px-3 gap-1.5 transition-colors',
                         activeCount > 0 && 'bg-primary/10 text-primary hover:bg-primary/20'
                     )}
                 >

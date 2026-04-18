@@ -20,7 +20,7 @@ use crate::modules::{
     account::migration::AccountModel,
     error::BichonResult,
     rest::response::DataPage,
-    store::{envelope::Envelope, tantivy::manager::INDEX_MANAGER},
+    store::{envelope::Envelope, tantivy::envelope::ENVELOPE_MANAGER},
 };
 
 pub async fn get_thread_messages(
@@ -30,7 +30,7 @@ pub async fn get_thread_messages(
     page_size: u64,
 ) -> BichonResult<DataPage<Envelope>> {
     AccountModel::check_account_exists(account_id).await?;
-    INDEX_MANAGER
+    ENVELOPE_MANAGER
         .list_thread_envelopes(account_id, thread_id, page, page_size, true)
         .await
 }

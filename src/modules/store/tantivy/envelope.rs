@@ -31,8 +31,7 @@ use crate::{
         dashboard::{DashboardStats, Group, LargestEmail, TimeBucket},
         error::{code::ErrorCode, BichonResult},
         message::{
-            attachment::AttachmentMetadata,
-            search::{SearchFilter, SortBy},
+            search::{EmailSearchFilter, SortBy},
             tags::{TagAction, TagCount, TagsRequest},
         },
         rest::response::DataPage,
@@ -41,9 +40,9 @@ use crate::{
             envelope::Envelope,
             storage::BLOB_MANAGER,
             tantivy::{
+                fatal_commit,
                 fields::{
-                    F_ACCOUNT_ID, F_ATTACHMENT_CATEGORY, F_ATTACHMENT_CONTENT_TYPE,
-                    F_ATTACHMENT_EXT, F_DATE, F_FROM, F_REGULAR_ATTACHMENT_COUNT, F_SIZE, F_TAGS,
+                    F_ACCOUNT_ID, F_DATE, F_FROM, F_REGULAR_ATTACHMENT_COUNT, F_SIZE, F_TAGS,
                     F_THREAD_ID, F_UID,
                 },
                 model::{extract_contacts, EnvelopeWithAttachments},
@@ -77,9 +76,10 @@ use tokio::{
 };
 use tracing::{info, warn};
 
-pub static INDEX_MANAGER: LazyLock<IndexManager> = LazyLock::new(IndexManager::new);
+pub static ENVELOPE_MANAGER: LazyLock<IndexManager> = LazyLock::new(IndexManager::new);
 
 pub struct IndexManager {
+    index: Arc<Index>,
     index_writer: Arc<Mutex<IndexWriter>>,
     sender: mpsc::Sender<TantivyDocument>,
     reader: IndexReader,
@@ -95,18 +95,18 @@ impl IndexManager {
         }
     }
     pub fn new() -> Self {
-        let index = Self::open_or_create_index(&DATA_DIR_MANAGER.tantivy_dir);
+        let index = Self::open_or_create_index(&DATA_DIR_MANAGER.envelope_dir);
         let mut merge_policy = LogMergePolicy::default();
         merge_policy.set_min_num_segments(25);
         merge_policy.set_min_layer_size(10_000);
         merge_policy.set_max_docs_before_merge(100_000);
 
         let index_writer = index
-            .writer_with_num_threads(4, 134_217_728)
+            .writer_with_num_threads(4, 67_108_864)
             .unwrap_or_else(|e| {
                 panic!(
-                    "Failed to create IndexWriter with 4 threads and 128MB buffer for {:?}: {}",
-                    &DATA_DIR_MANAGER.tantivy_dir, e
+                    "Failed to create IndexWriter with 4 threads and 64MB buffer for {:?}: {}",
+                    &DATA_DIR_MANAGER.envelope_dir, e
                 )
             });
         index_writer.set_merge_policy(Box::new(merge_policy));
@@ -114,7 +114,7 @@ impl IndexManager {
         let reader = index.reader().unwrap_or_else(|e| {
             panic!(
                 "Failed to create IndexReader for {:?}: {}",
-                &DATA_DIR_MANAGER.tantivy_dir, e
+                &DATA_DIR_MANAGER.envelope_dir, e
             )
         });
         let mut query_parser = QueryParser::for_index(&index, SchemaTools::email_default_fields());
@@ -125,7 +125,7 @@ impl IndexManager {
         let writer = index_writer.clone();
         let handler = task::spawn(async move {
             let mut shutdown = SIGNAL_MANAGER.subscribe();
-            let mut commit_interval = tokio::time::interval(Duration::from_secs(30));
+            let mut commit_interval = tokio::time::interval(Duration::from_secs(60));
             let mut pending_count = 0;
             let commit_threshold = 1000;
             loop {
@@ -134,17 +134,33 @@ impl IndexManager {
                         match maybe_msg {
                             Some(doc) => {
                                 let mut writer = writer.lock().await;
-                                if let Err(e) = writer.add_document(doc) {
-                                    eprintln!("[ERROR] Failed to add document: {e:?}");
-                                    tracing::error!("Tantivy: Failed to add document: {e:?}");
+                                let mut batch_count = 0;
+                                match writer.add_document(doc) {
+                                    Ok(_) => {
+                                        batch_count += 1;
+                                    }
+                                    Err(e) => {
+                                        eprintln!("[ERROR] Failed to add document: {e:?}");
+                                        tracing::error!("Tantivy: Failed to add document: {e:?}");
+                                    }
                                 }
-                                pending_count += 1;
                                 while let Ok(next_doc) = receiver.try_recv() {
-                                    let _ = writer.add_document(next_doc);
-                                    pending_count += 1;
+                                    match writer.add_document(next_doc) {
+                                        Ok(_) => batch_count += 1,
+                                        Err(e) => {
+                                            eprintln!("[ERROR] Failed to add document: {e:?}");
+                                            tracing::error!("Tantivy: Failed to add document: {e:?}");
+                                        }
+                                    }
+                                }
+                                if batch_count > 0 {
+                                    pending_count += batch_count;
                                 }
                                 if pending_count >= commit_threshold {
-                                    tracing::info!("Tantivy: Reached threshold ({}), committing...", pending_count);
+                                    tracing::info!(
+                                        "Tantivy: Reached threshold ({} docs), committing...",
+                                        pending_count
+                                    );
                                     fatal_commit(&mut writer);
                                     pending_count = 0;
                                     commit_interval.reset();
@@ -181,6 +197,7 @@ impl IndexManager {
             }
         });
         Self {
+            index: Arc::new(index),
             index_writer,
             sender,
             reader,
@@ -261,7 +278,7 @@ impl IndexManager {
     fn filter_query(
         &self,
         accounts: Option<HashSet<u64>>,
-        filter: SearchFilter,
+        filter: EmailSearchFilter,
         parser: QueryParser,
     ) -> BichonResult<Box<dyn Query>> {
         let f = SchemaTools::email_fields();
@@ -359,8 +376,15 @@ impl IndexManager {
         }
 
         if let Some(ref name) = filter.attachment_name {
-            if let Ok(query) = RegexQuery::from_pattern(name.as_str(), f.f_attachment_name) {
-                subqueries.push((Occur::Must, Box::new(query)));
+            if name.contains('.') {
+                let term = Term::from_field_text(f.f_attachment_name_exact, name);
+                let query = TermQuery::new(term, IndexRecordOption::Basic);
+                subqueries.push((Occur::Should, Box::new(query)));
+            }
+
+            let query_parser = QueryParser::for_index(&self.index, vec![f.f_attachment_name_text]);
+            if let Ok(q) = query_parser.parse_query(name) {
+                subqueries.push((Occur::Must, q));
             }
         }
 
@@ -978,7 +1002,7 @@ impl IndexManager {
     pub async fn search(
         &self,
         accounts: Option<HashSet<u64>>,
-        filter: SearchFilter,
+        filter: EmailSearchFilter,
         page: u64,
         page_size: u64,
         desc: bool,
@@ -1179,102 +1203,6 @@ impl IndexManager {
         })
     }
 
-    pub fn collect_attachment_metadata(
-        &self,
-        accounts: Option<HashSet<u64>>,
-    ) -> BichonResult<AttachmentMetadata> {
-        let searcher = self.create_searcher()?;
-
-        let aggregations: Aggregations = serde_json::from_value(json!({
-            "exts": {
-                "terms": {
-                    "field": F_ATTACHMENT_EXT,
-                    "size": 1000
-                }
-            },
-            "cats": {
-                "terms": {
-                    "field": F_ATTACHMENT_CATEGORY,
-                    "size": 1000
-                }
-            },
-            "content_types": {
-                "terms": {
-                    "field": F_ATTACHMENT_CONTENT_TYPE,
-                    "size": 1000
-                }
-            },
-        }))
-        .unwrap();
-
-        let query: Box<dyn Query> = match accounts {
-            Some(ref ids) if !ids.is_empty() => {
-                let mut subqueries = Vec::new();
-                for &id in ids {
-                    let term = Term::from_field_u64(SchemaTools::email_fields().f_account_id, id);
-                    subqueries.push((
-                        Occur::Should,
-                        Box::new(TermQuery::new(term, IndexRecordOption::Basic)) as Box<dyn Query>,
-                    ));
-                }
-                Box::new(BooleanQuery::new(subqueries))
-            }
-            Some(_) => Box::new(EmptyQuery),
-            None => Box::new(AllQuery),
-        };
-
-        let agg_collector = AggregationCollector::from_aggs(aggregations, Default::default());
-        let agg_results = searcher
-            .search(&query, &agg_collector)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-
-        let mut exts = Vec::with_capacity(20);
-        let extensions = agg_results.0.get("exts").unwrap();
-        if let AggregationResult::BucketResult(BucketResult::Terms { buckets, .. }) = extensions {
-            for entry in buckets {
-                if let Key::Str(ext) = &entry.key {
-                    exts.push(Group {
-                        key: ext.clone(),
-                        count: entry.doc_count,
-                    });
-                }
-            }
-        }
-
-        let mut cats = Vec::with_capacity(20);
-        let categories = agg_results.0.get("cats").unwrap();
-        if let AggregationResult::BucketResult(BucketResult::Terms { buckets, .. }) = categories {
-            for entry in buckets {
-                if let Key::Str(cat) = &entry.key {
-                    cats.push(Group {
-                        key: cat.clone(),
-                        count: entry.doc_count,
-                    });
-                }
-            }
-        }
-
-        let mut ctypes = Vec::with_capacity(20);
-        let content_types = agg_results.0.get("content_types").unwrap();
-        if let AggregationResult::BucketResult(BucketResult::Terms { buckets, .. }) = content_types
-        {
-            for entry in buckets {
-                if let Key::Str(content_type) = &entry.key {
-                    ctypes.push(Group {
-                        key: content_type.clone(),
-                        count: entry.doc_count,
-                    });
-                }
-            }
-        }
-
-        Ok(AttachmentMetadata {
-            extensions: exts,
-            categories: cats,
-            content_types: ctypes,
-        })
-    }
-
     pub async fn get_dashboard_stats(
         &self,
         accounts: &Option<HashSet<u64>>,
@@ -1422,7 +1350,7 @@ impl IndexManager {
                             let account_id = *account_id;
                             tokio::spawn(async move {
                                 if let Err(e) =
-                                    INDEX_MANAGER.delete_account_envelopes(account_id).await
+                                    ENVELOPE_MANAGER.delete_account_envelopes(account_id).await
                                 {
                                     tracing::error!(
                                         account_id = account_id,
@@ -1467,48 +1395,5 @@ impl IndexManager {
             }
         }
         Ok(stats)
-    }
-}
-
-fn fatal_commit(writer: &mut IndexWriter) {
-    const MAX_RETRIES: usize = 3;
-    const RETRY_DELAY_MS: u64 = 1000;
-
-    for attempt in 0..=MAX_RETRIES {
-        match writer.commit() {
-            Ok(_) => {
-                if attempt > 0 {
-                    eprintln!("[INFO] Commit succeeded on attempt {}", attempt + 1);
-                }
-                return;
-            }
-            Err(e) => match &e {
-                tantivy::TantivyError::IoError(io_error) => {
-                    if attempt < MAX_RETRIES {
-                        eprintln!(
-                            "[WARN] Commit failed (attempt {}/{}): {:?}. Retrying in {}ms...",
-                            attempt + 1,
-                            MAX_RETRIES + 1,
-                            io_error,
-                            RETRY_DELAY_MS * (attempt as u64 + 1)
-                        );
-                        std::thread::sleep(std::time::Duration::from_millis(
-                            RETRY_DELAY_MS * (attempt as u64 + 1),
-                        ));
-                    } else {
-                        eprintln!(
-                            "[FATAL] Tantivy commit failed after {} attempts: {:?}",
-                            MAX_RETRIES + 1,
-                            io_error
-                        );
-                        std::process::exit(1);
-                    }
-                }
-                _ => {
-                    eprintln!("[FATAL] Tantivy commit failed with non-IO error: {e:?}");
-                    std::process::exit(1);
-                }
-            },
-        }
     }
 }

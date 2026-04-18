@@ -83,17 +83,23 @@ export function TimePopover() {
                     size="sm"
                     variant="outline"
                     className={cn(
-                        'h-8 rounded-none px-3 gap-1.5 transition-colors',
+                        'h-6 rounded-none px-3 gap-1.5 transition-colors max-w-full',
                         (since || before) && 'bg-primary/10 text-primary hover:bg-primary/20'
                     )}
                 >
-                    <CalendarRange className="h-4 w-4" />
-                    {label(since, before)}
-                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                    <CalendarRange className="h-4 w-4 shrink-0" />
+                    <span className="truncate max-w-[120px] sm:max-w-none">
+                        {label(since, before)}
+                    </span>
+                    <ChevronDown className="h-3.5 w-3.5 opacity-60 shrink-0" />
                 </Button>
             </PopoverTrigger>
 
-            <PopoverContent align="start" className="w-[530px] p-4 space-y-6">
+            <PopoverContent
+                align="end"
+                sideOffset={8}
+                className="w-[92vw] sm:w-[420px] max-w-[420px] p-4 space-y-6"
+            >
                 <Section title={t('time.recent_range')}>
                     <div className="space-y-4 w-full">
                         <div className="flex flex-wrap gap-2">
@@ -109,22 +115,26 @@ export function TimePopover() {
                             ))}
                         </div>
 
-                        <div className="flex items-center gap-2 pt-3 border-t border-border/50">
-                            <span className="text-[10px] uppercase font-bold opacity-40 shrink-0">{t('time.recent_prefix')}</span>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-3 border-t border-border/50">
+                            <span className="text-[10px] uppercase font-bold opacity-40 shrink-0">
+                                {t('time.recent_prefix')}
+                            </span>
                             <Input
                                 type="number"
                                 min={1}
                                 placeholder="10"
-                                className="h-8 w-20 text-xs"
+                                className="h-8 w-full sm:w-20 text-xs"
                                 value={customDays}
                                 onChange={e => setCustomDays(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleApplyRecent()}
                             />
-                            <span className="text-xs text-muted-foreground shrink-0">{t('time.days_ago_to_now')}</span>
+                            <span className="text-xs text-muted-foreground shrink-0">
+                                {t('time.days_ago_to_now')}
+                            </span>
                             <Button
                                 size="sm"
                                 variant="secondary"
-                                className="h-8 px-3 ml-auto text-xs"
+                                className="h-8 px-3 sm:ml-auto text-xs w-full sm:w-auto"
                                 onClick={handleApplyRecent}
                             >
                                 {t('time.apply')}
@@ -132,6 +142,7 @@ export function TimePopover() {
                         </div>
                     </div>
                 </Section>
+
                 <Section title={t('time.historical')}>
                     <div className="flex flex-wrap gap-2 w-full">
                         {[1, 2, 3, 5, 10].map(y => (
@@ -148,23 +159,33 @@ export function TimePopover() {
                         ))}
                     </div>
                 </Section>
+
                 <Section title={t('time.absolute_range')}>
-                    <div className="flex gap-3 w-full">
-                        <div className="flex-1 min-w-0 space-y-1.5">
-                            <span className="text-[10px] pl-1 opacity-50 font-medium">{t('time.since').toUpperCase()}</span>
-                            <DatePicker
-                                placeholder={t('time.start_date')}
-                                selected={since ? new Date(since) : undefined}
-                                onSelect={(date) => setSince(date?.getTime())}
-                            />
+                    <div className="flex flex-col gap-4 w-full">
+                        <div className="flex items-center gap-3 w-full">
+                            <span className="w-20 text-right text-[10px] opacity-50 font-medium">
+                                {t('time.since').toUpperCase()}:
+                            </span>
+                            <div className="flex-1">
+                                <DatePicker
+                                    placeholder={t('time.start_date')}
+                                    selected={since ? new Date(since) : undefined}
+                                    onSelect={(date) => setSince(date?.getTime())}
+                                />
+                            </div>
                         </div>
-                        <div className="flex-1 min-w-0 space-y-1.5">
-                            <span className="text-[10px] pl-1 opacity-50 font-medium">{t('time.before').toUpperCase()}</span>
-                            <DatePicker
-                                placeholder={t('time.end_date')}
-                                selected={before ? new Date(before) : undefined}
-                                onSelect={(date) => setBefore(date?.getTime())}
-                            />
+
+                        <div className="flex items-center gap-3 w-full">
+                            <span className="w-20 text-right text-[10px] opacity-50 font-medium">
+                                {t('time.before').toUpperCase()}:
+                            </span>
+                            <div className="flex-1">
+                                <DatePicker
+                                    placeholder={t('time.end_date')}
+                                    selected={before ? new Date(before) : undefined}
+                                    onSelect={(date) => setBefore(date?.getTime())}
+                                />
+                            </div>
                         </div>
                     </div>
                 </Section>

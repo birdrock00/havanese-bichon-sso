@@ -39,13 +39,24 @@ pub const F_THREAD_ID: &str = "thread_id";
 pub const F_ATTACHMENT_COUNT: &str = "attachment_count";
 pub const F_REGULAR_ATTACHMENT_COUNT: &str = "regular_attachment_count";
 pub const F_ATTACHMENTS: &str = "attachments";
-pub const F_ATTACHMENT_NAME: &str = "attachment_name";
+pub const F_ATTACHMENT_NAME_TEXT: &str = "attachment_name_text";
+pub const F_ATTACHMENT_NAME_EXACT: &str = "attachment_name_exact";
 pub const F_ATTACHMENT_CONTENT_HASH: &str = "attachment_content_hash";
 pub const F_ATTACHMENT_EXT: &str = "attachment_ext";
 pub const F_ATTACHMENT_CATEGORY: &str = "attachment_category";
 pub const F_ATTACHMENT_CONTENT_TYPE: &str = "attachment_content_type";
 
+pub const F_ENVELOPE_ID: &str = "eid";
+pub const F_TEXT: &str = "text";
+pub const F_HAS_TEXT: &str = "has_text";
+pub const F_IS_OCR: &str = "is_ocr";
+pub const F_IS_INDEXED: &str = "is_indexed";
+pub const F_IS_MESSAGE: &str = "is_message";
+pub const F_NAME_TEXT: &str = "name_text";
+pub const F_NAME_EXACT: &str = "name_exact";
+pub const F_PAGE_COUNT: &str = "page_count";
 pub const F_TAGS: &str = "tags";
+pub const F_AUTO_TAGS: &str = "auto_tags";
 pub const F_SHARD_ID: &str = "shard_id";
 
 pub struct EmailFields {
@@ -70,11 +81,39 @@ pub struct EmailFields {
     pub f_attachment_count: Field,
     pub f_regular_attachment_count: Field,
     pub f_attachments: Field,
-    pub f_attachment_name: Field,
+    pub f_attachment_name_text: Field,
+    pub f_attachment_name_exact: Field,
     pub f_attachment_content_hash: Field,
     pub f_attachment_ext: Field,
     pub f_attachment_category: Field,
     pub f_attachment_content_type: Field,
     pub f_tags: Field,
     pub f_shard_id: Field,
+}
+
+pub struct AttachmentFields {
+    pub f_id: Field,
+    pub f_envelope_id: Field, // envelope id
+    pub f_account_id: Field,
+    pub f_mailbox_id: Field,
+    pub f_from: Field,
+    pub f_subject: Field,
+    pub f_content_hash: Field,
+    pub f_text: Field,
+    pub f_has_text: Field,
+    pub f_is_ocr: Field,
+    pub f_page_count: Field,
+    pub f_is_indexed: Field,
+    pub f_ingest_at: Field,
+    pub f_date: Field,
+    pub f_size: Field,
+    pub f_is_message: Field,
+    pub f_name_text: Field,  // TEXT
+    pub f_name_exact: Field, // STRING
+    pub f_ext: Field,
+    pub f_category: Field,
+    pub f_content_type: Field,
+    pub f_shard_id: Field,
+    pub f_tags: Field,
+    pub f_auto_tags: Field,
 }

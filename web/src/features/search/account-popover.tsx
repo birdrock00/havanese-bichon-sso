@@ -102,7 +102,7 @@ export function AccountPopover() {
           size="sm"
           variant="outline"
           className={cn(
-            'h-8 gap-1.5 px-3 rounded-none',
+            'h-6 gap-1.5 px-3 rounded-none',
             selectedIds.length > 0 &&
             'bg-primary/10 border-primary text-primary'
           )}

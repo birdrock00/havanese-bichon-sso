@@ -50,7 +50,7 @@ export function DataTableViewOptions<TData>({
         <Button
           variant='outline'
           size='sm'
-          className='ms-auto hidden h-8 lg:flex rounded-none'
+          className='ms-auto hidden h-6 lg:flex rounded-none'
         >
           <MixerHorizontalIcon className='size-4' />
           {t('search_view.button_label')}

@@ -96,10 +96,27 @@ pub struct AccountError {
 }
 
 impl DownloadState {
-    pub async fn init(account_id: u64) -> BichonResult<()> {
-        let state = DownloadState {
+    pub fn empty(account_id: u64) -> Self {
+        DownloadState {
             account_id,
             ..Default::default()
+        }
+    }
+
+    pub async fn init(account_id: u64) -> BichonResult<()> {
+        let now = utc_now!();
+        let state = DownloadState {
+            account_id,
+            last_trigger_at: now,
+            active_session: Some(DownloadSession {
+                start_time: now,
+                status: DownloadStatus::Running,
+                trigger: TriggerType::Scheduled,
+                ..Default::default()
+            }),
+            history: Default::default(),
+            last_finished_at: Default::default(),
+            global_errors: Default::default(),
         };
         upsert_impl(DB_MANAGER.envelope_db(), state).await
     }

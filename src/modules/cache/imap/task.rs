@@ -140,7 +140,7 @@ impl AccountSyncTask {
                     account_id
                 );
                 token.cancel();
-                if let Err(_) = tokio::time::timeout(Duration::from_secs(10), handler.stop()).await
+                if let Err(_) = tokio::time::timeout(Duration::from_secs(5), handler.stop()).await
                 {
                     error!(
                         "Shutdown: Account {} download task forced timeout.",

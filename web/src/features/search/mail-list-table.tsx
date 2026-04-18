@@ -86,110 +86,54 @@ export function MailListTable({
       maxSize: 25,
     },
     {
-      accessorKey: "account_email",
-      header: t('search.account'),
+      accessorKey: "source",
+      header: t('search.source'),
       cell: ({ row }) => {
+        const { from, account_email, mailbox_name, account_id, mailbox_id } = row.original;
         const { setFilter } = useSearchMessages();
-        const { account_email, account_id } = row.original;
+        const accountPrefix = account_email.split('@')[0];
 
         return (
-          <div
-            className="group relative flex items-center w-full h-full px-2 cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              setFilter((prev: any) => ({
-                ...prev,
-                account_ids: [account_id],
-                mailbox_ids: undefined
-              }))
-            }}
-          >
-            <div className="absolute left-0 top-1 bottom-1 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
-            <div className="absolute inset-x-2 bottom-0.5 h-[1px] bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
-            <span className="truncate flex-1 min-w-0 group-hover:text-primary transition-colors">
-              <LongText className='text-xs'>{account_email}</LongText>
-            </span>
-          </div>
-        );
-      },
-      meta: { className: 'w-[150px]' },
-      minSize: 150, maxSize: 150,
-    },
-    {
-      accessorKey: "mailbox_name",
-      header: t('search.mailbox'),
-      cell: ({ row }) => {
-        const { setFilter } = useSearchMessages();
-        const { mailbox_name, mailbox_id, account_id, tags } = row.original;
+          <div className="flex flex-col py-1.5 min-w-0 group">
+            <div
+              className="cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5"
+              onClick={(e) => {
+                e.stopPropagation();
+                setFilter((prev: any) => ({ ...prev, from: from }));
+              }}
+            >
+              <LongText className="text-xs truncate">
+                {from}
+              </LongText>
+            </div>
 
-        if (!mailbox_name) return null;
-        const safeTags = tags ?? [];
-        const visibleTags = safeTags.slice(0, 2);
+            <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground/70">
+              <span
+                className="truncate max-w-[90px] hover:text-primary cursor-pointer transition-colors"
+                title={account_email}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFilter((prev: any) => ({ ...prev, account_ids: [account_id], mailbox_ids: undefined }));
+                }}
+              >
+                {accountPrefix}
+              </span>
 
-        return (
-          <div
-            className="group relative flex items-center w-full min-w-0 h-full px-2 cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              setFilter((prev: any) => ({
-                ...prev,
-                account_ids: [account_id],
-                mailbox_ids: [mailbox_id]
-              }))
-            }}
-          >
-            <div className="absolute left-0 top-1 bottom-1 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
-            <div className="absolute inset-x-2 bottom-0.5 h-[1px] bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
-
-            <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-[11px] truncate font-medium leading-none group-hover:text-primary transition-colors">
+              <span className="shrink-0 opacity-40">/</span>
+              <span
+                className="truncate max-w-[70px] hover:text-primary cursor-pointer transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setFilter((prev: any) => ({ ...prev, account_ids: [account_id], mailbox_ids: [mailbox_id] }));
+                }}
+              >
                 {mailbox_name}
               </span>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {visibleTags.map((tag, i) => (
-                  <span key={i} className="px-1.5 py-0.5 rounded-sm bg-primary/10 text-primary text-[9px] font-medium leading-none border border-primary/20 whitespace-nowrap">
-                    {tag}
-                  </span>
-                ))}
-                {safeTags.length > 2 && (
-                  <span className="px-1.5 py-0.5 rounded-sm bg-gray-100 text-gray-500 text-[9px] font-medium leading-none border border-gray-200">
-                    +{safeTags.length - 2}
-                  </span>
-                )}
-              </div>
             </div>
           </div>
         );
       },
-      meta: { className: 'text-xs' },
-      maxSize: 120,
-    },
-    {
-      accessorKey: "from",
-      header: t('search.from'),
-      cell: ({ row }) => {
-        const fromEmail = row.original.from;
-        const { setFilter } = useSearchMessages();
-
-        return (
-          <div
-            className="group relative flex items-center w-full min-w-0 h-full px-2 cursor-pointer"
-            onClick={(e) => {
-              e.stopPropagation();
-              setFilter((prev: Record<string, any>) => ({ ...prev, from: fromEmail }))
-            }}
-          >
-            <div className="absolute left-0 top-1 bottom-1 w-0.5 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-150" />
-            <div className="absolute inset-x-2 bottom-0.5 h-[1px] bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left" />
-            <LongText className="text-xs flex-1 truncate group-hover:text-primary transition-colors">
-              {fromEmail}
-            </LongText>
-          </div>
-        );
-      },
       meta: { className: 'text-left text-xs' },
-      minSize: 150,
-      maxSize: 300,
     },
     {
       accessorKey: "to",
@@ -224,20 +168,17 @@ export function MailListTable({
           </div>
         );
       },
-      meta: { className: 'text-left text-xs' },
-      minSize: 150,
-      maxSize: 200,
+      meta: { className: 'text-left text-xs' }
     },
     {
       accessorKey: "subject",
       header: t('search.subject'),
       cell: ({ row }) => <LongText className='text-xs'>{row.original.subject}</LongText>,
-      meta: { className: 'text-left text-xs' },
-      maxSize: 450,
+      meta: { className: 'text-left text-xs' }
     },
     {
       id: "text_preview",
-      header: () => null,
+      header: t('search.preview'),
       cell: ({ row }) => {
         const preview = row.original.preview
 
@@ -265,18 +206,18 @@ export function MailListTable({
           </HoverCard>
         )
       },
-      meta: { className: "text-center max-w-[80px]" },
-      minSize: 36,
-      maxSize: 36,
+      meta: { className: "text-center text-xs" },
       enableSorting: false,
+      minSize: 100,
+      maxSize: 100,
     },
     {
       id: "attachment_count",
       header: () => <Paperclip size={16} />,
       cell: ({ row }) => <span className='text-xs'>{row.original.regular_attachment_count}</span>,
       meta: { className: 'text-left text-xs' },
-      minSize: 40,
-      maxSize: 40
+      minSize: 30,
+      maxSize: 30,
     },
     {
       accessorKey: 'size',
@@ -285,8 +226,8 @@ export function MailListTable({
       ),
       cell: ({ row }) => <span className='text-xs max-w-[40px]'>{formatBytes(row.original.size)}</span>,
       meta: { className: 'text-left text-xs' },
-      minSize: 100,
-      maxSize: 100,
+      minSize: 80,
+      maxSize: 80,
     },
     {
       accessorKey: 'date',
@@ -308,15 +249,15 @@ export function MailListTable({
         )
       },
       meta: { className: 'text-left text-xs' },
-      minSize: 130,
-      maxSize: 130,
+      minSize: 100,
+      maxSize: 100,
     },
     {
       id: 'actions',
       header: t('users.columns.actions'),
       cell: DataTableRowActions,
       meta: { className: 'text-right text-xs' },
-      minSize: 50,
+      minSize: 60,
       maxSize: 60,
     },
   ]

@@ -16,7 +16,53 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use tantivy::IndexWriter;
+
+pub mod attachment;
+pub mod envelope;
 pub mod fields;
-pub mod manager;
 pub mod model;
 pub mod schema;
+
+pub fn fatal_commit(writer: &mut IndexWriter) {
+    const MAX_RETRIES: usize = 3;
+    const RETRY_DELAY_MS: u64 = 1000;
+
+    for attempt in 0..=MAX_RETRIES {
+        match writer.commit() {
+            Ok(_) => {
+                if attempt > 0 {
+                    eprintln!("[INFO] Commit succeeded on attempt {}", attempt + 1);
+                }
+                return;
+            }
+            Err(e) => match &e {
+                tantivy::TantivyError::IoError(io_error) => {
+                    if attempt < MAX_RETRIES {
+                        eprintln!(
+                            "[WARN] Commit failed (attempt {}/{}): {:?}. Retrying in {}ms...",
+                            attempt + 1,
+                            MAX_RETRIES + 1,
+                            io_error,
+                            RETRY_DELAY_MS * (attempt as u64 + 1)
+                        );
+                        std::thread::sleep(std::time::Duration::from_millis(
+                            RETRY_DELAY_MS * (attempt as u64 + 1),
+                        ));
+                    } else {
+                        eprintln!(
+                            "[FATAL] Tantivy commit failed after {} attempts: {:?}",
+                            MAX_RETRIES + 1,
+                            io_error
+                        );
+                        std::process::exit(1);
+                    }
+                }
+                _ => {
+                    eprintln!("[FATAL] Tantivy commit failed with non-IO error: {e:?}");
+                    std::process::exit(1);
+                }
+            },
+        }
+    }
+}

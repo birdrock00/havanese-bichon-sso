@@ -22,13 +22,12 @@ use crate::modules::message::append::restore_emails;
 use crate::modules::message::append::RestoreMessagesRequest;
 use crate::modules::message::attachment::retrieve_attachment_content;
 use crate::modules::message::attachment::retrieve_nested_attachment_content;
-use crate::modules::message::attachment::AttachmentMetadata;
 use crate::modules::message::content::retrieve_nested_eml_content;
 use crate::modules::message::content::FullNestedMessageContent;
 use crate::modules::message::content::{retrieve_email_content, FullMessageContent};
 use crate::modules::message::delete::delete_messages_impl;
 use crate::modules::message::list::get_thread_messages;
-use crate::modules::message::search::{search_messages_impl, SearchRequest};
+use crate::modules::message::search::{search_messages_impl, EmailSearchRequest};
 use crate::modules::message::tags::TagCount;
 use crate::modules::message::tags::TagsRequest;
 use crate::modules::rest::api::ApiTags;
@@ -37,7 +36,7 @@ use crate::modules::rest::ApiResult;
 use crate::modules::rest::ErrorCode;
 use crate::modules::store::envelope::Envelope;
 use crate::modules::store::storage::get_reader;
-use crate::modules::store::tantivy::manager::INDEX_MANAGER;
+use crate::modules::store::tantivy::envelope::ENVELOPE_MANAGER;
 use crate::modules::users::permissions::Permission;
 use crate::modules::utils::validate_tag;
 use crate::raise_error;
@@ -82,7 +81,7 @@ impl MessageApi {
     )]
     async fn search_messages(
         &self,
-        payload: Json<SearchRequest>,
+        payload: Json<EmailSearchRequest>,
         context: ClientContext,
     ) -> ApiResult<Json<DataPage<Envelope>>> {
         let authorized_ids: Option<HashSet<u64>> = if context
@@ -191,7 +190,7 @@ impl MessageApi {
             .require_permission(Some(account_id), Permission::DATA_READ)
             .await?;
         let envelope_id = envelope_id.0;
-        let e = INDEX_MANAGER
+        let e = ENVELOPE_MANAGER
             .get_envelope_by_id(account_id, &envelope_id)
             .await?
             .ok_or_else(|| {
@@ -335,7 +334,7 @@ impl MessageApi {
         } else {
             Some(context.user.account_access_map.keys().cloned().collect())
         };
-        Ok(Json(INDEX_MANAGER.get_all_tags(authorized_ids).await?))
+        Ok(Json(ENVELOPE_MANAGER.get_all_tags(authorized_ids).await?))
     }
 
     /// Adds or removes facet tags for multiple emails across accounts.
@@ -361,7 +360,7 @@ impl MessageApi {
                 .await?;
         }
 
-        INDEX_MANAGER.update_envelope_tags(req).await?;
+        ENVELOPE_MANAGER.update_envelope_tags(req).await?;
         Ok(())
     }
 
@@ -380,29 +379,8 @@ impl MessageApi {
         } else {
             Some(context.user.account_access_map.keys().cloned().collect())
         };
-        Ok(Json(INDEX_MANAGER.get_all_contacts(authorized_ids).await?))
-    }
-
-    /// Retrieves unique metadata for all attachments across authorized accounts.
-    #[oai(
-        path = "/attachment_metadata",
-        method = "get",
-        operation_id = "get_attachment_metadata"
-    )]
-    async fn get_attachment_metadata(
-        &self,
-        context: ClientContext,
-    ) -> ApiResult<Json<AttachmentMetadata>> {
-        let authorized_ids: Option<HashSet<u64>> = if context
-            .has_permission(None, Permission::DATA_READ_ALL)
-            .await
-        {
-            None
-        } else {
-            Some(context.user.account_access_map.keys().cloned().collect())
-        };
         Ok(Json(
-            INDEX_MANAGER.collect_attachment_metadata(authorized_ids)?,
+            ENVELOPE_MANAGER.get_all_contacts(authorized_ids).await?,
         ))
     }
 }

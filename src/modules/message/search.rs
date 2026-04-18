@@ -24,13 +24,18 @@ use crate::{
     modules::{
         error::{code::ErrorCode, BichonResult},
         rest::response::DataPage,
-        store::{envelope::Envelope, tantivy::manager::INDEX_MANAGER},
+        store::{
+            envelope::Envelope,
+            tantivy::{
+                attachment::ATTACHMENT_MANAGER, envelope::ENVELOPE_MANAGER, model::AttachmentModel,
+            },
+        },
     },
     raise_error,
 };
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, Object)]
-pub struct SearchFilter {
+pub struct EmailSearchFilter {
     pub text: Option<String>,
     pub subject: Option<String>,
     pub body: Option<String>,
@@ -61,14 +66,14 @@ pub enum SortBy {
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, Object)]
-pub struct SearchRequest {
-    filter: SearchFilter,
+pub struct EmailSearchRequest {
+    filter: EmailSearchFilter,
     page: u64,
     page_size: u64,
     sort_by: Option<SortBy>,
     desc: Option<bool>,
 }
-impl SearchRequest {
+impl EmailSearchRequest {
     pub fn validate(&self) -> BichonResult<()> {
         if self.page == 0 || self.page_size == 0 {
             return Err(raise_error!(
@@ -89,10 +94,81 @@ impl SearchRequest {
 
 pub async fn search_messages_impl(
     accounts: Option<HashSet<u64>>,
-    request: SearchRequest,
+    request: EmailSearchRequest,
 ) -> BichonResult<DataPage<Envelope>> {
     request.validate()?;
-    INDEX_MANAGER
+    ENVELOPE_MANAGER
+        .search(
+            accounts,
+            request.filter,
+            request.page,
+            request.page_size,
+            request.desc.unwrap_or(true),
+            request.sort_by.unwrap_or(SortBy::DATE),
+        )
+        .await
+}
+
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, Object)]
+pub struct AttachmentSearchFilter {
+    pub text: Option<String>,
+    pub subject: Option<String>,
+    pub from: Option<String>,
+    pub since: Option<i64>,
+    pub before: Option<i64>,
+    pub account_ids: Option<HashSet<u64>>,
+    pub mailbox_ids: Option<HashSet<u64>>,
+    pub min_size: Option<u64>,
+    pub max_size: Option<u64>,
+
+    pub attachment_name: Option<String>,
+
+    pub tags: Option<HashSet<String>>,
+    pub attachment_extension: Option<String>,
+    pub attachment_category: Option<String>,
+    pub attachment_content_type: Option<String>,
+
+    pub is_ocr: Option<bool>,
+    pub is_message: Option<bool>,
+    pub has_text: Option<bool>,
+
+    pub min_page_count: Option<u64>,
+    pub max_page_count: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, Object)]
+pub struct AttachmentSearchRequest {
+    filter: AttachmentSearchFilter,
+    page: u64,
+    page_size: u64,
+    sort_by: Option<SortBy>,
+    desc: Option<bool>,
+}
+impl AttachmentSearchRequest {
+    pub fn validate(&self) -> BichonResult<()> {
+        if self.page == 0 || self.page_size == 0 {
+            return Err(raise_error!(
+                "Both page and page_size must be greater than 0.".into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+        if self.page_size > 500 {
+            return Err(raise_error!(
+                "The page_size exceeds the maximum allowed limit of 500.".into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+
+        Ok(())
+    }
+}
+
+pub async fn search_attachment_impl(
+    accounts: Option<HashSet<u64>>,
+    request: AttachmentSearchRequest,
+) -> BichonResult<DataPage<AttachmentModel>> {
+    request.validate()?;
+    ATTACHMENT_MANAGER
         .search(
             accounts,
             request.filter,

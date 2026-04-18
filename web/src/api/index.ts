@@ -31,8 +31,8 @@ export interface EmailEnvelope {
   message_id: string;
   account_id: number;
   mailbox_id: number;
-  account_email?: string;
-  mailbox_name?: string;
+  account_email: string;
+  mailbox_name: string;
   uid: number;
   subject: string;
   preview: string;

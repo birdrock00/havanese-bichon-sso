@@ -16,26 +16,27 @@ type DataTableToolbarProps<TData> = {
 export function DataTableToolbar<TData>({
   table,
 }: DataTableToolbarProps<TData>) {
-
-
-
   return (
-    <div className="flex flex-col gap-1 px-1 py-1 lg:flex-row lg:items-center lg:gap-1">
-      <div className="flex-1">
-        <TextSearchInput />
-      </div>
-      <div className="flex flex-wrap items-center gap-1 lg:flex-nowrap lg:justify-end">
-        <div className="flex flex-wrap items-center gap-1 lg:flex-nowrap">
-          <AccountPopover />
-          <MailboxPopover />
-          <MailFilterPopover />
-          <TagFilterPopover />
-          <TimePopover />
-          <MoreFiltersPopover />
-          <DataTableViewOptions table={table} />
+    <div className="flex flex-col gap-1 p-1 bg-background">
+      <div className="mb-4 flex items-center justify-center w-full">
+        <div className="w-full max-w-3xl">
+          <TextSearchInput />
         </div>
-        <div className="flex-shrink-0 ml-auto lg:ml-0">
+      </div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-1">
+        <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <AccountPopover />
+            <MailboxPopover />
+            <MailFilterPopover />
+            <TagFilterPopover />
+            <MoreFiltersPopover />
+          </div>
           <FilterResetButton />
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <TimePopover />
+          <DataTableViewOptions table={table} />
         </div>
       </div>
     </div>
