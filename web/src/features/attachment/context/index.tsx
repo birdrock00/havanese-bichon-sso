@@ -21,13 +21,15 @@ import React from 'react'
 import { SortingState } from '@tanstack/react-table'
 import { AttachmentModel } from '@/api/attachment/api'
 
-export type SearchDialogType = 'mailbox' | 'display' | 'delete' | 'filters' | 'tags' | 'edit-tags' | 'update-tags' | 'restore' | 'delete-mailbox'
+export type AttachmentDialogType = 'mailbox' | 'display' | 'delete' | 'filters' | 'tags' | 'edit-tags' | 'update-tags' | 'restore' | 'delete-mailbox'
 
-interface SearchContextType {
-  open: SearchDialogType | null
-  setOpen: (str: SearchDialogType | null) => void
-  currentEnvelope: AttachmentModel | undefined
-  setCurrentEnvelope: React.Dispatch<React.SetStateAction<AttachmentModel | undefined>>
+interface AttachmentContextType {
+  open: AttachmentDialogType | null
+  setOpen: (str: AttachmentDialogType | null) => void
+  currentAttachment: AttachmentModel | undefined
+  setCurrentAttachment: React.Dispatch<React.SetStateAction<AttachmentModel | undefined>>
+  toDelete: Map<number, Set<string>>
+  setToDelete: React.Dispatch<React.SetStateAction<Map<number, Set<string>>>>
   selected: Map<number, Set<string>>
   setSelected: React.Dispatch<React.SetStateAction<Map<number, Set<string>>>>
   deleteMailboxId: string | undefined
@@ -42,25 +44,25 @@ interface SearchContextType {
   handleTagToggle: (tag: string) => void
 }
 
-const SearchContext = React.createContext<SearchContextType | null>(null)
+const AttachmentContext = React.createContext<AttachmentContextType | null>(null)
 
 interface Props {
   children: React.ReactNode
-  value: SearchContextType
+  value: AttachmentContextType
 }
 
-export default function SearchProvider({ children, value }: Props) {
-  return <SearchContext.Provider value={value}>{children}</SearchContext.Provider>
+export default function AttachmentProvider({ children, value }: Props) {
+  return <AttachmentContext.Provider value={value}>{children}</AttachmentContext.Provider>
 }
 
-export const useSearchContext = () => {
-  const searchContext = React.useContext(SearchContext)
+export const useAttachmentContext = () => {
+  const attachmentContext = React.useContext(AttachmentContext)
 
-  if (!searchContext) {
+  if (!attachmentContext) {
     throw new Error(
-      'useSearchContext has to be used within <SearchContext.Provider>'
+      'useAttachmentContext has to be used within <AttachmentContext.Provider>'
     )
   }
 
-  return searchContext
+  return attachmentContext
 }

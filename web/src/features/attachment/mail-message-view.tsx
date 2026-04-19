@@ -35,24 +35,16 @@ import {
   load_message,
 } from '@/api/mailbox/envelope/api';
 import { AxiosError } from 'axios';
-import { useSearchContext } from './context';
+import { useAttachmentContext } from './context';
 import { MailThreadDialog } from './thread-dialog';
 import useMinimalAccountList from '@/hooks/use-minimal-account-list';
 import { useTranslation } from 'react-i18next';
 import { NestedEmailDialog } from './nested-email-dialog';
+import { EmailEnvelope } from '@/api';
 
 
 interface MailMessageViewProps {
-  envelope: {
-    id: string;
-    account_id: number,
-    from?: string;
-    to?: string[];
-    cc?: string[];
-    bcc?: string[];
-    subject?: string;
-    internal_date?: number;
-  };
+  envelope: EmailEnvelope;
   showActions?: boolean;
   showHeader?: boolean;
   showAttachments?: boolean;
@@ -120,7 +112,7 @@ export function MailMessageView({
   showHeader = true
 }: MailMessageViewProps) {
   const { t } = useTranslation()
-  const { setToDelete, setOpen, setSelected } = useSearchContext();
+  const { setToDelete, setOpen, setSelected } = useAttachmentContext();
   const [content, setContent] = useState<string | null>(null);
   const [contentType, setContentType] = useState<'Plain' | 'Html' | null>(null);
   const [attachments, setAttachments] = useState<AttachmentInfo[] | null>(null);
@@ -403,7 +395,7 @@ export function MailMessageView({
         )}
       </div>
 
-      <MailThreadDialog open={threadOpen} onOpenChange={setThreadOpen} />
+      <MailThreadDialog open={threadOpen} onOpenChange={setThreadOpen} currentEnvelope={envelope} />
       <NestedEmailDialog
         open={!!nestedEmlFile}
         onOpenChange={(open: boolean) => !open && setNestedEmlFile(null)}

@@ -77,6 +77,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end' className='w-[160px]'>
           <DropdownMenuItem
+            className='text-xs'
             onClick={(e) => {
               e.stopPropagation()
               setCurrentEnvelope(row.original)
@@ -90,6 +91,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
+            className='text-xs'
             onClick={(e) => {
               e.stopPropagation()
               setCurrentEnvelope(row.original)
@@ -104,11 +106,12 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
+
             onClick={(e) => {
               e.stopPropagation()
               handleDelete(row.original)
             }}
-            className='!text-red-500'
+            className='!text-red-500 text-xs'
           >
             {t('common.delete')}
             <DropdownMenuShortcut>

@@ -365,10 +365,14 @@
   "attachment": {
     "all_fields_desc": "Gleicht Anhangsname, Betreff und Absender ab",
     "date": "Datum",
+    "download": "Herunterladen",
+    "downloading": "Herunterladen...",
+    "emailMessageNotFound": "Die ursprüngliche E-Mail wurde nicht gefunden. Sie wurde möglicherweise gelöscht.",
     "name": "Dateiname",
     "search_input_placeholder": "Anhänge durchsuchen (verwenden Sie \" \" für die Phrasensuche)",
     "sender": "Absender",
     "sender_with_count": "Absender ({{count}})",
+    "showDuplicates": "Duplikate anzeigen",
     "size": "Dateigröße",
     "source": "Quelle",
     "subject": "Betreff"

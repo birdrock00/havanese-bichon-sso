@@ -30,18 +30,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { get_thread_messages } from '@/api/mailbox/envelope/api';
-import { MailMessageView } from './mail-message-view';
-import { useSearchContext } from './context';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
+import { EmailEnvelope } from '@/api';
+import { MailMessageView } from './mail-message-view';
 
 interface MailThreadDialogProps {
   open: boolean;
+  currentEnvelope: EmailEnvelope
   onOpenChange: (open: boolean) => void;
 }
 
-export function MailThreadDialog({ open, onOpenChange }: MailThreadDialogProps) {
-  const { currentEnvelope } = useSearchContext();
+export function MailThreadDialog({ open, onOpenChange, currentEnvelope }: MailThreadDialogProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const { t } = useTranslation();
 

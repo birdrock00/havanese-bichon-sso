@@ -22,7 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { delete_messages } from '@/api/mailbox/envelope/api'
-import { useSearchContext } from './context'
+import { useAttachmentContext } from './context'
 import { mapToRecordOfArrays } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
 
@@ -33,7 +33,7 @@ interface Props {
 
 export function EnvelopeDeleteDialog({ open, onOpenChange }: Props) {
   const queryClient = useQueryClient()
-  const { toDelete, setToDelete, setSelected } = useSearchContext()
+  const { toDelete, setToDelete, setSelected } = useAttachmentContext()
   const { t } = useTranslation()
 
   const deleteMutation = useMutation({
@@ -41,8 +41,8 @@ export function EnvelopeDeleteDialog({ open, onOpenChange }: Props) {
       delete_messages(payload),
     retry: false,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['search-messages'], exact: false })
-      queryClient.invalidateQueries({ queryKey: ['all-tags'] })
+      queryClient.invalidateQueries({ queryKey: ['search-attachments'], exact: false })
+      queryClient.invalidateQueries({ queryKey: ['attachment-tags'] })
       onOpenChange(false)
       setToDelete(new Map())
       setSelected(new Map())

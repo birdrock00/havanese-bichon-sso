@@ -365,10 +365,14 @@
   "attachment": {
     "all_fields_desc": "Matches attachment name, subject, and sender",
     "date": "Date",
+    "download": "Download",
+    "downloading": "Downloading...",
+    "emailMessageNotFound": "Unable to find the original email. It may have been deleted.",
     "name": "Filename",
     "search_input_placeholder": "Search attachments (use \" \" for phrase search)",
     "sender": "Sender",
     "sender_with_count": "Sender ({{count}})",
+    "showDuplicates": "Show duplicates",
     "size": "File size",
     "source": "Source",
     "subject": "Subject"

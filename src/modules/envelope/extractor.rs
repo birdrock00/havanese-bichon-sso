@@ -357,9 +357,9 @@ pub async fn detach_and_store_attachments(
     for (raw_start, raw_end, att) in ranges {
         // Step 2: Extract raw bytes and store them as standalone documents
         let raw_bytes = &original_body[raw_start..raw_end];
-        let content_hash = compute_content_hash(raw_bytes);
+        let content_hash = compute_content_hash(att.contents());
 
-        attachments.push((content_hash.clone(), Bytes::copy_from_slice(raw_bytes)));
+        attachments.push((content_hash.clone(), Bytes::copy_from_slice(raw_bytes)));//
 
         // Step 3: Replace raw attachment content with a hash-based placeholder
         let placeholder = format!("<<BICHON_DETACH_HASH:{}>>", &content_hash);
@@ -474,14 +474,6 @@ pub async fn reattach_eml_content(
 
     for (start, end, hash) in tasks {
         if let Some(original_data) = BLOB_MANAGER.get_attachment(&hash)? {
-            let actual_hash = compute_content_hash(&original_data);
-            if actual_hash != hash {
-                error!(
-                    "[ERROR] Content Hash Mismatch! Expected: {}, Actual: {}",
-                    hash, actual_hash
-                );
-                continue;
-            }
             restored_eml.splice(start..end, original_data.iter().cloned());
         } else {
             error!("[ERROR] Missing attachment blob for hash: {}", hash);

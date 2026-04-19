@@ -58,7 +58,7 @@ import { cn } from '@/lib/utils';
 
 import { list_mailboxes } from '@/api/mailbox/api';
 import useMinimalAccountList from '@/hooks/use-minimal-account-list';
-import { useSearchContext } from './context';
+import { useAttachmentContext } from './context';
 import { buildTree, ExtendedTreeItemProps } from '@/lib/build-tree';
 
 const CustomCollapse = styled(Collapse)({ padding: 0 });
@@ -149,7 +149,7 @@ function CustomLabel({
 
 export function MailboxPopover() {
     const { t } = useTranslation();
-    const { filter, setFilter, setOpen, setDeleteMailboxId, setSelectedAccountId } = useSearchContext();
+    const { filter, setFilter, setOpen, setDeleteMailboxId, setSelectedAccountId } = useAttachmentContext();
     const { minimalList = [] } = useMinimalAccountList();
 
     const [localOpen, setLocalOpen] = React.useState(false);

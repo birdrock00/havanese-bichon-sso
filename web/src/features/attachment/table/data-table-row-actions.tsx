@@ -23,21 +23,43 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useTranslation } from 'react-i18next'
-import { MoreVertical, TagIcon } from 'lucide-react'
-import { useSearchContext } from '../context'
+import { Copy, Download, MoreVertical } from 'lucide-react'
 import { AttachmentModel } from '@/api/attachment/api'
+import { useSearchAttachments } from '@/hooks/use-search-attachments'
+import { useToast } from '@/hooks/use-toast'
+import { useMutation } from '@tanstack/react-query'
+import { download_attachment } from '@/api/mailbox/envelope/api'
 
 interface DataTableRowActionsProps {
   row: Row<AttachmentModel>
 }
 
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
-  const { setOpen, setCurrentEnvelope, setSelected } = useSearchContext()
+  const { setFilter } = useSearchAttachments();
   const { t } = useTranslation()
+  const { toast } = useToast();
+
+  const downloadMutation = useMutation({
+    mutationFn: (content_hash: string) =>
+      download_attachment(
+        row.original.account_id,
+        row.original.envelope_id,
+        content_hash,
+        row.original.name ?? row.original.id
+      ),
+    onError: (error: any) => {
+      toast({
+        title: t('mail.failedToDownloadFile'),
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
 
   return (
     <>
@@ -51,17 +73,34 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             <span className='sr-only'>Open menu</span>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align='end' className='w-[160px]'>
+        <DropdownMenuContent align='end' className='w-[180px]'>
           <DropdownMenuItem
+            className='text-xs'
             onClick={(e) => {
               e.stopPropagation()
-              setCurrentEnvelope(row.original)
-              setOpen("edit-tags")
+              setFilter((prev: any) => ({ ...prev, content_hash: row.original.content_hash }));
             }}
           >
-            {t('attachment.editTag')}
+            {t('attachment.showDuplicates')}
             <DropdownMenuShortcut>
-              <TagIcon size={16} />
+              <Copy size={16} />
+            </DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className='text-xs'
+            disabled={downloadMutation.isPending}
+            onClick={(e) => {
+              e.stopPropagation()
+              e.preventDefault();
+              downloadMutation.mutate(row.original.content_hash);
+            }}
+          >
+            {downloadMutation.isPending
+              ? t('attachment.downloading')
+              : t('attachment.download')}
+            <DropdownMenuShortcut>
+              <Download size={16} />
             </DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuContent>

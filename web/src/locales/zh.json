@@ -365,10 +365,14 @@
   "attachment": {
     "all_fields_desc": "匹配附件名称、邮件主题和发件人",
     "date": "日期",
+    "download": "下载",
+    "downloading": "正在下载...",
+    "emailMessageNotFound": "找不到原始邮件。它可能已被删除。",
     "name": "文件名",
     "search_input_placeholder": "搜索附件（使用 \" \" 进行短语搜索）",
     "sender": "发件人",
     "sender_with_count": "发件人 ({{count}})",
+    "showDuplicates": "显示重复文件",
     "size": "文件大小",
     "source": "来源",
     "subject": "主题"

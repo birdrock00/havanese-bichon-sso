@@ -122,6 +122,7 @@ pub struct AttachmentSearchFilter {
     pub max_size: Option<u64>,
 
     pub attachment_name: Option<String>,
+    pub content_hash: Option<String>,
 
     pub tags: Option<HashSet<String>>,
     pub attachment_extension: Option<String>,

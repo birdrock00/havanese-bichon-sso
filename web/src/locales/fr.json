@@ -365,10 +365,14 @@
   "attachment": {
     "all_fields_desc": "Correspond au nom de la pièce jointe, à l'objet et à l'expéditeur",
     "date": "Date",
+    "download": "Télécharger",
+    "downloading": "Téléchargement en cours...",
+    "emailMessageNotFound": "Impossible de trouver l'e-mail original. Il a peut-être été supprimé.",
     "name": "Nom du fichier",
     "search_input_placeholder": "Rechercher des pièces jointes (utilisez \" \" pour la recherche par expression)",
     "sender": "Expéditeur",
     "sender_with_count": "Expéditeur ({{count}})",
+    "showDuplicates": "Afficher les doublons",
     "size": "Taille du fichier",
     "source": "Source",
     "subject": "Objet"

@@ -16,8 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-use crate::modules::logger::{validate_log_level, LocalTimer};
+use crate::modules::logger::LocalTimer;
 use crate::modules::settings::cli::SETTINGS;
 use crate::modules::settings::dir::DATA_DIR_MANAGER;
 use std::sync::OnceLock;
@@ -30,9 +29,7 @@ use tracing_subscriber::layer::SubscriberExt;
 
 pub static LOG_WORKER_GUARD: OnceLock<Vec<WorkerGuard>> = OnceLock::new();
 
-pub fn setup_file_logger() -> Result<(), tracing::dispatcher::SetGlobalDefaultError> {
-    validate_log_level(&SETTINGS.bichon_log_level);
-    let level = SETTINGS.bichon_log_level.parse::<Level>().unwrap();
+pub fn setup_file_logger(level: Level) -> Result<(), tracing::dispatcher::SetGlobalDefaultError> {
     let with_ansi = SETTINGS.bichon_ansi_logs;
 
     let (server_nonb, server_guard) = server_log_writer();

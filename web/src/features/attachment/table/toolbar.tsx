@@ -1,6 +1,5 @@
 import { type Table } from '@tanstack/react-table'
 import { DataTableViewOptions } from './view-options'
-import { TagFilterPopover } from '../tag-filter-popover'
 import { TimePopover } from '../time-popover'
 import { SenderFilterPopover } from '../sender-popover'
 import { TextSearchInput } from '../text-search-input'
@@ -31,8 +30,6 @@ export function DataTableToolbar<TData>({
             <AccountPopover />
             <MailboxPopover />
             <SenderFilterPopover />
-            <TagFilterPopover />
-
             <MetadataFilter
               type="extension"
               icon={<FileType className="h-3.5 w-3.5" />}

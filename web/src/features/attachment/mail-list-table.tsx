@@ -21,8 +21,7 @@ import { dateFnsLocaleMap, formatBytes } from "@/lib/utils"
 import { format, formatDistanceToNow } from "date-fns"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useSearchContext } from "./context"
-import { AttachmentBulkActions } from "./bulk-actions"
+import { useAttachmentContext } from "./context"
 import { useTranslation } from 'react-i18next'
 import { enUS } from "date-fns/locale"
 import { ColumnDef } from "@tanstack/react-table"
@@ -34,13 +33,11 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { DataTableToolbar } from "./table/toolbar"
 import { AttachmentModel } from "@/api/attachment/api"
 import { useSearchAttachments } from "@/hooks/use-search-attachments"
-import { FileIcon } from "lucide-react"
 import { AttachmentIcon } from "./attachment-icon"
 
 interface MailListProps {
   items: AttachmentModel[]
   isLoading: boolean
-  onAttachmentChanged: (attachment: AttachmentModel) => void
   setSortBy: (sortBy: "DATE" | "SIZE") => void
   setSortOrder: (value: "desc" | "asc") => void
 }
@@ -48,14 +45,13 @@ interface MailListProps {
 export function AttachmentListTable({
   items,
   isLoading,
-  onAttachmentChanged,
   setSortBy,
   setSortOrder
 }: MailListProps) {
   const { t, i18n } = useTranslation()
 
   const locale = dateFnsLocaleMap[i18n.language.toLowerCase()] ?? enUS
-  const { selected, setSelected } = useSearchContext()
+  const { selected, setSelected, setOpen, setCurrentAttachment } = useAttachmentContext()
 
   const columns: ColumnDef<AttachmentModel>[] = [
     {
@@ -133,12 +129,34 @@ export function AttachmentListTable({
           </div>
         );
       },
-      meta: { className: 'text-left' }
+      meta: { className: 'text-left text-xs' }
     },
     {
       accessorKey: "subject",
       header: t('attachment.subject'),
-      cell: ({ row }) => <LongText className='text-xs'>{row.original.subject}</LongText>,
+      cell: ({ row }) => {
+        return (
+          <div className="group relative flex items-center w-full min-w-0 h-full px-2 overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+
+            <div className="text-xs flex flex-wrap gap-x-1 min-w-0 flex-1">
+              <span className="flex items-center">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentAttachment(row.original);
+                    setOpen("display");
+                  }}
+                  className="hover:text-primary hover:underline transition-colors truncate"
+                >
+                  <LongText>{row.original.subject}</LongText>
+                </button>
+              </span>
+            </div>
+          </div>
+        );
+      },
       meta: { className: 'text-left text-xs' },
       minSize: 300,
       maxSize: 300,
@@ -277,11 +295,7 @@ export function AttachmentListTable({
       <SearchTable
         data={items}
         columns={columns}
-        onRowClick={(e, row) => {
-          const target = e.target as HTMLElement
-          if (target.closest('input[type="checkbox"], button')) return
-          onAttachmentChanged(row.original)
-        }}
+        onRowClick={() => { }}
         setSortBy={setSortBy}
         setSortOrder={setSortOrder}
       >
@@ -290,7 +304,6 @@ export function AttachmentListTable({
         }}
 
       </SearchTable>
-      {totalSelected > 0 && <AttachmentBulkActions />}
     </>
   )
 }

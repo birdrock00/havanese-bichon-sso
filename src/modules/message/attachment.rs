@@ -40,7 +40,7 @@ pub async fn retrieve_attachment_content(
     let (_, eml) = reattach_eml_content(account_id, envelope_id).await?;
     let message = MessageParser::default().parse(&eml).ok_or_else(|| {
         raise_error!(
-            "Failed to parse parent EML".into(),
+            "Failed to parse EML".into(),
             ErrorCode::InternalError
         )
     })?;
@@ -51,7 +51,7 @@ pub async fn retrieve_attachment_content(
         .map(|att| att.contents())
         .ok_or_else(|| {
             raise_error!(
-                "Target nested EML not found".into(),
+                "Target attachment not found".into(),
                 ErrorCode::ResourceNotFound
             )
         })?;

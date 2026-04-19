@@ -365,10 +365,14 @@
   "attachment": {
     "all_fields_desc": "Komt overeen met bijlagennaam, onderwerp en afzender",
     "date": "Datum",
+    "download": "Downloaden",
+    "downloading": "Downloaden...",
+    "emailMessageNotFound": "Kan de originele e-mail niet vinden. Deze is mogelijk verwijderd.",
     "name": "Bestandsnaam",
     "search_input_placeholder": "Zoek bijlagen (gebruik \" \" voor woordgroepen)",
     "sender": "Afzender",
     "sender_with_count": "Afzender ({{count}})",
+    "showDuplicates": "Duplicaten weergeven",
     "size": "Bestandsgrootte",
     "source": "Bron",
     "subject": "Onderwerp"

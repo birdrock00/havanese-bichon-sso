@@ -365,10 +365,14 @@
   "attachment": {
     "all_fields_desc": "Поиск по имени вложения, теме и отправителю",
     "date": "Дата",
+    "download": "Скачать",
+    "downloading": "Загрузка...",
+    "emailMessageNotFound": "Не удалось найти исходное письмо. Возможно, оно было удалено.",
     "name": "Имя файла",
     "search_input_placeholder": "Поиск вложений (используйте \" \" для фразового поиска)",
     "sender": "Отправитель",
     "sender_with_count": "Отправитель ({{count}})",
+    "showDuplicates": "Показать дубликаты",
     "size": "Размер файла",
     "source": "Источник",
     "subject": "Тема"

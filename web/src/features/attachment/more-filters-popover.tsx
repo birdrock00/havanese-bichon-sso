@@ -22,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { Info, ListFilter } from "lucide-react"
 import { useTranslation } from "react-i18next"
-import { useSearchContext } from "./context"
+import { useAttachmentContext } from "./context"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -49,7 +49,7 @@ const getPresetFromSize = (min?: number, max?: number) => {
 
 export function MoreFiltersPopover() {
     const { t } = useTranslation();
-    const { filter, setFilter } = useSearchContext();
+    const { filter, setFilter } = useAttachmentContext();
     const [open, setOpen] = React.useState(false);
 
     const [localState, setLocalState] = React.useState({

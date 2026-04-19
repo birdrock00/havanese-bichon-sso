@@ -365,10 +365,14 @@
   "attachment": {
     "all_fields_desc": "Täsmää liitteen nimeen, aiheeseen ja lähettäjään",
     "date": "Päivämäärä",
+    "download": "Lataa",
+    "downloading": "Ladataan...",
+    "emailMessageNotFound": "Alkuperäistä sähköpostia ei löytynyt. Se on ehkä poistettu.",
     "name": "Tiedostonimi",
     "search_input_placeholder": "Hae liitteitä (käytä \" \" lausehakuun)",
     "sender": "Lähettäjä",
     "sender_with_count": "Lähettäjä ({{count}})",
+    "showDuplicates": "Näytä kaksoiskappaleet",
     "size": "Tiedostokoko",
     "source": "Lähde",
     "subject": "Aihe"

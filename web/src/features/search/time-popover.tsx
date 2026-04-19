@@ -163,10 +163,10 @@ export function TimePopover() {
                 <Section title={t('time.absolute_range')}>
                     <div className="flex flex-col gap-4 w-full">
                         <div className="flex items-center gap-3 w-full">
-                            <span className="w-20 text-right text-[10px] opacity-50 font-medium">
+                            <span className="w-20 text-right text-[10px] font-medium">
                                 {t('time.since').toUpperCase()}:
                             </span>
-                            <div className="flex-1">
+                            <div className="w-full">
                                 <DatePicker
                                     placeholder={t('time.start_date')}
                                     selected={since ? new Date(since) : undefined}
@@ -176,10 +176,10 @@ export function TimePopover() {
                         </div>
 
                         <div className="flex items-center gap-3 w-full">
-                            <span className="w-20 text-right text-[10px] opacity-50 font-medium">
+                            <span className="w-20 text-right text-[10px] font-medium">
                                 {t('time.before').toUpperCase()}:
                             </span>
-                            <div className="flex-1">
+                            <div className="w-full">
                                 <DatePicker
                                     placeholder={t('time.end_date')}
                                     selected={before ? new Date(before) : undefined}

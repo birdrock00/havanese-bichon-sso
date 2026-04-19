@@ -343,6 +343,13 @@ impl IndexManager {
             subqueries.push((Occur::Must, Box::new(query)));
         }
 
+
+        if let Some(content_hash) = &filter.content_hash {
+            let term = Term::from_field_text(f.f_content_hash, content_hash);
+            let query = TermQuery::new(term, IndexRecordOption::Basic);
+            subqueries.push((Occur::Must, Box::new(query)));
+        }
+
         if let Some(ref name) = filter.attachment_name {
             let query_parser =
                 QueryParser::for_index(&self.index, vec![f.f_name_text, f.f_name_exact]);

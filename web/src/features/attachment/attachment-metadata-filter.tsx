@@ -1,7 +1,7 @@
 import * as React from "react"
 import { ChevronDown } from "lucide-react"
 import { useTranslation } from "react-i18next"
-import { useSearchContext } from "./context"
+import { useAttachmentContext } from "./context"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -15,7 +15,7 @@ interface MetaFilterProps {
 
 export function MetadataFilter({ type, icon }: MetaFilterProps) {
     const { t } = useTranslation()
-    const { filter, setFilter } = useSearchContext()
+    const { filter, setFilter } = useAttachmentContext()
     const [open, setOpen] = React.useState(false)
     const { data: meta, isLoading } = useAttachmentMetadata(open)
 

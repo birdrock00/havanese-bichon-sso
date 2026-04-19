@@ -19,12 +19,12 @@
 
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { useSearchContext } from "./context"
+import { useAttachmentContext } from "./context"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "react-i18next";
 
 export function FilterResetButton() {
-    const { filter, setFilter } = useSearchContext();
+    const { filter, setFilter } = useAttachmentContext();
     const { t } = useTranslation()
     const { q, ...restFilters } = filter;
 

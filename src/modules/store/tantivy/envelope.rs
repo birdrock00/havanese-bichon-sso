@@ -315,15 +315,17 @@ impl IndexManager {
         }
 
         if let Some(ref subject_val) = filter.subject {
-            let term = Term::from_field_text(f.f_subject, subject_val);
-            let query = TermQuery::new(term, IndexRecordOption::Basic);
-            subqueries.push((Occur::Must, Box::new(query)));
+            let query_parser = QueryParser::for_index(&self.index, vec![f.f_subject]);
+            if let Ok(q) = query_parser.parse_query(subject_val) {
+                subqueries.push((Occur::Must, q));
+            }
         }
 
         if let Some(ref body_val) = filter.body {
-            let term = Term::from_field_text(f.f_body, body_val);
-            let query = TermQuery::new(term, IndexRecordOption::Basic);
-            subqueries.push((Occur::Must, Box::new(query)));
+            let query_parser = QueryParser::for_index(&self.index, vec![f.f_body]);
+            if let Ok(q) = query_parser.parse_query(body_val) {
+                subqueries.push((Occur::Must, q));
+            }
         }
 
         if let Some(ref tags) = filter.tags {

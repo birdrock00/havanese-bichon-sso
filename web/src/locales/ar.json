@@ -365,10 +365,14 @@
   "attachment": {
     "all_fields_desc": "مطابقة اسم المرفق، موضوع الرسالة، والمرسل",
     "date": "التاريخ",
+    "download": "تنزيل",
+    "downloading": "جاري التنزيل...",
+    "emailMessageNotFound": "تعذر العثور على رسالة البريد الإلكتروني الأصلية. ربما تم حذفها.",
     "name": "اسم الملف",
     "search_input_placeholder": "بحث عن المرفقات (استخدم \" \" للبحث عن عبارة)",
     "sender": "المرسل",
     "sender_with_count": "المرسل ({{count}})",
+    "showDuplicates": "إظهار الملفات المكررة",
     "size": "حجم الملف",
     "source": "المصدر",
     "subject": "الموضوع"

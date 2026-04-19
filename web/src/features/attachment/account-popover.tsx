@@ -34,11 +34,11 @@ import {
 
 import useMinimalAccountList from '@/hooks/use-minimal-account-list'
 import { cn } from '@/lib/utils'
-import { useSearchContext } from './context'
+import { useAttachmentContext } from './context'
 
 export function AccountPopover() {
   const { t } = useTranslation()
-  const { filter, setFilter } = useSearchContext()
+  const { filter, setFilter } = useAttachmentContext()
   const [search, setSearch] = React.useState('')
   const { minimalList = [] } = useMinimalAccountList()
 

@@ -22,18 +22,22 @@ import { FixedHeader } from '@/components/layout/fixed-header';
 import { Main } from '@/components/layout/main';
 import { AttachmentListPagination } from '@/components/pagination';
 import React from 'react';
-import SearchProvider, { SearchDialogType } from './context';
+import AttachmentProvider, { AttachmentDialogType } from './context';
 import useDialogState from '@/hooks/use-dialog-state';
 import { useTranslation } from 'react-i18next';
 import { AttachmentListTable } from './mail-list-table';
 import { SortingState } from '@tanstack/react-table';
 import { useSearchAttachments } from '@/hooks/use-search-attachments';
 import { AttachmentModel } from '@/api/attachment/api';
+import { MailDisplayDrawer } from './mail-display-dialog';
+import { EnvelopeDeleteDialog } from './delete-dialog';
+import { RestoreMessageDialog } from './restore-message-dialog';
 
 export default function AttachmentSearch() {
   const { t } = useTranslation()
-  const [selectedAttachment, setSelectedAttachment] = React.useState<AttachmentModel | undefined>(undefined);
-  const [open, setOpen] = useDialogState<SearchDialogType>(null)
+  const [currentAttachment, setCurrentAttachment] = React.useState<AttachmentModel | undefined>(undefined);
+  const [open, setOpen] = useDialogState<AttachmentDialogType>(null)
+  const [toDelete, setToDelete] = React.useState<Map<number, Set<string>>>(new Map());
   const [selected, setSelected] = React.useState<Map<number, Set<string>>>(new Map());
   const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "date", desc: true }]);
@@ -72,13 +76,15 @@ export default function AttachmentSearch() {
     <>
       <FixedHeader />
       <Main>
-        <SearchProvider
+        <AttachmentProvider
           value={{
             open,
             setOpen,
-            currentEnvelope: selectedAttachment,
+            currentAttachment,
             selectedTags,
-            setCurrentEnvelope: setSelectedAttachment,
+            setCurrentAttachment,
+            toDelete,
+            setToDelete,
             selected,
             setSelected,
             sorting,
@@ -109,10 +115,6 @@ export default function AttachmentSearch() {
                 <AttachmentListTable
                   isLoading={isLoading}
                   items={attachments}
-                  onAttachmentChanged={(att) => {
-                    setOpen('display');
-                    setSelectedAttachment(att);
-                  }}
                   setSortBy={setSortBy}
                   setSortOrder={setSortOrder}
                 />
@@ -128,42 +130,24 @@ export default function AttachmentSearch() {
             </div>
           </div>
 
-          {/* <MailDisplayDrawer
-            key='search-mail-display'
+          <MailDisplayDrawer
+            key='attachment-mail-display'
             open={open === 'display'}
             onOpenChange={() => setOpen('display')}
           />
 
           <EnvelopeDeleteDialog
-            key='delete-envelope'
+            key='delete-attachment-envelope'
             open={open === 'delete'}
             onOpenChange={() => setOpen('delete')}
           />
 
-          <EditTagsDialog
-            key='edit-attachment-tags-dialog'
-            open={open === 'edit-tags'}
-            onOpenChange={() => setOpen('edit-tags')}
-          />
-
-          <UpdateTagsDialog
-            key='update-attachment-tags-dialog'
-            open={open === 'update-tags'}
-            onOpenChange={() => setOpen('update-tags')}
-          />
-
           <RestoreMessageDialog
-            key='restore-mail-dialog'
+            key='attachment-restore-mail-dialog'
             open={open === 'restore'}
             onOpenChange={() => setOpen('restore')}
           />
-
-          <MailBoxDeleteDialog
-            key='mailbox-delete'
-            open={open === 'delete-mailbox'}
-            onOpenChange={() => setOpen('delete-mailbox')}
-          /> */}
-        </SearchProvider>
+        </AttachmentProvider>
       </Main>
     </>
   );

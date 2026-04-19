@@ -365,10 +365,14 @@
   "attachment": {
     "all_fields_desc": "첨부 파일 이름, 메일 제목 및 발신자 일치",
     "date": "날짜",
+    "download": "다운로드",
+    "downloading": "다운로드 중...",
+    "emailMessageNotFound": "원본 메일을 찾을 수 없습니다. 삭제되었을 수 있습니다.",
     "name": "파일 이름",
     "search_input_placeholder": "첨부 파일 검색 (구문 검색은 \" \" 사용)",
     "sender": "보낸 사람",
     "sender_with_count": "보낸 사람 ({{count}})",
+    "showDuplicates": "중복 파일 표시",
     "size": "파일 크기",
     "source": "출처",
     "subject": "제목"

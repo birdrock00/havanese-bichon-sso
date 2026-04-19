@@ -365,10 +365,14 @@
   "attachment": {
     "all_fields_desc": "Dopasuj nazwę załącznika, temat i nadawcę",
     "date": "Data",
+    "download": "Pobierz",
+    "downloading": "Pobieranie...",
+    "emailMessageNotFound": "Nie można znaleźć oryginalnej wiadomości e-mail. Mogła zostać usunięta.",
     "name": "Nazwa pliku",
     "search_input_placeholder": "Wyszukaj załączniki (użyj \" \" do wyszukiwania fraz)",
     "sender": "Nadawca",
     "sender_with_count": "Nadawca ({{count}})",
+    "showDuplicates": "Pokaż duplikaty",
     "size": "Rozmiar pliku",
     "source": "Źródło",
     "subject": "Temat"

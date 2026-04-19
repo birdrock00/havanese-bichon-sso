@@ -365,10 +365,14 @@
   "attachment": {
     "all_fields_desc": "Matcher vedleggsnavn, emne og avsender",
     "date": "Dato",
+    "download": "Last ned",
+    "downloading": "Laster ned...",
+    "emailMessageNotFound": "Fant ikke den originale e-posten. Den kan ha blitt slettet.",
     "name": "Filnavn",
     "search_input_placeholder": "Søk etter vedlegg (bruk \" \" for frasesøk)",
     "sender": "Avsender",
     "sender_with_count": "Avsender ({{count}})",
+    "showDuplicates": "Vis duplikater",
     "size": "Filstørrelse",
     "source": "Kilde",
     "subject": "Emne"

@@ -42,7 +42,7 @@ import {
 } from '@/components/ui/table'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
-import { useSearchContext } from '../context'
+import { useAttachmentContext } from '../context'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { AttachmentModel } from '@/api/attachment/api'
 
@@ -65,7 +65,7 @@ interface DataTableProps {
 }
 
 export function SearchTable({ columns, data, onRowClick, setSortBy, setSortOrder, children }: DataTableProps) {
-  const { sorting, setSorting } = useSearchContext()
+  const { sorting, setSorting } = useAttachmentContext()
   const { t } = useTranslation()
   const [rowSelection, setRowSelection] = useState({})
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])

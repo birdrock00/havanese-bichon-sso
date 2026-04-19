@@ -365,10 +365,14 @@
   "attachment": {
     "all_fields_desc": "Corrisponde al nome dell'allegato, all'oggetto e al mittente",
     "date": "Data",
+    "download": "Scarica",
+    "downloading": "Download in corso...",
+    "emailMessageNotFound": "Impossibile trovare l'email originale. Potrebbe essere stata eliminata.",
     "name": "Nome file",
     "search_input_placeholder": "Cerca allegati (usa \" \" per la ricerca di frasi)",
     "sender": "Mittente",
     "sender_with_count": "Mittente ({{count}})",
+    "showDuplicates": "Mostra duplicati",
     "size": "Dimensione file",
     "source": "Origine",
     "subject": "Oggetto"

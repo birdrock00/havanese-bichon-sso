@@ -24,8 +24,9 @@ import { useMutation } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'
 import { ToastAction } from '@/components/ui/toast'
-import { useSearchContext } from './context'
 import { EmailEnvelope } from '@/api'
+import { useAttachmentContext } from './context'
+import { useEnvelope } from '@/hooks/use-envelope'
 
 function MessageSummary({ envelope, t }: { envelope: EmailEnvelope, t: (key: string) => string }) {
     return (
@@ -82,13 +83,17 @@ export function RestoreMessageDialog({
     onOpenChange
 }: RestoreMessageDialogProps) {
     const { t } = useTranslation()
-    const { currentEnvelope, selected } = useSearchContext()
+    const { selected, currentAttachment } = useAttachmentContext()
 
     const accountsWithSelection = Array.from(selected.entries()).filter(([_, ids]) => ids.size > 0);
     const selectedCount = accountsWithSelection.reduce((sum, [_, set]) => sum + set.size, 0);
     const accountCount = accountsWithSelection.length;
 
     const isBulk = selectedCount > 0;
+
+    const {
+        data: currentEnvelope,
+    } = useEnvelope(currentAttachment?.account_id, currentAttachment?.envelope_id);
 
 
     const restoreMutation = useMutation({

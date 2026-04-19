@@ -365,10 +365,14 @@
   "attachment": {
     "all_fields_desc": "Coincide con el nombre del adjunto, asunto y remitente",
     "date": "Fecha",
+    "download": "Descargar",
+    "downloading": "Descargando...",
+    "emailMessageNotFound": "No se pudo encontrar el correo electrónico original. Es posible que se haya eliminado.",
     "name": "Nombre de archivo",
     "search_input_placeholder": "Buscar adjuntos (use \" \" para búsqueda de frases)",
     "sender": "Remitente",
     "sender_with_count": "Remitente ({{count}})",
+    "showDuplicates": "Mostrar duplicados",
     "size": "Tamaño del archivo",
     "source": "Fuente",
     "subject": "Asunto"

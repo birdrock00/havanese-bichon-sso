@@ -138,3 +138,10 @@ export const get_attachment_meta = async () => {
     const response = await axiosInstance.get<AttachmentMetadata>("api/v1/attachment_metadata");
     return response.data;
 };
+
+export const get_envelope = async (accountId: number, id: string) => {
+    const response = await axiosInstance.get<EmailEnvelope>(`api/v1/envelope/${accountId}/${id}`);
+    return response.data;
+};
+
+

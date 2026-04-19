@@ -19,9 +19,9 @@
 use crate::modules::logger::file::setup_file_logger;
 use crate::modules::settings::cli::SETTINGS;
 use chrono::Local;
-use tracing_log::LogTracer;
 use std::process;
 use tracing::Level;
+use tracing_log::LogTracer;
 use tracing_subscriber::fmt::{format::Writer, time::FormatTime};
 
 mod file;
@@ -35,17 +35,18 @@ impl FormatTime for LocalTimer {
 }
 
 pub fn initialize_logging() {
-    LogTracer::init().unwrap();
+    let level = validate_log_level(&SETTINGS.bichon_log_level);
+    if matches!(level, Level::DEBUG) || matches!(level, Level::TRACE) {
+        LogTracer::init().unwrap();
+    }
     if SETTINGS.bichon_log_to_file {
-        setup_file_logger().unwrap();
+        setup_file_logger(level).unwrap();
     } else {
-        setup_stdout_logger().unwrap();
+        setup_stdout_logger(level).unwrap();
     }
 }
 
-fn setup_stdout_logger() -> Result<(), tracing::dispatcher::SetGlobalDefaultError> {
-    validate_log_level(&SETTINGS.bichon_log_level);
-    let level = SETTINGS.bichon_log_level.parse::<Level>().unwrap();
+fn setup_stdout_logger(level: Level) -> Result<(), tracing::dispatcher::SetGlobalDefaultError> {
     let with_ansi = SETTINGS.bichon_ansi_logs;
 
     let format = tracing_subscriber::fmt::format()
@@ -63,13 +64,16 @@ fn setup_stdout_logger() -> Result<(), tracing::dispatcher::SetGlobalDefaultErro
     tracing::subscriber::set_global_default(subscriber)
 }
 
-fn validate_log_level(value: &String) {
-    if value.parse::<Level>().is_err() {
-        eprintln!(
-            "Invalid log level specified. Use one of: error, warn, info, debug, trace. 
-        The log level you currently specified is 'rustmailer_log_level'='{}'",
-            value
-        );
-        process::exit(1);
+fn validate_log_level(value: &String) -> Level {
+    match value.parse::<Level>() {
+        Ok(level) => level,
+        Err(_) => {
+            eprintln!(
+                "Invalid log level specified. Use one of: error, warn, info, debug, trace. 
+                The log level you currently specified is 'rustmailer_log_level'='{}'",
+                value
+            );
+            process::exit(1);
+        }
     }
 }

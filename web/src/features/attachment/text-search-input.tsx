@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Search, X, Clock, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useSearchContext } from "./context"
+import { useAttachmentContext } from "./context"
 import { useTranslation } from "react-i18next"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -34,7 +34,7 @@ const SEARCH_FIELDS: SearchField[] = ["text", "subject", "attachment_name", "fro
 
 export function TextSearchInput() {
     const { t } = useTranslation()
-    const { filter, setFilter } = useSearchContext()
+    const { filter, setFilter } = useAttachmentContext()
 
     const [value, setValue] = useState("")
     const [field, setField] = useState<SearchField>("text")

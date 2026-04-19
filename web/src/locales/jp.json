@@ -365,10 +365,14 @@
   "attachment": {
     "all_fields_desc": "添付ファイル名、件名、送信者を照合",
     "date": "日付",
+    "download": "ダウンロード",
+    "downloading": "ダウンロード中...",
+    "emailMessageNotFound": "元のメールが見つかりません。削除された可能性があります。",
     "name": "ファイル名",
     "search_input_placeholder": "添付ファイルを検索 (フレーズ検索は \" \" を使用)",
     "sender": "送信者",
     "sender_with_count": "送信者 ({{count}})",
+    "showDuplicates": "重複ファイルを表示",
     "size": "ファイルサイズ",
     "source": "ソース",
     "subject": "件名"

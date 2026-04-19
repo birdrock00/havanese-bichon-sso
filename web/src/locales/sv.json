@@ -365,10 +365,14 @@
   "attachment": {
     "all_fields_desc": "Matchar bilagenamn, ämne och avsändare",
     "date": "Datum",
+    "download": "Ladda ner",
+    "downloading": "Laddar ner...",
+    "emailMessageNotFound": "Det går inte att hitta det ursprungliga e-postmeddelandet. Det kan ha raderats.",
     "name": "Filnamn",
     "search_input_placeholder": "Sök efter bilagor (använd \" \" för frassökning)",
     "sender": "Avsändare",
     "sender_with_count": "Avsändare ({{count}})",
+    "showDuplicates": "Visa dubbletter",
     "size": "Filstorlek",
     "source": "Källa",
     "subject": "Ämne"
