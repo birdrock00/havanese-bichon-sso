@@ -23,8 +23,6 @@ import { useTranslation } from 'react-i18next';
 import { getToken } from '@/stores/authStore';
 import { useNavigate } from '@tanstack/react-router';
 import useMinimalAccountList from '@/hooks/use-minimal-account-list';
-import { Badge } from '@/components/ui/badge';
-import LongText from '@/components/long-text';
 
 interface DailyActivity {
   date: string;
@@ -108,7 +106,7 @@ export default function MailArchiveDashboard() {
     queryKey: ['dashboard-stats'],
     enabled: !!token,
     queryFn: get_dashboard_stats,
-    placeholderData: INITIAL_DASHBOARD_STATS,
+    initialData: INITIAL_DASHBOARD_STATS,
   });
 
   const navigate = useNavigate();
