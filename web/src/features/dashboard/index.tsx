@@ -106,16 +106,20 @@ export default function MailArchiveDashboard() {
     queryKey: ['dashboard-stats'],
     enabled: !!token,
     queryFn: get_dashboard_stats,
-    initialData: INITIAL_DASHBOARD_STATS,
+    placeholderData: INITIAL_DASHBOARD_STATS,
   });
 
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const currentLocale = i18n.resolvedLanguage || i18n.language || navigator.language;
 
-  const logicalSize = stats?.total_size_bytes ?? 0;
-  const blobSize = stats?.storage_usage_bytes ?? 0;
-  const indexSize = stats?.index_usage_bytes ?? 0;
+
+  const stats1 = stats ?? INITIAL_DASHBOARD_STATS;
+
+
+  const logicalSize = stats1.total_size_bytes ?? 0;
+  const blobSize = stats1.storage_usage_bytes ?? 0;
+  const indexSize = stats1.index_usage_bytes ?? 0;
   const physicalTotal = blobSize + indexSize;
 
   const savingsPercent = logicalSize > 0
@@ -125,13 +129,13 @@ export default function MailArchiveDashboard() {
   const blobWidth = logicalSize > 0 ? (blobSize / logicalSize) * 100 : 0;
   const indexWidth = logicalSize > 0 ? (indexSize / logicalSize) * 100 : 0;
 
-  const totalAttachments = (stats?.with_attachment_count ?? 0) + (stats?.without_attachment_count ?? 0);
-  const attachmentRatio = totalAttachments > 0 ? (stats?.with_attachment_count ?? 0) / totalAttachments : 0;
+  const totalAttachments = (stats1.with_attachment_count ?? 0) + (stats1.without_attachment_count ?? 0);
+  const attachmentRatio = totalAttachments > 0 ? (stats1.with_attachment_count ?? 0) / totalAttachments : 0;
 
-  const hasRecentActivity = stats?.recent_activity && stats.recent_activity.length > 0;
-  const hasTopSenders = stats?.top_senders && stats.top_senders.length > 0;
-  const hasTopEmails = stats?.top_largest_emails && stats.top_largest_emails.length > 0;
-  const hasTopAccounts = stats?.top_accounts && stats.top_accounts.length > 0;
+  const hasRecentActivity = stats1.recent_activity && stats1.recent_activity.length > 0;
+  const hasTopSenders = stats1.top_senders && stats1.top_senders.length > 0;
+  const hasTopEmails = stats1.top_largest_emails && stats1.top_largest_emails.length > 0;
+  const hasTopAccounts = stats1.top_accounts && stats1.top_accounts.length > 0;
 
   const { minimalList } = useMinimalAccountList();
   const getAccountIdByEmail = (email: string): number | null => {
@@ -200,7 +204,7 @@ export default function MailArchiveDashboard() {
                 <Users className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl font-bold">{formatNumber(stats!.account_count)}</div>
+                <div className="text-xl font-bold">{formatNumber(stats1.account_count)}</div>
                 <p className="text-xs text-muted-foreground">{t('dashboard.connected')}</p>
               </CardContent>
             </Card>
@@ -211,7 +215,7 @@ export default function MailArchiveDashboard() {
                 <Mail className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl font-bold">{formatNumber(stats!.email_count)}</div>
+                <div className="text-xl font-bold">{formatNumber(stats1.email_count)}</div>
                 <p className="text-xs text-muted-foreground">{t('dashboard.syncedLocally')}</p>
               </CardContent>
             </Card>
@@ -221,15 +225,15 @@ export default function MailArchiveDashboard() {
               </CardHeader>
               <CardContent>
                 <div className='text-xl font-bold truncate text-primary tracking-tighter'>
-                  {stats!.system_version ? (
-                    <a href={`https://github.com/rustmailer/bichon/releases/tag/${stats!.system_version}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                      {stats!.system_version}
+                  {stats1.system_version ? (
+                    <a href={`https://github.com/rustmailer/bichon/releases/tag/${stats1.system_version}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                      {stats1.system_version}
                     </a>
                   ) : 'N/A'}
                 </div>
                 <div className="flex items-center gap-1.5 mt-1">
                   <GithubIcon className="h-5 w-5 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground font-mono truncate">{stats!.commit_hash?.substring(0, 7) ?? 'N/A'}</p>
+                  <p className="text-xs text-muted-foreground font-mono truncate">{stats1.commit_hash?.substring(0, 7) ?? 'N/A'}</p>
                 </div>
               </CardContent>
             </Card>
@@ -288,7 +292,7 @@ export default function MailArchiveDashboard() {
               <CardContent className="h-36">
                 {hasRecentActivity ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={convertRecentActivity(stats!.recent_activity, currentLocale)} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <BarChart data={convertRecentActivity(stats1.recent_activity, currentLocale)} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
                       <XAxis dataKey="date" tick={{ fontSize: 12 }} interval="preserveStart" tickCount={10} />
                       <YAxis tick={{ fontSize: 12 }} />
@@ -377,7 +381,7 @@ export default function MailArchiveDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {stats!.top_senders.map((s) => (
+                      {stats1.top_senders.map((s) => (
                         <TableRow key={s.key}>
                           <TableCell>
                             <div className="group relative flex items-center w-full min-w-0 h-full px-2 overflow-hidden">
@@ -422,7 +426,7 @@ export default function MailArchiveDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {stats!.top_largest_emails.map((m, i) => (
+                      {stats1.top_largest_emails.map((m, i) => (
                         <TableRow key={i}>
                           <TableCell>
                             <div className="group relative flex items-center w-full min-w-0 h-full px-2 overflow-hidden">
@@ -450,51 +454,6 @@ export default function MailArchiveDashboard() {
                   </Table>
                 ) : (
                   <EmptyTable title={t('dashboard.noLargeEmails')} />
-                )}
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="!px-4 !pt-4 !pb-1">
-                <CardTitle className="text-xs font-bold uppercase tracking-wider">{t('dashboard.top10Accounts')}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {hasTopAccounts ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs">{t('dashboard.account')}</TableHead>
-                        <TableHead className="text-right text-xs">{t('dashboard.emails')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {stats!.top_accounts.map((acc) => (
-                        <TableRow key={acc.key}>
-                          <TableCell>
-                            <div className="group relative flex items-center w-full min-w-0 h-full px-2 overflow-hidden">
-                              <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                              <div className="text-xs flex flex-wrap gap-x-1 min-w-0 flex-1">
-                                <span className="flex items-center">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleQuickSearch({ account_ids: [getAccountIdByEmail(acc.key) || 0] })
-                                    }}
-                                    className="hover:text-primary hover:underline transition-colors truncate max-w-[258px]"
-                                  >
-                                    {acc.key}
-                                  </button>
-                                </span>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs">{formatNumber(acc.count)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <EmptyTable title={t('dashboard.noAccountData')} />
                 )}
               </CardContent>
             </Card>
@@ -547,6 +506,51 @@ export default function MailArchiveDashboard() {
                   </Table>
                 ) : (
                   <EmptyTable title="No attachment data" />
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="!px-4 !pt-4 !pb-1">
+                <CardTitle className="text-xs font-bold uppercase tracking-wider">{t('dashboard.top10Accounts')}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                {hasTopAccounts ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">{t('dashboard.account')}</TableHead>
+                        <TableHead className="text-right text-xs">{t('dashboard.emails')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {stats1.top_accounts.map((acc) => (
+                        <TableRow key={acc.key}>
+                          <TableCell>
+                            <div className="group relative flex items-center w-full min-w-0 h-full px-2 overflow-hidden">
+                              <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <div className="text-xs flex flex-wrap gap-x-1 min-w-0 flex-1">
+                                <span className="flex items-center">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleQuickSearch({ account_ids: [getAccountIdByEmail(acc.key) || 0] })
+                                    }}
+                                    className="hover:text-primary hover:underline transition-colors truncate max-w-[258px]"
+                                  >
+                                    {acc.key}
+                                  </button>
+                                </span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs">{formatNumber(acc.count)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <EmptyTable title={t('dashboard.noAccountData')} />
                 )}
               </CardContent>
             </Card>
