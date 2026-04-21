@@ -132,9 +132,6 @@ export type ServerConfigurations = {
     bichon_envelope_cache_size: number
 
     bichon_sync_concurrency?: number | null
-    bichon_duckdb_threads?: number | null
-    bichon_duckdb_max_memory?: string | null
-
     bichon_enable_smtp: boolean
     bichon_smtp_port: number
     bichon_smtp_encryption: "none" | "starttls" | "tls"

@@ -129,7 +129,6 @@ export default function ServerConfigurationsPage() {
   return (
     <div className="w-full max-w-6xl mx-auto">
       <ScrollArea className="h-full w-full">
-        {/* Header Section */}
         <div className="px-6 pt-6 pb-2">
           <div className="flex items-start gap-4 p-5 rounded-xl border bg-gradient-to-br from-secondary/50 to-background shadow-inner">
             <div className="p-2 bg-primary/10 rounded-lg">
@@ -145,73 +144,60 @@ export default function ServerConfigurationsPage() {
             </div>
           </div>
         </div>
-
-        {/* Main Grid */}
         <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-          {/* Network Settings */}
           <SettingsCard
             icon={Server}
             title={t("systemConfig.sections.network.title")}
             description={t("systemConfig.sections.network.desc")}
           >
-            <SettingRow label="bichon_bind_ip" value={data.bichon_bind_ip ?? "0.0.0.0"} />
-            <SettingRow label="bichon_http_port" value={data.bichon_http_port} />
-            <SettingRow label="bichon_base_url" value={data.bichon_base_url} />
-            <SettingRow label="bichon_public_url" value={data.bichon_public_url} />
+            <SettingRow label="BICHON_BIND_IP" value={data.bichon_bind_ip ?? "0.0.0.0"} />
+            <SettingRow label="BICHON_HTTP_PORT" value={data.bichon_http_port} />
+            <SettingRow label="BICHON_BASE_URL" value={data.bichon_base_url} />
+            <SettingRow label="BICHON_PUBLIC_URL" value={data.bichon_public_url} />
             <SettingRow
-              label="bichon_enable_rest_https"
+              label="BICHON_ENABLE_REST_HTTPS"
               value={<BooleanBadge value={data.bichon_enable_rest_https} />}
             />
           </SettingsCard>
-
-          {/* SMTP Server (NEW) */}
           <SettingsCard
             icon={Mail}
             title={t("systemConfig.sections.smtp.title", "SMTP Server")}
             description={t("systemConfig.sections.smtp.desc", "Incoming mail reception settings")}
           >
-            <SettingRow label="bichon_enable_smtp" value={<BooleanBadge value={data.bichon_enable_smtp} />} />
-            <SettingRow label="bichon_smtp_port" value={data.bichon_smtp_port} />
-            <SettingRow label="bichon_smtp_encryption" value={<span className="uppercase text-xs font-bold">{data.bichon_smtp_encryption}</span>} />
-            <SettingRow label="bichon_smtp_auth_required" value={<BooleanBadge value={data.bichon_smtp_auth_required} />} />
+            <SettingRow label="BICHON_ENABLE_SMTP" value={<BooleanBadge value={data.bichon_enable_smtp} />} />
+            <SettingRow label="BICHON_SMTP_PORT" value={data.bichon_smtp_port} />
+            <SettingRow label="BICHON_SMTP_ENCRYPTION" value={data.bichon_smtp_encryption} />
+            <SettingRow label="BICHON_SMTP_AUTH_REQUIRED" value={<BooleanBadge value={data.bichon_smtp_auth_required} />} />
           </SettingsCard>
-
-          {/* Performance & Engine (NEWly structured) */}
           <SettingsCard
             icon={Zap}
             title={t("systemConfig.sections.performance.title")}
             description={t("systemConfig.sections.performance.desc")}
           >
-            <SettingRow label="bichon_duckdb_threads" value={data.bichon_duckdb_threads ?? t("systemConfig.status.auto")} />
-            <SettingRow label="bichon_sync_concurrency" value={data.bichon_sync_concurrency ?? t("systemConfig.status.auto")} />
+            <SettingRow label="BICHON_SYNC_CONCURRENCY" value={data.bichon_sync_concurrency ?? t("systemConfig.status.auto")} />
             <SettingRow
-              label="bichon_http_compression_enabled"
+              label="BICHON_HTTP_COMPRESSION_ENABLED"
               value={<BooleanBadge value={data.bichon_http_compression_enabled} />}
             />
           </SettingsCard>
-
-          {/* Storage & Directories */}
           <SettingsCard
             icon={Database}
             title={t("systemConfig.sections.storage.title")}
             description={t("systemConfig.sections.storage.desc")}
           >
-            <SettingRow label="bichon_root_dir" value={<span className="text-[10px] font-mono">{data.bichon_root_dir}</span>} />
-            <SettingRow label="bichon_data_dir" value={data.bichon_data_dir ? <span className="text-[10px] font-mono">{data.bichon_data_dir}</span> : "—"} />
-            <SettingRow label="bichon_index_dir" value={data.bichon_index_dir ? <span className="text-[10px] font-mono">{data.bichon_index_dir}</span> : "—"} />
-            <SettingRow label="bichon_metadata_cache_size" value={formatMB(data.bichon_metadata_cache_size)} />
-            <SettingRow label="bichon_envelope_cache_size" value={formatMB(data.bichon_envelope_cache_size)} />
+            <SettingRow label="BICHON_ROOT_DIR" value={<span className="font-mono">{data.bichon_root_dir}</span>} />
+            <SettingRow label="BICHON_DATA_DIR" value={data.bichon_data_dir ? <span className="font-mono">{data.bichon_data_dir}</span> : "—"} />
+            <SettingRow label="BICHON_INDEX_DIR" value={data.bichon_index_dir ? <span className="font-mono">{data.bichon_index_dir}</span> : "—"} />
+            <SettingRow label="BICHON_METADATA_CACHE_SIZE" value={formatMB(data.bichon_metadata_cache_size)} />
+            <SettingRow label="BICHON_ENVELOPE_CACHE_SIZE" value={formatMB(data.bichon_envelope_cache_size)} />
           </SettingsCard>
-
-          {/* Security & Access */}
           <SettingsCard
             icon={ShieldCheck}
             title={t("systemConfig.sections.security.title")}
             description={t("systemConfig.sections.security.desc")}
           >
             <SettingRow
-              label="bichon_encrypt_password_set"
+              label="BICHON_ENCRYPT_PASSWORD_SET"
               value={
                 data.bichon_encrypt_password_set ? (
                   <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
@@ -223,22 +209,20 @@ export default function ServerConfigurationsPage() {
               }
             />
             <SettingRow
-              label="bichon_webui_token_expiration_hours"
+              label="BICHON_WEBUI_TOKEN_EXPIRATION_HOURS"
               value={`${data.bichon_webui_token_expiration_hours}h`}
             />
           </SettingsCard>
-
-          {/* Logging Settings */}
           <SettingsCard
             icon={Activity}
             title={t("systemConfig.sections.logging.title")}
             description={t("systemConfig.sections.logging.desc")}
           >
-            <SettingRow label="bichon_log_level" value={<Badge variant="outline" className="uppercase">{data.bichon_log_level}</Badge>} />
-            <SettingRow label="bichon_ansi_logs" value={<BooleanBadge value={data.bichon_ansi_logs} />} />
-            <SettingRow label="bichon_json_logs" value={<BooleanBadge value={data.bichon_json_logs} />} />
-            <SettingRow label="bichon_log_to_file" value={<BooleanBadge value={data.bichon_log_to_file} />} />
-            <SettingRow label="bichon_max_server_log_files" value={data.bichon_max_server_log_files} />
+            <SettingRow label="BICHON_LOG_LEVEL" value={<Badge variant="outline" className="uppercase">{data.bichon_log_level}</Badge>} />
+            <SettingRow label="BICHON_ANSI_LOGS" value={<BooleanBadge value={data.bichon_ansi_logs} />} />
+            <SettingRow label="BICHON_JSON_LOGS" value={<BooleanBadge value={data.bichon_json_logs} />} />
+            <SettingRow label="BICHON_LOG_TO_FILE" value={<BooleanBadge value={data.bichon_log_to_file} />} />
+            <SettingRow label="BICHON_MAX_SERVER_LOG_FILES" value={data.bichon_max_server_log_files} />
           </SettingsCard>
 
         </div>

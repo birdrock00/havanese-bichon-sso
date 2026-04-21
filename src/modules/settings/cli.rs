@@ -261,21 +261,6 @@ pub struct Settings {
     #[clap(
         long,
         env,
-        help = "Number of DuckDB execution threads (default: auto)",
-        value_parser = clap::value_parser!(u16).range(1..)
-    )]
-    pub bichon_duckdb_threads: Option<i64>,
-
-    #[clap(
-        long,
-        env,
-        help = "Maximum memory DuckDB may use (e.g. 512MB, 2GB, 80%)"
-    )]
-    pub bichon_duckdb_max_memory: Option<String>,
-
-    #[clap(
-        long,
-        env,
         default_value = "false",
         help = "Enable the embedded SMTP server for real-time email receiving"
     )]
