@@ -35,7 +35,7 @@ use crate::{
         cache::imap::mailbox::MailBox,
         database::{list_all_impl, secondary_find_impl, with_transaction},
         error::BichonResult,
-        store::tantivy::envelope::ENVELOPE_MANAGER,
+        store::tantivy::{attachment::ATTACHMENT_MANAGER, envelope::ENVELOPE_MANAGER},
         users::{role::DEFAULT_ACCOUNT_MANAGER_ROLE_ID, UserModel, DEFAULT_ADMIN_USER_ID},
     },
     utc_now,
@@ -372,7 +372,12 @@ impl AccountV4 {
         OAuth2AccessToken::try_delete(account.id).await?;
         UserModel::cleanup_account(account.id).await?;
         MailBox::clean(account.id).await?;
-        ENVELOPE_MANAGER.delete_account_envelopes(account.id).await?;
+        ENVELOPE_MANAGER
+            .delete_account_envelopes(account.id)
+            .await?;
+        ATTACHMENT_MANAGER
+            .delete_account_attachments(account.id)
+            .await?;
         Self::delete_account(account.id).await?;
         info!("Sequential cleanup completed for account: {}", account.id);
         Ok(())

@@ -53,6 +53,7 @@ export interface DashboardStats {
     with_attachment_count: number;         // Emails with attachments
     without_attachment_count: number;      // Emails without attachments
     top_largest_emails: LargestEmail[];    // Top 10 largest emails
+    top_largest_attachments: LargestAttachment[];    // Top 10 largest attachments
     system_version: string, //The semantic version string of the currently running backend service
     commit_hash: string //Git commit hash used to build this system version
 }
@@ -69,6 +70,7 @@ export const INITIAL_DASHBOARD_STATS: DashboardStats = {
     with_attachment_count: 0,
     without_attachment_count: 0,
     top_largest_emails: [],
+    top_largest_attachments: [],
     system_version: '0.0.0',
     commit_hash: 'n/a'
 };
@@ -87,6 +89,13 @@ export interface Group {
 export interface LargestEmail {
     subject: string;        // Email subject
     size_bytes: number;     // Email size in bytes
+    id: string
+}
+
+export interface LargestAttachment {
+    name: string;        // Attachment name
+    size_bytes: number;     // Email size in bytes
+    id: String // attachment id
 }
 
 export interface Proxy {

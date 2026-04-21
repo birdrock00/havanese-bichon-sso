@@ -38,6 +38,7 @@ use crate::{
 pub struct EmailSearchFilter {
     pub text: Option<String>,
     pub subject: Option<String>,
+    pub id: Option<String>,
     pub body: Option<String>,
     pub from: Option<String>,
     pub to: Option<String>,
@@ -111,6 +112,7 @@ pub async fn search_messages_impl(
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, Object)]
 pub struct AttachmentSearchFilter {
+    pub id: Option<String>,
     pub text: Option<String>,
     pub subject: Option<String>,
     pub from: Option<String>,

@@ -343,9 +343,14 @@ impl IndexManager {
             subqueries.push((Occur::Must, Box::new(query)));
         }
 
-
         if let Some(content_hash) = &filter.content_hash {
             let term = Term::from_field_text(f.f_content_hash, content_hash);
+            let query = TermQuery::new(term, IndexRecordOption::Basic);
+            subqueries.push((Occur::Must, Box::new(query)));
+        }
+
+        if let Some(id) = &filter.id {
+            let term = Term::from_field_text(f.f_id, id);
             let query = TermQuery::new(term, IndexRecordOption::Basic);
             subqueries.push((Occur::Must, Box::new(query)));
         }
@@ -539,17 +544,24 @@ impl IndexManager {
         let attachment_docs: Vec<(Option<u64>, DocAddress)> = searcher
             .search(
                 &query,
-                &TopDocs::with_limit(10).order_by_fast_field(F_SIZE, Order::Desc),
+                &TopDocs::with_limit(200).order_by_fast_field(F_SIZE, Order::Desc),
             )
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         let mut result = Vec::new();
+        let mut seen_hashes = std::collections::HashSet::new();
+
         for (_, doc_address) in attachment_docs {
             let doc: TantivyDocument = searcher
                 .doc(doc_address)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
             let att = LargestAttachment::from_tantivy_doc(&doc)?;
-            result.push(att);
+            if seen_hashes.insert(att.content_hash.clone()) {
+                result.push(att);
+            }
+            if result.len() >= 10 {
+                break;
+            }
         }
         Ok(result)
     }
@@ -566,7 +578,7 @@ impl IndexManager {
         Ok(())
     }
 
-    pub async fn delete_mailbox_envelopes(
+    pub async fn delete_mailbox_attachments(
         &self,
         account_id: u64,
         mailbox_ids: Vec<u64>,

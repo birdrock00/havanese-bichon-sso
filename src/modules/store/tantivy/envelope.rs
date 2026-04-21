@@ -390,6 +390,12 @@ impl IndexManager {
             }
         }
 
+        if let Some(ref id) = filter.id {
+            let term = Term::from_field_text(f.f_id, id);
+            let query = TermQuery::new(term, IndexRecordOption::Basic);
+            subqueries.push((Occur::Must, Box::new(query)));
+        }
+
         if let Some(ref extension) = filter.attachment_extension {
             let term = Term::from_field_text(f.f_attachment_ext, extension);
             let query = TermQuery::new(term, IndexRecordOption::Basic);

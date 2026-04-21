@@ -17,7 +17,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::modules::{
-    cache::imap::mailbox::MailBox, error::BichonResult, store::tantivy::envelope::ENVELOPE_MANAGER,
+    cache::imap::mailbox::MailBox,
+    error::BichonResult,
+    store::tantivy::{attachment::ATTACHMENT_MANAGER, envelope::ENVELOPE_MANAGER},
 };
 
 pub async fn delete_mailbox_impl(account_id: u64, mailbox_id: u64) -> BichonResult<()> {
@@ -44,6 +46,9 @@ pub async fn delete_mailbox_impl(account_id: u64, mailbox_id: u64) -> BichonResu
 
     ENVELOPE_MANAGER
         .delete_mailbox_envelopes(account_id, ids_to_delete.clone())
+        .await?;
+    ATTACHMENT_MANAGER
+        .delete_mailbox_attachments(account_id, ids_to_delete.clone())
         .await?;
     Ok(())
 }

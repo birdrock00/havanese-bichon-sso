@@ -17,7 +17,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::modules::{
-    store::tantivy::{envelope::ENVELOPE_MANAGER, fields::F_ID, schema::SchemaTools},
+    store::tantivy::{
+        attachment::ATTACHMENT_MANAGER,
+        envelope::ENVELOPE_MANAGER,
+        fields::{F_CONTENT_HASH, F_ID},
+        schema::SchemaTools,
+    },
     users::permissions::Permission,
 };
 use poem_openapi::Object;
@@ -39,17 +44,18 @@ use crate::{
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize, Object)]
 pub struct DashboardStats {
-    pub account_count: usize,                  // Number of accounts
-    pub email_count: u64,                      // Total number of emails
-    pub total_size_bytes: u64,                 // Total size of all emails (in bytes)
-    pub storage_usage_bytes: u64,              // Actual storage used (in bytes)
-    pub index_usage_bytes: u64,                // Index storage size (in bytes)
-    pub recent_activity: Vec<TimeBucket>,      // Email activity over recent days
-    pub top_senders: Vec<Group>,               // Top 10 senders
-    pub top_accounts: Vec<Group>,              // Top 10 accounts
-    pub with_attachment_count: u64,            // Emails with attachments
-    pub without_attachment_count: u64,         // Emails without attachments
-    pub top_largest_emails: Vec<LargestEmail>, // Top 10 largest emails
+    pub account_count: usize,                            // Number of accounts
+    pub email_count: u64,                                // Total number of emails
+    pub total_size_bytes: u64,                           // Total size of all emails (in bytes)
+    pub storage_usage_bytes: u64,                        // Actual storage used (in bytes)
+    pub index_usage_bytes: u64,                          // Index storage size (in bytes)
+    pub recent_activity: Vec<TimeBucket>,                // Email activity over recent days
+    pub top_senders: Vec<Group>,                         // Top 10 senders
+    pub top_accounts: Vec<Group>,                        // Top 10 accounts
+    pub with_attachment_count: u64,                      // Emails with attachments
+    pub without_attachment_count: u64,                   // Emails without attachments
+    pub top_largest_emails: Vec<LargestEmail>,           // Top 10 largest emails
+    pub top_largest_attachments: Vec<LargestAttachment>, // Top 10 largest attachments
     pub system_version: String, // The semantic version string of the currently running backend service
     pub commit_hash: String,    // Git commit hash used to build this system version
 }
@@ -66,9 +72,16 @@ impl DashboardStats {
             Some(context.user.account_access_map.keys().cloned().collect())
         };
 
-        let mut stat = ENVELOPE_MANAGER.get_dashboard_stats(&authorized_ids).await?;
+        let mut stat = ENVELOPE_MANAGER
+            .get_dashboard_stats(&authorized_ids)
+            .await?;
 
-        stat.top_largest_emails = ENVELOPE_MANAGER.top_10_largest_emails(&authorized_ids).await?;
+        stat.top_largest_emails = ENVELOPE_MANAGER
+            .top_10_largest_emails(&authorized_ids)
+            .await?;
+        stat.top_largest_attachments = ATTACHMENT_MANAGER
+            .top_10_largest_attachments(&authorized_ids)
+            .await?;
 
         stat.account_count = if has_all_accounts {
             AccountModel::count().await?
@@ -165,6 +178,7 @@ pub struct LargestAttachment {
     pub name: String,    // Attachment name
     pub size_bytes: u64, // Attachment size in bytes
     pub id: String,
+    pub content_hash: String,
 }
 
 impl LargestAttachment {
@@ -205,12 +219,26 @@ impl LargestAttachment {
             )
         })?;
 
-        let envelope = LargestAttachment {
+        let value = document.get_first(fields.f_content_hash).ok_or_else(|| {
+            raise_error!(
+                format!("'{}' field not found", F_CONTENT_HASH),
+                ErrorCode::InternalError
+            )
+        })?;
+        let content_hash = value.as_str().map(|s| s.to_string()).ok_or_else(|| {
+            raise_error!(
+                format!("'{}' field is not a string", F_CONTENT_HASH),
+                ErrorCode::InternalError
+            )
+        })?;
+
+        let attachment = LargestAttachment {
             name,
             size_bytes,
             id,
+            content_hash,
         };
 
-        Ok(envelope)
+        Ok(attachment)
     }
 }

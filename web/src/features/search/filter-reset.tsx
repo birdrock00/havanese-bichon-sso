@@ -38,20 +38,20 @@ export function FilterResetButton() {
 
     return (
         <Button
-            variant="default"
+            variant="ghost"
             size="sm"
             onClick={() => setFilter(q ? { q } : {})}
             className={cn(
-                "h-6 px-2 text-xs gap-1.5 font-normal",
-                "text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                "h-7 px-2 text-xs gap-1.5 font-medium rounded-md",
+                "text-foreground/70 hover:text-foreground hover:bg-accent transition-all duration-200"
             )}
             title={t('search_reset.tooltip')}
         >
             <span>{t('search_reset.label')}</span>
-            <div className="flex items-center justify-center w-4 h-4 rounded-full bg-muted-foreground/20 text-[10px]">
+            <div className="flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
                 {activeFiltersCount}
             </div>
-            <X className="h-3 w-3" />
+            <X className="h-4 w-4" />
         </Button>
     );
 }

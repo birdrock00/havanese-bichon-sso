@@ -5,76 +5,101 @@
 
 @layer base {
   :root {
-      --background: 271 8% 98%;
-      --foreground: 271 56% 6%;
-      --muted: 271 8% 92%;
-      --muted-foreground: 271 10% 35%;
-      --popover: 271 8% 98%;
-      --popover-foreground: 271 56% 6%;
-      --card: 271 8% 97%;
-      --card-foreground: 271 56% 5%;
-      --border: 271 6% 88%;
-      --input: 271 6% 88%;
-      --primary: 271 60% 66%;
-      --primary-foreground: 0 0% 0%;
-      --secondary: 91 55% 58%;
-      --secondary-foreground: 91 50% 10%;
-      --accent: 91 55% 58%;
-      --accent-foreground: 91 50% 10%;
-      --destructive: 17 85% 48%;
-      --destructive-foreground: 0 0% 100%;
-      --ring: 271 60% 66%;
-      --chart-1: 271 60% 66%;
-      --chart-2: 91 55% 58%;
-      --chart-3: 91 55% 58%;
-      --chart-4: 91 55% 62%;
-      --chart-5: 271 63% 66%;
-      --radius: 0.5rem;
-      /* Sidebar */
-      --sidebar-background: 271 8% 98%;
-      --sidebar-foreground: 271 56% 6%;
-      --sidebar-primary: 271 60% 66%;
-      --sidebar-primary-foreground: 0 0% 0%;
-      --sidebar-accent: 91 55% 58%;
-      --sidebar-accent-foreground: 91 50% 10%;
-      --sidebar-border: 271 6% 88%;
-      --sidebar-ring: 271 60% 66%;
-  }
-  .dark {
-      --background: 271 20% 10%;
-      --foreground: 271 10% 96%;
-      --muted: 271 10% 14%;
-      --muted-foreground: 271 10% 65%;
-      --popover: 271 20% 10%;
-      --popover-foreground: 271 10% 96%;
-      --card: 271 20% 13%;
-      --card-foreground: 0 0% 100%;
-      --border: 271 12% 22%;
-      --input: 271 12% 22%;
-      --primary: 271 50% 66%;
-      --primary-foreground: 0 0% 0%;
-      --secondary: 91 45% 58%;
-      --secondary-foreground: 91 40% 10%;
-      --accent: 91 45% 58%;
-      --accent-foreground: 91 40% 10%;
-      --destructive: 17 85% 55%;
-      --destructive-foreground: 0 0% 100%;
-      --ring: 271 50% 66%;
-      --chart-1: 271 50% 66%;
-      --chart-2: 91 45% 58%;
-      --chart-3: 91 45% 58%;
-      --chart-4: 91 45% 62%;
-      --chart-5: 271 55% 66%;
+    /* 亮色模式：保持清爽，略微加深边框对比度 */
+    --background: 0 0% 100%;
+    --foreground: 215 28% 17%;
+    
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 16% 47%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 28% 17%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 28% 17%;
+    
+    /* 提升亮色下的边框清晰度 */
+    --border: 214 32% 88%;
+    --input: 214 32% 88%;
+    
+    --primary: 221 83% 53%;
+    --primary-foreground: 210 40% 98%;
+    
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222 47% 11%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --ring: 221 83% 53%;
+    --radius: 0.35rem;
 
-      /* Sidebar */
-      --sidebar-background: 271 20% 10%;
-      --sidebar-foreground: 271 10% 96%;
-      --sidebar-primary: 271 50% 66%;
-      --sidebar-primary-foreground: 0 0% 0%;
-      --sidebar-accent: 91 45% 58%;
-      --sidebar-accent-foreground: 91 40% 10%;
-      --sidebar-border: 271 12% 22%;
-      --sidebar-ring: 271 50% 66%;
+    --chart-1: 221 83% 53%;
+    --chart-2: 200 90% 40%;
+    --chart-3: 35 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+
+    --sidebar-background: 210 40% 98%;
+    --sidebar-foreground: 215 28% 17%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 214 32% 91%;
+    --sidebar-accent-foreground: 215 28% 17%;
+    --sidebar-border: 214 32% 88%;
+    --sidebar-ring: 221 83% 53%;
+  }
+
+  .dark {
+    /* 背景：采用质感深灰 (Slate 900级别) 而不是纯黑 */
+    --background: 215 20% 12%; 
+    --foreground: 210 40% 98%; /* 更明亮的纯白主文本 */
+    
+    /* 卡片和悬浮层：比背景明显提亮一个色阶 (Slate 800级别)，形成物理层次感 */
+    --card: 215 20% 16%; 
+    --card-foreground: 210 40% 98%;
+    --popover: 215 20% 16%;
+    --popover-foreground: 210 40% 98%;
+    
+    /* 弱化背景：用于 Table 表头、Hover 状态，再次提亮 */
+    --muted: 215 20% 22%; 
+    /* 弱化文字：明度提高到 70%，确保在深色背景上不费眼 */
+    --muted-foreground: 215 15% 70%; 
+    
+    /* 边框和输入框：使用高光轮廓线，对比度极强，切分区域极其清晰 */
+    --border: 215 20% 28%; 
+    --input: 215 20% 28%;
+    
+    /* 主色调：采用穿透力更强的高明度冰蓝色 */
+    --primary: 217 90% 70%; 
+    --primary-foreground: 215 20% 12%;
+    
+    --secondary: 215 20% 22%;
+    --secondary-foreground: 210 40% 98%;
+    --accent: 215 20% 22%;
+    --accent-foreground: 210 40% 98%;
+    
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --ring: 217 90% 70%;
+
+    --chart-1: 217 90% 70%;
+    --chart-2: 200 90% 60%;
+    --chart-3: 35 90% 65%;
+    --chart-4: 280 75% 75%;
+    --chart-5: 340 85% 70%;
+
+    /* 侧边栏：略微比主区域深一点点，起到画框包裹的视觉效果 */
+    --sidebar-background: 215 20% 10%; 
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 217 90% 70%;
+    --sidebar-primary-foreground: 215 20% 12%;
+    --sidebar-accent: 215 20% 22%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 215 20% 28%;
+    --sidebar-ring: 217 90% 70%;
   }
   
 

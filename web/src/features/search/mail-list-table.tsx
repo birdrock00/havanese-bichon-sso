@@ -249,8 +249,8 @@ export function MailListTable({
         )
       },
       meta: { className: 'text-left text-xs' },
-      minSize: 100,
-      maxSize: 100,
+      minSize: 130,
+      maxSize: 130,
     },
     {
       id: 'actions',

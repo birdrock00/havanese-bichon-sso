@@ -485,6 +485,7 @@
     "tantivyDatabase": "Tantivy 검색 엔진 기반",
     "title": "대시보드",
     "top10Accounts": "상위 10개 계정",
+    "top10LargestAttachments": "가장 큰 첨부 파일 10개",
     "top10LargestEmails": "상위 10개 최대 크기 이메일",
     "top10Senders": "상위 10명 발신자",
     "topLists": "상위 목록",
