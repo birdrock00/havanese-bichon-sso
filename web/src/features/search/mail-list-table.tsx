@@ -173,7 +173,28 @@ export function MailListTable({
     {
       accessorKey: "subject",
       header: t('search.subject'),
-      cell: ({ row }) => <LongText className='text-xs'>{row.original.subject}</LongText>,
+      cell: ({ row }) => {
+        const tags = row.original.tags ?? [];
+        return (
+          <div className="flex flex-col gap-1 py-1.5 min-w-0">
+            <LongText className='text-xs font-medium truncate'>
+              {row.original.subject}
+            </LongText>
+            {tags.length > 0 && (
+              <div className="flex items-center gap-1 flex-wrap">
+                {tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center rounded-md bg-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary ring-1 ring-inset ring-primary/20"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      },
       meta: { className: 'text-left text-xs' }
     },
     {

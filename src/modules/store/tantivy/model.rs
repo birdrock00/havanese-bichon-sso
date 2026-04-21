@@ -1,7 +1,28 @@
+//
+// Copyright (c) 2025-2026 rustmailer.com (https://rustmailer.com)
+//
+// This file is part of the Bichon Email Archiving Project
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use tantivy::{schema::Value, TantivyDocument};
+use tantivy::{
+    schema::{Facet, Value},
+    TantivyDocument,
+};
 
 use crate::{
     modules::{
@@ -107,7 +128,12 @@ impl EnvelopeWithAttachments {
         let tags: Vec<String> = doc
             .get_all(fields.f_tags)
             .filter_map(|value| value.as_facet())
-            .map(|f| f.to_string())
+            .map(|facet_encoded_str| {
+                Facet::from_encoded(facet_encoded_str.as_bytes().to_vec())
+                    .ok()
+                    .map(|facet| facet.to_string())
+            })
+            .flatten()
             .collect();
 
         let account_id = extract_u64_field(doc, fields.f_account_id, F_ACCOUNT_ID)?;
@@ -361,14 +387,25 @@ impl AttachmentModel {
         let tags: Vec<String> = doc
             .get_all(f.f_tags)
             .filter_map(|value| value.as_facet())
-            .map(|f| f.to_string())
+            .map(|facet_encoded_str| {
+                Facet::from_encoded(facet_encoded_str.as_bytes().to_vec())
+                    .ok()
+                    .map(|facet| facet.to_string())
+            })
+            .flatten()
             .collect();
 
         let auto_tags: Vec<String> = doc
             .get_all(f.f_auto_tags)
             .filter_map(|value| value.as_facet())
-            .map(|f| f.to_string())
+            .map(|facet_encoded_str| {
+                Facet::from_encoded(facet_encoded_str.as_bytes().to_vec())
+                    .ok()
+                    .map(|facet| facet.to_string())
+            })
+            .flatten()
             .collect();
+
         let account_id = extract_u64_field(doc, f.f_account_id, F_ACCOUNT_ID)?;
         let mailbox_id = extract_u64_field(doc, f.f_mailbox_id, F_MAILBOX_ID)?;
         let account = AccountModel::get(account_id)?;

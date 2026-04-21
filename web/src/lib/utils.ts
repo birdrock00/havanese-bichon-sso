@@ -88,17 +88,34 @@ export function validateTag(facetPath: string) {
     };
   }
 
-  const invalidChars = /['"`;,()[\]{}<>]/;
-
-  if (invalidChars.test(facetPath)) {
+  if (!facetPath.startsWith('/')) {
     return {
       valid: false,
-      error: "Tag path contains invalid characters"
+      error: "Tag path must start with '/'"
+    };
+  }
+
+  let escaped = false;
+  for (let i = 1; i < facetPath.length; i++) {
+    const char = facetPath[i];
+
+    if (escaped) {
+      escaped = false;
+    } else if (char === '\\') {
+      escaped = true;
+    }
+  }
+
+  if (escaped) {
+    return {
+      valid: false,
+      error: "Tag path has unmatched escape character at the end"
     };
   }
 
   return { valid: true };
 }
+
 
 
 export function formatTimestamp(milliseconds: number): string {

@@ -347,31 +347,6 @@ pub fn decode_avatar_bytes(base64_str: &str) -> BichonResult<Vec<u8>> {
     Ok(bytes)
 }
 
-pub fn validate_tag(tag: &str) -> Result<(), String> {
-    if tag.is_empty() {
-        return Err("Tag cannot be empty".to_string());
-    }
-
-    const INVALID: &[char] = &[
-        '\'', '"', '`', ';', ',', '(', ')', '[', ']', '{', '}', '<', '>',
-    ];
-
-    let mut found = Vec::new();
-
-    for c in tag.chars() {
-        if INVALID.contains(&c) && !found.contains(&c) {
-            found.push(c);
-        }
-    }
-
-    if !found.is_empty() {
-        let chars: String = found.iter().collect();
-        return Err(format!("Tag contains invalid characters: {}", chars));
-    }
-
-    Ok(())
-}
-
 pub fn compute_content_hash(content: &[u8]) -> String {
     let hash = blake3::hash(content);
     hash.to_hex().to_string()

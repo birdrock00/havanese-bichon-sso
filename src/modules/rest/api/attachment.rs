@@ -29,11 +29,11 @@ use crate::modules::rest::ErrorCode;
 use crate::modules::store::tantivy::attachment::ATTACHMENT_MANAGER;
 use crate::modules::store::tantivy::model::AttachmentModel;
 use crate::modules::users::permissions::Permission;
-use crate::modules::utils::validate_tag;
 use crate::raise_error;
 use poem_openapi::param::Path;
 use poem_openapi::payload::Json;
 use poem_openapi::OpenApi;
+use tantivy::schema::Facet;
 use std::collections::HashSet;
 
 pub struct AttachmentApi;
@@ -133,8 +133,8 @@ impl AttachmentApi {
     ) -> ApiResult<()> {
         let req = req.0;
         for tag in &req.tags {
-            validate_tag(tag)
-                .map_err(|e| raise_error!(format!("{}", e), ErrorCode::InvalidParameter))?;
+            Facet::from_text(tag)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
         }
 
         for account_id in req.updates.keys() {

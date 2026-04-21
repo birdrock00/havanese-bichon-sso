@@ -38,12 +38,12 @@ use crate::modules::store::envelope::Envelope;
 use crate::modules::store::storage::get_reader;
 use crate::modules::store::tantivy::envelope::ENVELOPE_MANAGER;
 use crate::modules::users::permissions::Permission;
-use crate::modules::utils::validate_tag;
 use crate::raise_error;
 use poem::Body;
 use poem_openapi::param::{Path, Query};
 use poem_openapi::payload::{Attachment, AttachmentType, Json};
 use poem_openapi::OpenApi;
+use tantivy::schema::Facet;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
@@ -350,8 +350,8 @@ impl MessageApi {
     ) -> ApiResult<()> {
         let req = req.0;
         for tag in &req.tags {
-            validate_tag(tag)
-                .map_err(|e| raise_error!(format!("{}", e), ErrorCode::InvalidParameter))?;
+            Facet::from_text(tag)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
         }
 
         for account_id in req.updates.keys() {
