@@ -54,11 +54,14 @@ pub async fn send_batch_request(
             );
         }
         Ok(res) => {
+            let status = res.status();
+            let error_body = res.text().await.unwrap_or_default();
             eprintln!(
-                "  {} Failed to send to [{}]. Status: {}",
+                "  {} Failed to send to [{}]. Status: {}\n  Server error: {}",
                 style("✘").red(),
                 folder,
-                res.status()
+                status,
+                error_body
             );
         }
         Err(e) => {
