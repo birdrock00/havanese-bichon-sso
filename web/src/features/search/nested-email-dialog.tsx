@@ -35,7 +35,7 @@ const MessageHeader = ({
 }: {
     envelope: EmailEnvelope,
     attachments?: AttachmentInfo[],
-    onDownload: (nested_content_hash: string) => void
+    onDownload: (nested_content_hash: string, fileName: string) => void
 }) => {
     const { t } = useTranslation();
     const displayAttachments = attachments || [];
@@ -118,7 +118,7 @@ const MessageHeader = ({
                                 <Tooltip key={i}>
                                     <TooltipTrigger asChild>
                                         <button
-                                            onClick={() => onDownload(att.content_hash)}
+                                            onClick={() => onDownload(att.content_hash, att.filename)}
                                             className="group flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-all text-slate-600 hover:text-blue-700"
                                         >
                                             <span className={`${color} p-0.5 rounded`}>{icon}</span>
@@ -170,7 +170,7 @@ export function NestedEmailDialog({ open, onOpenChange, accountId, envelopeId, f
                             <MessageHeader
                                 envelope={data.envelope}
                                 attachments={data.attachments}
-                                onDownload={(nested_content_hash) => download_nested_attachment(accountId, envelopeId, content_hash, nested_content_hash)}
+                                onDownload={(nested_content_hash, fileName) => download_nested_attachment(accountId, envelopeId, content_hash, nested_content_hash, fileName)}
                             />
 
                             <div className="mt-8 pt-8 border-t border-slate-100">

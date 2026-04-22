@@ -21,7 +21,7 @@ import React from 'react'
 import { SortingState } from '@tanstack/react-table'
 import { AttachmentModel } from '@/api/attachment/api'
 
-export type AttachmentDialogType = 'mailbox' | 'display' | 'delete' | 'filters' | 'tags' | 'edit-tags' | 'update-tags' | 'restore' | 'delete-mailbox'
+export type AttachmentDialogType = 'mailbox' | 'display' | 'delete' | 'filters' | 'tags' | 'edit-tags' | 'update-tags' | 'restore' | 'delete-mailbox' | 'nested-eml'
 
 interface AttachmentContextType {
   open: AttachmentDialogType | null

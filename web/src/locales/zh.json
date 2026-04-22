@@ -375,7 +375,8 @@
     "showDuplicates": "显示重复文件",
     "size": "文件大小",
     "source": "来源",
-    "subject": "主题"
+    "subject": "主题",
+    "viewEmbeddedEmail": "查看内嵌邮件"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "您确定要退出登录吗？",
@@ -546,6 +547,7 @@
     "attachments": "附件",
     "bcc": "密送",
     "cc": "抄送",
+    "clickToDownload": "点击下载",
     "date": "日期",
     "delete": "删除",
     "download": "下载",

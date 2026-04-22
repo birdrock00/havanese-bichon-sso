@@ -375,7 +375,8 @@
     "showDuplicates": "Vis duplikater",
     "size": "Filstørrelse",
     "source": "Kilde",
-    "subject": "Emne"
+    "subject": "Emne",
+    "viewEmbeddedEmail": "Vis innebygd e-post"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "Er du sikker på at du vil logge ut?",
@@ -546,6 +547,7 @@
     "attachments": "Vedlegg",
     "bcc": "Blindkopi",
     "cc": "Kopi",
+    "clickToDownload": "Klikk for å laste ned",
     "date": "Dato",
     "delete": "Slett",
     "download": "Last ned",

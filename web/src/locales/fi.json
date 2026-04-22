@@ -375,7 +375,8 @@
     "showDuplicates": "Näytä kaksoiskappaleet",
     "size": "Tiedostokoko",
     "source": "Lähde",
-    "subject": "Aihe"
+    "subject": "Aihe",
+    "viewEmbeddedEmail": "Näytä upotettu sähköposti"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "Oletko varma, että haluat kirjautua ulos?",
@@ -546,6 +547,7 @@
     "attachments": "Liitteet",
     "bcc": "Piilokopio",
     "cc": "Kopio",
+    "clickToDownload": "Napsauta ladataksesi",
     "date": "Päivämäärä",
     "delete": "Poista",
     "download": "Lataa",

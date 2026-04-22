@@ -375,7 +375,8 @@
     "showDuplicates": "Visa dubbletter",
     "size": "Filstorlek",
     "source": "Källa",
-    "subject": "Ämne"
+    "subject": "Ämne",
+    "viewEmbeddedEmail": "Visa inbäddat e-postmeddelande"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "Är du säker på att du vill logga ut?",
@@ -546,6 +547,7 @@
     "attachments": "Bilagor",
     "bcc": "Hemlig kopia",
     "cc": "Kopia",
+    "clickToDownload": "Klicka för att ladda ner",
     "date": "Datum",
     "delete": "Ta bort",
     "download": "Ladda ner",

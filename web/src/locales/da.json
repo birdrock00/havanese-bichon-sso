@@ -375,7 +375,8 @@
     "showDuplicates": "Vis dubletter",
     "size": "Filstørrelse",
     "source": "Kilde",
-    "subject": "Emne"
+    "subject": "Emne",
+    "viewEmbeddedEmail": "Vis indlejret e-mail"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "Er du sikker på, du vil logge ud?",
@@ -546,6 +547,7 @@
     "attachments": "Vedhæftninger",
     "bcc": "Blindkopi",
     "cc": "Kopi",
+    "clickToDownload": "Klik for at downloade",
     "date": "Dato",
     "delete": "Slet",
     "download": "Download",

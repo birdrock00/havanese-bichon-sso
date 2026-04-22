@@ -375,7 +375,8 @@
     "showDuplicates": "Afficher les doublons",
     "size": "Taille du fichier",
     "source": "Source",
-    "subject": "Objet"
+    "subject": "Objet",
+    "viewEmbeddedEmail": "Voir l'e-mail intégré"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "Êtes-vous sûr de vouloir vous déconnecter ?",
@@ -546,6 +547,7 @@
     "attachments": "Pièces jointes",
     "bcc": "Cci",
     "cc": "Cc",
+    "clickToDownload": "Cliquer pour télécharger",
     "date": "Date",
     "delete": "Supprimer",
     "download": "Télécharger",

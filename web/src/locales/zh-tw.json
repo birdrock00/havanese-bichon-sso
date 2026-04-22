@@ -375,7 +375,8 @@
     "showDuplicates": "顯示重複檔案",
     "size": "檔案大小",
     "source": "來源",
-    "subject": "主旨"
+    "subject": "主旨",
+    "viewEmbeddedEmail": "檢視內嵌郵件"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "確定要登出嗎？",
@@ -546,6 +547,7 @@
     "attachments": "附件",
     "bcc": "密件副本 (BCC)",
     "cc": "副本 (CC)",
+    "clickToDownload": "點擊下載",
     "date": "日期",
     "delete": "刪除",
     "download": "下載",

@@ -375,7 +375,8 @@
     "showDuplicates": "Mostrar duplicados",
     "size": "Tamanho do arquivo",
     "source": "Origem",
-    "subject": "Assunto"
+    "subject": "Assunto",
+    "viewEmbeddedEmail": "Ver e-mail incorporado"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "Tem certeza que deseja sair?",
@@ -546,6 +547,7 @@
     "attachments": "Anexos",
     "bcc": "BCC",
     "cc": "CC",
+    "clickToDownload": "Clique para baixar",
     "date": "Data",
     "delete": "Excluir",
     "download": "Baixar",

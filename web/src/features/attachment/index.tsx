@@ -32,6 +32,7 @@ import { AttachmentModel } from '@/api/attachment/api';
 import { MailDisplayDrawer } from './mail-display-dialog';
 import { EnvelopeDeleteDialog } from './delete-dialog';
 import { RestoreMessageDialog } from './restore-message-dialog';
+import { NestedEmailDialog } from './nested-email-dialog';
 
 export default function AttachmentSearch() {
   const { t } = useTranslation()
@@ -146,6 +147,12 @@ export default function AttachmentSearch() {
             key='attachment-restore-mail-dialog'
             open={open === 'restore'}
             onOpenChange={() => setOpen('restore')}
+          />
+
+          <NestedEmailDialog
+            key="nested-eml-attachment-dialog"
+            open={open === 'nested-eml'}
+            onOpenChange={() => setOpen('nested-eml')}
           />
         </AttachmentProvider>
       </Main>

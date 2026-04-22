@@ -375,7 +375,8 @@
     "showDuplicates": "Pokaż duplikaty",
     "size": "Rozmiar pliku",
     "source": "Źródło",
-    "subject": "Temat"
+    "subject": "Temat",
+    "viewEmbeddedEmail": "Wyświetl osadzony e-mail"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "Czy na pewno chcesz się wylogować?",
@@ -546,6 +547,7 @@
     "attachments": "Załączniki",
     "bcc": "UDW",
     "cc": "DW",
+    "clickToDownload": "Kliknij, aby pobrać",
     "date": "Data",
     "delete": "Usuń",
     "download": "Pobierz",

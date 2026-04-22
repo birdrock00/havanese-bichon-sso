@@ -165,7 +165,7 @@ export function AttachmentListTable({
       accessorKey: "name",
       header: t('attachment.name'),
       cell: ({ row }) => {
-        const { name, content_type } = row.original;
+        const { name, content_type, is_message } = row.original;
         const safeName = name ?? "n/a";
 
         const shortContentType = content_type
@@ -179,9 +179,30 @@ export function AttachmentListTable({
                 contentType={content_type ?? ""}
                 className="h-4 w-4 mt-0.5"
               />
-              <LongText className='text-xs font-medium max-w-[320px] text-foreground/90'>
+
+              {is_message && <div className="group relative flex items-center w-full min-w-0 h-full px-2 overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                <div className="text-xs flex flex-wrap gap-x-1 min-w-0 flex-1">
+                  <span className="flex items-center">
+                    <button
+                      type="button"
+                      title={t('attachment.viewEmbeddedEmail')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCurrentAttachment(row.original);
+                        setOpen("nested-eml");
+                      }}
+                      className="hover:text-primary hover:underline transition-colors truncate"
+                    >
+                      <LongText>{safeName}</LongText>
+                    </button>
+                  </span>
+                </div>
+              </div>}
+              {!is_message && <LongText className='text-xs font-medium max-w-[320px] text-foreground/90'>
                 {safeName}
-              </LongText>
+              </LongText>}
             </div>
             <div className="flex items-center gap-1 ml-6.5 mt-1">
               <span className="text-[10px] text-muted-foreground font-mono bg-muted px-1 py-0.5 rounded-sm">
@@ -278,7 +299,7 @@ export function AttachmentListTable({
   if (isLoading) {
     return (
       <div className="divide-y divide-border">
-        {Array.from({ length: 8 }).map((_, i) => (
+        {Array.from({ length: 30 }).map((_, i) => (
           <div key={i} className="flex items-center gap-2 px-2 py-1.5">
             <Skeleton className="h-3 w-3" />
             <Skeleton className="h-3 w-3 rounded-full" />

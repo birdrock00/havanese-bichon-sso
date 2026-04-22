@@ -375,7 +375,8 @@
     "showDuplicates": "Duplicaten weergeven",
     "size": "Bestandsgrootte",
     "source": "Bron",
-    "subject": "Onderwerp"
+    "subject": "Onderwerp",
+    "viewEmbeddedEmail": "Ingesloten e-mail bekijken"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "Weet u zeker dat u wilt uitloggen?",
@@ -546,6 +547,7 @@
     "attachments": "Bijlagen",
     "bcc": "BCC",
     "cc": "CC",
+    "clickToDownload": "Klik om te downloaden",
     "date": "Datum",
     "delete": "Verwijderen",
     "download": "Downloaden",

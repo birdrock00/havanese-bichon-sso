@@ -375,7 +375,8 @@
     "showDuplicates": "Mostrar duplicados",
     "size": "Tamaño del archivo",
     "source": "Fuente",
-    "subject": "Asunto"
+    "subject": "Asunto",
+    "viewEmbeddedEmail": "Ver correo electrónico incrustado"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "¿Estás seguro de que quieres cerrar sesión?",
@@ -546,6 +547,7 @@
     "attachments": "Adjuntos",
     "bcc": "CCO",
     "cc": "CC",
+    "clickToDownload": "Hacer clic para descargar",
     "date": "Fecha",
     "delete": "Eliminar",
     "download": "Descargar",

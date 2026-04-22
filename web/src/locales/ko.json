@@ -375,7 +375,8 @@
     "showDuplicates": "중복 파일 표시",
     "size": "파일 크기",
     "source": "출처",
-    "subject": "제목"
+    "subject": "제목",
+    "viewEmbeddedEmail": "포함된 메일 보기"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "정말로 로그아웃하시겠습니까?",
@@ -546,6 +547,7 @@
     "attachments": "첨부 파일",
     "bcc": "숨은 참조",
     "cc": "참조",
+    "clickToDownload": "클릭하여 다운로드",
     "date": "날짜",
     "delete": "삭제",
     "download": "다운로드",

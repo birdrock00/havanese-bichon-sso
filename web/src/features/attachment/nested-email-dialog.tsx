@@ -27,6 +27,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Download, Loader, Mail } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { getFileConfig } from './mail-message-view';
+import { useAttachmentContext } from './context';
 
 const MessageHeader = ({
     envelope,
@@ -35,7 +36,7 @@ const MessageHeader = ({
 }: {
     envelope: EmailEnvelope,
     attachments?: AttachmentInfo[],
-    onDownload: (nested_content_hash: string) => void
+    onDownload: (nested_content_hash: string, fileName: string) => void
 }) => {
     const { t } = useTranslation();
     const displayAttachments = attachments || [];
@@ -118,7 +119,7 @@ const MessageHeader = ({
                                 <Tooltip key={i}>
                                     <TooltipTrigger asChild>
                                         <button
-                                            onClick={() => onDownload(att.content_hash)}
+                                            onClick={() => onDownload(att.content_hash, att.filename)}
                                             className="group flex items-center gap-2 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-all text-slate-600 hover:text-blue-700"
                                         >
                                             <span className={`${color} p-0.5 rounded`}>{icon}</span>
@@ -144,12 +145,13 @@ const MessageHeader = ({
 
 
 
-export function NestedEmailDialog({ open, onOpenChange, accountId, envelopeId, fileName, content_hash }: any) {
+export function NestedEmailDialog({ open, onOpenChange }: any) {
+    const { currentAttachment } = useAttachmentContext()
 
     const { data, isLoading } = useQuery({
-        queryKey: ['nested-message', accountId, envelopeId, content_hash],
-        queryFn: () => load_nested_message(accountId, envelopeId, content_hash),
-        enabled: open && !!content_hash,
+        queryKey: ['nested-message', currentAttachment?.account_id!, currentAttachment?.envelope_id!, currentAttachment?.content_hash!],
+        queryFn: () => load_nested_message(currentAttachment?.account_id!, currentAttachment?.envelope_id!, currentAttachment?.content_hash!),
+        enabled: open && !!currentAttachment,
     });
 
     return (
@@ -158,7 +160,7 @@ export function NestedEmailDialog({ open, onOpenChange, accountId, envelopeId, f
                 <div className="text-white px-4 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-blue-400" />
-                        <span className="text-sm font-medium truncate max-w-[400px] opacity-90">{fileName}</span>
+                        <span className="text-sm font-medium truncate max-w-[400px] opacity-90">{currentAttachment?.name}</span>
                     </div>
                 </div>
 
@@ -170,7 +172,13 @@ export function NestedEmailDialog({ open, onOpenChange, accountId, envelopeId, f
                             <MessageHeader
                                 envelope={data.envelope}
                                 attachments={data.attachments}
-                                onDownload={(nested_content_hash) => download_nested_attachment(accountId, envelopeId, content_hash, nested_content_hash)}
+                                onDownload={(nested_content_hash, fileName) => download_nested_attachment(
+                                    currentAttachment?.account_id!,
+                                    currentAttachment?.envelope_id!,
+                                    currentAttachment?.content_hash!,
+                                    nested_content_hash,
+                                    fileName
+                                )}
                             />
 
                             <div className="mt-8 pt-8 border-t border-slate-100">

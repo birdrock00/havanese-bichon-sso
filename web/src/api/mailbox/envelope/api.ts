@@ -41,10 +41,10 @@ export const download_attachment = async (accountId: number, id: string, content
     saveAs(blob, fileName);
 };
 
-export const download_nested_attachment = async (accountId: number, id: string, content_hash: string, nested_content_hash: string) => {
+export const download_nested_attachment = async (accountId: number, id: string, content_hash: string, nested_content_hash: string, fileName: string) => {
     const response = await axiosInstance.get(`api/v1/download-nested-attachment/${accountId}/${id}?content_hash=${content_hash}&nested_content_hash=${nested_content_hash}`, { responseType: 'blob' });
     const blob = new Blob([response.data]);
-    saveAs(blob, nested_content_hash);
+    saveAs(blob, fileName);
 };
 export interface AttachmentInfo {
     /** MIME content type of the attachment (e.g., `image/png`, `application/pdf`). */

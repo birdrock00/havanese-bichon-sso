@@ -375,7 +375,8 @@
     "showDuplicates": "重複ファイルを表示",
     "size": "ファイルサイズ",
     "source": "ソース",
-    "subject": "件名"
+    "subject": "件名",
+    "viewEmbeddedEmail": "埋め込みメールを表示"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "ログアウトしてもよろしいですか？",
@@ -546,6 +547,7 @@
     "attachments": "添付ファイル",
     "bcc": "BCC",
     "cc": "CC",
+    "clickToDownload": "クリックしてダウンロード",
     "date": "日付",
     "delete": "削除",
     "download": "ダウンロード",

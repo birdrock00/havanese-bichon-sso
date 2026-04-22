@@ -375,7 +375,8 @@
     "showDuplicates": "إظهار الملفات المكررة",
     "size": "حجم الملف",
     "source": "المصدر",
-    "subject": "الموضوع"
+    "subject": "الموضوع",
+    "viewEmbeddedEmail": "عرض البريد الإلكتروني المضمن"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
@@ -546,6 +547,7 @@
     "attachments": "المرفقات",
     "bcc": "نسخة مخفية",
     "cc": "نسخة",
+    "clickToDownload": "انقر للتنزيل",
     "date": "التاريخ",
     "delete": "حذف",
     "download": "تحميل",

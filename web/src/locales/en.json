@@ -375,7 +375,8 @@
     "showDuplicates": "Show duplicates",
     "size": "File size",
     "source": "Source",
-    "subject": "Subject"
+    "subject": "Subject",
+    "viewEmbeddedEmail": "View embedded email"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "Are you sure you want to log out?",
@@ -546,6 +547,7 @@
     "attachments": "Attachments",
     "bcc": "BCC",
     "cc": "CC",
+    "clickToDownload": "Click to download",
     "date": "Date",
     "delete": "Delete",
     "download": "Download",

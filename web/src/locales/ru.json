@@ -375,7 +375,8 @@
     "showDuplicates": "Показать дубликаты",
     "size": "Размер файла",
     "source": "Источник",
-    "subject": "Тема"
+    "subject": "Тема",
+    "viewEmbeddedEmail": "Просмотреть вложенное письмо"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "Вы уверены, что хотите выйти?",
@@ -546,6 +547,7 @@
     "attachments": "Вложения",
     "bcc": "Скрытая",
     "cc": "Копия",
+    "clickToDownload": "Нажмите, чтобы скачать",
     "date": "Дата",
     "delete": "Удалить",
     "download": "Скачать",
