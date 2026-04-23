@@ -233,7 +233,6 @@ export default function MailArchiveDashboard() {
                 </div>
                 <div className="flex items-center gap-1.5 mt-1">
                   <GithubIcon className="h-5 w-5 text-muted-foreground" />
-                  <p className="text-xs text-muted-foreground font-mono truncate">{stats1.commit_hash?.substring(0, 7) ?? 'N/A'}</p>
                 </div>
               </CardContent>
             </Card>

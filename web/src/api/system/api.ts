@@ -55,7 +55,6 @@ export interface DashboardStats {
     top_largest_emails: LargestEmail[];    // Top 10 largest emails
     top_largest_attachments: LargestAttachment[];    // Top 10 largest attachments
     system_version: string, //The semantic version string of the currently running backend service
-    commit_hash: string //Git commit hash used to build this system version
 }
 
 export const INITIAL_DASHBOARD_STATS: DashboardStats = {
@@ -71,8 +70,7 @@ export const INITIAL_DASHBOARD_STATS: DashboardStats = {
     without_attachment_count: 0,
     top_largest_emails: [],
     top_largest_attachments: [],
-    system_version: '0.0.0',
-    commit_hash: 'n/a'
+    system_version: '0.0.0'
 };
 
 

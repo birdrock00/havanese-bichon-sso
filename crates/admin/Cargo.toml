@@ -1,0 +1,11 @@
+[package]
+name = "bichon-admin"
+version.workspace = true
+edition.workspace = true
+
+
+[dependencies]
+bichon-core = { path = "../core" }
+tokio.workspace = true
+dialoguer.workspace = true
+console.workspace = true

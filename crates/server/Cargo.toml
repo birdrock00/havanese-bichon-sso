@@ -1,0 +1,33 @@
+[package]
+name = "bichon-server"
+version.workspace = true
+edition.workspace = true
+
+
+[dependencies]
+bichon-core = { path = "../core", features = ["web-api"] }
+bichon-smtp = { path = "../smtp" }
+poem = { version = "3.1.12", features = ["embed", "compression", "rustls"] }
+poem-derive = "3.1.12"
+poem-openapi = { version = "5.1.16", features = [
+    "openapi-explorer",
+    "rapidoc",
+    "scalar",
+    "redoc",
+    "swagger-ui",
+    "email",
+] }
+rust-embed = "8.11.0"
+email_address.workspace = true
+tantivy.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+governor.workspace = true
+snafu.workspace = true
+timeago.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+tokio.workspace = true
+http.workspace = true
+urlencoding.workspace = true
+mimalloc.workspace = true
