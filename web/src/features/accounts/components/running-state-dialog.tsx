@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { useQuery } from '@tanstack/react-query'
-import { account_state, AccountModel, FolderProgress } from '@/api/account/api'
+import { download_state, AccountModel, FolderProgress } from '@/api/account/api'
 import { format } from 'date-fns'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
@@ -134,7 +134,7 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
 
   const { data: state, isLoading } = useQuery({
     queryKey: ['running-state', currentRow.id],
-    queryFn: () => account_state(currentRow.id),
+    queryFn: () => download_state(currentRow.id),
     refetchInterval: 5000,
     enabled: open && !!currentRow.id,
   })

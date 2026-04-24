@@ -25,15 +25,16 @@ use std::fs;
 
 use crate::{
     auth::verify_user_and_get_account, eml::handle_eml_directory_import,
-    mbox::handle_mbox_single_file_import, pst::handle_pst_import,
+    export::handle_account_export, mbox::handle_mbox_single_file_import, pst::handle_pst_import,
     thunderbird::handle_thunderbird_import,
 };
 
+pub mod api;
 pub mod auth;
 pub mod eml;
+pub mod export;
 pub mod mbox;
 pub mod pst;
-pub mod sender;
 pub mod thunderbird;
 
 #[derive(Parser, Debug)]
@@ -124,27 +125,48 @@ async fn main() {
         }
     };
 
-    let target_account_id = verify_user_and_get_account(&final_config, &theme).await;
-
-    let import_modes = &[
-        "1. EML: Scan directory recursively (Maintains folder structure)",
-        "2. MBOX: Single archive file (Stream from one file)",
-        "3. Thunderbird: Import from local profile directory",
-        "4. PST: Outlook Personal Storage (Single .pst file)",
+    let operations = &[
+        "1. Import: Upload email data to Bichon",
+        "2. Export: Download account data as MBOX file",
     ];
 
-    let mode_idx = Select::with_theme(&theme)
-        .with_prompt("Select import method")
-        .items(import_modes)
+    let op_idx = Select::with_theme(&theme)
+        .with_prompt("Select operation")
+        .items(operations)
         .default(0)
         .interact()
         .unwrap();
 
-    match mode_idx {
-        0 => handle_eml_directory_import(&final_config, target_account_id, &theme).await,
-        1 => handle_mbox_single_file_import(&final_config, target_account_id, &theme).await,
-        2 => handle_thunderbird_import(&final_config, target_account_id, &theme).await,
-        3 => handle_pst_import(&final_config, target_account_id, &theme).await,
+    match op_idx {
+        0 => {
+            let target_account = verify_user_and_get_account(&final_config, &theme, true).await;
+
+            let import_modes = &[
+                "1. EML: Scan directory recursively (Maintains folder structure)",
+                "2. MBOX: Single archive file (Stream from one file)",
+                "3. Thunderbird: Import from local profile directory",
+                "4. PST: Outlook Personal Storage (Single .pst file)",
+            ];
+
+            let mode_idx = Select::with_theme(&theme)
+                .with_prompt("Select import method")
+                .items(import_modes)
+                .default(0)
+                .interact()
+                .unwrap();
+
+            match mode_idx {
+                0 => handle_eml_directory_import(&final_config, target_account.id, &theme).await,
+                1 => handle_mbox_single_file_import(&final_config, target_account.id, &theme).await,
+                2 => handle_thunderbird_import(&final_config, target_account.id, &theme).await,
+                3 => handle_pst_import(&final_config, target_account.id, &theme).await,
+                _ => unreachable!(),
+            }
+        }
+        1 => {
+            let target_account = verify_user_and_get_account(&final_config, &theme, false).await;
+            handle_account_export(&final_config, target_account, &theme).await;
+        }
         _ => unreachable!(),
     }
 }

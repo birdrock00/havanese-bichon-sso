@@ -22,3 +22,6 @@ mail-send.workspace = true
 base64.workspace = true
 codepage-strings = "1.0.2"
 hex = "0.4.3"
+sysinfo.workspace = true
+indicatif = "0.18.4"
+serde_json.workspace = true

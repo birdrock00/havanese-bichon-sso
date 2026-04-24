@@ -19,9 +19,9 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::api::sender::send_batch_request;
 use crate::mbox::gmail::determine_folder;
 use crate::mbox::reader::MboxFile;
-use crate::sender::send_batch_request;
 use crate::BichonCtlConfig;
 use bichon_core::base64_encode_url_safe;
 use console::style;

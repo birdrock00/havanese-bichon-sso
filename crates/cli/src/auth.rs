@@ -29,7 +29,11 @@ use bichon_core::{
 
 use crate::BichonCtlConfig;
 
-pub async fn verify_user_and_get_account(config: &BichonCtlConfig, theme: &ColorfulTheme) -> u64 {
+pub async fn verify_user_and_get_account(
+    config: &BichonCtlConfig,
+    theme: &ColorfulTheme,
+    only_nosync: bool,
+) -> MinimalAccount {
     let client = Client::new();
     let url = format!("{}/api/v1/current-user", config.base_url);
 
@@ -88,7 +92,7 @@ pub async fn verify_user_and_get_account(config: &BichonCtlConfig, theme: &Color
     println!("Welcome, {}!", style(&user.username).cyan());
 
     let account_list_url = format!(
-        "{}/api/v1/minimal-account-list?only_nosync=true",
+        "{}/api/v1/minimal-account-list?only_nosync={only_nosync}",
         config.base_url
     );
     let acc_response = client
@@ -184,5 +188,5 @@ pub async fn verify_user_and_get_account(config: &BichonCtlConfig, theme: &Color
         style(&selected_acc.email).cyan().bold()
     );
 
-    selected_acc.id
+    selected_acc.clone()
 }

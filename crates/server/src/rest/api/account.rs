@@ -25,8 +25,10 @@ use bichon_core::account::payload::{
     filter_accessible_accounts, AccountCreateRequest, AccountUpdateRequest, MinimalAccount,
 };
 use bichon_core::account::state::DownloadState;
+use bichon_core::account::stats::AccountStats;
 use bichon_core::account::view::AccountResp;
 use bichon_core::common::paginated::{paginate_vec, DataPage};
+use bichon_core::store::tantivy::envelope::ENVELOPE_MANAGER;
 use bichon_core::users::permissions::Permission;
 use bichon_core::users::UserModel;
 use poem_openapi::param::{Path, Query};
@@ -182,11 +184,11 @@ impl AccountApi {
 
     /// Get the running state of an account
     #[oai(
-        path = "/account-state/:account_id",
+        path = "/accounts/:account_id/download-stats",
         method = "get",
-        operation_id = "account_state"
+        operation_id = "accounts_download_state"
     )]
-    async fn account_state(
+    async fn accounts_download_state(
         &self,
         /// The account ID to check state for
         account_id: Path<u64>,
@@ -199,6 +201,27 @@ impl AccountApi {
             .await?;
         let state = DownloadState::get(account_id).await?;
         let state = state.unwrap_or(DownloadState::empty(account_id));
+        Ok(Json(state))
+    }
+
+    /// Get the stats of an account
+    #[oai(
+        path = "/accounts/:account_id/stats",
+        method = "get",
+        operation_id = "accounts_stats"
+    )]
+    async fn accounts_stats(
+        &self,
+        /// The account ID to check state for
+        account_id: Path<u64>,
+        context: WrappedContext,
+    ) -> ApiResult<Json<AccountStats>> {
+        let account_id = account_id.0;
+        AccountModel::check_account_exists(account_id).await?;
+        context
+            .require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)
+            .await?;
+        let state = ENVELOPE_MANAGER.get_account_stats(account_id).await?;
         Ok(Json(state))
     }
 

@@ -29,7 +29,7 @@ use reqwest::Client;
 
 use bichon_core::base64_encode_url_safe;
 
-use crate::{sender::send_batch_request, BichonCtlConfig};
+use crate::{BichonCtlConfig, api::sender::send_batch_request};
 
 pub async fn handle_eml_directory_import(
     config: &BichonCtlConfig,

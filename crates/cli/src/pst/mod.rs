@@ -23,9 +23,9 @@ use mail_send::mail_builder::headers::text::Text;
 use mail_send::mail_builder::MessageBuilder;
 use outlook_pst::ltp::prop_context::PropertyValue;
 
-use crate::BichonCtlConfig;
+use crate::api::sender::send_batch_request;
 use crate::pst::encoding::decode_subject;
-use crate::sender::send_batch_request;
+use crate::BichonCtlConfig;
 use bichon_core::base64_encode_url_safe;
 use dialoguer::Confirm;
 use outlook_pst::messaging::attachment::AttachmentProperties;

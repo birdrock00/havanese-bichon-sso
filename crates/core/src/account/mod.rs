@@ -19,8 +19,9 @@
 pub mod entity;
 pub mod grant;
 pub mod migration;
-pub mod payload;
-pub mod state;
-pub mod since;
 pub mod old_state;
+pub mod payload;
+pub mod since;
+pub mod state;
+pub mod stats;
 pub mod view;

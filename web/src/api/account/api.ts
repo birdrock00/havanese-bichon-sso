@@ -146,8 +146,8 @@ export interface AccountModel {
     auto_download_new_mailboxes?: boolean;
 }
 
-export const account_state = async (account_id: number) => {
-    const response = await axiosInstance.get<DownloadState>(`api/v1/account-state/${account_id}`);
+export const download_state = async (account_id: number) => {
+    const response = await axiosInstance.get<DownloadState>(`api/v1/accounts/${account_id}/download-stats`);
     return response.data;
 };
 

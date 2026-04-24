@@ -57,7 +57,7 @@ async-imap = { version = "0.11.2", default-features = false, features = [
     "compress",
 ] }
 webpki-roots = "1.0.7"
-rustls = { version = "0.23.38", default-features = false, features = ["ring"] }
+rustls = { version = "0.23.39", default-features = false, features = ["ring"] }
 rustls-pki-types = "1.14.0"
 tokio-io-timeout = "1.2.1"
 semver = "1.0.28"

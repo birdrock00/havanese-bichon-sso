@@ -25,22 +25,30 @@ use std::{
 };
 
 use crate::{
-    account::migration::AccountModel, common::{paginated::DataPage, signal::SIGNAL_MANAGER}, dashboard::{DashboardStats, Group, LargestEmail, TimeBucket}, error::{BichonResult, code::ErrorCode}, message::{
-            search::{EmailSearchFilter, SortBy},
-            tags::{TagAction, TagCount, TagsRequest},
-        }, raise_error, settings::dir::DATA_DIR_MANAGER, store::{
-            envelope::Envelope,
-            storage::BLOB_MANAGER,
-            tantivy::{
-                fatal_commit,
-                fields::{
-                    F_ACCOUNT_ID, F_DATE, F_FROM, F_REGULAR_ATTACHMENT_COUNT, F_SIZE, F_TAGS,
-                    F_THREAD_ID, F_UID,
-                },
-                model::{EnvelopeWithAttachments, extract_contacts},
-                schema::SchemaTools,
+    account::{migration::AccountModel, stats::AccountStats},
+    common::{paginated::DataPage, signal::SIGNAL_MANAGER},
+    dashboard::{DashboardStats, Group, LargestEmail, TimeBucket},
+    error::{code::ErrorCode, BichonResult},
+    message::{
+        search::{EmailSearchFilter, SortBy},
+        tags::{TagAction, TagCount, TagsRequest},
+    },
+    raise_error,
+    settings::dir::DATA_DIR_MANAGER,
+    store::{
+        envelope::Envelope,
+        storage::BLOB_MANAGER,
+        tantivy::{
+            fatal_commit,
+            fields::{
+                F_ACCOUNT_ID, F_DATE, F_FROM, F_ID, F_REGULAR_ATTACHMENT_COUNT, F_SIZE, F_TAGS,
+                F_THREAD_ID, F_UID,
             },
-        }, utc_now
+            model::{extract_contacts, EnvelopeWithAttachments},
+            schema::SchemaTools,
+        },
+    },
+    utc_now,
 };
 
 use chrono::Utc;
@@ -621,6 +629,51 @@ impl IndexManager {
         Ok(Self::extract_max_uid(&agg_res))
     }
 
+    pub async fn get_account_stats(&self, account_id: u64) -> BichonResult<AccountStats> {
+        let searcher = self.create_searcher()?;
+        let query = self.account_query(account_id);
+
+        let agg_req: Aggregations = serde_json::from_value(json!({
+            "total_count": {
+                "value_count": {
+                    "field": F_ID
+                }
+            },
+            "total_size": {
+                "sum": {
+                    "field": F_SIZE
+                }
+            }
+        }))
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        let collector = AggregationCollector::from_aggs(agg_req, Default::default());
+        let agg_res = searcher
+            .search(query.as_ref(), &collector)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        let mut stats = AccountStats::default();
+
+        stats.total_count = Self::extract_value_count(&agg_res, "total_count")?;
+
+        let result = agg_res.0.get("total_size").ok_or_else(|| {
+            raise_error!(
+                "missing 'total_size' aggregation result".into(),
+                ErrorCode::InternalError
+            )
+        })?;
+
+        if let AggregationResult::MetricResult(MetricResult::Sum(v)) = result {
+            stats.total_size = v.value.map(|v| v as u64).ok_or_else(|| {
+                raise_error!(
+                    "'total_size' sum metric has no value".into(),
+                    ErrorCode::InternalError
+                )
+            })?;
+        }
+        Ok(stats)
+    }
+
     fn extract_max_uid(agg_res: &AggregationResults) -> Option<u64> {
         agg_res.0.get("max_uid").and_then(|result| match result {
             AggregationResult::MetricResult(MetricResult::Max(max)) => {
@@ -1110,13 +1163,13 @@ impl IndexManager {
         let agg_res = searcher
             .search(query.as_ref(), &collector)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Self::extract_thread_count(&agg_res)
+        Self::extract_value_count(&agg_res, "thread_count")
     }
 
-    fn extract_thread_count(agg_res: &AggregationResults) -> BichonResult<u64> {
-        let Some(result) = agg_res.0.get("thread_count") else {
+    fn extract_value_count(agg_res: &AggregationResults, name: &str) -> BichonResult<u64> {
+        let Some(result) = agg_res.0.get(name) else {
             return Err(raise_error!(
-                "Missing aggregation result: thread_count".into(),
+                format!("Missing aggregation result: '{}'", name),
                 ErrorCode::InternalError
             ));
         };

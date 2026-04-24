@@ -21,12 +21,15 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 use crate::{
-    common::paginated::DataPage, error::{BichonResult, code::ErrorCode}, raise_error, store::{
-            envelope::Envelope,
-            tantivy::{
-                attachment::ATTACHMENT_MANAGER, envelope::ENVELOPE_MANAGER, model::AttachmentModel,
-            },
-        }
+    common::paginated::DataPage,
+    error::{code::ErrorCode, BichonResult},
+    raise_error,
+    store::{
+        envelope::Envelope,
+        tantivy::{
+            attachment::ATTACHMENT_MANAGER, envelope::ENVELOPE_MANAGER, model::AttachmentModel,
+        },
+    },
 };
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -66,11 +69,11 @@ pub enum SortBy {
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct EmailSearchRequest {
-    filter: EmailSearchFilter,
-    page: u64,
-    page_size: u64,
-    sort_by: Option<SortBy>,
-    desc: Option<bool>,
+    pub filter: EmailSearchFilter,
+    pub page: u64,
+    pub page_size: u64,
+    pub sort_by: Option<SortBy>,
+    pub desc: Option<bool>,
 }
 impl EmailSearchRequest {
     pub fn validate(&self) -> BichonResult<()> {
