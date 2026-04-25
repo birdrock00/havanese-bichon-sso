@@ -1,10 +1,8 @@
-use bichon_core::{base64_encode, store::envelope::Envelope};
+use crate::BichonCtlConfig;
+use bichon_core::{base64_encode, envelope::meta::BichonMetadata, store::envelope::Envelope};
 use chrono::{TimeZone, Utc};
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
 use tokio::io::AsyncWriteExt;
-
-use crate::BichonCtlConfig;
 
 pub async fn download_and_export_with_json_header(
     client: &Client,
@@ -74,13 +72,6 @@ pub async fn download_and_export_with_json_header(
     }
 
     true
-}
-
-#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
-pub struct BichonMetadata {
-    pub account_email: Option<String>,
-    pub mailbox_name: Option<String>,
-    pub tags: Option<Vec<String>>,
 }
 
 fn build_metadata_header(meta: BichonMetadata) -> String {

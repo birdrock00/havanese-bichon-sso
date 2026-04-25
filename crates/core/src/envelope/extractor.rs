@@ -17,6 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::common::AddrVec;
+use crate::envelope::meta::parse_bichon_metadata;
 use crate::envelope::utils::normalize_subject;
 use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
@@ -33,6 +34,7 @@ use async_imap::types::Fetch;
 use bytes::Bytes;
 use mail_parser::{Address, HeaderName, Message, MessageParser, MimeHeaders};
 use tantivy::TantivyDocument;
+use tantivy::schema::Facet;
 use tracing::error;
 use uuid::Uuid;
 
@@ -159,6 +161,36 @@ async fn extract_envelope_core(
     let envelope_id = Uuid::new_v4().to_string();
     let now = utc_now!();
 
+
+    let mut final_tags = Vec::new();
+
+    if let Some(meta_header) = message.header_raw("X-Bichon-Metadata") {
+        if let Some(bmd) = parse_bichon_metadata(meta_header) {
+            if let Some(tags) = bmd.tags {
+                let validated_tags: Result<Vec<String>, _> = tags
+                    .iter()
+                    .map(|tag| {
+                        Facet::from_text(tag)
+                            .map(|_| tag.clone()) 
+                            .map_err(|e| e)
+                    })
+                    .collect();
+
+                match validated_tags {
+                    Ok(valid_list) => {
+                        final_tags = valid_list;
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "Tag validation failed, ignoring all tags: {:#?}",
+                            e
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     let attachment_docs: Vec<TantivyDocument> = attachments
         .iter()
         .filter(|a| !a.inline || a.content_id.is_none())
@@ -210,7 +242,7 @@ async fn extract_envelope_core(
         thread_id,
         attachment_count,
         regular_attachment_count: attachment_docs.len(),
-        tags: None,
+        tags: (!final_tags.is_empty()).then_some(final_tags),
         account_email: None,
         mailbox_name: None,
         content_hash: email_content_hash,

@@ -106,6 +106,12 @@ impl EnvelopeWithAttachments {
             }
         }
 
+        if let Some(tags) = &self.envelope.tags {
+            for tag in tags {
+                doc.add_facet(fields.f_tags, tag);
+            }
+        }
+
         doc.add_u64(
             fields.f_attachment_count,
             self.envelope.attachment_count as u64,
@@ -166,7 +172,7 @@ impl EnvelopeWithAttachments {
                 fields.f_regular_attachment_count,
                 F_REGULAR_ATTACHMENT_COUNT,
             )? as usize,
-            tags: if tags.is_empty() { None } else { Some(tags) },
+            tags: (!tags.is_empty()).then_some(tags),
             content_hash: extract_string_field(doc, fields.f_content_hash, F_CONTENT_HASH)?,
             ingest_at: extract_i64_field(doc, fields.f_ingest_at, F_INGEST_AT)?,
         };

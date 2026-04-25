@@ -117,7 +117,11 @@ pub async fn handle_account_export(
         .interact()
         .unwrap()
     {
-        println!(" {} Starting export...", style("✔").green());
+        println!(
+            " {} Starting export ({} items per page)...",
+            style("✔").green(),
+            100
+        );
 
         let pb = ProgressBar::new(stats.total_count as u64);
         pb.set_style(ProgressStyle::with_template(
@@ -145,7 +149,7 @@ pub async fn handle_account_export(
             if let Some(batch) = search_messages(&client, config, current_page, page_size).await {
                 total_pages = batch.total_pages.unwrap();
 
-                println!(" → Processing page {}/{}", current_page, total_pages);
+                pb.set_message(format!("Page {}/{}", current_page, total_pages));
 
                 for envelope in batch.items {
                     let success =
@@ -153,6 +157,7 @@ pub async fn handle_account_export(
                             .await;
 
                     if !success {
+                        pb.finish_with_message("Failed");
                         eprintln!(" ✘ Failed to export an email. Aborting process...");
                         return;
                     }
@@ -163,6 +168,7 @@ pub async fn handle_account_export(
                 }
                 current_page += 1;
             } else {
+                pb.finish_with_message("Error");
                 eprintln!(
                     " ✘ Failed to fetch page {}. Aborting process...",
                     current_page

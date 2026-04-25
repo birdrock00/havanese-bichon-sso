@@ -24,6 +24,7 @@ use crate::mbox::gmail::determine_folder;
 use crate::mbox::reader::MboxFile;
 use crate::BichonCtlConfig;
 use bichon_core::base64_encode_url_safe;
+use bichon_core::envelope::meta::{parse_bichon_metadata, BichonMetadata};
 use console::style;
 use dialoguer::{theme::ColorfulTheme, Input};
 use dialoguer::{Confirm, Select};
@@ -59,6 +60,7 @@ pub async fn handle_mbox_single_file_import(
     let options = vec![
         "Use labels from mail headers (X-Gmail-Labels)",
         "Specify a single target folder for all emails",
+        "Use X-Bichon-Metadata header (Automatic)",
     ];
 
     let selection = Select::with_theme(theme)
@@ -78,6 +80,7 @@ pub async fn handle_mbox_single_file_import(
                 .unwrap();
             Some(folder)
         }
+        2 => None,
         _ => unreachable!(),
     };
 
@@ -150,20 +153,31 @@ pub async fn run_import(
             }
         };
 
-        let folder_name = match target_folder {
-            Some(ref folder_name) => folder_name.clone(),
-            None => {
-                let gmail_labels = message.header_raw("X-Gmail-Labels").unwrap_or("INBOX");
-                let text_cow = MessageStream::new(gmail_labels.as_bytes())
-                    .parse_unstructured()
-                    .into_text();
-                let data: &str = match &text_cow {
-                    Some(c) => c.as_ref(),
-                    None => "INBOX",
-                };
-                determine_folder(data)
-            }
+        let mut metadata: Option<BichonMetadata> = None;
+        if let Some(meta_header) = message.header_raw("X-Bichon-Metadata") {
+            metadata = parse_bichon_metadata(meta_header);
+        }
+
+        let get_default_folder = || {
+            let gmail_labels = message.header_raw("X-Gmail-Labels").unwrap_or("INBOX");
+            let text_cow = MessageStream::new(gmail_labels.as_bytes())
+                .parse_unstructured()
+                .into_text();
+            let data: &str = match &text_cow {
+                Some(c) => c.as_ref(),
+                None => "INBOX",
+            };
+            determine_folder(data)
         };
+
+        let folder_name = if let Some(ref folder) = target_folder {
+            folder.clone()
+        } else if let Some(ref meta) = metadata {
+            meta.mailbox_name.clone().unwrap_or_else(get_default_folder)
+        } else {
+            get_default_folder()
+        };
+
         let b64_eml = base64_encode_url_safe!(&body);
         let buffer = folder_buffers
             .entry(folder_name.clone())
