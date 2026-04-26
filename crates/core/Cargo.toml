@@ -44,7 +44,10 @@ sysinfo.workspace = true
 num_cpus.workspace = true
 rand.workspace = true
 encoding_rs.workspace = true
-async-imap.workspace = true
+async-imap = { git = "https://github.com/rustmailer/async-imap.git", branch = "main", default-features = false, features = [
+    "runtime-tokio",
+    "compress",
+] }
 webpki-roots.workspace = true
 rustls.workspace = true
 rustls-pki-types.workspace = true

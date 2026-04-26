@@ -38,7 +38,6 @@ regex = "1.12.3"
 email_address = "0.2.9"
 futures = "0.3.32"
 utf7-imap = "0.3.2"
-imap-proto = "0.16.6"
 mail-parser = { version = '0.11.2', features = ["serde"] }
 # mail-send = "0.5.2"
 tokio-rustls = { version = "0.26.4", default-features = false, features = [
@@ -52,13 +51,9 @@ sysinfo = "0.38.4"
 num_cpus = "1.17.0"
 rand = "0.10.1"
 encoding_rs = "0.8.35"
-async-imap = { version = "0.11.2", default-features = false, features = [
-    "runtime-tokio",
-    "compress",
-] }
 webpki-roots = "1.0.7"
 rustls = { version = "0.23.39", default-features = false, features = ["ring"] }
-rustls-pki-types = "1.14.0"
+rustls-pki-types = "1.14.1"
 tokio-io-timeout = "1.2.1"
 semver = "1.0.28"
 governor = "0.10.4"
@@ -84,7 +79,7 @@ console = "0.16.3"
 mail-send = "0.6.0"
 rcgen = "0.14.7"
 rustls-pemfile = "2.2.0"
-blake3 = "1.8.4"
+blake3 = "1.8.5"
 uuid = { version = "1.23.1", features = ["v4", "serde"] }
 fjall = { version = "3.1.4", features = ["lz4", "metrics", "bytes_1"] }
 tantivy = { version = "0.26.0", features = ["zstd-compression"] }
