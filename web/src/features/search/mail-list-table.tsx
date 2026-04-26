@@ -195,7 +195,9 @@ export function MailListTable({
           </div>
         );
       },
-      meta: { className: 'text-left text-xs' }
+      meta: { className: 'text-left text-xs' },
+      minSize: 500,
+      maxSize: 500,
     },
     {
       id: "text_preview",
@@ -277,7 +279,7 @@ export function MailListTable({
       id: 'actions',
       header: t('users.columns.actions'),
       cell: DataTableRowActions,
-      meta: { className: 'text-right text-xs' },
+      meta: { className: 'text-center text-xs' },
       minSize: 60,
       maxSize: 60,
     },

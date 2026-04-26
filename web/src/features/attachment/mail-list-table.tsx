@@ -158,8 +158,8 @@ export function AttachmentListTable({
         );
       },
       meta: { className: 'text-left text-xs' },
-      minSize: 300,
-      maxSize: 300,
+      minSize: 500,
+      maxSize: 500,
     },
     {
       accessorKey: "name",
