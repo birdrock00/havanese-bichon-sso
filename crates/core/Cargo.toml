@@ -48,6 +48,7 @@ async-imap = { git = "https://github.com/rustmailer/async-imap.git", branch = "m
     "runtime-tokio",
     "compress",
 ] }
+tantivy = { version = "0.26.0", features = ["zstd-compression"] }
 webpki-roots.workspace = true
 rustls.workspace = true
 rustls-pki-types.workspace = true
@@ -65,6 +66,5 @@ mail-send.workspace = true
 blake3.workspace = true
 uuid.workspace = true
 fjall.workspace = true
-tantivy.workspace = true
 tracing-log.workspace = true
 tokio-util.workspace = true

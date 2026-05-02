@@ -19,7 +19,6 @@ poem-openapi = { version = "5.1.16", features = [
 ] }
 rust-embed = "8.11.0"
 email_address.workspace = true
-tantivy.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 governor.workspace = true

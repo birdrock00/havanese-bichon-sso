@@ -82,7 +82,6 @@ rustls-pemfile = "2.2.0"
 blake3 = "1.8.5"
 uuid = { version = "1.23.1", features = ["v4", "serde"] }
 fjall = { version = "3.1.4", features = ["lz4", "metrics", "bytes_1"] }
-tantivy = { version = "0.26.0", features = ["zstd-compression"] }
 tracing-log = "0.2.0"
 tokio-util = "0.7.18"
 

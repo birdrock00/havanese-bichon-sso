@@ -38,6 +38,7 @@ use bichon_core::raise_error;
 use bichon_core::store::envelope::Envelope;
 use bichon_core::store::storage::get_reader;
 use bichon_core::store::tantivy::envelope::ENVELOPE_MANAGER;
+use bichon_core::store::tantivy::validate_facet;
 use bichon_core::users::permissions::Permission;
 use poem::Body;
 use poem_openapi::param::{Path, Query};
@@ -45,7 +46,6 @@ use poem_openapi::payload::{Attachment, AttachmentType, Json};
 use poem_openapi::OpenApi;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use tantivy::schema::Facet;
 
 pub struct MessageApi;
 
@@ -350,8 +350,7 @@ impl MessageApi {
     ) -> ApiResult<()> {
         let req = req.0;
         for tag in &req.tags {
-            Facet::from_text(tag)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
+            validate_facet(tag)?;
         }
 
         for account_id in req.updates.keys() {

@@ -16,7 +16,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use tantivy::IndexWriter;
+use tantivy::{schema::Facet, IndexWriter};
+
+use crate::{
+    error::{code::ErrorCode, BichonResult},
+    raise_error,
+};
 
 pub mod attachment;
 pub mod envelope;
@@ -65,4 +70,10 @@ pub fn fatal_commit(writer: &mut IndexWriter) {
             },
         }
     }
+}
+
+pub fn validate_facet(tag: &str) -> BichonResult<()> {
+    Facet::from_text(tag)
+        .map(|_| ())
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))
 }

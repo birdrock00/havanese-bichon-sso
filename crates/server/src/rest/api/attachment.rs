@@ -29,12 +29,12 @@ use bichon_core::message::tags::TagsRequest;
 use bichon_core::raise_error;
 use bichon_core::store::tantivy::attachment::ATTACHMENT_MANAGER;
 use bichon_core::store::tantivy::model::AttachmentModel;
+use bichon_core::store::tantivy::validate_facet;
 use bichon_core::users::permissions::Permission;
 use poem_openapi::param::Path;
 use poem_openapi::payload::Json;
 use poem_openapi::OpenApi;
 use std::collections::HashSet;
-use tantivy::schema::Facet;
 
 pub struct AttachmentApi;
 
@@ -133,8 +133,7 @@ impl AttachmentApi {
     ) -> ApiResult<()> {
         let req = req.0;
         for tag in &req.tags {
-            Facet::from_text(tag)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
+            validate_facet(tag)?;
         }
 
         for account_id in req.updates.keys() {
