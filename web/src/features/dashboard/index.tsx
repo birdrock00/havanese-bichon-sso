@@ -488,7 +488,7 @@ export default function MailArchiveDashboard() {
                                       e.stopPropagation();
                                       handleQuickAttachmentSearch({ id: a.id })
                                     }}
-                                    className="hover:text-primary hover:underline transition-colors truncate max-w-[258px]"
+                                    className="hover:text-primary hover:underline transition-colors truncate max-w-[238px]"
                                   >
                                     {a.name || 'Unnamed'}
                                   </button>
