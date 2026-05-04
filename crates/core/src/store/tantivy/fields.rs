@@ -27,10 +27,17 @@ pub const F_SUBJECT: &str = "subject";
 pub const F_BODY: &str = "body";
 pub const F_PREVIEW: &str = "preview";
 pub const F_CONTENT_HASH: &str = "content_hash";
+
 pub const F_FROM: &str = "from";
 pub const F_TO: &str = "to";
 pub const F_CC: &str = "cc";
 pub const F_BCC: &str = "bcc";
+
+pub const F_FROM_TEXT: &str = "from_text";
+pub const F_TO_TEXT: &str = "to_text";
+pub const F_CC_TEXT: &str = "cc_text";
+pub const F_BCC_TEXT: &str = "bcc_text";
+
 pub const F_DATE: &str = "date";
 pub const F_INTERNAL_DATE: &str = "internal_date";
 pub const F_INGEST_AT: &str = "ingest_at";
@@ -73,6 +80,10 @@ pub struct EmailFields {
     pub f_to: Field,
     pub f_cc: Field,
     pub f_bcc: Field,
+    pub f_from_text: Field,
+    pub f_to_text: Field,
+    pub f_cc_text: Field,
+    pub f_bcc_text: Field,
     pub f_date: Field,
     pub f_internal_date: Field,
     pub f_ingest_at: Field,
@@ -97,6 +108,7 @@ pub struct AttachmentFields {
     pub f_account_id: Field,
     pub f_mailbox_id: Field,
     pub f_from: Field,
+    pub f_from_text: Field,
     pub f_subject: Field,
     pub f_content_hash: Field,
     pub f_text: Field,

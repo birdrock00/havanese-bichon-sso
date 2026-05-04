@@ -26,8 +26,10 @@ use crate::{
 pub mod attachment;
 pub mod envelope;
 pub mod fields;
+pub mod filter;
 pub mod model;
 pub mod schema;
+pub mod tokenizers;
 
 pub fn fatal_commit(writer: &mut IndexWriter) {
     const MAX_RETRIES: usize = 3;

@@ -67,16 +67,20 @@ impl EnvelopeWithAttachments {
         doc.add_text(fields.f_preview, &self.envelope.preview);
         doc.add_text(fields.f_content_hash, &self.envelope.content_hash);
         doc.add_text(fields.f_from, &self.envelope.from);
+        doc.add_text(fields.f_from_text, &self.envelope.from);
         doc.add_text(fields.f_body, body_text);
 
         for to in &self.envelope.to {
             doc.add_text(fields.f_to, to);
+            doc.add_text(fields.f_to_text, to);
         }
         for cc in &self.envelope.cc {
             doc.add_text(fields.f_cc, cc);
+            doc.add_text(fields.f_cc_text, cc);
         }
         for bcc in &self.envelope.bcc {
             doc.add_text(fields.f_bcc, bcc);
+            doc.add_text(fields.f_bcc_text, bcc);
         }
 
         doc.add_i64(fields.f_date, self.envelope.date);
@@ -353,9 +357,10 @@ impl AttachmentModel {
         doc.add_text(f.f_envelope_id, self.envelope_id);
         doc.add_u64(f.f_account_id, self.account_id);
         doc.add_u64(f.f_mailbox_id, self.mailbox_id);
-        doc.add_text(f.f_subject, self.subject);
+        doc.add_text(f.f_subject, &self.subject);
         doc.add_text(f.f_content_hash, self.content_hash);
-        doc.add_text(f.f_from, self.from);
+        doc.add_text(f.f_from, &self.from);
+        doc.add_text(f.f_from_text, &self.from);
         doc.add_i64(f.f_date, self.date);
         doc.add_i64(f.f_ingest_at, self.ingest_at);
         doc.add_u64(f.f_size, self.size);
@@ -383,6 +388,18 @@ impl AttachmentModel {
         if let Some(name) = self.name {
             doc.add_text(f.f_name_text, name.clone());
             doc.add_text(f.f_name_exact, name);
+        }
+
+        if let Some(tags) = &self.tags {
+            for tag in tags {
+                doc.add_facet(f.f_tags, tag);
+            }
+        }
+
+        if let Some(tags) = &self.auto_tags {
+            for tag in tags {
+                doc.add_facet(f.f_auto_tags, tag);
+            }
         }
 
         doc

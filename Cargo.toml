@@ -11,7 +11,7 @@ edition = "2021"
 [workspace.dependencies]
 chrono = "0.4.44"
 clap = { version = "4.6.1", features = ["derive", "env"] }
-mimalloc = "0.1.49"
+mimalloc = "0.1.50"
 native_db = "0.8.2"
 itertools = "0.14.0"
 native_model = "0.4.20"
@@ -38,7 +38,7 @@ regex = "1.12.3"
 email_address = "0.2.9"
 futures = "0.3.32"
 utf7-imap = "0.3.2"
-mail-parser = { version = '0.11.2', features = ["serde"] }
+mail-parser = { version = '0.11.3', features = ["serde"] }
 # mail-send = "0.5.2"
 tokio-rustls = { version = "0.26.4", default-features = false, features = [
     "ring",
@@ -52,12 +52,12 @@ num_cpus = "1.17.0"
 rand = "0.10.1"
 encoding_rs = "0.8.35"
 webpki-roots = "1.0.7"
-rustls = { version = "0.23.39", default-features = false, features = ["ring"] }
+rustls = { version = "0.23.40", default-features = false, features = ["ring"] }
 rustls-pki-types = "1.14.1"
 tokio-io-timeout = "1.2.1"
 semver = "1.0.28"
 governor = "0.10.4"
-lru = "0.17.0"
+lru = "0.18.0"
 mime_guess = "2.0.5"
 hex = "0.4.3"
 time = { version = "0.3.47", features = [

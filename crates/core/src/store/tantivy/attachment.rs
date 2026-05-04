@@ -25,19 +25,26 @@ use std::{
 };
 
 use crate::{
-    common::{paginated::DataPage, signal::SIGNAL_MANAGER}, dashboard::{Group, LargestAttachment}, error::{BichonResult, code::ErrorCode}, message::{
-            attachment::AttachmentMetadata,
-            search::{AttachmentSearchFilter, SortBy},
-            tags::{TagAction, TagCount, TagsRequest},
-        }, raise_error, settings::dir::DATA_DIR_MANAGER, store::tantivy::{
-            fatal_commit,
-            fields::{
-                F_ATTACHMENT_CATEGORY, F_ATTACHMENT_CONTENT_TYPE, F_ATTACHMENT_EXT, F_DATE, F_SIZE,
-                F_TAGS,
-            },
-            model::{AttachmentModel, extract_senders},
-            schema::SchemaTools,
-        }
+    common::{paginated::DataPage, signal::SIGNAL_MANAGER},
+    dashboard::{Group, LargestAttachment},
+    error::{code::ErrorCode, BichonResult},
+    message::{
+        attachment::AttachmentMetadata,
+        search::{AttachmentSearchFilter, SortBy},
+        tags::{TagAction, TagCount, TagsRequest},
+    },
+    raise_error,
+    settings::dir::DATA_DIR_MANAGER,
+    store::tantivy::{
+        fatal_commit,
+        fields::{
+            F_ATTACHMENT_CATEGORY, F_ATTACHMENT_CONTENT_TYPE, F_ATTACHMENT_EXT, F_DATE, F_SIZE,
+            F_TAGS,
+        },
+        model::{extract_senders, AttachmentModel},
+        schema::SchemaTools,
+        tokenizers::EuroTokenizer,
+    },
 };
 
 use serde_json::json;
@@ -67,7 +74,6 @@ pub struct IndexManager {
     index_writer: Arc<Mutex<IndexWriter>>,
     sender: mpsc::Sender<TantivyDocument>,
     reader: IndexReader,
-    query_parser: QueryParser,
     handle: Mutex<Option<JoinHandle<()>>>,
 }
 
@@ -80,6 +86,7 @@ impl IndexManager {
     }
     pub fn new() -> Self {
         let index = Self::open_or_create_index(&DATA_DIR_MANAGER.attachment_dir);
+        index.tokenizers().register("euro", EuroTokenizer::new());
         let mut merge_policy = LogMergePolicy::default();
         merge_policy.set_min_num_segments(25);
         merge_policy.set_min_layer_size(10_000);
@@ -101,9 +108,6 @@ impl IndexManager {
                 &DATA_DIR_MANAGER.envelope_dir, e
             )
         });
-        let mut query_parser =
-            QueryParser::for_index(&index, SchemaTools::attachment_default_fields());
-        query_parser.set_conjunction_by_default();
 
         let (sender, mut receiver) = mpsc::channel::<TantivyDocument>(100);
 
@@ -186,7 +190,6 @@ impl IndexManager {
             index_writer,
             sender,
             reader,
-            query_parser,
             handle: Mutex::new(Some(handler)),
         }
     }
@@ -267,7 +270,6 @@ impl IndexManager {
         &self,
         accounts: Option<HashSet<u64>>,
         filter: AttachmentSearchFilter,
-        parser: QueryParser,
     ) -> BichonResult<Box<dyn Query>> {
         let f = SchemaTools::attachment_fields();
         let mut subqueries: Vec<(Occur, Box<dyn Query>)> = Vec::new();
@@ -296,16 +298,21 @@ impl IndexManager {
         }
 
         if let Some(ref text) = filter.text {
-            let query = parser
+            let query_parser =
+                QueryParser::for_index(&self.index, SchemaTools::attachment_default_fields());
+
+            let query = query_parser
                 .parse_query(text)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
             subqueries.push((Occur::Must, Box::new(query)));
         }
 
         if let Some(ref subject_val) = filter.subject {
-            let term = Term::from_field_text(f.f_subject, subject_val);
-            let query = TermQuery::new(term, IndexRecordOption::Basic);
-            subqueries.push((Occur::Must, Box::new(query)));
+            let query_parser = QueryParser::for_index(&self.index, vec![f.f_subject]);
+            let q = query_parser
+                .parse_query(subject_val)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
+            subqueries.push((Occur::Must, q));
         }
 
         if let Some(ref tags) = filter.tags {
@@ -329,9 +336,11 @@ impl IndexManager {
         }
 
         if let Some(from_query) = &filter.from {
-            let term = Term::from_field_text(f.f_from, from_query);
-            let query = TermQuery::new(term, IndexRecordOption::Basic);
-            subqueries.push((Occur::Must, Box::new(query)));
+            let query_parser = QueryParser::for_index(&self.index, vec![f.f_from_text]);
+            let q = query_parser
+                .parse_query(from_query)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
+            subqueries.push((Occur::Must, q))
         }
 
         if let Some(content_hash) = &filter.content_hash {
@@ -349,9 +358,11 @@ impl IndexManager {
         if let Some(ref name) = filter.attachment_name {
             let query_parser =
                 QueryParser::for_index(&self.index, vec![f.f_name_text, f.f_name_exact]);
-            if let Ok(q) = query_parser.parse_query(name) {
-                subqueries.push((Occur::Must, q));
-            }
+            
+            let q = query_parser
+                .parse_query(name)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
+            subqueries.push((Occur::Must, q));
         }
 
         if let Some(ref extension) = filter.attachment_extension {
@@ -774,7 +785,7 @@ impl IndexManager {
     ) -> BichonResult<DataPage<AttachmentModel>> {
         assert!(page > 0, "Page number must be greater than 0");
         assert!(page_size > 0, "Page size must be greater than 0");
-        let query = self.filter_query(accounts, filter, self.query_parser.clone())?;
+        let query = self.filter_query(accounts, filter)?;
         let searcher = self.create_searcher()?;
         let total = searcher
             .search(&query, &Count)

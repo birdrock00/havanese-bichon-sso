@@ -46,6 +46,7 @@ use crate::{
             },
             model::{extract_contacts, EnvelopeWithAttachments},
             schema::SchemaTools,
+            tokenizers::EuroTokenizer,
         },
     },
     utc_now,
@@ -67,7 +68,7 @@ use tantivy::{
     schema::{IndexRecordOption, Value},
     DocAddress, Index, IndexReader, IndexWriter, Order, TantivyDocument, Term,
 };
-use tantivy::{query::RegexQuery, schema::Facet, Searcher};
+use tantivy::{schema::Facet, Searcher};
 use tokio::{
     sync::{mpsc, Mutex},
     task::{self, JoinHandle},
@@ -81,7 +82,6 @@ pub struct IndexManager {
     index_writer: Arc<Mutex<IndexWriter>>,
     sender: mpsc::Sender<TantivyDocument>,
     reader: IndexReader,
-    query_parser: QueryParser,
     handle: Mutex<Option<JoinHandle<()>>>,
 }
 
@@ -94,6 +94,7 @@ impl IndexManager {
     }
     pub fn new() -> Self {
         let index = Self::open_or_create_index(&DATA_DIR_MANAGER.envelope_dir);
+        index.tokenizers().register("euro", EuroTokenizer::new());
         let mut merge_policy = LogMergePolicy::default();
         merge_policy.set_min_num_segments(25);
         merge_policy.set_min_layer_size(10_000);
@@ -115,8 +116,6 @@ impl IndexManager {
                 &DATA_DIR_MANAGER.envelope_dir, e
             )
         });
-        let mut query_parser = QueryParser::for_index(&index, SchemaTools::email_default_fields());
-        query_parser.set_conjunction_by_default();
 
         let (sender, mut receiver) = mpsc::channel::<TantivyDocument>(100);
 
@@ -199,7 +198,6 @@ impl IndexManager {
             index_writer,
             sender,
             reader,
-            query_parser,
             handle: Mutex::new(Some(handler)),
         }
     }
@@ -277,7 +275,6 @@ impl IndexManager {
         &self,
         accounts: Option<HashSet<u64>>,
         filter: EmailSearchFilter,
-        parser: QueryParser,
     ) -> BichonResult<Box<dyn Query>> {
         let f = SchemaTools::email_fields();
         let mut subqueries: Vec<(Occur, Box<dyn Query>)> = Vec::new();
@@ -306,7 +303,10 @@ impl IndexManager {
         }
 
         if let Some(ref text) = filter.text {
-            let query = parser
+            let query_parser =
+                QueryParser::for_index(&self.index, SchemaTools::email_default_fields());
+
+            let query = query_parser
                 .parse_query(text)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
             subqueries.push((Occur::Must, Box::new(query)));
@@ -314,16 +314,20 @@ impl IndexManager {
 
         if let Some(ref subject_val) = filter.subject {
             let query_parser = QueryParser::for_index(&self.index, vec![f.f_subject]);
-            if let Ok(q) = query_parser.parse_query(subject_val) {
-                subqueries.push((Occur::Must, q));
-            }
+            let q = query_parser
+                .parse_query(subject_val)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
+            println!("{:#?}", &q);
+            subqueries.push((Occur::Must, q));
         }
 
         if let Some(ref body_val) = filter.body {
             let query_parser = QueryParser::for_index(&self.index, vec![f.f_body]);
-            if let Ok(q) = query_parser.parse_query(body_val) {
-                subqueries.push((Occur::Must, q));
-            }
+            
+            let q = query_parser
+                .parse_query(body_val)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
+            subqueries.push((Occur::Must, q));
         }
 
         if let Some(ref tags) = filter.tags {
@@ -347,15 +351,17 @@ impl IndexManager {
         }
 
         for (field, opt_value) in [
-            (f.f_from, &filter.from),
-            (f.f_to, &filter.to),
-            (f.f_cc, &filter.cc),
-            (f.f_bcc, &filter.bcc),
+            (f.f_from_text, &filter.from),
+            (f.f_to_text, &filter.to),
+            (f.f_cc_text, &filter.cc),
+            (f.f_bcc_text, &filter.bcc),
         ] {
             if let Some(ref v) = opt_value {
-                if let Ok(query) = RegexQuery::from_pattern(v.as_str(), field) {
-                    subqueries.push((Occur::Must, Box::new(query)));
-                }
+                let query_parser = QueryParser::for_index(&self.index, vec![field]);
+                let q = query_parser
+                    .parse_query(v)
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
+                subqueries.push((Occur::Must, q));
             }
         }
 
@@ -378,12 +384,24 @@ impl IndexManager {
         if let Some(ref name) = filter.attachment_name {
             if name.contains('.') {
                 let term = Term::from_field_text(f.f_attachment_name_exact, name);
-                let query = TermQuery::new(term, IndexRecordOption::Basic);
-                subqueries.push((Occur::Should, Box::new(query)));
-            }
+                let exact_query = TermQuery::new(term, IndexRecordOption::Basic);
 
-            let query_parser = QueryParser::for_index(&self.index, vec![f.f_attachment_name_text]);
-            if let Ok(q) = query_parser.parse_query(name) {
+                let query_parser =
+                    QueryParser::for_index(&self.index, vec![f.f_attachment_name_text]);
+                let q: Box<dyn Query> = query_parser
+                    .parse_query(name)
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
+                let query = BooleanQuery::new(vec![
+                    (Occur::Should, Box::new(exact_query)),
+                    (Occur::Should, Box::new(q)),
+                ]);
+                subqueries.push((Occur::Must, Box::new(query)));
+            } else {
+                let query_parser =
+                    QueryParser::for_index(&self.index, vec![f.f_attachment_name_text]);
+                let q = query_parser
+                    .parse_query(name)
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
                 subqueries.push((Occur::Must, q));
             }
         }
@@ -1061,7 +1079,7 @@ impl IndexManager {
     ) -> BichonResult<DataPage<Envelope>> {
         assert!(page > 0, "Page number must be greater than 0");
         assert!(page_size > 0, "Page size must be greater than 0");
-        let query = self.filter_query(accounts, filter, self.query_parser.clone())?;
+        let query = self.filter_query(accounts, filter)?;
         let searcher = self.create_searcher()?;
         let total = searcher
             .search(&query, &Count)

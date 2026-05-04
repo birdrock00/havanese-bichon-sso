@@ -117,5 +117,7 @@ async fn initialize() -> BichonResult<()> {
     BichonTls::initialize().await?;
     BichonContext::initialize().await?;
     LazyLock::force(&BLOB_MANAGER);
+    LazyLock::force(&ENVELOPE_MANAGER);
+    LazyLock::force(&ATTACHMENT_MANAGER);
     Ok(())
 }
