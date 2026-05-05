@@ -23,11 +23,17 @@ use crate::store::tantivy::filter::DeunicodeFilter;
 
 #[derive(Clone)]
 pub struct EuroTokenizer {
-    en: TextAnalyzer,
-    fr: TextAnalyzer,
-    de: TextAnalyzer,
-    es: TextAnalyzer,
-    nl: TextAnalyzer,
+    arabic: TextAnalyzer,
+    dutch: TextAnalyzer,
+    english: TextAnalyzer,
+    french: TextAnalyzer,
+    german: TextAnalyzer,
+    italian: TextAnalyzer,
+    portuguese: TextAnalyzer,
+    russian: TextAnalyzer,
+    spanish: TextAnalyzer,
+    swedish: TextAnalyzer,
+    turkish: TextAnalyzer,
     default: TextAnalyzer,
 }
 
@@ -43,11 +49,17 @@ impl EuroTokenizer {
         }
 
         Self {
-            en: build(Language::English),
-            fr: build(Language::French),
-            de: build(Language::German),
-            es: build(Language::Spanish),
-            nl: build(Language::Dutch),
+            arabic: build(Language::Arabic),
+            dutch: build(Language::Dutch),
+            english: build(Language::English),
+            french: build(Language::French),
+            german: build(Language::German),
+            italian: build(Language::Italian),
+            portuguese: build(Language::Portuguese),
+            russian: build(Language::Russian),
+            spanish: build(Language::Spanish),
+            swedish: build(Language::Swedish),
+            turkish: build(Language::Turkish),
             default: TextAnalyzer::builder(SimpleTokenizer::default())
                 .filter(RemoveLongFilter::limit(40))
                 .filter(LowerCaser)
@@ -61,11 +73,17 @@ impl Tokenizer for EuroTokenizer {
 
     fn token_stream<'a>(&'a mut self, text: &'a str) -> Self::TokenStream<'a> {
         match detect_language(text) {
-            Lang::Eng => self.en.token_stream(text),
-            Lang::Fra => self.fr.token_stream(text),
-            Lang::Deu => self.de.token_stream(text),
-            Lang::Spa => self.es.token_stream(text),
-            Lang::Nld => self.nl.token_stream(text),
+            Lang::Ara => self.arabic.token_stream(text),
+            Lang::Eng => self.english.token_stream(text),
+            Lang::Fra => self.french.token_stream(text),
+            Lang::Deu => self.german.token_stream(text),
+            Lang::Spa => self.spanish.token_stream(text),
+            Lang::Nld => self.dutch.token_stream(text),
+            Lang::Por => self.portuguese.token_stream(text),
+            Lang::Rus => self.russian.token_stream(text),
+            Lang::Swe => self.swedish.token_stream(text),
+            Lang::Tur => self.turkish.token_stream(text),
+            Lang::Ita => self.italian.token_stream(text),
             _ => self.default.token_stream(text), // fallback
         }
     }
