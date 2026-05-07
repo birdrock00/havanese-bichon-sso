@@ -21,8 +21,8 @@ use crate::account::state::DownloadState;
 use crate::cache::imap::download::process_imap_download;
 use crate::common::periodic::{PeriodicTask, TaskHandle};
 use crate::oauth2::token::OAuth2AccessToken;
-use crate::{account::migration::AccountModel, error::BichonResult};
 use crate::utc_now;
+use crate::{account::migration::AccountModel, error::BichonResult};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::{sync::LazyLock, time::Duration};
@@ -83,7 +83,7 @@ impl AccountSyncTask {
                                 }
                             }
                             if let Err(e) = process_imap_download(&account, internal_token).await {
-                                DownloadState::append_global_error_message(
+                                DownloadState::append_session_error(
                                     account.id,
                                     format!("error in account download task: {:#?}", e),
                                 )
@@ -140,8 +140,7 @@ impl AccountSyncTask {
                     account_id
                 );
                 token.cancel();
-                if let Err(_) = tokio::time::timeout(Duration::from_secs(5), handler.stop()).await
-                {
+                if let Err(_) = tokio::time::timeout(Duration::from_secs(5), handler.stop()).await {
                     error!(
                         "Shutdown: Account {} download task forced timeout.",
                         account_id

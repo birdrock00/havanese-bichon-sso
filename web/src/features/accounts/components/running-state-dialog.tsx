@@ -38,7 +38,6 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import {
-  CheckCircle,
   Clock,
   Loader2,
   Activity,
@@ -55,7 +54,6 @@ interface Props {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  // 保持颜色逻辑，但在暗色模式下这些颜色也相对友好，如果需要完全适配可调整为 bg-primary/10 等
   const map: Record<string, string> = {
     Running: 'bg-blue-500/10 text-blue-600',
     Downloading: 'bg-blue-500/10 text-blue-600',
@@ -141,7 +139,6 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
 
   const session = state?.active_session
   const history = state?.history || []
-  const globalErrors = state?.global_errors || []
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -167,10 +164,6 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
               <TabsTrigger value="history" className="whitespace-nowrap data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full bg-transparent shadow-none px-0 text-xs sm:text-sm font-bold">
                 {t('accounts.runningState.tabs.history')}
                 <Badge variant="secondary" className="ml-2 h-4 px-1 text-[10px] font-bold">{history.length}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="errors" className="whitespace-nowrap data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none h-full bg-transparent shadow-none px-0 text-xs sm:text-sm font-bold">
-                {t('accounts.runningState.tabs.global_errors')}
-                {globalErrors.length > 0 && <Badge variant="destructive" className="ml-2 h-4 px-1 text-[10px] font-bold">{globalErrors.length}</Badge>}
               </TabsTrigger>
             </TabsList>
           </div>
@@ -391,82 +384,6 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
                             </AccordionItem>
                           ))}
                         </Accordion>
-                      )}
-                    </div>
-                  </ScrollArea>
-                </TabsContent>
-                <TabsContent value="errors" className="h-full m-0 data-[state=active]:flex flex-col">
-                  <ScrollArea className="flex-1">
-                    <div className="p-4 sm:p-6">
-                      {globalErrors.length === 0 ? (
-                        <div className="py-32 text-center text-muted-foreground">
-                          <CheckCircle className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                          <p className="font-medium italic text-sm">{t('accounts.runningState.empty.no_global_errors')}</p>
-                        </div>
-                      ) : (
-                        <div className="relative">
-                          <div className="absolute left-[19px] top-2 bottom-2 w-0.5 bg-destructive/20" />
-                          <div className="space-y-6">
-                            {[...globalErrors]
-                              .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
-                              .map((e, i) => (
-                                <div key={i} className="relative pl-10 min-w-0">
-                                  <div className="absolute left-0 top-1.5 w-[40px] flex justify-center">
-                                    {i === 0 ? (
-                                      <span className="relative flex h-3 w-3">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
-                                      </span>
-                                    ) : (
-                                      <div className="w-2.5 h-2.5 rounded-full bg-destructive/20 mt-0.5" />
-                                    )}
-                                  </div>
-                                  <div
-                                    className={`
-                                      p-4 border rounded-2xl shadow-sm transition-all min-w-0
-                                      ${i === 0
-                                        ? 'border-destructive/20 bg-destructive/5 ring-1 ring-destructive/10'
-                                        : 'border-border bg-card'}
-                                    `}
-                                  >
-                                    <div className="flex items-start justify-between gap-3 mb-2 min-w-0">
-                                      <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                                        {i === 0 && (
-                                          <Badge className="bg-destructive hover:bg-destructive text-[9px] h-4 px-1">
-                                            {t('accounts.runningState.latest')}
-                                          </Badge>
-                                        )}
-
-                                        <div className="text-[10px] font-mono font-bold text-destructive bg-destructive/10 px-1.5 py-0.5 rounded break-all">
-                                          <span className="sm:hidden">
-                                            {format(new Date(e.at), 'HH:mm')}
-                                          </span>
-                                          <span className="hidden sm:inline">
-                                            {format(new Date(e.at), 'yyyy-MM-dd HH:mm:ss')}
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      <AlertTriangle
-                                        className={`w-4 h-4 shrink-0 ${i === 0 ? 'text-destructive' : 'text-destructive/50'
-                                          }`}
-                                      />
-                                    </div>
-                                    <div className="min-w-0">
-                                      <p
-                                        className={`
-                                          text-xs font-bold leading-relaxed whitespace-pre-wrap break-all min-w-0
-                                          ${i === 0 ? 'text-foreground' : 'text-muted-foreground'}
-                                        `}
-                                      >
-                                        {e.error}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                          </div>
-                        </div>
                       )}
                     </div>
                   </ScrollArea>

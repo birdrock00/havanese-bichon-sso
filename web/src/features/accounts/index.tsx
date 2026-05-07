@@ -43,6 +43,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useTranslation } from 'react-i18next'
 import { AccountAccessAssignmentDialog } from './components/access-assignment-dialog'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { AddAccountDialog } from './components/add-account-dialog'
 
 export default function Accounts() {
   const { t } = useTranslation()
@@ -75,29 +76,12 @@ export default function Accounts() {
             {require_any_permission(['system:root', 'account:create']) && <div className="flex gap-2">
               <div className="flex rounded-md shadow-sm">
                 <Button
-                  onClick={() => setOpen("add-imap")}
+                  onClick={() => setOpen("add")}
                   className="rounded-r-none border-r-0"
                 >
                   <Plus className="h-4 w-4" />
-                  {t('accounts.addImap')}
+                  {t('accounts.add')}
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="icon"
-                      className="h-9 w-9 rounded-l-none border-l-0"
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                      <span className="sr-only">{t('accounts.moreAccountTypes')}</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setOpen("add-nosync")}>
-                      <Plus className="h-4 w-4" />
-                      {t('accounts.addNoSync')}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
             </div>}
           </div>
@@ -120,8 +104,8 @@ export default function Accounts() {
                     {t('accounts.noAccountConfigurationsDesc')}
                   </p>
                   <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-4">
-                    <Button variant="default" className="w-64" onClick={() => setOpen("add-imap")}>
-                      {t('accounts.addConfiguration')}
+                    <Button variant="default" className="w-64" onClick={() => setOpen("add")}>
+                      {t('accounts.add')}
                     </Button>
                   </div>
                 </div>
@@ -130,7 +114,10 @@ export default function Accounts() {
           </div>
         </div>
       </Main>
-
+      <AddAccountDialog
+        key='account-add'
+        open={open === 'add'}
+        onOpenChange={() => setOpen('add')} />
 
       <AccountActionDialog
         key='imap-account-add'

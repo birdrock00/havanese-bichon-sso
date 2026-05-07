@@ -18,7 +18,7 @@
 
 import { useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, Loader2, MessageSquareText } from 'lucide-react';
+import { Loader2, MessageSquareText } from 'lucide-react';
 
 import {
   Dialog,
@@ -27,7 +27,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { get_thread_messages } from '@/api/mailbox/envelope/api';
 import { MailMessageView } from './mail-message-view';
@@ -72,6 +74,7 @@ export function MailThreadDialog({ open, onOpenChange }: MailThreadDialogProps) 
 
   const allMessages = data?.pages.flatMap((page) => page.items) ?? [];
   const totalCount = data?.pages[0]?.total_items ?? 0;
+  const sortedMessages = [...allMessages].sort((a, b) => a.date - b.date);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -84,138 +87,168 @@ export function MailThreadDialog({ open, onOpenChange }: MailThreadDialogProps) 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-width-full p-0 max-h-full flex flex-col md:max-w-3xl lg:max-w-4xl">
-        {/* Header */}
         <DialogHeader className="p-4 pb-3 border-b shrink-0">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquareText className="w-5 h-5" />
-              <div className="text-sm">
-                {t('search.thread.title', { count: totalCount })}
-              </div>
-            </DialogTitle>
-          </div>
+          <DialogTitle className="flex items-center gap-2">
+            <MessageSquareText className="w-5 h-5" />
+            <span className="text-sm">
+              {t('search.thread.title', { count: totalCount })}
+            </span>
+          </DialogTitle>
         </DialogHeader>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {isLoading && <ThreadSkeleton />}
+        <ScrollArea className="h-[calc(100vh-260px)] w-full pr-4 -mr-4 py-1">
+          <div className="p-4 sm:p-6">
+            {isLoading && <ThreadSkeleton />}
 
-          {isError && (
-            <div className="text-center text-destructive text-sm">
-              {t('search.thread.error')}: {(error as Error)?.message}
-            </div>
-          )}
+            {isError && (
+              <div className="text-center text-destructive text-sm">
+                {t('search.thread.error')}: {(error as Error)?.message}
+              </div>
+            )}
 
-          {!isLoading && allMessages.length === 0 && (
-            <div className="text-center text-muted-foreground text-sm">
-              {t('search.thread.empty')}
-            </div>
-          )}
+            {!isLoading && sortedMessages.length === 0 && (
+              <div className="text-center text-muted-foreground text-sm">
+                {t('search.thread.empty')}
+              </div>
+            )}
 
-          {allMessages
-            .sort((a, b) => a.date - b.date)
-            .map((msg) => {
-              const isExpanded = expandedIds.has(msg.id);
-              const preview = msg.preview;
-              const date = new Date(msg.date);
-              const formattedDate = isNaN(date.getTime())
-                ? t('search.thread.invalidDate')
-                : format(date, 'yyyy-MM-dd HH:mm:ss');
+            {sortedMessages.length > 0 && (
+              <div className="relative">
+                <div className="absolute left-[19px] top-2 bottom-2 w-0.5 bg-destructive/20" />
+                <div className="absolute left-[15px] bottom-0 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[7px] border-l-transparent border-r-transparent border-t-destructive/40" />
 
-              return (
-                <Card
-                  key={msg.id}
-                  className={`transition-all ${isExpanded ? 'ring-2 ring-primary' : ''}`}
-                >
-                  <CardHeader
-                    className="cursor-pointer pb-3"
-                    onClick={() => toggleExpand(msg.id)}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className="font-medium truncate">{msg.from}</span>
-                          <span className="text-muted-foreground">→</span>
-                          <span className="text-muted-foreground truncate">
-                            {msg.to.join(', ')}
-                          </span>
+                <div className="space-y-6">
+                  {sortedMessages.map((msg, i) => {
+                    const isExpanded = expandedIds.has(msg.id);
+                    const isLatest = i === sortedMessages.length - 1;
+
+                    const date = new Date(msg.date);
+                    const formattedDate = isNaN(date.getTime())
+                      ? t('search.thread.invalidDate')
+                      : format(date, 'yyyy-MM-dd HH:mm:ss');
+
+                    return (
+                      <div key={msg.id} className={`relative pl-10 min-w-0 ${isLatest ? 'mt-6' : ''}`}>
+                        <div className="absolute left-0 top-1.5 w-[40px] flex flex-col items-center gap-1">
+                          {isLatest && (
+                            <Badge className="bg-primary hover:bg-primary text-[9px] h-4 px-1 shrink-0 w-fit">
+                              {t('search.thread.latest')}
+                            </Badge>
+                          )}
+                          {isLatest ? (
+                            <span className="relative flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-primary" />
+                            </span>
+                          ) : (
+                            <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/30 mt-0.5" />
+                          )}
                         </div>
-                        <p className="font-medium mt-1 text-sm">
-                          {msg.subject || t('search.thread.noSubject')}
-                        </p>
-                        {!isExpanded && preview && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                            {preview}
-                          </p>
-                        )}
-                      </div>
+                        <Card
+                          className={`transition-all min-w-0 shadow-sm ${isLatest
+                            ? 'border-primary/20 bg-primary/5 ring-1 ring-primary/10'
+                            : 'border-border bg-card'
+                            } ${isExpanded ? 'ring-2 ring-primary' : ''}`}
+                        >
+                          <CardHeader
+                            className="cursor-pointer pb-3"
+                            onClick={() => toggleExpand(msg.id)}
+                          >
+                            <div className="flex items-start justify-between gap-3 mb-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                                <span className="font-medium truncate text-sm">{msg.from}</span>
+                                <span className="text-muted-foreground text-sm">→</span>
+                                <span className="text-muted-foreground truncate text-sm">
+                                  {msg.to.join(', ')}
+                                </span>
+                              </div>
+                              <div className="text-[10px] font-mono font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                                <span className="sm:hidden">
+                                  {isNaN(date.getTime()) ? '' : format(date, 'HH:mm')}
+                                </span>
+                                <span className="hidden sm:inline">{formattedDate}</span>
+                              </div>
+                            </div>
 
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{formattedDate}</span>
-                        {isExpanded ? (
-                          <ChevronUp className="w-4 h-4" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4" />
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
+                            <p className="font-medium text-sm">
+                              {msg.subject || t('search.thread.noSubject')}
+                            </p>
 
-                  {isExpanded && (
-                    <CardContent className="p-0">
-                      <div className="h-96 border-t m-5">
-                        <MailMessageView
-                          envelope={msg}
-                          showActions={false}
-                          showAttachments={false}
-                          showHeader={false}
-                        />
+                            {!isExpanded && msg.preview && (
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                {msg.preview}
+                              </p>
+                            )}
+                          </CardHeader>
+
+                          {isExpanded && (
+                            <CardContent className="p-0">
+                              <div className="h-96 border-t m-5">
+                                <MailMessageView
+                                  envelope={msg}
+                                  showActions={false}
+                                  showAttachments={false}
+                                  showHeader={false}
+                                />
+                              </div>
+                            </CardContent>
+                          )}
+                        </Card>
                       </div>
-                    </CardContent>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {hasNextPage && (
+              <div className="flex justify-center py-3 mt-4">
+                <Button
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  variant="outline"
+                  size="sm"
+                >
+                  {isFetchingNextPage ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {t('search.thread.loadingMore')}
+                    </>
+                  ) : (
+                    t('search.thread.loadMore')
                   )}
-                </Card>
-              );
-            })}
-
-          {hasNextPage && (
-            <div className="flex justify-center py-3">
-              <Button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                variant="outline"
-                size="sm"
-              >
-                {isFetchingNextPage ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {t('search.thread.loadingMore')}
-                  </>
-                ) : (
-                  t('search.thread.loadMore')
-                )}
-              </Button>
-            </div>
-          )}
-        </div>
+                </Button>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
 }
 
-// Skeleton
 function ThreadSkeleton() {
   return (
-    <div className="space-y-4">
-      {[...Array(3)].map((_, i) => (
-        <Card key={i}>
-          <CardHeader>
-            <Skeleton className="h-4 w-48 mb-2" />
-            <Skeleton className="h-5 w-64 mb-1" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-32 mt-2" />
-          </CardHeader>
-        </Card>
-      ))}
+    <div className="relative">
+      <div className="absolute left-[19px] top-2 bottom-2 w-0.5 bg-destructive/20" />
+      <div className="absolute left-[15px] bottom-0 w-0 h-0 border-l-[5px] border-r-[5px] border-t-[7px] border-l-transparent border-r-transparent border-t-destructive/40" />
+      <div className="space-y-6">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="relative pl-10 min-w-0">
+            <div className="absolute left-0 top-1.5 w-[40px] flex justify-center">
+              <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/30 mt-0.5" />
+            </div>
+            <Card>
+              <CardHeader>
+                <Skeleton className="h-4 w-48 mb-2" />
+                <Skeleton className="h-5 w-64 mb-1" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-32 mt-2" />
+              </CardHeader>
+            </Card>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

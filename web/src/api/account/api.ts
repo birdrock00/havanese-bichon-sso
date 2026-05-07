@@ -82,7 +82,6 @@ export interface DownloadState {
     history: DownloadSession[];
     last_trigger_at: number;
     last_finished_at: number | null;
-    global_errors: AccountError[];
 }
 
 

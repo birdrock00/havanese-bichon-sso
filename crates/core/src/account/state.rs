@@ -17,11 +17,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
+    raise_error, utc_now,
     {
         database::{async_find_impl, delete_impl, manager::DB_MANAGER, update_impl, upsert_impl},
         error::{code::ErrorCode, BichonResult},
     },
-    raise_error, utc_now,
 };
 use native_db::*;
 use native_model::{native_model, Model};
@@ -91,7 +91,6 @@ pub struct DownloadState {
     pub history: Vec<DownloadSession>,
     pub last_trigger_at: i64,
     pub last_finished_at: Option<i64>,
-    pub global_errors: Vec<AccountError>,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
@@ -122,7 +121,6 @@ impl DownloadState {
             }),
             history: Default::default(),
             last_finished_at: Default::default(),
-            global_errors: Default::default(),
         };
         upsert_impl(DB_MANAGER.envelope_db(), state).await
     }
@@ -304,40 +302,5 @@ impl DownloadState {
                 })
         })
         .await
-    }
-
-    pub async fn append_global_error_message(account_id: u64, error: String) -> BichonResult<()> {
-        Self::update_state(account_id, move |current| {
-            let mut updated = current.clone();
-            updated.append_global_error_log(error);
-            Ok(updated)
-        })
-        .await
-    }
-
-    fn append_global_error_log(&mut self, error: String) {
-        let new_error = AccountError {
-            error,
-            at: utc_now!(),
-        };
-
-        self.global_errors.push(new_error);
-        let to_remove = self.global_errors.len().saturating_sub(30);
-        if to_remove > 0 {
-            self.global_errors.drain(0..to_remove);
-        }
-    }
-
-    pub async fn clear_global_errors(account_id: u64) -> BichonResult<()> {
-        Self::update_state(account_id, move |current| {
-            let mut updated = current.clone();
-            updated.clear_global_error_log();
-            Ok(updated)
-        })
-        .await
-    }
-
-    fn clear_global_error_log(&mut self) {
-        self.global_errors.clear();
     }
 }
