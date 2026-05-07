@@ -35,7 +35,7 @@ pub struct BichonContext {
 
 impl Initialize for BichonContext {
     async fn initialize() -> BichonResult<()> {
-        BICHON_CONTEXT.start_account_syncers().await
+        BICHON_CONTEXT.start_account_downloader().await
     }
 }
 
@@ -49,7 +49,7 @@ impl BichonContext {
         utc_now!() - self.start_at
     }
 
-    pub async fn start_account_syncers(&self) -> BichonResult<()> {
+    pub async fn start_account_downloader(&self) -> BichonResult<()> {
         let accounts = AccountModel::list_all().await?;
         let active_accounts: Vec<AccountModel> = accounts
             .into_iter()
@@ -66,7 +66,7 @@ impl BichonContext {
         );
         for account in active_accounts {
             DOWNLOAD_CONTROLLER
-                .trigger_start(account.id, account.email)
+                .trigger_schedule(account.id, account.email)
                 .await
         }
 

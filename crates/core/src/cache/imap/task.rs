@@ -17,37 +17,56 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::account::entity::AuthType;
-use crate::account::state::DownloadState;
+use crate::account::state::{DownloadState, TriggerType};
 use crate::cache::imap::download::process_imap_download;
 use crate::common::periodic::{PeriodicTask, TaskHandle};
+use crate::error::code::ErrorCode;
 use crate::oauth2::token::OAuth2AccessToken;
-use crate::utc_now;
 use crate::{account::migration::AccountModel, error::BichonResult};
-use std::collections::HashMap;
+use crate::{raise_error, utc_now};
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::{sync::LazyLock, time::Duration};
 use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
 static _DESCRIPTION: &str = "This task periodically synchronizes mailbox data for a specified account, ensuring that all local data is up-to-date.";
 const TASK_INTERVAL: Duration = Duration::from_secs(10);
-pub static SYNC_TASKS: LazyLock<AccountSyncTask> = LazyLock::new(AccountSyncTask::new);
+pub static SYNC_TASKS: LazyLock<AccountDownTask> = LazyLock::new(AccountDownTask::new);
 static LAST_WARN_TIME: AtomicI64 = AtomicI64::new(0);
 const WARN_INTERVAL_MS: i64 = 600_000;
 
-pub struct AccountSyncTask {
+pub struct AccountDownTask {
     tasks: Mutex<Option<HashMap<u64, (TaskHandle, CancellationToken)>>>,
+    manual_tasks: Mutex<HashMap<u64, (JoinHandle<()>, CancellationToken)>>,
+    busy_accounts: Mutex<HashSet<u64>>,
 }
 
-impl AccountSyncTask {
+impl AccountDownTask {
     pub fn new() -> Self {
         Self {
             tasks: Mutex::new(Some(HashMap::new())),
+            manual_tasks: Mutex::new(HashMap::new()),
+            busy_accounts: Mutex::new(HashSet::new()),
         }
     }
 
-    pub async fn start_account_download_task(&self, account_id: u64, email: String) {
+    async fn set_busy(&self, account_id: u64, is_busy: bool) {
+        let mut guard = self.busy_accounts.lock().await;
+        if is_busy {
+            guard.insert(account_id);
+        } else {
+            guard.remove(&account_id);
+        }
+    }
+
+    async fn is_busy(&self, account_id: u64) -> bool {
+        self.busy_accounts.lock().await.contains(&account_id)
+    }
+
+    pub async fn start_download_task(&self, account_id: u64, email: String) {
         let task_name = format!("account-download-task-{}-{}", account_id, &email);
         let periodic_task = PeriodicTask::new(&task_name);
 
@@ -58,6 +77,28 @@ impl AccountSyncTask {
             let account_id = param.unwrap();
             let internal_token = task_token.clone();
             Box::pin(async move {
+                if SYNC_TASKS.is_manual_running(account_id).await {
+                    info!(
+                        "Account {}: Scheduled task skipped (Manual task is running).",
+                        account_id
+                    );
+                    return Ok(());
+                }
+
+                if SYNC_TASKS.is_busy(account_id).await {
+                    warn!(
+                        "Account {}: Scheduled task skipped (Previous sync still active).",
+                        account_id
+                    );
+                    return Ok(());
+                }
+
+                SYNC_TASKS.set_busy(account_id, true).await;
+                let _busy_guard = scopeguard::guard(account_id, |id| {
+                    tokio::spawn(async move {
+                        SYNC_TASKS.set_busy(id, false).await;
+                    });
+                });
                 let account = AccountModel::async_get(account_id).await.ok();
                 match account {
                     Some(account) => {
@@ -82,7 +123,13 @@ impl AccountSyncTask {
                                     }
                                 }
                             }
-                            if let Err(e) = process_imap_download(&account, internal_token).await {
+                            if let Err(e) = process_imap_download(
+                                &account,
+                                internal_token,
+                                TriggerType::Scheduled,
+                            )
+                            .await
+                            {
                                 DownloadState::append_session_error(
                                     account.id,
                                     format!("error in account download task: {:#?}", e),
@@ -149,5 +196,71 @@ impl AccountSyncTask {
             }
             info!("Shutdown: All download tasks processed.");
         }
+    }
+
+    pub async fn start_manual_task(&self, account_id: u64) -> BichonResult<()> {
+        {
+            if self.is_manual_running(account_id).await {
+                return Err(raise_error!(
+                    "Manual task already running.".into(),
+                    ErrorCode::Forbidden
+                ));
+            }
+            if self.is_busy(account_id).await {
+                return Err(raise_error!(
+                    "The background synchronization is currently active. Please try again in a few seconds.".into(), 
+                    ErrorCode::Forbidden
+                ));
+            }
+        }
+
+        let cancel_token = CancellationToken::new();
+        let token_clone = cancel_token.clone();
+        let handle = tokio::spawn(async move {
+            SYNC_TASKS.set_busy(account_id, true).await;
+            let _cleanup = scopeguard::guard(account_id, |id| {
+                tokio::spawn(async move {
+                    SYNC_TASKS.set_busy(id, false).await;
+                    let mut guard = SYNC_TASKS.manual_tasks.lock().await;
+                    guard.remove(&id);
+                });
+            });
+            if token_clone.is_cancelled() {
+                return;
+            }
+            let account = match AccountModel::async_get(account_id).await {
+                Ok(acc) => acc,
+                Err(e) => {
+                    error!("Failed to fetch account {}: {:?}", account_id, e);
+                    return;
+                }
+            };
+
+            if let Err(e) = process_imap_download(&account, token_clone, TriggerType::Manual).await
+            {
+                error!("Manual download failed for {}: {:?}", account_id, e);
+                let error_msg = format!("error in account download task: {:#?}", e);
+                let _ = DownloadState::append_session_error(account.id, error_msg).await;
+            }
+        });
+        {
+            let mut guard = self.manual_tasks.lock().await;
+            guard.insert(account_id, (handle, cancel_token));
+        }
+
+        Ok(())
+    }
+
+    pub async fn cancel_manual_task(&self, account_id: u64) {
+        let mut guard = self.manual_tasks.lock().await;
+        if let Some((handle, token)) = guard.remove(&account_id) {
+            token.cancel();
+            let _ = handle.await;
+        }
+    }
+
+    pub async fn is_manual_running(&self, account_id: u64) -> bool {
+        let guard = self.manual_tasks.lock().await;
+        guard.contains_key(&account_id)
     }
 }

@@ -19,33 +19,34 @@
 use crate::{
     account::{
         migration::{AccountModel, AccountType},
-        state::{DownloadState, DownloadStatus},
+        state::{DownloadState, DownloadStatus, TriggerType},
     },
-    cache::imap::{mailbox::MailBox, download::flow::FetchDirection},
+    cache::imap::{download::flow::FetchDirection, mailbox::MailBox},
     error::BichonResult,
     imap::executor::ImapExecutor,
 };
+use download_folders::get_download_folders;
+use download_type::{decide_next_download_task, DownloadTask};
 use flow::reconcile_mailboxes;
 use rebuild::{rebuild_cache, rebuild_cache_by_date};
 use std::time::Instant;
-use download_folders::get_download_folders;
-use download_type::{decide_next_download_task, DownloadTask};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, warn};
 
-pub mod flow;
-pub mod rebuild;
 pub mod download_folders;
 pub mod download_type;
+pub mod flow;
+pub mod rebuild;
 
 pub async fn process_imap_download(
     account: &AccountModel,
     token: CancellationToken,
+    trigger_type: TriggerType,
 ) -> BichonResult<()> {
     assert_eq!(account.account_type, AccountType::IMAP);
     let start_time = Instant::now();
     let account_id = account.id;
-    let download_task = decide_next_download_task(account).await?;
+    let download_task = decide_next_download_task(account, trigger_type).await?;
     if matches!(download_task, DownloadTask::Idle) {
         return Ok(());
     }

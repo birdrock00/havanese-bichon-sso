@@ -17,6 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
+    utc_now,
     {
         account::{
             migration::AccountModel,
@@ -24,7 +25,6 @@ use crate::{
         },
         error::BichonResult,
     },
-    utc_now,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -34,27 +34,33 @@ pub enum DownloadTask {
     Idle,
 }
 
-pub async fn decide_next_download_task(account: &AccountModel) -> BichonResult<DownloadTask> {
-    Ok(match DownloadState::get(account.id).await? {
-        Some(state) => {
-            let should_trigger = should_trigger_next_download(
-                state.last_trigger_at,
-                state.last_finished_at.unwrap_or(0),
-                account.download_interval_min.unwrap(),
-            );
-
-            if should_trigger {
-                DownloadState::start_new_session(account.id, TriggerType::Scheduled).await?;
-                DownloadTask::TraceFetch
-            } else {
-                DownloadTask::Idle
-            }
-        }
+pub async fn decide_next_download_task(
+    account: &AccountModel,
+    trigger_type: TriggerType,
+) -> BichonResult<DownloadTask> {
+    let state = match DownloadState::get(account.id).await? {
         None => {
             DownloadState::init(account.id).await?;
-            DownloadTask::FullFetch
+            return Ok(DownloadTask::FullFetch);
         }
-    })
+        Some(s) => s,
+    };
+
+    let should_start = match trigger_type {
+        TriggerType::Manual => true,
+        TriggerType::Scheduled => should_trigger_next_download(
+            state.last_trigger_at,
+            state.last_finished_at.unwrap_or(0),
+            account.download_interval_min.unwrap_or(60),
+        ),
+    };
+
+    if should_start {
+        DownloadState::start_new_session(account.id, trigger_type).await?;
+        Ok(DownloadTask::TraceFetch)
+    } else {
+        Ok(DownloadTask::Idle)
+    }
 }
 
 fn should_trigger_next_download(

@@ -35,11 +35,10 @@ impl DownloadController {
         tokio::spawn(async move {
             while let Some((account_id, email)) = rx.recv().await {
                 match Self::start_download(account_id, email.clone()).await {
-                    Ok(Some(_)) => {}
-                    Ok(None) => {}
+                    Ok(_) => {}
                     Err(err) => {
                         error!(
-                            "Failed to prepare and start download of account {{{}-{}}}, error: {:#?}",
+                            "Failed to prepare and start scheduled download of account {{{}-{}}}, error: {:#?}",
                             &account_id, &email, err
                         );
                     }
@@ -51,7 +50,7 @@ impl DownloadController {
     }
 
     /// Trigger synchronization for a specific account
-    pub async fn trigger_start(&self, account_id: u64, email: String) {
+    pub async fn trigger_schedule(&self, account_id: u64, email: String) {
         if let Err(e) = self.channel.send((account_id, email)).await {
             error!(
                 "Failed to trigger download for account={{{}}}, error: {:?}",
@@ -60,13 +59,13 @@ impl DownloadController {
         }
     }
 
-    async fn start_download(account_id: u64, email: String) -> BichonResult<Option<()>> {
+    async fn start_download(account_id: u64, email: String) -> BichonResult<()> {
         info!(
             "Account download starting for account: {}-{}.",
             account_id, email
         );
-        SYNC_TASKS.start_account_download_task(account_id, email).await;
+        SYNC_TASKS.start_download_task(account_id, email).await;
         tokio::time::sleep(Duration::from_millis(100)).await;
-        Ok(Some(()))
+        Ok(())
     }
 }

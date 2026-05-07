@@ -529,6 +529,7 @@ dependencies = [
  "ring",
  "rustls",
  "rustls-pki-types",
+ "scopeguard",
  "serde",
  "serde_json",
  "snafu",

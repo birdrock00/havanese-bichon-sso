@@ -70,3 +70,4 @@ tracing-log.workspace = true
 tokio-util.workspace = true
 whichlang = "0.1.1"
 deunicode = "1.6.2"
+scopeguard = "1.2.0"

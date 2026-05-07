@@ -298,7 +298,7 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
                                       {format(new Date(h.start_time), 'yyyy-MM-dd HH:mm:ss')}
                                     </div>
                                     <StatusBadge status={h.status} />
-                                    <div className="hidden xs:block"><TriggerBadge trigger={h.trigger} /></div>
+                                    <div className="xs:block"><TriggerBadge trigger={h.trigger} /></div>
                                   </div>
                                   <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full self-start sm:self-auto">
                                     {Object.keys(h.folder_details).length} {t('accounts.runningState.folders')}

@@ -170,6 +170,17 @@ export const remove_account = async (account_id: number) => {
     return response.data;
 };
 
+
+export const start_account_download = async (account_id: number) => {
+    const response = await axiosInstance.post(`api/v1/accounts/${account_id}/start-download`);
+    return response.data;
+};
+
+export const cancel_account_download = async (account_id: number) => {
+    const response = await axiosInstance.post(`api/v1/accounts/${account_id}/cancel-download`);
+    return response.data;
+};
+
 export interface AutoConfigResult {
     imap: ServerConfig;
     oauth2?: OAuth2Config;

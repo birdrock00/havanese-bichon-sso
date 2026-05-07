@@ -318,7 +318,7 @@ impl AccountV4 {
 
         if matches!(cloned.account_type, AccountType::IMAP) {
             DOWNLOAD_CONTROLLER
-                .trigger_start(cloned.id, cloned.email.clone())
+                .trigger_schedule(cloned.id, cloned.email.clone())
                 .await;
         }
         Ok(cloned)

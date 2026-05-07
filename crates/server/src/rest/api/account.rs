@@ -20,14 +20,17 @@ use crate::common::auth::WrappedContext;
 use crate::rest::api::ApiTags;
 use crate::rest::ApiResult;
 use bichon_core::account::grant::BatchAccountRoleRequest;
-use bichon_core::account::migration::AccountModel;
+use bichon_core::account::migration::{AccountModel, AccountType};
 use bichon_core::account::payload::{
     filter_accessible_accounts, AccountCreateRequest, AccountUpdateRequest, MinimalAccount,
 };
 use bichon_core::account::state::DownloadState;
 use bichon_core::account::stats::AccountStats;
 use bichon_core::account::view::AccountResp;
+use bichon_core::cache::imap::task::SYNC_TASKS;
 use bichon_core::common::paginated::{paginate_vec, DataPage};
+use bichon_core::error::code::ErrorCode;
+use bichon_core::raise_error;
 use bichon_core::store::tantivy::envelope::ENVELOPE_MANAGER;
 use bichon_core::users::permissions::Permission;
 use bichon_core::users::UserModel;
@@ -202,6 +205,68 @@ impl AccountApi {
         let state = DownloadState::get(account_id).await?;
         let state = state.unwrap_or(DownloadState::empty(account_id));
         Ok(Json(state))
+    }
+
+    /// Start a manual download task for an account
+    #[oai(
+        path = "/accounts/:account_id/start-download",
+        method = "post",
+        operation_id = "accounts_start_download"
+    )]
+    async fn accounts_start_download(
+        &self,
+        /// The account ID to start download for
+        account_id: Path<u64>,
+        context: WrappedContext,
+    ) -> ApiResult<()> {
+        let account_id = account_id.0;
+        let account = AccountModel::check_account_exists(account_id).await?;
+        if !matches!(account.account_type, AccountType::IMAP) {
+            return Err(raise_error!(
+                format!("Manual download is not supported for '{:#?}' accounts. Only IMAP accounts are supported.", account.account_type),
+                ErrorCode::InvalidParameter
+            ))?;
+        }
+        context
+            .require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)
+            .await?;
+        SYNC_TASKS.start_manual_task(account_id).await?;
+        Ok(())
+    }
+
+    /// Cancel a running manual download task
+    #[oai(
+        path = "/accounts/:account_id/cancel-download",
+        method = "post",
+        operation_id = "accounts_cancel_download"
+    )]
+    async fn accounts_cancel_download(
+        &self,
+        /// The account ID to cancel download for
+        account_id: Path<u64>,
+        context: WrappedContext,
+    ) -> ApiResult<()> {
+        let account_id = account_id.0;
+        let account = AccountModel::check_account_exists(account_id).await?;
+
+        if !matches!(account.account_type, AccountType::IMAP) {
+            return Err(raise_error!(
+                "This operation is only supported for IMAP accounts.".into(),
+                ErrorCode::InvalidParameter
+            ))?;
+        }
+        context
+            .require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)
+            .await?;
+
+        if !SYNC_TASKS.is_manual_running(account_id).await {
+            return Err(raise_error!(
+                "No running manual task found for this account.".into(),
+                ErrorCode::ResourceNotFound
+            ))?;
+        }
+        SYNC_TASKS.cancel_manual_task(account_id).await;
+        Ok(())
     }
 
     /// Get the stats of an account
