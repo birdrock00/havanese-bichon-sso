@@ -5,7 +5,6 @@
 
 @layer base {
   :root {
-    /* 亮色模式：保持清爽，略微加深边框对比度 */
     --background: 0 0% 100%;
     --foreground: 215 28% 17%;
     
@@ -16,8 +15,7 @@
     --popover-foreground: 215 28% 17%;
     --card: 0 0% 100%;
     --card-foreground: 215 28% 17%;
-    
-    /* 提升亮色下的边框清晰度 */
+
     --border: 214 32% 88%;
     --input: 214 32% 88%;
     
@@ -52,26 +50,21 @@
   }
 
   .dark {
-    /* 背景：采用质感深灰 (Slate 900级别) 而不是纯黑 */
     --background: 215 20% 12%; 
-    --foreground: 210 40% 98%; /* 更明亮的纯白主文本 */
+    --foreground: 210 40% 98%;
     
-    /* 卡片和悬浮层：比背景明显提亮一个色阶 (Slate 800级别)，形成物理层次感 */
     --card: 215 20% 16%; 
     --card-foreground: 210 40% 98%;
     --popover: 215 20% 16%;
     --popover-foreground: 210 40% 98%;
     
-    /* 弱化背景：用于 Table 表头、Hover 状态，再次提亮 */
+    
     --muted: 215 20% 22%; 
-    /* 弱化文字：明度提高到 70%，确保在深色背景上不费眼 */
     --muted-foreground: 215 15% 70%; 
     
-    /* 边框和输入框：使用高光轮廓线，对比度极强，切分区域极其清晰 */
     --border: 215 20% 28%; 
     --input: 215 20% 28%;
     
-    /* 主色调：采用穿透力更强的高明度冰蓝色 */
     --primary: 217 90% 70%; 
     --primary-foreground: 215 20% 12%;
     
@@ -91,7 +84,6 @@
     --chart-4: 280 75% 75%;
     --chart-5: 340 85% 70%;
 
-    /* 侧边栏：略微比主区域深一点点，起到画框包裹的视觉效果 */
     --sidebar-background: 215 20% 10%; 
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 217 90% 70%;
