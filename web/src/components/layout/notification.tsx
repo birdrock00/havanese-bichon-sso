@@ -156,7 +156,7 @@ function ReleaseNotificationView({ data }: { data: Release }) {
         </p>
       </div>
 
-      <div className="prose prose-xs dark:prose-invert max-w-none">
+      <div className="prose prose-xs dark:prose-invert max-w-none text-sm">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>
           {data.body}
         </ReactMarkdown>
