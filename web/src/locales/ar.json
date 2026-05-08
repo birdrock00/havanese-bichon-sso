@@ -484,6 +484,7 @@
     "noRecentActivity": "لا يوجد نشاط حديث",
     "noSendersData": "لا توجد بيانات للمرسلين",
     "noSubject": "(لا يوجد موضوع)",
+    "regularAttachments": "المرفقات العادية",
     "saved": "الموفرة",
     "sender": "المرسل",
     "size": "الحجم",
@@ -497,6 +498,7 @@
     "top10LargestEmails": "أكبر 10 رسائل بريد إلكتروني",
     "top10Senders": "أفضل 10 مرسلين",
     "topLists": "القوائم الأعلى",
+    "totalAttachments": "إجمالي المرفقات",
     "totalEmailSize": "الحجم الإجمالي لرسائل البريد الإلكتروني",
     "totalEmails": "إجمالي رسائل البريد الإلكتروني",
     "withAttachments": "مع مرفقات"

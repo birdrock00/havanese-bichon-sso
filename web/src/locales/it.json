@@ -484,6 +484,7 @@
     "noRecentActivity": "Nessuna attività recente",
     "noSendersData": "Nessun dato sui mittenti",
     "noSubject": "(Nessun Oggetto)",
+    "regularAttachments": "Allegati regolari",
     "saved": "Risparmiato",
     "sender": "Mittente",
     "size": "Dimensione",
@@ -497,6 +498,7 @@
     "top10LargestEmails": "Le 10 Email più Grandi",
     "top10Senders": "I 10 Mittenti Principali",
     "topLists": "Liste Top",
+    "totalAttachments": "Allegati totali",
     "totalEmailSize": "Dimensione totale email",
     "totalEmails": "Email totali",
     "withAttachments": "Con Allegati"

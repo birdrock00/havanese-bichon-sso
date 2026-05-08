@@ -484,6 +484,7 @@
     "noRecentActivity": "Aucune activité récente",
     "noSendersData": "Aucune donnée d'expéditeurs",
     "noSubject": "(Aucun Objet)",
+    "regularAttachments": "Pièces jointes standard",
     "saved": "Économisé",
     "sender": "Expéditeur",
     "size": "Taille",
@@ -497,6 +498,7 @@
     "top10LargestEmails": "Top 10 des E-mails les Plus Volumineux",
     "top10Senders": "Top 10 des Expéditeurs",
     "topLists": "Top Listes",
+    "totalAttachments": "Total des pièces jointes",
     "totalEmailSize": "Taille totale des e-mails",
     "totalEmails": "Total des e-mails",
     "withAttachments": "Avec Pièces Jointes"

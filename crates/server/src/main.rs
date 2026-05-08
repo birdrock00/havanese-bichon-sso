@@ -19,20 +19,20 @@
 use std::sync::LazyLock;
 
 use bichon_core::{
-    bichon_version, raise_error,
-    {
-        cache::imap::task::SYNC_TASKS,
-        common::rustls::BichonTls,
-        context::{executors::BichonContext, Initialize},
-        error::{code::ErrorCode, BichonResult},
-        logger,
-        settings::cli::SETTINGS,
-        store::{
-            storage::BLOB_MANAGER,
-            tantivy::{attachment::ATTACHMENT_MANAGER, envelope::ENVELOPE_MANAGER},
-        },
-        tasks::PeriodicTasks,
+    bichon_version,
+    cache::imap::task::SYNC_TASKS,
+    common::rustls::BichonTls,
+    context::{executors::BichonContext, Initialize},
+    error::{code::ErrorCode, BichonResult},
+    logger,
+    migrate::is_legacy_data_layout,
+    raise_error,
+    settings::cli::SETTINGS,
+    store::{
+        storage::BLOB_MANAGER,
+        tantivy::{attachment::ATTACHMENT_MANAGER, envelope::ENVELOPE_MANAGER},
     },
+    tasks::PeriodicTasks,
 };
 use bichon_smtp::server::{start_smtp_server, SmtpServer};
 use mimalloc::MiMalloc;
@@ -68,6 +68,24 @@ async fn main() -> BichonResult<()> {
     info!("Version:  {}", bichon_version!());
     info!("Git:      [{}]", env!("GIT_HASH"));
     info!("GitHub:   https://github.com/rustmailer/bichon");
+
+    match is_legacy_data_layout() {
+        Ok(true) => {
+            error!("Incompatible data format detected.");
+            error!("Your data was created by an older version of Bichon and must be migrated before use.");
+            error!("Please run: bichon-migrate");
+            error!("Documentation: https://github.com/rustmailer/bichon/wiki/migration");
+            return Err(raise_error!(
+                "Legacy data layout detected".into(),
+                ErrorCode::InternalError
+            ));
+        }
+        Err(e) => {
+            error!("Failed to check data layout: {:#?}", e);
+            return Err(raise_error!(format!("{:#?}", e), ErrorCode::InternalError));
+        }
+        Ok(false) => {}
+    }
 
     if let Err(error) = initialize().await {
         eprintln!("{:?}", error);

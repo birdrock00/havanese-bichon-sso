@@ -13,6 +13,7 @@ pub mod import;
 pub mod logger;
 pub mod mailbox;
 pub mod message;
+pub mod migrate;
 pub mod oauth2;
 pub mod settings;
 pub mod store;

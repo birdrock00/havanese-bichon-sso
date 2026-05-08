@@ -219,21 +219,15 @@ export default function MailArchiveDashboard() {
                 <p className="text-xs text-muted-foreground">{t('dashboard.syncedLocally')}</p>
               </CardContent>
             </Card>
+
             <Card className="md:col-span-2 lg:col-span-2">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-xs font-bold uppercase tracking-wider">{t('dashboard.systemVersion')}</CardTitle>
+                <CardTitle className="text-xs font-bold uppercase tracking-wider">{t('dashboard.totalAttachments')}</CardTitle>
+                <Mail className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className='text-xl font-bold truncate text-primary tracking-tighter'>
-                  {stats1.system_version ? (
-                    <a href={`https://github.com/rustmailer/bichon/releases/tag/${stats1.system_version}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                      {stats1.system_version}
-                    </a>
-                  ) : 'N/A'}
-                </div>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <GithubIcon className="h-5 w-5 text-muted-foreground" />
-                </div>
+                <div className="text-xl font-bold">{formatNumber(stats1.attachment_count)}</div>
+                <p className="text-xs text-muted-foreground">{t('dashboard.regularAttachments')}</p>
               </CardContent>
             </Card>
             <Card className="md:col-span-6 lg:col-span-6">
@@ -558,7 +552,30 @@ export default function MailArchiveDashboard() {
       </Main>
 
       <div className="mt-auto p-6 text-center text-xs text-muted-foreground border-t">
-        © 2025-2026 <a href="https://rustmailer.com" target="_blank" rel="noopener noreferrer" className="hover:underline">rustmailer.com</a> - Bichon Email Archiving Project
+        <p>
+          © 2025-2026{" "}
+          <a
+            href="https://github.com/rustmailer/bichon"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline font-medium"
+          >
+            Bichon Email Archiving Project
+          </a>
+          {stats1.system_version && (
+            <>
+              <span className="mx-2 opacity-50">•</span>
+              <a
+                href={`https://github.com/rustmailer/bichon/releases/tag/${stats1.system_version}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline font-mono"
+              >
+                v{stats1.system_version}
+              </a>
+            </>
+          )}
+        </p>
       </div>
     </>
   );

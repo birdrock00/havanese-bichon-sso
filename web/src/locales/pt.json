@@ -484,6 +484,7 @@
     "noRecentActivity": "Nenhuma Atividade Recente",
     "noSendersData": "Sem Dados de Remetentes",
     "noSubject": "(Sem Assunto)",
+    "regularAttachments": "Anexos regulares",
     "saved": "Economizado",
     "sender": "Remetente",
     "size": "Tamanho",
@@ -497,6 +498,7 @@
     "top10LargestEmails": "Top 10 Maiores Emails",
     "top10Senders": "Top 10 Remetentes",
     "topLists": "Principais Listas",
+    "totalAttachments": "Total de anexos",
     "totalEmailSize": "Tamanho Total do Email",
     "totalEmails": "Total de Emails",
     "withAttachments": "Com Anexos"

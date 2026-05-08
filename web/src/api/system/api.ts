@@ -44,6 +44,7 @@ export const get_notifications = async () => {
 export interface DashboardStats {
     account_count: number;                 // Number of accounts
     email_count: number;                   // Total number of emails
+    attachment_count: number;                   // Total number of attachments
     total_size_bytes: number;              // Total size of all emails (in bytes)
     storage_usage_bytes: number;           // Actual storage used (in bytes)
     index_usage_bytes: number;             // Index storage size (in bytes)
@@ -60,6 +61,7 @@ export interface DashboardStats {
 export const INITIAL_DASHBOARD_STATS: DashboardStats = {
     account_count: 0,
     email_count: 0,
+    attachment_count: 0,
     total_size_bytes: 0,
     storage_usage_bytes: 0,
     index_usage_bytes: 0,

@@ -484,6 +484,7 @@
     "noRecentActivity": "Ingen nylig aktivitet",
     "noSendersData": "Inga avsändardata",
     "noSubject": "(Inget ämne)",
+    "regularAttachments": "Vanliga bilagor",
     "saved": "Sparat",
     "sender": "Avsändare",
     "size": "Storlek",
@@ -497,6 +498,7 @@
     "top10LargestEmails": "Topp 10 största e-postmeddelanden",
     "top10Senders": "Topp 10 avsändare",
     "topLists": "Topplistor",
+    "totalAttachments": "Totalt antal bilagor",
     "totalEmailSize": "Total e-poststorlek",
     "totalEmails": "Totalt antal e-postmeddelanden",
     "withAttachments": "Med bilagor"

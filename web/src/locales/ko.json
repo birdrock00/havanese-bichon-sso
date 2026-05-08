@@ -484,6 +484,7 @@
     "noRecentActivity": "최근 활동 없음",
     "noSendersData": "발신자 데이터 없음",
     "noSubject": "(제목 없음)",
+    "regularAttachments": "일반 첨부 파일",
     "saved": "절약됨",
     "sender": "발신자",
     "size": "크기",
@@ -497,6 +498,7 @@
     "top10LargestEmails": "상위 10개 최대 크기 이메일",
     "top10Senders": "상위 10명 발신자",
     "topLists": "상위 목록",
+    "totalAttachments": "총 첨부 파일",
     "totalEmailSize": "총 이메일 크기",
     "totalEmails": "총 이메일 수",
     "withAttachments": "첨부 파일 포함"

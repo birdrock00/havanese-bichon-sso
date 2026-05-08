@@ -484,6 +484,7 @@
     "noRecentActivity": "Ei viimeaikaisia tapahtumia",
     "noSendersData": "Ei lähettäjätietoja",
     "noSubject": "(Ei aihetta)",
+    "regularAttachments": "Tavalliset liitteet",
     "saved": "Säästetty",
     "sender": "Lähettäjä",
     "size": "Koko",
@@ -497,6 +498,7 @@
     "top10LargestEmails": "10 suurinta sähköpostia",
     "top10Senders": "10 parasta lähettäjää",
     "topLists": "Parhaat listat",
+    "totalAttachments": "Liitteitä yhteensä",
     "totalEmailSize": "Sähköpostien kokonaiskoko",
     "totalEmails": "Sähköpostien kokonaismäärä",
     "withAttachments": "Liitteillä"

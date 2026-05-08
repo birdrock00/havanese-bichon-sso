@@ -484,6 +484,7 @@
     "noRecentActivity": "Keine kürzliche Aktivität",
     "noSendersData": "Keine Absenderdaten",
     "noSubject": "(Kein Betreff)",
+    "regularAttachments": "Reguläre Anhänge",
     "saved": "Eingespart",
     "sender": "Absender",
     "size": "Größe",
@@ -497,6 +498,7 @@
     "top10LargestEmails": "Top 10 größte E-Mails",
     "top10Senders": "Top 10 Absender",
     "topLists": "Top-Listen",
+    "totalAttachments": "Anhänge insgesamt",
     "totalEmailSize": "Gesamtgröße der E-Mails",
     "totalEmails": "Gesamt-E-Mails",
     "withAttachments": "Mit Anhängen"

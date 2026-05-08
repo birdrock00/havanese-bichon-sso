@@ -484,6 +484,7 @@
     "noRecentActivity": "Geen recente activiteit",
     "noSendersData": "Geen afzendersgegevens",
     "noSubject": "(Geen Onderwerp)",
+    "regularAttachments": "Reguliere bijlagen",
     "saved": "Bespaard",
     "sender": "Afzender",
     "size": "Grootte",
@@ -497,6 +498,7 @@
     "top10LargestEmails": "Top 10 Grootste e-mails",
     "top10Senders": "Top 10 Afzenders",
     "topLists": "Toplijsten",
+    "totalAttachments": "Totaal aantal bijlagen",
     "totalEmailSize": "Totale e-mailgrootte",
     "totalEmails": "Totaal aantal e-mails",
     "withAttachments": "Met Bijlagen"

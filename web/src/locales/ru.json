@@ -484,6 +484,7 @@
     "noRecentActivity": "Нет недавней активности",
     "noSendersData": "Нет данных об отправителях",
     "noSubject": "(Без темы)",
+    "regularAttachments": "Обычные вложения",
     "saved": "Сэкономлено",
     "sender": "Отправитель",
     "size": "Размер",
@@ -497,6 +498,7 @@
     "top10LargestEmails": "Топ 10 самых больших писем",
     "top10Senders": "Топ 10 отправителей",
     "topLists": "Топ списки",
+    "totalAttachments": "Всего вложений",
     "totalEmailSize": "Общий размер писем",
     "totalEmails": "Всего писем",
     "withAttachments": "С вложениями"

@@ -484,6 +484,7 @@
     "noRecentActivity": "無近期活動",
     "noSendersData": "無寄件人資料",
     "noSubject": "(無主旨)",
+    "regularAttachments": "普通附件",
     "saved": "節省空間",
     "sender": "寄件人",
     "size": "大小",
@@ -497,6 +498,7 @@
     "top10LargestEmails": "前 10 封最大郵件",
     "top10Senders": "前 10 名寄件人",
     "topLists": "排行榜",
+    "totalAttachments": "附件總數",
     "totalEmailSize": "郵件總容量",
     "totalEmails": "郵件總數",
     "withAttachments": "包含附件"

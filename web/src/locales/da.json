@@ -484,6 +484,7 @@
     "noRecentActivity": "Ingen nylig aktivitet",
     "noSendersData": "Ingen afsenderdata",
     "noSubject": "(Intet emne)",
+    "regularAttachments": "Almindelige vedhæftede filer",
     "saved": "Sparet",
     "sender": "Afender",
     "size": "Størrelse",
@@ -497,6 +498,7 @@
     "top10LargestEmails": "Top 10 Største E-mails",
     "top10Senders": "Top 10 Afsendere",
     "topLists": "Toplister",
+    "totalAttachments": "Samlet antal vedhæftede filer",
     "totalEmailSize": "Samlet e-mailstørrelse",
     "totalEmails": "Samlet antal e-mails",
     "withAttachments": "Med vedhæftninger"

@@ -484,6 +484,7 @@
     "noRecentActivity": "Ingen nylig aktivitet",
     "noSendersData": "Ingen avsenderdata",
     "noSubject": "(Uten emne)",
+    "regularAttachments": "Vanlige vedlegg",
     "saved": "Spart",
     "sender": "Avsender",
     "size": "Størrelse",
@@ -497,6 +498,7 @@
     "top10LargestEmails": "Topp 10 største e-poster",
     "top10Senders": "Topp 10 avsendere",
     "topLists": "Topplister",
+    "totalAttachments": "Totalt antall vedlegg",
     "totalEmailSize": "Total e-poststørrelse",
     "totalEmails": "Totalt antall e-poster",
     "withAttachments": "Med vedlegg"

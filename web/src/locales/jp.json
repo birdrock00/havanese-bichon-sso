@@ -484,6 +484,7 @@
     "noRecentActivity": "最近のアクティビティなし",
     "noSendersData": "送信者データなし",
     "noSubject": "(件名なし)",
+    "regularAttachments": "通常の添付ファイル",
     "saved": "節約済み",
     "sender": "送信者",
     "size": "サイズ",
@@ -497,6 +498,7 @@
     "top10LargestEmails": "容量の大きいメールトップ10",
     "top10Senders": "送信者トップ10",
     "topLists": "トップリスト",
+    "totalAttachments": "添付ファイル総数",
     "totalEmailSize": "メール総容量",
     "totalEmails": "合計メール数",
     "withAttachments": "添付ファイルあり"

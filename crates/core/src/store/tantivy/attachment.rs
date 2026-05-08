@@ -266,6 +266,30 @@ impl IndexManager {
         Box::new(boolean_query)
     }
 
+    pub fn total_attachments(&self, accounts: &Option<HashSet<u64>>) -> BichonResult<u64> {
+        let searcher = self.create_searcher()?;
+
+        match accounts {
+            Some(ref ids) if !ids.is_empty() => {
+                let mut subqueries = Vec::new();
+                for &id in ids {
+                    let term = Term::from_field_u64(SchemaTools::email_fields().f_account_id, id);
+                    subqueries.push((
+                        Occur::Should,
+                        Box::new(TermQuery::new(term, IndexRecordOption::Basic)) as Box<dyn Query>,
+                    ));
+                }
+                let query = Box::new(BooleanQuery::new(subqueries)) as Box<dyn Query>;
+                let count = searcher
+                    .search(&query, &Count)
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                Ok(count as u64)
+            }
+            Some(_) => Ok(0),
+            None => Ok(searcher.num_docs()),
+        }
+    }
+
     fn filter_query(
         &self,
         accounts: Option<HashSet<u64>>,
@@ -358,7 +382,7 @@ impl IndexManager {
         if let Some(ref name) = filter.attachment_name {
             let query_parser =
                 QueryParser::for_index(&self.index, vec![f.f_name_text, f.f_name_exact]);
-            
+
             let q = query_parser
                 .parse_query(name)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;

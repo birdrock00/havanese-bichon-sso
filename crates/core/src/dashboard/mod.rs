@@ -46,6 +46,7 @@ use crate::{
 pub struct DashboardStats {
     pub account_count: usize,                            // Number of accounts
     pub email_count: u64,                                // Total number of emails
+    pub attachment_count: u64,                           // Total number of attachments
     pub total_size_bytes: u64,                           // Total size of all emails (in bytes)
     pub storage_usage_bytes: u64,                        // Actual storage used (in bytes)
     pub index_usage_bytes: u64,                          // Index storage size (in bytes)
@@ -89,7 +90,7 @@ impl DashboardStats {
         };
 
         stat.email_count = ENVELOPE_MANAGER.total_emails(&authorized_ids)?;
-
+        stat.attachment_count = ATTACHMENT_MANAGER.total_attachments(&authorized_ids)?;
         if has_all_accounts {
             stat.storage_usage_bytes = get_total_size(&DATA_DIR_MANAGER.storage_dir)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
