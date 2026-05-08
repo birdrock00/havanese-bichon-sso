@@ -76,7 +76,7 @@ export default function Accounts() {
               <div className="flex rounded-md shadow-sm">
                 <Button
                   onClick={() => setOpen("add")}
-                  className="rounded-r-none border-r-0"
+                  className="border-r-0"
                 >
                   <Plus className="h-4 w-4" />
                   {t('accounts.add')}
