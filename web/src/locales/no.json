@@ -1202,6 +1202,10 @@
     "filterProxy": "Filtrer Proxy...",
     "general": "Generelt",
     "generateNewToken": "Generer nytt token, det gamle utløper umiddelbart.",
+    "header": {
+      "description": "Administrer profilen din og se systemkonfigurasjoner.",
+      "title": "Innstillinger"
+    },
     "host": "Vert",
     "id": "Id",
     "invalidPassword": "Ugyldig passord",

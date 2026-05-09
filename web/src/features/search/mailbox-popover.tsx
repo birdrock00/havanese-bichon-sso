@@ -271,7 +271,7 @@ export function MailboxPopover() {
                     variant="outline"
                     disabled={disabled}
                     className={cn(
-                        'h-6 rounded-none px-3 gap-1.5 transition-colors',
+                        'h-6 rounded-none px-3 gap-1.5 transition-colors border-l-0',
                         selectedMailboxIds.length > 0 && 'bg-primary/10 text-primary border-primary/20'
                     )}
                 >

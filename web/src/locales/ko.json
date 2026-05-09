@@ -1202,6 +1202,10 @@
     "filterProxy": "프록시 필터링...",
     "general": "일반",
     "generateNewToken": "새 토큰을 생성합니다. 이전 토큰은 즉시 무효화됩니다.",
+    "header": {
+      "description": "프로필 관리 및 시스템 설정 확인.",
+      "title": "설정"
+    },
     "host": "호스트",
     "id": "ID",
     "invalidPassword": "유효하지 않은 비밀번호",

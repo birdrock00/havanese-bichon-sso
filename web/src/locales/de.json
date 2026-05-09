@@ -1202,6 +1202,10 @@
     "filterProxy": "Proxys filtern...",
     "general": "Allgemein",
     "generateNewToken": "Einen neuen Token generieren, der alte läuft sofort ab.",
+    "header": {
+      "description": "Profil verwalten und Systemkonfigurationen anzeigen.",
+      "title": "Einstellungen"
+    },
     "host": "Host",
     "id": "Id",
     "invalidPassword": "Ungültiges Passwort",

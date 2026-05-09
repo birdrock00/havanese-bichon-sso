@@ -1202,6 +1202,10 @@
     "filterProxy": "Suodata välityspalvelimet...",
     "general": "Yleinen",
     "generateNewToken": "Luo uusi tunnus, vanha vanhenee välittömästi.",
+    "header": {
+      "description": "Hallitse profiiliasi ja tarkastele järjestelmän määrityksiä.",
+      "title": "Asetukset"
+    },
     "host": "Isäntä",
     "id": "Id",
     "invalidPassword": "Virheellinen salasana",

@@ -1202,6 +1202,10 @@
     "filterProxy": "Filtrer les Proxys...",
     "general": "Général",
     "generateNewToken": "Génère un nouveau jeton, l'ancien expirera immédiatement.",
+    "header": {
+      "description": "Gérez votre profil et consultez les configurations système.",
+      "title": "Paramètres"
+    },
     "host": "Hôte",
     "id": "Id",
     "invalidPassword": "Mot de passe non valide",

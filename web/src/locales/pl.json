@@ -1202,6 +1202,10 @@
     "filterProxy": "Filtr Proxy...",
     "general": "Ogólne",
     "generateNewToken": "Wygeneruj nowy token, stary wygaśnie natychmiast.",
+    "header": {
+      "description": "Zarządzaj profilem i przeglądaj konfiguracje systemu.",
+      "title": "Ustawienia"
+    },
     "host": "Host",
     "id": "Id",
     "invalidPassword": "Błędne hasło",

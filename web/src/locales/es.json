@@ -1202,6 +1202,10 @@
     "filterProxy": "Filtrar proxies...",
     "general": "General",
     "generateNewToken": "Generar un nuevo token, el antiguo caducará inmediatamente.",
+    "header": {
+      "description": "Administra tu perfil y consulta las configuraciones del sistema.",
+      "title": "Configuración"
+    },
     "host": "Host",
     "id": "Id",
     "invalidPassword": "Contraseña inválida",

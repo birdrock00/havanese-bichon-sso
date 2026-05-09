@@ -1202,6 +1202,10 @@
     "filterProxy": "篩選代理...",
     "general": "一般",
     "generateNewToken": "產生一個新權杖。舊權杖將立即失效。",
+    "header": {
+      "description": "管理您的個人資料並查看系統配置。",
+      "title": "設置"
+    },
     "host": "主機",
     "id": "ID",
     "invalidPassword": "密碼無效",

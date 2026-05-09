@@ -25,6 +25,7 @@ import { useCurrentUser } from '@/hooks/use-current-user'
 import { PermissionsDialog } from './permissions-dialog'
 import Logo from '@/assets/logo.svg'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import LongText from '@/components/long-text'
 
 
 export function AccountAccessList() {
@@ -70,13 +71,15 @@ export function AccountAccessList() {
                     if (!email) return null
 
                     return (
-                        <Card key={accountId} className="group hover:bg-accent/40 transition-all h-fit">
+                        <Card key={accountId} className="group hover:bg-accent/40 transition-all h-fit min-w-0">
                             <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-3">
                                 <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary text-sm font-bold shrink-0">
                                     {email.charAt(0).toUpperCase()}
                                 </div>
-                                <div className="flex flex-col min-w-0">
-                                    <CardTitle className="text-sm font-semibold truncate">{email}</CardTitle>
+                                <div className="flex flex-col min-w-0 flex-1">
+                                    <CardTitle className="text-sm font-semibold">
+                                        <LongText className="max-w-[248px]">{email}</LongText>
+                                    </CardTitle>
                                     <CardDescription className="text-[10px] font-mono">
                                         {t('settings.profile.account.id', { id: accountId })}
                                     </CardDescription>

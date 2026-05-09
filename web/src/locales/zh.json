@@ -1202,6 +1202,10 @@
     "filterProxy": "筛选代理...",
     "general": "常规",
     "generateNewToken": "生成新令牌，旧令牌立即失效。",
+    "header": {
+      "description": "管理您的个人资料并查看系统配置。",
+      "title": "设置"
+    },
     "host": "主机",
     "id": "ID",
     "invalidPassword": "密码无效",

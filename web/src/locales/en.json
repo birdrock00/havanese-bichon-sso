@@ -1202,6 +1202,10 @@
     "filterProxy": "Filter Proxy...",
     "general": "General",
     "generateNewToken": "Generate new token, old one expires immediately.",
+    "header": {
+      "description": "Manage your account profile and view system configurations.",
+      "title": "Settings"
+    },
     "host": "Host",
     "id": "Id",
     "invalidPassword": "Invalid password",

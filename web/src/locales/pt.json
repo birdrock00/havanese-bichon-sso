@@ -1202,6 +1202,10 @@
     "filterProxy": "Filtrar Proxy...",
     "general": "Geral",
     "generateNewToken": "Gera um novo token. O token antigo é imediatamente invalidado.",
+    "header": {
+      "description": "Gerencie seu perfil e visualize as configurações do sistema.",
+      "title": "Configurações"
+    },
     "host": "Host",
     "id": "ID",
     "invalidPassword": "Senha Inválida",

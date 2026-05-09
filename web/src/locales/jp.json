@@ -1202,6 +1202,10 @@
     "filterProxy": "プロキシをフィルター...",
     "general": "一般",
     "generateNewToken": "新しいトークンを生成します。古いトークンは直ちに失効します。",
+    "header": {
+      "description": "プロフィールの管理とシステム設定の確認。",
+      "title": "設定"
+    },
     "host": "ホスト",
     "id": "ID",
     "invalidPassword": "無効なパスワード",

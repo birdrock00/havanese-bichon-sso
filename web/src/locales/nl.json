@@ -1202,6 +1202,10 @@
     "filterProxy": "Filter Proxy...",
     "general": "Algemeen",
     "generateNewToken": "Genereer nieuw token, het oude verloopt onmiddellijk.",
+    "header": {
+      "description": "Beheer uw profiel en bekijk systeemconfiguraties.",
+      "title": "Instellingen"
+    },
     "host": "Host",
     "id": "Id",
     "invalidPassword": "Ongeldig wachtwoord",
