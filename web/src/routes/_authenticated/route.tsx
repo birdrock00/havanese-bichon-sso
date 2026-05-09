@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-import Cookies from 'js-cookie'
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { cn } from '@/lib/utils'
 import { SearchProvider } from '@/context/search-context'
@@ -29,7 +27,7 @@ export const Route = createFileRoute('/_authenticated')({
 })
 
 function RouteComponent() {
-  const defaultOpen = Cookies.get('sidebar:state') !== 'false'
+  const defaultOpen = localStorage.getItem('sidebar_state') === 'true';
   return (
     <SearchProvider>
       <SidebarProvider defaultOpen={defaultOpen}>
