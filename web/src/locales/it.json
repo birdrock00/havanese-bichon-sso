@@ -915,7 +915,7 @@
       "role_badge": "Ruolo {{type}}",
       "title": "Permessi: {{name}}",
       "unknown": "Ruolo sconosciuto",
-      "view_permissions": "Dettagli permessi"
+      "view_permissions": "Dettagli"
     },
     "empty": {
       "desc": "Non hai ancora creato alcun ruolo personalizzato.",
@@ -1272,6 +1272,7 @@
     "rootTitle": "Root",
     "selectAll": "Seleziona Tutto",
     "sidebar": {
+      "access": "Permessi di accesso",
       "apiTokens": "Token API",
       "configurations": "Configurazioni di sistema",
       "profile": "Profilo",
@@ -1299,6 +1300,9 @@
     "confirm": "Disconnetti",
     "desc": "Sei sicuro di voler disconnetterti? Dovrai accedere di nuovo per usare il tuo account.",
     "title": "Disconnetti"
+  },
+  "system": {
+    "notifications": "Notifiche di sistema"
   },
   "systemConfig": {
     "pageDescription": "Questi parametri sono inizializzati tramite flag CLI o variabili d'ambiente. Sono di sola lettura per garantire la coerenza.",

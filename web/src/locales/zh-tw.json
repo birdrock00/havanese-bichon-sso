@@ -915,7 +915,7 @@
       "role_badge": "{{type}} 角色",
       "title": "角色權限: {{name}}",
       "unknown": "未知角色",
-      "view_permissions": "權限詳情"
+      "view_permissions": "詳情"
     },
     "empty": {
       "desc": "您尚未建立任何自定義角色。點擊下方按鈕開始新增新角色。",
@@ -1272,6 +1272,7 @@
     "rootTitle": "根目錄",
     "selectAll": "全選",
     "sidebar": {
+      "access": "訪問權限",
       "apiTokens": "API 權杖",
       "configurations": "系統配置",
       "profile": "個人資料",
@@ -1299,6 +1300,9 @@
     "confirm": "登出",
     "desc": "您確定要登出嗎？您需要重新登入才能存取帳戶。",
     "title": "登出"
+  },
+  "system": {
+    "notifications": "系統通知"
   },
   "systemConfig": {
     "pageDescription": "這些參數透過 CLI 標誌或環境變數初始化。它們目前為唯讀，以確保環境一致性。",

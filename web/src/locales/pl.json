@@ -915,7 +915,7 @@
       "role_badge": "Rola {{type}}",
       "title": "Uprawnienia: {{name}}",
       "unknown": "Nieznana rola",
-      "view_permissions": "Zobacz szczegóły"
+      "view_permissions": "Szczegóły"
     },
     "empty": {
       "desc": "Nie utworzyłeś jeszcze żadnych własnych ról.",
@@ -1272,6 +1272,7 @@
     "rootTitle": "Root",
     "selectAll": "Zaznacz wszystko",
     "sidebar": {
+      "access": "Uprawnienia dostępu",
       "apiTokens": "Tokeny API",
       "configurations": "Konfiguracja systemu",
       "profile": "Profil",
@@ -1299,6 +1300,9 @@
     "confirm": "Wyloguj się",
     "desc": "Czy na pewno chcesz się wylogować? Aby uzyskać dostęp do konta, będziesz musiał zalogować się ponownie.",
     "title": "Wyloguj się"
+  },
+  "system": {
+    "notifications": "Powiadomienia systemowe"
   },
   "systemConfig": {
     "pageDescription": "Parametry te są inicjowane za pomocą flag CLI lub zmiennych środowiskowych. Są one obecnie tylko do odczytu.",

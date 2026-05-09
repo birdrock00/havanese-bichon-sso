@@ -915,7 +915,7 @@
       "role_badge": "{{type}} Role",
       "title": "Role Permissions: {{name}}",
       "unknown": "Unknown Role",
-      "view_permissions": "Permission Details"
+      "view_permissions": "Details"
     },
     "empty": {
       "desc": "You haven't created any custom roles yet.",
@@ -1272,6 +1272,7 @@
     "rootTitle": "Root",
     "selectAll": "Select all",
     "sidebar": {
+      "access": "Access Permissions",
       "apiTokens": "API Tokens",
       "configurations": "System Configurations",
       "profile": "Profile",
@@ -1299,6 +1300,9 @@
     "confirm": "Sign out",
     "desc": "Are you sure you want to sign out? You will need to sign in again to access your account.",
     "title": "Sign out"
+  },
+  "system": {
+    "notifications": "System Notifications"
   },
   "systemConfig": {
     "pageDescription": "These parameters are initialized via CLI flags or Environment Variables. They are currently read-only to ensure environment consistency.",

@@ -25,11 +25,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { getPermissions, User } from '@/api/users/api'
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { CheckCircle, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useTranslation } from 'react-i18next'
+import useMinimalAccountList from '@/hooks/use-minimal-account-list'
 
 interface Props {
   currentRow?: User
@@ -95,6 +96,7 @@ export function PermissionsDialog({
 }: Props) {
   const { t } = useTranslation()
 
+  const { getEmailById } = useMinimalAccountList();
 
   const ownedPermissions = React.useMemo<string[]>(() => {
     if (!currentRow) return []
@@ -120,7 +122,7 @@ export function PermissionsDialog({
     mode === 'global'
       ? getGlobalCategories(t)
       : getAccountCategories(t)
-      
+
   const title =
     mode === 'global'
       ? t('permission.dialog.global_title')
@@ -140,56 +142,51 @@ export function PermissionsDialog({
             <Badge variant="outline" className="text-[10px]">
               {mode === 'global'
                 ? t('permission.scope.global')
-                : t('permission.scope.account', { id: accountId })}
+                : t('permission.scope.account', { id: getEmailById(accountId!) })}
             </Badge>
           </div>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto py-4">
-          <div className="grid gap-6 px-1">
+          <div className="flex flex-col gap-6 px-1">
             {categories.map((cat) => (
               <div key={cat.title} className="flex flex-col">
-                <h3 className="text-[11px] font-bold text-slate-500 border-l-4 border-blue-500 pl-2 mb-4 uppercase tracking-widest">
+                <h3 className="text-[11px] font-bold text-muted-foreground border-l-2 border-primary pl-2 mb-3 uppercase tracking-widest">
                   {cat.title}
                 </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   {cat.keys.map((key) => {
                     const item = permissions.get(key)
                     if (!item) return null
 
-                    const hasPermission =
-                      ownedPermissions.includes(item.value)
+                    const hasPermission = ownedPermissions.includes(item.value)
 
                     return (
                       <div
                         key={item.value}
                         className={cn(
-                          'flex items-center gap-2.5 p-2 rounded-md transition-all text-xs border',
+                          'flex items-center gap-2.5 p-2.5 rounded-md border text-xs transition-all',
                           hasPermission
-                            ? 'bg-green-50/40 border-green-100 text-green-800 shadow-sm'
-                            : 'bg-slate-50/30 border-transparent text-slate-400 opacity-60',
+                            ? 'bg-primary/5 border-primary/20'
+                            : 'bg-muted/30 border-border opacity-50',
                         )}
                       >
                         {hasPermission ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                          <CheckCircle className="w-4 h-4 text-primary shrink-0" />
                         ) : (
-                          <XCircle className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                          <XCircle className="w-4 h-4 text-muted-foreground/40 shrink-0" />
                         )}
 
                         <div className="flex flex-col min-w-0 flex-1">
-                          <span
-                            className={cn(
-                              'font-semibold text-sm leading-none truncate',
-                              hasPermission
-                                ? 'text-slate-900'
-                                : 'text-slate-500',
-                            )}
-                          >
+                          <span className={cn(
+                            'font-medium text-xs leading-none truncate',
+                            hasPermission ? 'text-foreground' : 'text-muted-foreground',
+                          )}>
                             {item.label}
                           </span>
-                          <span className="text-xs opacity-70 font-mono mt-1 truncate">
+                          <span className="text-[10px] text-muted-foreground font-mono mt-1 truncate">
                             {item.value}
                           </span>
                         </div>

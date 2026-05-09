@@ -915,7 +915,7 @@
       "role_badge": "{{type}} rol",
       "title": "Permissies: {{name}}",
       "unknown": "Onbekende rol",
-      "view_permissions": "Details bekijken"
+      "view_permissions": "Details"
     },
     "empty": {
       "desc": "U heeft nog geen aangepaste rollen gemaakt.",
@@ -1272,6 +1272,7 @@
     "rootTitle": "Root",
     "selectAll": "Alles selecteren",
     "sidebar": {
+      "access": "Toegangsrechten",
       "apiTokens": "API-tokens",
       "configurations": "Systeemconfiguraties",
       "profile": "Profiel",
@@ -1299,6 +1300,9 @@
     "confirm": "Uitloggen",
     "desc": "Weet je zeker dat je wilt uitloggen? Je moet opnieuw inloggen om toegang te krijgen tot je account.",
     "title": "Uitloggen"
+  },
+  "system": {
+    "notifications": "Systeemmeldingen"
   },
   "systemConfig": {
     "pageDescription": "Deze parameters worden geïnitialiseerd via CLI-flags of omgevingsvariabelen. Ze zijn alleen-lezen.",

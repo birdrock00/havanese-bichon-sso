@@ -59,7 +59,11 @@ export function RunningStateCellAction({ row }: Props) {
         })
       }
     }}>
-      <span className="text-xs text-blue-500 cursor-pointer underline hover:text-blue-700">{t('accounts.viewDetails')}</span>
+      <span
+        className="text-xs text-primary cursor-pointer underline underline-offset-2 hover:opacity-80 transition-opacity"
+      >
+        {t('accounts.viewDetails')}
+      </span>
     </Button>
   )
 }

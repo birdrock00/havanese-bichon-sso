@@ -24,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { Languages } from 'lucide-react'
+import { Globe } from 'lucide-react'
 
 const LANGUAGES = [
   { code: 'ar', label: 'العربية' },
@@ -59,7 +59,7 @@ export function LanguageSwitch() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon">
-          <Languages className="h-4 w-4" />
+          <Globe/>
           <span className="sr-only">Change language</span>
         </Button>
       </DropdownMenuTrigger>

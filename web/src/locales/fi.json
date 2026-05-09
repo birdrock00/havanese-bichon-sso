@@ -915,7 +915,7 @@
       "role_badge": "{{type}}-rooli",
       "title": "Oikeudet: {{name}}",
       "unknown": "Tuntematon rooli",
-      "view_permissions": "Katso yksityiskohdat"
+      "view_permissions": "Tiedot"
     },
     "empty": {
       "desc": "Et ole vielä luonut mukautettuja rooleja.",
@@ -1272,6 +1272,7 @@
     "rootTitle": "Pääkäyttäjä",
     "selectAll": "Valitse kaikki",
     "sidebar": {
+      "access": "Käyttöoikeudet",
       "apiTokens": "API-tunnukset",
       "configurations": "Järjestelmäasetukset",
       "profile": "Profiili",
@@ -1299,6 +1300,9 @@
     "confirm": "Kirjaudu ulos",
     "desc": "Haluatko varmasti kirjautua ulos? Sinun täytyy kirjautua uudelleen päästäksesi tilillesi.",
     "title": "Kirjaudu ulos"
+  },
+  "system": {
+    "notifications": "Järjestelmäilmoitukset"
   },
   "systemConfig": {
     "pageDescription": "Nämä parametrit alustetaan CLI-lippujen tai ympäristömuuttujien kautta. Ne ovat vain luku -tilassa.",

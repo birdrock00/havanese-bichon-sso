@@ -35,17 +35,13 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from '@/hooks/use-toast'
 import { PasswordInput } from '@/components/password-input'
 import { update_user, User } from '@/api/users/api'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-
 import { FileWithPreview } from '@/hooks/use-file-upload'
 import AvatarUpload from './avatar-upload'
-import useMinimalAccountList from '@/hooks/use-minimal-account-list'
-import { PermissionsDialog } from './permissions-dialog'
+import { PermissionsDialog } from '../access/permissions-dialog'
 
 const profileSchema = (t: (key: string) => string) => z.object({
   username: z
@@ -104,10 +100,7 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
   const [avatarFile, setAvatarFile] = useState<FileWithPreview | null>(null)
 
   const [permissionsOpen, setPermissionsOpen] = useState(false)
-  const [permissionsMode, setPermissionsMode] =
-    useState<'global' | 'account'>('global')
-  const [permissionsAccountId, setPermissionsAccountId] =
-    useState<number | undefined>(undefined)
+  const [permissionsAccountId, setPermissionsAccountId] = useState<number | undefined>(undefined)
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema(t)),
@@ -149,15 +142,7 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
     },
   })
 
-  const { getEmailById } = useMinimalAccountList()
-
-  const accessibleAccountIds = user.account_access_map instanceof Map
-    ? Array.from(user.account_access_map.keys())
-    : Object.keys(user.account_access_map || {}).map(Number)
-
-  const hasAccess = accessibleAccountIds.length > 0
   const roleNames = user.global_roles_names
-  const roleSummary = user.account_roles_summary || {}
 
   return (
     <>
@@ -188,7 +173,6 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
                       size="sm"
                       className="text-xs"
                       onClick={() => {
-                        setPermissionsMode('global')
                         setPermissionsAccountId(undefined)
                         setPermissionsOpen(true)
                       }}
@@ -260,77 +244,6 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
                 )}
               />
             </div>
-
-            {hasAccess && (
-              <Separator orientation="vertical" className="hidden lg:block" />
-            )}
-
-            {hasAccess && (
-              <div className="space-y-4">
-                <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {t('settings.profile.section.accounts', {
-                    count: accessibleAccountIds.length,
-                  })}
-                </h2>
-
-                <ScrollArea className="h-[calc(100vh-16rem)] pr-4">
-                  <div className="grid grid-cols-1 gap-3">
-                    {accessibleAccountIds.map((accountId) => {
-                      const email = getEmailById(accountId)
-                      const roleName = roleSummary[accountId]
-                      if (!email) return null
-
-                      return (
-                        <div
-                          key={accountId}
-                          className="group flex items-center justify-between p-3 rounded-xl border bg-card hover:bg-accent/40 transition-all shadow-sm"
-                        >
-                          <div className="flex items-center min-w-0">
-                            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10 text-primary text-sm font-bold mr-4 shrink-0">
-                              {email.charAt(0).toUpperCase()}
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <span className="text-xs font-semibold truncate">
-                                {email}
-                              </span>
-                              <span className="text-[10px] text-muted-foreground font-mono">
-                                {t('settings.profile.account.id', {
-                                  id: accountId,
-                                })}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            {roleName && (
-                              <Badge
-                                variant="outline"
-                                className="text-[11px]"
-                              >
-                                {roleName}
-                              </Badge>
-                            )}
-
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              className="text-[10px]"
-                              onClick={() => {
-                                setPermissionsMode('account')
-                                setPermissionsAccountId(accountId)
-                                setPermissionsOpen(true)
-                              }}
-                            >
-                              {t('settings.profile.button.permissions')}
-                            </Button>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </ScrollArea>
-              </div>
-            )}
           </div>
 
           <div className="flex justify-start pt-4">
@@ -346,12 +259,11 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
           </div>
         </form>
       </Form>
-
       <PermissionsDialog
         currentRow={user}
         open={permissionsOpen}
         onOpenChange={setPermissionsOpen}
-        mode={permissionsMode}
+        mode="global"
         accountId={permissionsAccountId}
       />
     </>

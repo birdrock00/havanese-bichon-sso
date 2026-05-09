@@ -915,7 +915,7 @@
       "role_badge": "Rol {{type}}",
       "title": "Permisos: {{name}}",
       "unknown": "Rol desconocido",
-      "view_permissions": "Ver detalles"
+      "view_permissions": "Detalles"
     },
     "empty": {
       "desc": "Aún no ha creado ningún rol personalizado.",
@@ -1272,6 +1272,7 @@
     "rootTitle": "Usuario raíz",
     "selectAll": "Seleccionar todo",
     "sidebar": {
+      "access": "Permisos de acceso",
       "apiTokens": "Tokens API",
       "configurations": "Configuraciones del sistema",
       "profile": "Perfil",
@@ -1299,6 +1300,9 @@
     "confirm": "Cerrar sesión",
     "desc": "¿Está seguro de que desea cerrar sesión? Necesitará iniciar sesión nuevamente para acceder a su cuenta.",
     "title": "Cerrar sesión"
+  },
+  "system": {
+    "notifications": "Notificaciones del sistema"
   },
   "systemConfig": {
     "pageDescription": "Estos parámetros se inicializan mediante indicadores CLI o variables de entorno. Actualmente son de solo lectura.",

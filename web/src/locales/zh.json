@@ -915,7 +915,7 @@
       "role_badge": "{{type}} 角色",
       "title": "角色权限: {{name}}",
       "unknown": "未知角色",
-      "view_permissions": "权限详情"
+      "view_permissions": "详情"
     },
     "empty": {
       "desc": "您尚未创建任何自定义角色。点击下方按钮开始添加新角色。",
@@ -1272,6 +1272,7 @@
     "rootTitle": "管理员账户",
     "selectAll": "全选",
     "sidebar": {
+      "access": "访问权限",
       "apiTokens": "API 令牌",
       "configurations": "系统配置",
       "profile": "个人资料",
@@ -1299,6 +1300,9 @@
     "confirm": "退出登录",
     "desc": "您确定要退出登录吗？您需要重新登录才能访问账户。",
     "title": "退出登录"
+  },
+  "system": {
+    "notifications": "系统通知"
   },
   "systemConfig": {
     "pageDescription": "这些参数通过 CLI 标志或环境变量初始化。它们当前为只读，以确保环境一致性。",

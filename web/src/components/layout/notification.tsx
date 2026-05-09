@@ -31,6 +31,7 @@ import { get_notifications } from "@/api/system/api";
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 interface Release {
   tag_name: string;
@@ -57,6 +58,9 @@ export function NotificationPopover() {
     queryFn: get_notifications,
     staleTime: 1000 * 60 * 30, // 30 minutes
   });
+
+
+  const {t} = useTranslation();
 
   const activeNotifications = useMemo((): ActiveNotification[] => {
     if (!data) return [];
@@ -107,8 +111,8 @@ export function NotificationPopover() {
       </PopoverTrigger>
       <PopoverContent className="w-[32rem] p-0" align="end">
         <div className="p-4 border-b">
-          <h4 className="font-medium">
-            System Notifications
+          <h4 className="font-medium text-sm">
+            {t('system.notifications')}
             {showNotificationBadge && ` (${activeNotifications.length})`}
           </h4>
         </div>
@@ -144,7 +148,7 @@ function ReleaseNotificationView({ data }: { data: Release }) {
     <div className="space-y-4">
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">
+          <h3 className="text-sm font-semibold">
             {data.tag_name}
           </h3>
           <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
@@ -156,7 +160,7 @@ function ReleaseNotificationView({ data }: { data: Release }) {
         </p>
       </div>
 
-      <div className="prose prose-xs dark:prose-invert max-w-none text-sm">
+      <div className="prose prose-xs dark:prose-invert max-w-none text-xs">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>
           {data.body}
         </ReactMarkdown>
@@ -168,7 +172,7 @@ function ReleaseNotificationView({ data }: { data: Release }) {
             href={data.html_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-primary hover:underline inline-flex items-center"
+            className="text-xs text-primary hover:underline inline-flex items-center"
           >
             View full release notes <ExternalLinkIcon className="ml-1 h-3 w-3" />
           </a>

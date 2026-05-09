@@ -41,7 +41,11 @@ export function PermissionsCellAction({ row }: Props) {
       setCurrentRow(row.original)
       setOpen('permissions')
     }}>
-      <span className="text-xs text-blue-500 cursor-pointer underline hover:text-blue-700">{t('roles.details.view_permissions')}</span>
+      <span
+        className="text-xs text-primary cursor-pointer underline underline-offset-2 hover:opacity-80 transition-opacity"
+      >
+        {t('roles.details.view_permissions')}
+      </span>
     </Button>
   )
 }

@@ -915,7 +915,7 @@
       "role_badge": "{{type}}-Rolle",
       "title": "Berechtigungen: {{name}}",
       "unknown": "Unbekannte Rolle",
-      "view_permissions": "Details anzeigen"
+      "view_permissions": "Details"
     },
     "empty": {
       "desc": "Sie haben noch keine benutzerdefinierten Rollen erstellt.",
@@ -1272,6 +1272,7 @@
     "rootTitle": "Root-Benutzer",
     "selectAll": "Alle auswählen",
     "sidebar": {
+      "access": "Zugriffsrechte",
       "apiTokens": "API-Token",
       "configurations": "Systemkonfigurationen",
       "profile": "Profil",
@@ -1299,6 +1300,9 @@
     "confirm": "Abmelden",
     "desc": "Möchten Sie sich wirklich abmelden? Sie müssen sich erneut anmelden, um auf Ihr Konto zuzugreifen.",
     "title": "Abmelden"
+  },
+  "system": {
+    "notifications": "Systembenachrichtigungen"
   },
   "systemConfig": {
     "pageDescription": "Diese Parameter werden über CLI-Flags oder Umgebungsvariablen initialisiert. Sie sind schreibgeschützt, um die Umgebungskonsistenz zu gewährleisten.",

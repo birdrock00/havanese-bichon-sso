@@ -915,7 +915,7 @@
       "role_badge": "Rôle {{type}}",
       "title": "Permissions : {{name}}",
       "unknown": "Rôle inconnu",
-      "view_permissions": "Détails des permissions"
+      "view_permissions": "Détails"
     },
     "empty": {
       "desc": "Vous n'avez pas encore créé de rôles personnalisés.",
@@ -1272,6 +1272,7 @@
     "rootTitle": "Root",
     "selectAll": "Tout sélectionner",
     "sidebar": {
+      "access": "Droits d'accès",
       "apiTokens": "Jetons API",
       "configurations": "Configurations système",
       "profile": "Profil",
@@ -1299,6 +1300,9 @@
     "confirm": "Déconnexion",
     "desc": "Êtes-vous sûr de vouloir vous déconnecter ? Vous devrez vous reconnecter pour accéder à votre compte.",
     "title": "Déconnexion"
+  },
+  "system": {
+    "notifications": "Notifications système"
   },
   "systemConfig": {
     "pageDescription": "Ces paramètres sont initialisés via des drapeaux CLI ou des variables d'environnement. Ils sont en lecture seule pour garantir la cohérence de l'environnement.",

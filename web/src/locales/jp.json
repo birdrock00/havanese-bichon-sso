@@ -915,7 +915,7 @@
       "role_badge": "{{type}} ロール",
       "title": "ロール権限: {{name}}",
       "unknown": "不明なロール",
-      "view_permissions": "権限の詳細"
+      "view_permissions": "詳細"
     },
     "empty": {
       "desc": "カスタムロールがまだ作成されていません。",
@@ -1272,6 +1272,7 @@
     "rootTitle": "ルート",
     "selectAll": "すべて選択",
     "sidebar": {
+      "access": "アクセス権限",
       "apiTokens": "APIトークン",
       "configurations": "システム設定",
       "profile": "プロフィール",
@@ -1299,6 +1300,9 @@
     "confirm": "サインアウト",
     "desc": "本当にサインアウトしますか？ アカウントにアクセスするには再度サインインが必要です。",
     "title": "サインアウト"
+  },
+  "system": {
+    "notifications": "システム通知"
   },
   "systemConfig": {
     "pageDescription": "これらのパラメータは、CLIフラグまたは環境変数を介して初期化されます。環境の一貫性を確保するため、現在は読み取り専用です。",

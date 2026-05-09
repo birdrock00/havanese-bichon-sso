@@ -915,7 +915,7 @@
       "role_badge": "{{type}} rolle",
       "title": "Rettigheder: {{name}}",
       "unknown": "Ukendt rolle",
-      "view_permissions": "Se detaljer"
+      "view_permissions": "Detaljer"
     },
     "empty": {
       "desc": "Du har ikke oprettet nogen brugerdefinerede roller endnu.",
@@ -1272,6 +1272,7 @@
     "rootTitle": "Root",
     "selectAll": "Vælg alle",
     "sidebar": {
+      "access": "Adgang",
       "apiTokens": "API-tokens",
       "configurations": "Systemkonfigurationer",
       "profile": "Profil",
@@ -1299,6 +1300,9 @@
     "confirm": "Log ud",
     "desc": "Er du sikker på, at du vil logge ud? Du skal logge ind igen for at få adgang til din konto.",
     "title": "Log ud"
+  },
+  "system": {
+    "notifications": "Systemmeddelelser"
   },
   "systemConfig": {
     "pageDescription": "Disse parametre initialiseres via CLI-flag eller miljøvariabler. De er skrivebeskyttede.",

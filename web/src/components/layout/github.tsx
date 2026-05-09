@@ -17,32 +17,47 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
+import { Star } from "lucide-react";
 
 interface GithubLinkButtonProps {
-  /** GitHub repository or profile URL */
   href?: string;
-  /** Icon size (default: 20) */
+  repo?: string;
   size?: number;
-  /** Optional tooltip title */
   title?: string;
 }
 
 export const GithubLinkButton: React.FC<GithubLinkButtonProps> = ({
   href = "https://github.com/rustmailer/bichon",
-  size = 20,
+  repo = "rustmailer/bichon",
+  size = 18,
   title = "View on GitHub",
 }) => {
+  const [stars, setStars] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetch(`https://api.github.com/repos/${repo}`)
+      .then(res => res.json())
+      .then(data => setStars(data.stargazers_count))
+      .catch(() => { });
+  }, [repo]);
+
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
       title={title}
-      className="inline-flex items-center justify-center rounded-full p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-xs font-medium"
     >
-      <GitHubLogoIcon className="w-5 h-5" style={{ width: size, height: size }} />
+      <GitHubLogoIcon style={{ width: size, height: size }} />
+      {stars !== null && (
+        <>
+          <Star className="h-3 w-3 fill-current" />
+          <span>{stars >= 1000 ? `${(stars / 1000).toFixed(1)}k` : stars}</span>
+        </>
+      )}
     </a>
   );
 };

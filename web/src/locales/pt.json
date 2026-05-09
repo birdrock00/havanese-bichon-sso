@@ -915,7 +915,7 @@
       "role_badge": "Função {{type}}",
       "title": "Permissões: {{name}}",
       "unknown": "Função desconhecida",
-      "view_permissions": "Ver detalhes"
+      "view_permissions": "Detalhes"
     },
     "empty": {
       "desc": "Você ainda não criou funções personalizadas.",
@@ -1272,6 +1272,7 @@
     "rootTitle": "Root",
     "selectAll": "Selecionar Todos",
     "sidebar": {
+      "access": "Permissões de acesso",
       "apiTokens": "Tokens API",
       "configurations": "Configurações do sistema",
       "profile": "Perfil",
@@ -1299,6 +1300,9 @@
     "confirm": "Sair",
     "desc": "Tem certeza de que deseja sair? Você precisará entrar novamente para acessar sua conta.",
     "title": "Sair"
+  },
+  "system": {
+    "notifications": "Notificações do sistema"
   },
   "systemConfig": {
     "pageDescription": "Estes parâmetros são inicializados via flags CLI ou variáveis de ambiente. Estão em modo somente leitura.",

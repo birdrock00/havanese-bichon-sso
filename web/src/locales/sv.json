@@ -915,7 +915,7 @@
       "role_badge": "{{type}} Roll",
       "title": "Rollbehörigheter: {{name}}",
       "unknown": "Okänd roll",
-      "view_permissions": "Visa behörigheter"
+      "view_permissions": "Detaljer"
     },
     "empty": {
       "desc": "Du har inte skapat några anpassade roller än.",
@@ -1272,6 +1272,7 @@
     "rootTitle": "Root",
     "selectAll": "Välj alla",
     "sidebar": {
+      "access": "Behörigheter",
       "apiTokens": "API-tokens",
       "configurations": "Systemkonfigurationer",
       "profile": "Profil",
@@ -1299,6 +1300,9 @@
     "confirm": "Logga ut",
     "desc": "Är du säker på att du vill logga ut? Du måste logga in igen för att få åtkomst till ditt konto.",
     "title": "Logga ut"
+  },
+  "system": {
+    "notifications": "Systemaviseringar"
   },
   "systemConfig": {
     "pageDescription": "Dessa parametrar initieras via CLI-flaggor eller miljövariabler. De är skrivskyddade.",
