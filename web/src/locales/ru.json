@@ -183,7 +183,7 @@
     "imapPort": "IMAP Порт",
     "imapPortPlaceholder": "например, 993",
     "imapProxy": "Использовать SOCKS5 прокси для соединений IMAP.",
-    "incSync": "Инкр. синхр.",
+    "incDownload": "Интервал",
     "lastSync": "Посл. синхр.",
     "leaveEmptyToKeepExisting": "Оставьте пустым, чтобы сохранить существующий пароль, или введите новый для обновления.",
     "leaveEmptyToKeepPassword": "Оставьте пустым, чтобы сохранить текущий пароль",
@@ -1372,6 +1372,17 @@
     "label": "Теги",
     "no_tags_found": "Теги не найдены",
     "search_placeholder": "Поиск тегов..."
+  },
+  "theme": {
+    "appearance": "Внешний вид",
+    "blue": "Синий",
+    "dark": "Темная",
+    "default": "По умолчанию",
+    "green": "Зеленый",
+    "light": "Светлая",
+    "orange": "Оранжевый",
+    "rose": "Розовый",
+    "yellow": "Желтый"
   },
   "time": {
     "absolute_range": "Абсолютный диапазон дат",

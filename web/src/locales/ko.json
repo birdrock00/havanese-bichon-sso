@@ -183,7 +183,7 @@
     "imapPort": "IMAP 포트",
     "imapPortPlaceholder": "예: 993",
     "imapProxy": "IMAP 연결에 SOCKS5 프록시를 사용합니다.",
-    "incSync": "증분 동기화",
+    "incDownload": "간격",
     "lastSync": "최종 동기화",
     "leaveEmptyToKeepExisting": "기존 비밀번호를 유지하려면 비워 두십시오. 업데이트할 경우에만 새 비밀번호를 입력하십시오.",
     "leaveEmptyToKeepPassword": "현재 비밀번호를 유지하려면 비워 두십시오",
@@ -1372,6 +1372,17 @@
     "label": "태그",
     "no_tags_found": "태그를 찾을 수 없습니다",
     "search_placeholder": "태그 검색..."
+  },
+  "theme": {
+    "appearance": "모양 설정",
+    "blue": "블루",
+    "dark": "다크",
+    "default": "기본",
+    "green": "그린",
+    "light": "라이트",
+    "orange": "오렌지",
+    "rose": "로즈",
+    "yellow": "옐로우"
   },
   "time": {
     "absolute_range": "절대 날짜 범위",

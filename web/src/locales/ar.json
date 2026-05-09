@@ -183,7 +183,7 @@
     "imapPort": "منفذ IMAP",
     "imapPortPlaceholder": "مثال: 993",
     "imapProxy": "استخدم وكيل SOCKS5 لاتصالات IMAP.",
-    "incSync": "مزامنة تزايدية",
+    "incDownload": "الفاصل",
     "lastSync": "آخر مزامنة",
     "leaveEmptyToKeepExisting": "اترك فارغًا للاحتفاظ بكلمة المرور الحالية، أو أدخل كلمة مرور جديدة لتحديثها.",
     "leaveEmptyToKeepPassword": "اترك فارغًا للاحتفاظ بكلمة المرور الحالية",
@@ -1372,6 +1372,17 @@
     "label": "الوسوم",
     "no_tags_found": "لم يتم العثور على وسوم",
     "search_placeholder": "بحث عن الوسوم..."
+  },
+  "theme": {
+    "appearance": "الإعدادات المظهر",
+    "blue": "أزرق",
+    "dark": "داكن",
+    "default": "افتراضي",
+    "green": "أخضر",
+    "light": "فاتح",
+    "orange": "برتقالي",
+    "rose": "وردي",
+    "yellow": "أصفر"
   },
   "time": {
     "absolute_range": "نطاق تاريخ محدد",

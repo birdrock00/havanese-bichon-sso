@@ -183,7 +183,7 @@
     "imapPort": "Port IMAP",
     "imapPortPlaceholder": "ex. 993",
     "imapProxy": "Utiliser un proxy SOCKS5 pour les connexions IMAP.",
-    "incSync": "Sync. Inc.",
+    "incDownload": "Intervalle",
     "lastSync": "Dernière Synchronisation",
     "leaveEmptyToKeepExisting": "Laissez vide pour conserver le mot de passe existant, ou entrez-en un nouveau pour le mettre à jour.",
     "leaveEmptyToKeepPassword": "Laisser vide pour conserver le mot de passe actuel",
@@ -1372,6 +1372,17 @@
     "label": "Étiquettes",
     "no_tags_found": "Aucune étiquette trouvée",
     "search_placeholder": "Rechercher des étiquettes..."
+  },
+  "theme": {
+    "appearance": "Apparence",
+    "blue": "Bleu",
+    "dark": "Sombre",
+    "default": "Par défaut",
+    "green": "Vert",
+    "light": "Clair",
+    "orange": "Orange",
+    "rose": "Rose",
+    "yellow": "Jaune"
   },
   "time": {
     "absolute_range": "Plage de dates absolue",

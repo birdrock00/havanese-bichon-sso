@@ -183,7 +183,7 @@
     "imapPort": "IMAP-portti",
     "imapPortPlaceholder": "esim. 993",
     "imapProxy": "Käytä SOCKS5-välityspalvelinta IMAP-yhteyksiin.",
-    "incSync": "Lisäsynkronointi",
+    "incDownload": "Väli",
     "lastSync": "Viimeisin synkronointi",
     "leaveEmptyToKeepExisting": "Jätä tyhjäksi säilyttääksesi olemassa olevan salasanan, tai syötä uusi päivittääksesi sen.",
     "leaveEmptyToKeepPassword": "Jätä tyhjäksi säilyttääksesi nykyisen salasanan",
@@ -1372,6 +1372,17 @@
     "label": "Tunnisteet",
     "no_tags_found": "Tunnisteita ei löytynyt",
     "search_placeholder": "Hae tunnisteita..."
+  },
+  "theme": {
+    "appearance": "Ulkoasu",
+    "blue": "Sininen",
+    "dark": "Tumma",
+    "default": "Oletus",
+    "green": "Vihreä",
+    "light": "Vaalea",
+    "orange": "Oranssi",
+    "rose": "Roosa",
+    "yellow": "Keltainen"
   },
   "time": {
     "absolute_range": "Kiinteä päivämääräväli",

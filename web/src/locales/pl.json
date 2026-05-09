@@ -183,7 +183,7 @@
     "imapPort": "Port IMAP",
     "imapPortPlaceholder": "np. 993 (szyfrowany TLS/SSL) lub 143 (bez szyfrowania)",
     "imapProxy": "Użyj proxy gniazda SOCKS5 dla połączeń IMAP.",
-    "incSync": "Inc Sync",
+    "incDownload": "Interwał",
     "lastSync": "OStatnia synchronizacja",
     "leaveEmptyToKeepExisting": "Pozostaw to pole puste, jeśli chcesz zachować dotychczasowe hasło lub wpisz nowe, aby zaktualizować.",
     "leaveEmptyToKeepPassword": "Pozostaw to pole puste, jeśli chcesz zachować dotychczasowe hasło",
@@ -1372,6 +1372,17 @@
     "label": "Tagi",
     "no_tags_found": "Nie znaleziono tagów",
     "search_placeholder": "Szukaj tagów..."
+  },
+  "theme": {
+    "appearance": "Wygląd",
+    "blue": "Niebieski",
+    "dark": "Ciemny",
+    "default": "Domyślny",
+    "green": "Zielony",
+    "light": "Jasny",
+    "orange": "Pomarańczowy",
+    "rose": "Różany",
+    "yellow": "Żółty"
   },
   "time": {
     "absolute_range": "Bezwzględny zakres dat",

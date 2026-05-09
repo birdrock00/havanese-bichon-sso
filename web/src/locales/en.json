@@ -183,7 +183,7 @@
     "imapPort": "IMAP Port",
     "imapPortPlaceholder": "e.g 993",
     "imapProxy": "Use a SOCKS5 proxy for IMAP connections.",
-    "incSync": "Inc Sync",
+    "incDownload": "Interval",
     "lastSync": "Last Sync",
     "leaveEmptyToKeepExisting": "Leave empty to keep the existing password, or enter a new password to update it.",
     "leaveEmptyToKeepPassword": "Leave empty to keep current password",
@@ -1372,6 +1372,17 @@
     "label": "Tags",
     "no_tags_found": "No tags found",
     "search_placeholder": "Search tags..."
+  },
+  "theme": {
+    "appearance": "Appearance",
+    "blue": "Blue",
+    "dark": "Dark",
+    "default": "Default",
+    "green": "Green",
+    "light": "Light",
+    "orange": "Orange",
+    "rose": "Rose",
+    "yellow": "Yellow"
   },
   "time": {
     "absolute_range": "Absolute date range",

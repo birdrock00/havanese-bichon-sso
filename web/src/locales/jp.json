@@ -183,7 +183,7 @@
     "imapPort": "IMAPポート",
     "imapPortPlaceholder": "例: 993",
     "imapProxy": "IMAP接続にSOCKS5プロキシを使用します。",
-    "incSync": "増分同期",
+    "incDownload": "間隔",
     "lastSync": "最終同期",
     "leaveEmptyToKeepExisting": "既存のパスワードを保持する場合は空欄にしてください。更新する場合は新しいパスワードを入力してください。",
     "leaveEmptyToKeepPassword": "現在のパスワードを保持する場合は空欄にしてください",
@@ -1372,6 +1372,17 @@
     "label": "タグ",
     "no_tags_found": "タグが見つかりません",
     "search_placeholder": "タグを検索..."
+  },
+  "theme": {
+    "appearance": "外観設定",
+    "blue": "ブルー",
+    "dark": "ダーク",
+    "default": "デフォルト",
+    "green": "グリーン",
+    "light": "ライト",
+    "orange": "オレンジ",
+    "rose": "ローズ",
+    "yellow": "イエロー"
   },
   "time": {
     "absolute_range": "絶対日付範囲",

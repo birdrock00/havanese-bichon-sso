@@ -183,7 +183,7 @@
     "imapPort": "IMAP Poort",
     "imapPortPlaceholder": "bv. 993",
     "imapProxy": "Gebruik een SOCKS5-proxy voor IMAP-verbindingen.",
-    "incSync": "Inc Sync",
+    "incDownload": "Interval",
     "lastSync": "Laatste Sync",
     "leaveEmptyToKeepExisting": "Laat leeg om het bestaande wachtwoord te behouden, of voer een nieuw wachtwoord in om het bij te werken.",
     "leaveEmptyToKeepPassword": "Laat leeg om huidig wachtwoord te behouden",
@@ -1372,6 +1372,17 @@
     "label": "Tags",
     "no_tags_found": "Geen tags gevonden",
     "search_placeholder": "Tags zoeken..."
+  },
+  "theme": {
+    "appearance": "Uiterlijk",
+    "blue": "Blauw",
+    "dark": "Donker",
+    "default": "Standaard",
+    "green": "Groen",
+    "light": "Licht",
+    "orange": "Oranje",
+    "rose": "Roze",
+    "yellow": "Geel"
   },
   "time": {
     "absolute_range": "Absolute datumbereik",

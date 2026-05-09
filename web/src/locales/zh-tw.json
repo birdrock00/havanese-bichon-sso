@@ -183,7 +183,7 @@
     "imapPort": "IMAP 連接埠",
     "imapPortPlaceholder": "例如：993",
     "imapProxy": "使用 SOCKS5 代理進行 IMAP 連線。",
-    "incSync": "增量同步",
+    "incDownload": "間隔",
     "lastSync": "上次同步",
     "leaveEmptyToKeepExisting": "保留現有密碼請留空。若要更新，請輸入新密碼。",
     "leaveEmptyToKeepPassword": "保留現有密碼請留空",
@@ -1372,6 +1372,17 @@
     "label": "標籤",
     "no_tags_found": "未找到標籤",
     "search_placeholder": "搜尋標籤…"
+  },
+  "theme": {
+    "appearance": "外觀設置",
+    "blue": "藍色",
+    "dark": "深色",
+    "default": "預設",
+    "green": "綠色",
+    "light": "淺色",
+    "orange": "橙色",
+    "rose": "玫瑰色",
+    "yellow": "黃色"
   },
   "time": {
     "absolute_range": "絕對日期範圍",

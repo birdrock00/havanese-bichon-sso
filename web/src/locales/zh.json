@@ -183,7 +183,7 @@
     "imapPort": "IMAP 端口",
     "imapPortPlaceholder": "例如:993",
     "imapProxy": "为 IMAP 连接使用 SOCKS5 代理。",
-    "incSync": "增量同步",
+    "incDownload": "间隔",
     "lastSync": "最后同步",
     "leaveEmptyToKeepExisting": "留空以保持现有密码，或输入新密码进行更新。",
     "leaveEmptyToKeepPassword": "留空以保持当前密码",
@@ -1372,6 +1372,17 @@
     "label": "标签",
     "no_tags_found": "未找到标签",
     "search_placeholder": "搜索标签..."
+  },
+  "theme": {
+    "appearance": "外观设置",
+    "blue": "蓝色",
+    "dark": "深色",
+    "default": "默认",
+    "green": "绿色",
+    "light": "浅色",
+    "orange": "橙色",
+    "rose": "玫瑰色",
+    "yellow": "黄色"
   },
   "time": {
     "absolute_range": "绝对日期范围",

@@ -183,7 +183,7 @@
     "imapPort": "IMAP-port",
     "imapPortPlaceholder": "f.eks. 993",
     "imapProxy": "Brug en SOCKS5-proxy til IMAP-forbindelser.",
-    "incSync": "Ink. Synk.",
+    "incDownload": "Interval",
     "lastSync": "Sidste synk.",
     "leaveEmptyToKeepExisting": "Lad stå tomt for at beholde den eksisterende adgangskode, eller indtast en ny for at opdatere den.",
     "leaveEmptyToKeepPassword": "Lad stå tomt for at beholde nuværende adgangskode",
@@ -1372,6 +1372,17 @@
     "label": "Tags",
     "no_tags_found": "Ingen tags fundet",
     "search_placeholder": "Søg tags..."
+  },
+  "theme": {
+    "appearance": "Udseende",
+    "blue": "Blå",
+    "dark": "Mørk",
+    "default": "Standard",
+    "green": "Grøn",
+    "light": "Lys",
+    "orange": "Orange",
+    "rose": "Rosa",
+    "yellow": "Gul"
   },
   "time": {
     "absolute_range": "Absolut datointerval",

@@ -183,7 +183,7 @@
     "imapPort": "IMAP-port",
     "imapPortPlaceholder": "t.ex. 993",
     "imapProxy": "Använd en SOCKS5-proxy för IMAP-anslutningar.",
-    "incSync": "Ink. synk",
+    "incDownload": "Intervall",
     "lastSync": "Senaste synk",
     "leaveEmptyToKeepExisting": "Lämna tomt för att behålla det befintliga lösenordet, eller ange ett nytt för att uppdatera det.",
     "leaveEmptyToKeepPassword": "Lämna tomt för att behålla nuvarande lösenord",
@@ -1372,6 +1372,17 @@
     "label": "Taggar",
     "no_tags_found": "Inga taggar hittades",
     "search_placeholder": "Sök taggar..."
+  },
+  "theme": {
+    "appearance": "Utseende",
+    "blue": "Blå",
+    "dark": "Mörk",
+    "default": "Standard",
+    "green": "Grön",
+    "light": "Ljus",
+    "orange": "Orange",
+    "rose": "Rosa",
+    "yellow": "Gul"
   },
   "time": {
     "absolute_range": "Absolut datumintervall",
