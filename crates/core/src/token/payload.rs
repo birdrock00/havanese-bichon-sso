@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct AccessTokenCreateRequest {
     /// An optional description of the token's purpose or usage.
-    //#[oai(validator(max_length = "32"))]
+    #[cfg_attr(feature = "web-api", oai(validator(max_length = "32")))]
     pub name: Option<String>,
     /// The expiration interval for this token, in hours.
     /// None means the token does not expire (this applies only to API tokens).

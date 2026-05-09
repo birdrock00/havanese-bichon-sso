@@ -82,7 +82,6 @@ pub struct AccountV1 {
     pub id: u64,
     pub imap: Option<ImapConfig>,
     pub enabled: bool,
-    //#[oai(validator(custom = "crate::common::validator::EmailValidator"))]
     pub email: String,
     pub name: Option<String>,
     pub capabilities: Option<Vec<String>>,
@@ -110,7 +109,6 @@ pub struct AccountV2 {
     pub id: u64,
     pub imap: Option<ImapConfig>,
     pub enabled: bool,
-    //#[oai(validator(custom = "crate::common::validator::EmailValidator"))]
     pub email: String,
     pub name: Option<String>,
     pub capabilities: Option<Vec<String>>,
@@ -141,7 +139,6 @@ pub struct AccountV3 {
     pub id: u64,
     pub imap: Option<ImapConfig>,
     pub enabled: bool,
-    //#[oai(validator(custom = "crate::common::validator::EmailValidator"))]
     pub email: String,
     pub name: Option<String>,
     pub capabilities: Option<Vec<String>>,
@@ -176,7 +173,10 @@ pub struct AccountV4 {
     pub id: u64,
     pub imap: Option<ImapConfig>,
     pub enabled: bool,
-    //#[oai(validator(custom = "crate::common::validator::EmailValidator"))]
+    #[cfg_attr(
+        feature = "web-api",
+        oai(validator(custom = "crate::common::validator::EmailValidator"))
+    )]
     pub email: String,
     pub account_name: Option<String>,
     pub login_name: Option<String>,

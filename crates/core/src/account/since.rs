@@ -38,7 +38,7 @@ pub struct DateSince {
     ///   "fixed": "2025-05-01"
     /// }
     /// ```
-    //#[oai(validator(pattern = r"^\d{4}-\d{2}-\d{2}$"))]
+    #[cfg_attr(feature = "web-api", oai(validator(pattern = r"^\d{4}-\d{2}-\d{2}$")))]
     pub fixed: Option<String>,
     /// Relative time period from current date
     ///
@@ -73,7 +73,7 @@ pub struct RelativeDate {
     /// The time unit to use for the offset (days, months, or years)
     pub unit: Unit,
     /// The quantity of time units to offset (must be a positive integer)
-    //#[oai(validator(minimum(value = "1")))]
+    #[cfg_attr(feature = "web-api", oai(validator(minimum(value = "1"))))]
     pub value: u32,
 }
 

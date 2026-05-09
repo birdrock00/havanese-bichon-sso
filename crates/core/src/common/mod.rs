@@ -25,6 +25,8 @@ pub mod paginated;
 pub mod periodic;
 pub mod rustls;
 pub mod signal;
+#[cfg(feature = "web-api")]
+pub mod validator;
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Addr {

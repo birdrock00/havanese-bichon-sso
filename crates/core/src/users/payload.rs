@@ -34,7 +34,22 @@ use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 fn allowed_themes() -> HashSet<&'static str> {
-    ["light", "dark"].into_iter().collect()
+    [
+        "light",
+        "dark",
+        "rose-light",
+        "rose-dark",
+        "orange-light",
+        "orange-dark",
+        "green-light",
+        "green-dark",
+        "yellow-light",
+        "yellow-dark",
+        "blue-light",
+        "blue-dark",
+    ]
+    .into_iter()
+    .collect()
 }
 
 fn allowed_languages() -> HashSet<&'static str> {
@@ -201,7 +216,7 @@ impl RoleUpdateRequest {
 pub struct UserCreateRequest {
     pub username: String,
 
-    //#[oai(validator(custom = "crate::common::validator::EmailValidator"))]
+    #[cfg_attr(feature = "web-api", oai(validator(custom = "crate::common::validator::EmailValidator")))]
     pub email: String,
 
     pub password: String,
@@ -338,7 +353,7 @@ impl UserCreateRequest {
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct UserUpdateRequest {
     pub username: Option<String>,
-    //#[oai(validator(custom = "crate::common::validator::EmailValidator"))]
+    #[cfg_attr(feature = "web-api", oai(validator(custom = "crate::common::validator::EmailValidator")))]
     pub email: Option<String>,
     pub password: Option<String>,
     pub avatar_base64: Option<String>,

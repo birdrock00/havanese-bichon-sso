@@ -27,7 +27,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct AccountCreateRequest {
-    //#[oai(validator(custom = "crate::common::validator::EmailValidator"))]
+    #[cfg_attr(
+        feature = "web-api",
+        oai(validator(custom = "crate::common::validator::EmailValidator"))
+    )]
     pub email: String,
     pub login_name: Option<String>,
     pub account_name: Option<String>,
@@ -36,11 +39,14 @@ pub struct AccountCreateRequest {
     pub date_since: Option<DateSince>,
     pub date_before: Option<RelativeDate>,
     pub account_type: AccountType,
-    //#[oai(validator(minimum(value = "100")))]
+    #[cfg_attr(feature = "web-api", oai(validator(minimum(value = "100"))))]
     pub folder_limit: Option<u32>,
-    //#[oai(validator(minimum(value = "10")))]
+    #[cfg_attr(feature = "web-api", oai(validator(minimum(value = "10"))))]
     pub download_interval_min: Option<i64>,
-    //#[oai(validator(minimum(value = "10"), maximum(value = "200")))]
+    #[cfg_attr(
+        feature = "web-api",
+        oai(validator(minimum(value = "10"), maximum(value = "200")))
+    )]
     pub download_batch_size: Option<u32>,
     pub use_proxy: Option<u64>,
     pub use_dangerous: bool,
@@ -136,7 +142,7 @@ pub struct AccountUpdateRequest {
     /// Max emails to sync for this folder.  
     /// If not set, sync all emails.  
     /// otherwise sync up to `n` most recent emails (min 10).
-    //#[oai(validator(minimum(value = "100")))]
+    #[cfg_attr(feature = "web-api", oai(validator(minimum(value = "100"))))]
     pub folder_limit: Option<u32>,
     pub clear_folder_limit: Option<bool>,
     /// Configuration for selective folder (mailbox/label) synchronization
@@ -153,10 +159,13 @@ pub struct AccountUpdateRequest {
     /// Defaults to standard folders (`INBOX`, `Sent`) if empty.
     /// Modified folders will be automatically synced on the next update.
     pub sync_folders: Option<Vec<String>>,
-    /// Incremental sync interval (seconds)
-    //#[oai(validator(minimum(value = "10")))]
+    /// Incremental download interval (seconds)
+    #[cfg_attr(feature = "web-api", oai(validator(minimum(value = "10"))))]
     pub download_interval_min: Option<i64>,
-    //#[oai(validator(minimum(value = "10"), maximum(value = "200")))]
+    #[cfg_attr(
+        feature = "web-api",
+        oai(validator(minimum(value = "10"), maximum(value = "200")))
+    )]
     pub download_batch_size: Option<u32>,
     /// Optional proxy ID for establishing the connection to external APIs (e.g., Gmail, Outlook).
     /// - If `None` or not provided, the client will connect directly to the API server.

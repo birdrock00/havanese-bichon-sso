@@ -25,10 +25,16 @@ use serde::{Deserialize, Serialize};
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct ImapConfig {
     /// IMAP server hostname or IP address
-    //#[oai(validator(max_length = 253, pattern = r"^[a-zA-Z0-9\-\.]+$"))]
+    #[cfg_attr(
+        feature = "web-api",
+        oai(validator(max_length = 253, pattern = r"^[a-zA-Z0-9\-\.]+$"))
+    )]
     pub host: String,
     /// IMAP server port number
-    //#[oai(validator(minimum(value = "1"), maximum(value = "65535")))]
+    #[cfg_attr(
+        feature = "web-api",
+        oai(validator(minimum(value = "1"), maximum(value = "65535")))
+    )]
     pub port: u16,
     /// Connection encryption method
     pub encryption: Encryption,
@@ -71,7 +77,7 @@ pub struct AuthConfig {
     ///
     /// Users should provide a plaintext password (1 to 256 characters).
     /// The server will encrypt the password using AES-256-GCM and securely store it.
-    //#[oai(validator(max_length = 256, min_length = 1))]
+    #[cfg_attr(feature = "web-api", oai(validator(max_length = 256, min_length = 1)))]
     pub password: Option<String>,
 }
 
