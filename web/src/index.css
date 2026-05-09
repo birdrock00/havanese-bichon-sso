@@ -1,101 +1,12 @@
+@import "./theme.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 215 28% 17%;
-    
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215 16% 47%;
-    
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 28% 17%;
-    --card: 0 0% 100%;
-    --card-foreground: 215 28% 17%;
 
-    --border: 214 32% 88%;
-    --input: 214 32% 88%;
-    
-    --primary: 221 83% 53%;
-    --primary-foreground: 210 40% 98%;
-    
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222 47% 11%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222 47% 11%;
-    
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    
-    --ring: 221 83% 53%;
-    --radius: 0.35rem;
-
-    --chart-1: 221 83% 53%;
-    --chart-2: 200 90% 40%;
-    --chart-3: 35 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-
-    --sidebar-background: 210 40% 98%;
-    --sidebar-foreground: 215 28% 17%;
-    --sidebar-primary: 221 83% 53%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 214 32% 91%;
-    --sidebar-accent-foreground: 215 28% 17%;
-    --sidebar-border: 214 32% 88%;
-    --sidebar-ring: 221 83% 53%;
-  }
-
-  .dark {
-    --background: 215 20% 12%; 
-    --foreground: 210 40% 98%;
-    
-    --card: 215 20% 16%; 
-    --card-foreground: 210 40% 98%;
-    --popover: 215 20% 16%;
-    --popover-foreground: 210 40% 98%;
-    
-   
-    --muted: 215 20% 22%; 
-    --muted-foreground: 215 15% 70%; 
-    
-    --border: 215 20% 28%; 
-    --input: 215 20% 28%;
-    
-    --primary: 217 90% 70%; 
-    --primary-foreground: 215 20% 12%;
-    
-    --secondary: 215 20% 22%;
-    --secondary-foreground: 210 40% 98%;
-    --accent: 215 20% 22%;
-    --accent-foreground: 210 40% 98%;
-    
-    --destructive: 0 70% 60%;
-    --destructive-foreground: 210 40% 98%;
-    
-    --ring: 217 90% 70%;
-
-    --chart-1: 217 90% 70%;
-    --chart-2: 200 90% 60%;
-    --chart-3: 35 90% 65%;
-    --chart-4: 280 75% 75%;
-    --chart-5: 340 85% 70%;
-
-    --sidebar-background: 215 20% 10%; 
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217 90% 70%;
-    --sidebar-primary-foreground: 215 20% 12%;
-    --sidebar-accent: 215 20% 22%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 20% 28%;
-    --sidebar-ring: 217 90% 70%;
-  }
-  
-
-  /* styles.css */
   .CollapsibleContent {
     overflow: hidden;
   }

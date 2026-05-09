@@ -19,7 +19,8 @@
 
 import { createContext, useContext, useEffect, useState } from 'react'
 
-type Theme = 'dark' | 'light'
+export type Theme = 'light' | 'dark' | 'rose-light' | 'rose-dark' | 'orange-light'
+  | 'orange-dark' | 'green-light' | 'green-dark' | 'yellow-light' | 'yellow-dark' | 'blue-light' | 'blue-dark'
 
 type ThemeProviderProps = {
   children: React.ReactNode
@@ -41,7 +42,7 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
 export function ThemeProvider({
   children,
-  defaultTheme = 'dark',
+  defaultTheme = 'light',
   storageKey = 'vite-ui-theme',
   ...props
 }: ThemeProviderProps) {
@@ -51,7 +52,8 @@ export function ThemeProvider({
 
   useEffect(() => {
     const root = window.document.documentElement
-    root.classList.remove('light', 'dark')
+    root.classList.remove('light', 'dark', 'rose-light', 'rose-dark', 'orange-light',
+      'orange-dark', 'green-light', 'green-dark', 'yellow-light', 'yellow-dark', 'blue-light', 'blue-dark')
     root.classList.add(theme)
     localStorage.setItem(storageKey, theme)
   }, [theme, storageKey])
