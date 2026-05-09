@@ -443,7 +443,7 @@ export default function MailArchiveDashboard() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-xs">Name</TableHead>
+                        <TableHead className="text-xs">{t('attachment.name')}</TableHead>
                         <TableHead className="text-right text-xs">{t('dashboard.size')}</TableHead>
                       </TableRow>
                     </TableHeader>
