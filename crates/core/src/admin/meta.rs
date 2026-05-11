@@ -16,21 +16,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-
 use std::{path::Path, rc::Rc};
 
 use native_db::{Builder, Database};
 
 use crate::{
-    {
-        database::META_MODELS,
-        error::{code::ErrorCode, BichonResult},
-        token::{AccessTokenModel, AccessTokenModelKey, TokenType},
-        users::{UserModel, DEFAULT_ADMIN_USER_ID},
-        utils::encrypt::internal_encrypt_string,
-    },
+    account::migration::AccountV3,
+    database::META_MODELS,
+    error::{code::ErrorCode, BichonResult},
     raise_error,
+    token::{AccessTokenModel, AccessTokenModelKey, TokenType},
+    users::{UserModel, DEFAULT_ADMIN_USER_ID},
+    utils::encrypt::internal_encrypt_string,
 };
 use itertools::Itertools;
 
@@ -46,6 +43,21 @@ pub fn init_meta_database(path: impl AsRef<Path>) -> BichonResult<Rc<Database<'s
         })?;
 
     Ok(Rc::new(database))
+}
+
+pub fn list_all_accounts(database: &Rc<Database<'static>>) -> BichonResult<Vec<AccountV3>> {
+    let r_transaction = database
+        .r_transaction()
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+    let entities: Vec<AccountV3> = r_transaction
+        .scan()
+        .primary()
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+        .all()
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+        .try_collect()
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+    Ok(entities)
 }
 
 pub fn find_admin(database: &Rc<Database<'static>>) -> BichonResult<Option<UserModel>> {

@@ -37,7 +37,7 @@ use crate::{
     settings::dir::DATA_DIR_MANAGER,
     store::{
         envelope::Envelope,
-        storage::BLOB_MANAGER,
+        blob::BLOB_MANAGER,
         tantivy::{
             fatal_commit,
             fields::{
@@ -317,7 +317,6 @@ impl IndexManager {
             let q = query_parser
                 .parse_query(subject_val)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
-            println!("{:#?}", &q);
             subqueries.push((Occur::Must, q));
         }
 

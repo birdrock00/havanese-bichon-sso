@@ -84,7 +84,7 @@ uuid = { version = "1.23.1", features = ["v4", "serde"] }
 fjall = { version = "3.1.4", features = ["lz4", "metrics", "bytes_1"] }
 tracing-log = "0.2.0"
 tokio-util = "0.7.18"
-
+indicatif = "0.18.4"
 
 [profile.release]
 strip = true

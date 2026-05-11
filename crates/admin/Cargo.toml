@@ -9,3 +9,4 @@ bichon-core = { path = "../core" }
 tokio.workspace = true
 dialoguer.workspace = true
 console.workspace = true
+indicatif.workspace = true

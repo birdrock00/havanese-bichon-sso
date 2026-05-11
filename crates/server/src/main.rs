@@ -25,11 +25,11 @@ use bichon_core::{
     context::{executors::BichonContext, Initialize},
     error::{code::ErrorCode, BichonResult},
     logger,
-    migrate::is_legacy_data_layout,
+    migrate::check_data_status,
     raise_error,
     settings::cli::SETTINGS,
     store::{
-        storage::BLOB_MANAGER,
+        blob::BLOB_MANAGER,
         tantivy::{attachment::ATTACHMENT_MANAGER, envelope::ENVELOPE_MANAGER},
     },
     tasks::PeriodicTasks,
@@ -69,11 +69,11 @@ async fn main() -> BichonResult<()> {
     info!("Git:      [{}]", env!("GIT_HASH"));
     info!("GitHub:   https://github.com/rustmailer/bichon");
 
-    match is_legacy_data_layout() {
-        Ok(true) => {
+    match check_data_status() {
+        Ok(false) => {
             error!("Incompatible data format detected.");
             error!("Your data was created by an older version of Bichon and must be migrated before use.");
-            error!("Please run: bichon-migrate");
+            error!("Please run: bichon-admin");
             error!("Documentation: https://github.com/rustmailer/bichon/wiki/migration");
             return Err(raise_error!(
                 "Legacy data layout detected".into(),
@@ -84,7 +84,7 @@ async fn main() -> BichonResult<()> {
             error!("Failed to check data layout: {:#?}", e);
             return Err(raise_error!(format!("{:#?}", e), ErrorCode::InternalError));
         }
-        Ok(false) => {}
+        Ok(true) => {}
     }
 
     if let Err(error) = initialize().await {

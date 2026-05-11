@@ -464,6 +464,7 @@ dependencies = [
  "bichon-core",
  "console",
  "dialoguer",
+ "indicatif",
  "tokio",
 ]
 
@@ -5022,6 +5023,8 @@ dependencies = [
  "fastdivide",
  "fnv",
  "fs4",
+ "futures-channel",
+ "futures-util",
  "htmlescape",
  "itertools",
  "levenshtein_automata",
@@ -5045,6 +5048,7 @@ dependencies = [
  "tantivy-common",
  "tantivy-fst",
  "tantivy-query-grammar",
+ "tantivy-sstable",
  "tantivy-stacker",
  "tantivy-tokenizer-api",
  "tempfile",

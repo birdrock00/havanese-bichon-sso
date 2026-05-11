@@ -32,84 +32,104 @@ use crate::store::tantivy::fields::{
     F_SIZE, F_SUBJECT, F_TAGS, F_TEXT, F_THREAD_ID, F_TO, F_TO_TEXT, F_UID,
 };
 
-static EMAIL_FIELDS: LazyLock<Arc<EmailFields>> = LazyLock::new(|| {
-    let (_, fields) = SchemaTools::create_email_schema();
-    Arc::new(fields)
-});
+// ─── Lazy Globals ─────────────────────────────────────────────────────────────
 
-static ATTACHMENT_FIELDS: LazyLock<Arc<AttachmentFields>> = LazyLock::new(|| {
-    let (_, fields) = SchemaTools::create_attachment_schema();
-    Arc::new(fields)
-});
+static EMAIL_FIELDS: LazyLock<Arc<EmailFields>> = LazyLock::new(|| Arc::new(EmailSchema::fields()));
+
+static ATTACHMENT_FIELDS: LazyLock<Arc<AttachmentFields>> =
+    LazyLock::new(|| Arc::new(AttachmentSchema::fields()));
+
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 pub struct SchemaTools;
 
 impl SchemaTools {
     pub fn email_schema() -> Schema {
-        let (schema, _) = Self::create_email_schema();
-        schema
+        EmailSchema::build().0
+    }
+    pub fn attachment_schema() -> Schema {
+        AttachmentSchema::build().0
     }
 
     pub fn email_fields() -> &'static EmailFields {
         &EMAIL_FIELDS
     }
+    pub fn attachment_fields() -> &'static AttachmentFields {
+        &ATTACHMENT_FIELDS
+    }
 
     pub fn email_default_fields() -> Vec<Field> {
-        let fields = Self::email_fields();
+        let f = Self::email_fields();
         vec![
-            fields.f_subject,
-            fields.f_body,
-            fields.f_attachment_name_text,
-            fields.f_from_text,
-            fields.f_to_text,
-            fields.f_cc_text,
-            fields.f_bcc_text,
+            f.f_subject,
+            f.f_body,
+            f.f_attachment_name_text,
+            f.f_from_text,
+            f.f_to_text,
+            f.f_cc_text,
+            f.f_bcc_text,
         ]
     }
 
+    pub fn attachment_default_fields() -> Vec<Field> {
+        let f = Self::attachment_fields();
+        vec![f.f_subject, f.f_text, f.f_name_text, f.f_from_text]
+    }
+
     pub fn create_email_schema() -> (Schema, EmailFields) {
-        let mut builder = Schema::builder();
-        let f_id = builder.add_text_field(F_ID, STRING | STORED | FAST);
-        let f_message_id = builder.add_text_field(F_MESSAGE_ID, STRING | STORED);
-        let f_account_id = builder.add_u64_field(F_ACCOUNT_ID, INDEXED | STORED | FAST);
-        let f_mailbox_id = builder.add_u64_field(F_MAILBOX_ID, INDEXED | STORED | FAST);
-        let f_uid = builder.add_u64_field(F_UID, INDEXED | STORED | FAST);
-        let f_subject = builder.add_text_field(F_SUBJECT, Self::text_store("euro"));
-        let f_body = builder.add_text_field(F_BODY, Self::text_no_store("euro"));
-        let f_preview = builder.add_text_field(F_PREVIEW, STORED);
-        let f_content_hash = builder.add_text_field(F_CONTENT_HASH, STRING | STORED | FAST);
+        EmailSchema::build()
+    }
+    pub fn create_attachment_schema() -> (Schema, AttachmentFields) {
+        AttachmentSchema::build()
+    }
+}
 
-        let f_from = builder.add_text_field(F_FROM, STRING | STORED | FAST);
-        let f_to = builder.add_text_field(F_TO, STRING | STORED);
-        let f_cc = builder.add_text_field(F_CC, STRING | STORED);
-        let f_bcc = builder.add_text_field(F_BCC, STRING | STORED);
+// ─── Schema builders ──────────────────────────────────────────────────────────
 
-        let f_from_text = builder.add_text_field(F_FROM_TEXT, Self::text_no_store("euro"));
-        let f_to_text = builder.add_text_field(F_TO_TEXT, Self::text_no_store("euro"));
-        let f_cc_text = builder.add_text_field(F_CC_TEXT, Self::text_no_store("euro"));
-        let f_bcc_text = builder.add_text_field(F_BCC_TEXT, Self::text_no_store("euro"));
+struct EmailSchema;
 
-        let f_date = builder.add_i64_field(F_DATE, INDEXED | STORED | FAST);
-        let f_internal_date = builder.add_i64_field(F_INTERNAL_DATE, INDEXED | STORED | FAST);
-        let f_ingest_at = builder.add_i64_field(F_INGEST_AT, INDEXED | STORED | FAST);
-        let f_size = builder.add_u64_field(F_SIZE, INDEXED | STORED | FAST);
-        let f_thread_id = builder.add_text_field(F_THREAD_ID, STRING | STORED | FAST);
-        let f_attachment_count = builder.add_u64_field(F_ATTACHMENT_COUNT, INDEXED | STORED | FAST);
+impl EmailSchema {
+    fn build() -> (Schema, EmailFields) {
+        let mut b = Schema::builder();
+
+        let f_id = b.add_text_field(F_ID, STRING | STORED | FAST);
+        let f_message_id = b.add_text_field(F_MESSAGE_ID, STRING | STORED);
+        let f_account_id = b.add_u64_field(F_ACCOUNT_ID, INDEXED | STORED | FAST);
+        let f_mailbox_id = b.add_u64_field(F_MAILBOX_ID, INDEXED | STORED | FAST);
+        let f_uid = b.add_u64_field(F_UID, INDEXED | STORED | FAST);
+        let f_subject = b.add_text_field(F_SUBJECT, text_store("euro"));
+        let f_body = b.add_text_field(F_BODY, text_no_store("euro"));
+        let f_preview = b.add_text_field(F_PREVIEW, STORED);
+        let f_content_hash = b.add_text_field(F_CONTENT_HASH, STRING | STORED | FAST);
+        let f_from = b.add_text_field(F_FROM, STRING | STORED | FAST);
+        let f_to = b.add_text_field(F_TO, STRING | STORED);
+        let f_cc = b.add_text_field(F_CC, STRING | STORED);
+        let f_bcc = b.add_text_field(F_BCC, STRING | STORED);
+        let f_from_text = b.add_text_field(F_FROM_TEXT, text_no_store("euro"));
+        let f_to_text = b.add_text_field(F_TO_TEXT, text_no_store("euro"));
+        let f_cc_text = b.add_text_field(F_CC_TEXT, text_no_store("euro"));
+        let f_bcc_text = b.add_text_field(F_BCC_TEXT, text_no_store("euro"));
+        let f_date = b.add_i64_field(F_DATE, INDEXED | STORED | FAST);
+        let f_internal_date = b.add_i64_field(F_INTERNAL_DATE, INDEXED | STORED | FAST);
+        let f_ingest_at = b.add_i64_field(F_INGEST_AT, INDEXED | STORED | FAST);
+        let f_size = b.add_u64_field(F_SIZE, INDEXED | STORED | FAST);
+        let f_thread_id = b.add_text_field(F_THREAD_ID, STRING | STORED | FAST);
+        let f_attachment_count = b.add_u64_field(F_ATTACHMENT_COUNT, INDEXED | STORED | FAST);
         let f_regular_attachment_count =
-            builder.add_u64_field(F_REGULAR_ATTACHMENT_COUNT, INDEXED | STORED | FAST);
+            b.add_u64_field(F_REGULAR_ATTACHMENT_COUNT, INDEXED | STORED | FAST);
         let f_attachment_name_text =
-            builder.add_text_field(F_ATTACHMENT_NAME_TEXT, Self::text_no_store("euro"));
-        let f_attachment_name_exact = builder.add_text_field(F_ATTACHMENT_NAME_EXACT, STRING);
-        let f_attachments = builder.add_text_field(F_ATTACHMENTS, STORED);
+            b.add_text_field(F_ATTACHMENT_NAME_TEXT, text_no_store("euro"));
+        let f_attachment_name_exact = b.add_text_field(F_ATTACHMENT_NAME_EXACT, STRING);
+        let f_attachments = b.add_text_field(F_ATTACHMENTS, STORED);
         let f_attachment_content_hash =
-            builder.add_text_field(F_ATTACHMENT_CONTENT_HASH, STRING | STORED | FAST);
-        let f_attachment_ext = builder.add_text_field(F_ATTACHMENT_EXT, STRING | STORED | FAST);
-        let f_attachment_category =
-            builder.add_text_field(F_ATTACHMENT_CATEGORY, STRING | STORED | FAST);
+            b.add_text_field(F_ATTACHMENT_CONTENT_HASH, STRING | STORED | FAST);
+        let f_attachment_ext = b.add_text_field(F_ATTACHMENT_EXT, STRING | STORED | FAST);
+        let f_attachment_category = b.add_text_field(F_ATTACHMENT_CATEGORY, STRING | STORED | FAST);
         let f_attachment_content_type =
-            builder.add_text_field(F_ATTACHMENT_CONTENT_TYPE, STRING | STORED | FAST);
-        let f_tags = builder.add_facet_field(F_TAGS, FacetOptions::default().set_stored());
-        let f_shard_id = builder.add_u64_field(F_SHARD_ID, INDEXED | STORED | FAST);
+            b.add_text_field(F_ATTACHMENT_CONTENT_TYPE, STRING | STORED | FAST);
+        let f_tags = b.add_facet_field(F_TAGS, FacetOptions::default().set_stored());
+        let f_shard_id = b.add_u64_field(F_SHARD_ID, INDEXED | STORED | FAST);
+
         let fields = EmailFields {
             f_id,
             f_message_id,
@@ -145,57 +165,47 @@ impl SchemaTools {
             f_tags,
             f_shard_id,
         };
-        (builder.build(), fields)
+
+        (b.build(), fields)
     }
 
-    pub fn attachment_schema() -> Schema {
-        let (schema, _) = Self::create_attachment_schema();
-        schema
+    fn fields() -> EmailFields {
+        Self::build().1
     }
+}
 
-    pub fn attachment_fields() -> &'static AttachmentFields {
-        &ATTACHMENT_FIELDS
-    }
+struct AttachmentSchema;
 
-    pub fn attachment_default_fields() -> Vec<Field> {
-        let fields = Self::attachment_fields();
-        vec![
-            fields.f_subject,
-            fields.f_text,
-            fields.f_name_text,
-            fields.f_from_text,
-        ]
-    }
+impl AttachmentSchema {
+    fn build() -> (Schema, AttachmentFields) {
+        let mut b = Schema::builder();
 
-    pub fn create_attachment_schema() -> (Schema, AttachmentFields) {
-        let mut builder = Schema::builder();
-        let f_id = builder.add_text_field(F_ID, STRING | STORED | FAST);
-        let f_envelope_id = builder.add_text_field(F_ENVELOPE_ID, STRING | STORED | FAST);
-        let f_account_id = builder.add_u64_field(F_ACCOUNT_ID, INDEXED | STORED | FAST);
-        let f_mailbox_id = builder.add_u64_field(F_MAILBOX_ID, INDEXED | STORED | FAST);
-        let f_subject = builder.add_text_field(F_SUBJECT, Self::text_store("euro"));
-        let f_content_hash = builder.add_text_field(F_CONTENT_HASH, STRING | STORED | FAST);
-        let f_from = builder.add_text_field(F_FROM, STRING | STORED | FAST);
-        let f_from_text = builder.add_text_field(F_FROM_TEXT, Self::text_no_store("euro"));
-        let f_date = builder.add_i64_field(F_DATE, INDEXED | STORED | FAST);
-        let f_ingest_at = builder.add_i64_field(F_INGEST_AT, INDEXED | STORED | FAST);
-        let f_size = builder.add_u64_field(F_SIZE, INDEXED | STORED | FAST);
-        let f_ext = builder.add_text_field(F_ATTACHMENT_EXT, STRING | STORED | FAST);
-        let f_category = builder.add_text_field(F_ATTACHMENT_CATEGORY, STRING | STORED | FAST);
-        let f_content_type =
-            builder.add_text_field(F_ATTACHMENT_CONTENT_TYPE, STRING | STORED | FAST);
-        let f_shard_id = builder.add_u64_field(F_SHARD_ID, INDEXED | STORED | FAST);
-        let f_text = builder.add_text_field(F_TEXT, Self::text_no_store("euro"));
-        let f_has_text = builder.add_bool_field(F_HAS_TEXT, INDEXED | STORED | FAST);
-        let f_is_ocr = builder.add_bool_field(F_IS_OCR, INDEXED | STORED | FAST);
-        let f_page_count = builder.add_u64_field(F_PAGE_COUNT, INDEXED | STORED | FAST);
-        let f_is_indexed = builder.add_bool_field(F_IS_INDEXED, INDEXED | STORED | FAST);
-        let f_is_message = builder.add_bool_field(F_IS_MESSAGE, INDEXED | STORED | FAST);
-        let f_name_text = builder.add_text_field(F_NAME_TEXT, Self::text_no_store("euro"));
-        let f_name_exact = builder.add_text_field(F_NAME_EXACT, STRING | STORED);
-        let f_tags = builder.add_facet_field(F_TAGS, FacetOptions::default().set_stored());
-        let f_auto_tags =
-            builder.add_facet_field(F_AUTO_TAGS, FacetOptions::default().set_stored());
+        let f_id = b.add_text_field(F_ID, STRING | STORED | FAST);
+        let f_envelope_id = b.add_text_field(F_ENVELOPE_ID, STRING | STORED | FAST);
+        let f_account_id = b.add_u64_field(F_ACCOUNT_ID, INDEXED | STORED | FAST);
+        let f_mailbox_id = b.add_u64_field(F_MAILBOX_ID, INDEXED | STORED | FAST);
+        let f_subject = b.add_text_field(F_SUBJECT, text_store("euro"));
+        let f_content_hash = b.add_text_field(F_CONTENT_HASH, STRING | STORED | FAST);
+        let f_from = b.add_text_field(F_FROM, STRING | STORED | FAST);
+        let f_from_text = b.add_text_field(F_FROM_TEXT, text_no_store("euro"));
+        let f_date = b.add_i64_field(F_DATE, INDEXED | STORED | FAST);
+        let f_ingest_at = b.add_i64_field(F_INGEST_AT, INDEXED | STORED | FAST);
+        let f_size = b.add_u64_field(F_SIZE, INDEXED | STORED | FAST);
+        let f_ext = b.add_text_field(F_ATTACHMENT_EXT, STRING | STORED | FAST);
+        let f_category = b.add_text_field(F_ATTACHMENT_CATEGORY, STRING | STORED | FAST);
+        let f_content_type = b.add_text_field(F_ATTACHMENT_CONTENT_TYPE, STRING | STORED | FAST);
+        let f_shard_id = b.add_u64_field(F_SHARD_ID, INDEXED | STORED | FAST);
+        let f_text = b.add_text_field(F_TEXT, text_no_store("euro"));
+        let f_has_text = b.add_bool_field(F_HAS_TEXT, INDEXED | STORED | FAST);
+        let f_is_ocr = b.add_bool_field(F_IS_OCR, INDEXED | STORED | FAST);
+        let f_page_count = b.add_u64_field(F_PAGE_COUNT, INDEXED | STORED | FAST);
+        let f_is_indexed = b.add_bool_field(F_IS_INDEXED, INDEXED | STORED | FAST);
+        let f_is_message = b.add_bool_field(F_IS_MESSAGE, INDEXED | STORED | FAST);
+        let f_name_text = b.add_text_field(F_NAME_TEXT, text_no_store("euro"));
+        let f_name_exact = b.add_text_field(F_NAME_EXACT, STRING | STORED);
+        let f_tags = b.add_facet_field(F_TAGS, FacetOptions::default().set_stored());
+        let f_auto_tags = b.add_facet_field(F_AUTO_TAGS, FacetOptions::default().set_stored());
+
         let fields = AttachmentFields {
             f_id,
             f_envelope_id,
@@ -223,24 +233,25 @@ impl SchemaTools {
             f_tags,
             f_auto_tags,
         };
-        (builder.build(), fields)
+
+        (b.build(), fields)
     }
 
-    fn text_no_store(tokenizer: &str) -> TextOptions {
-        TextOptions::default().set_indexing_options(
-            TextFieldIndexing::default()
-                .set_tokenizer(tokenizer)
-                .set_index_option(IndexRecordOption::WithFreqsAndPositions),
-        )
+    fn fields() -> AttachmentFields {
+        Self::build().1
     }
+}
 
-    fn text_store(tokenizer: &str) -> TextOptions {
-        TextOptions::default()
-            .set_indexing_options(
-                TextFieldIndexing::default()
-                    .set_tokenizer(tokenizer)
-                    .set_index_option(IndexRecordOption::WithFreqsAndPositions),
-            )
-            .set_stored()
-    }
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+fn text_no_store(tokenizer: &str) -> TextOptions {
+    TextOptions::default().set_indexing_options(
+        TextFieldIndexing::default()
+            .set_tokenizer(tokenizer)
+            .set_index_option(IndexRecordOption::WithFreqsAndPositions),
+    )
+}
+
+fn text_store(tokenizer: &str) -> TextOptions {
+    text_no_store(tokenizer).set_stored()
 }

@@ -22,7 +22,7 @@ use crate::envelope::utils::normalize_subject;
 use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
 use crate::message::content::AttachmentInfo;
-use crate::store::storage::{DetachedEmail, BLOB_MANAGER};
+use crate::store::blob::{DetachedEmail, BLOB_MANAGER};
 use crate::store::tantivy::attachment::ATTACHMENT_MANAGER;
 use crate::store::tantivy::envelope::ENVELOPE_MANAGER;
 use crate::store::tantivy::model::{AttachmentModel, EnvelopeWithAttachments};
@@ -355,7 +355,7 @@ pub fn generate_message_id() -> String {
     format!("<{:016x}.{}.{}@{}>", id!(128), ts, pid, "bichon")
 }
 
-fn extract_references(message: &Message<'_>) -> Option<Vec<String>> {
+pub fn extract_references(message: &Message<'_>) -> Option<Vec<String>> {
     match message.references() {
         mail_parser::HeaderValue::Text(cow) => Some(vec![cow.to_string()]),
         mail_parser::HeaderValue::TextList(vec) => {

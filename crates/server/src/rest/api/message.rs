@@ -36,7 +36,7 @@ use bichon_core::message::tags::TagCount;
 use bichon_core::message::tags::TagsRequest;
 use bichon_core::raise_error;
 use bichon_core::store::envelope::Envelope;
-use bichon_core::store::storage::get_reader;
+use bichon_core::store::blob::get_reader;
 use bichon_core::store::tantivy::envelope::ENVELOPE_MANAGER;
 use bichon_core::store::tantivy::validate_facet;
 use bichon_core::users::permissions::Permission;
