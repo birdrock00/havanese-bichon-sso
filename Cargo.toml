@@ -1,6 +1,12 @@
 [workspace]
 
-members = ["crates/core", "crates/server", "crates/cli", "crates/admin"]
+members = [
+    "crates/memdb",
+    "crates/core",
+    "crates/server",
+    "crates/cli",
+    "crates/admin",
+]
 
 resolver = "2"
 
@@ -12,13 +18,12 @@ edition = "2021"
 chrono = "0.4.44"
 clap = { version = "4.6.1", features = ["derive", "env"] }
 mimalloc = "0.1.50"
-native_db = "0.8.2"
+memdb = { path = "crates/memdb" }
 itertools = "0.14.0"
-native_model = "0.4.20"
 ring = { version = "0.17.14", features = ["std"] }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.149"
-tokio = { version = "1.52.1", features = ["full"] }
+tokio = { version = "1.52.3", features = ["full"] }
 tracing = "0.1.44"
 tracing-appender = "0.2.3"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
@@ -47,7 +52,7 @@ tokio-rustls = { version = "0.26.4", default-features = false, features = [
 timeago = "0.6.0"
 oauth2 = { version = "5.0.0", features = ["reqwest-blocking"] }
 url = { version = "2.5.8", features = ["serde"] }
-sysinfo = "0.38.4"
+sysinfo = "0.39.1"
 num_cpus = "1.17.0"
 rand = "0.10.1"
 encoding_rs = "0.8.35"
@@ -77,7 +82,7 @@ bytes = "1.11.1"
 dialoguer = "0.12.0"
 console = "0.16.3"
 mail-send = "0.6.0"
-rcgen = "0.14.7"
+rcgen = "0.14.8"
 rustls-pemfile = "2.2.0"
 blake3 = "1.8.5"
 uuid = { version = "1.23.1", features = ["v4", "serde"] }

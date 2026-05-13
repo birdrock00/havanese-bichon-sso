@@ -139,3 +139,78 @@ async fn initialize() -> BichonResult<()> {
     LazyLock::force(&ATTACHMENT_MANAGER);
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;
+
+#[cfg(test)]
+mod api_tests {
+    use super::rest::api::create_openapi_service;
+    use poem::test::TestClient;
+
+    #[tokio::test]
+    async fn openapi_spec_json_is_served() {
+        let api_service = create_openapi_service();
+        let spec_endpoint = api_service.spec_endpoint();
+        let cli = TestClient::new(spec_endpoint);
+
+        let resp = cli.get("/").send().await;
+        resp.assert_status_is_ok();
+
+        let body = resp.json().await;
+        let obj = body.value().object();
+        assert!(obj.get_opt("openapi").is_some(), "missing openapi version");
+        assert!(obj.get_opt("info").is_some(), "missing info section");
+        assert!(obj.get_opt("paths").is_some(), "missing paths section");
+    }
+
+    #[tokio::test]
+    async fn openapi_spec_yaml_is_served() {
+        let api_service = create_openapi_service();
+        let spec_endpoint = api_service.spec_endpoint_yaml();
+        let cli = TestClient::new(spec_endpoint);
+
+        let resp = cli.get("/").send().await;
+        resp.assert_status_is_ok();
+    }
+
+    #[tokio::test]
+    async fn swagger_ui_is_served() {
+        let api_service = create_openapi_service();
+        let swagger = api_service.swagger_ui();
+        let cli = TestClient::new(swagger);
+
+        let resp = cli.get("/").send().await;
+        resp.assert_status_is_ok();
+    }
+
+    #[tokio::test]
+    async fn openapi_spec_lists_all_tag_groups() {
+        let api_service = create_openapi_service();
+        let spec_endpoint = api_service.spec_endpoint();
+        let cli = TestClient::new(spec_endpoint);
+
+        let resp = cli.get("/").send().await;
+        let body = resp.json().await;
+        let value = body.value();
+
+        let tag_names: Vec<&str> = value
+            .object()
+            .get("tags")
+            .array()
+            .iter()
+            .map(|v| v.object().get("name").string())
+            .collect();
+
+        assert!(tag_names.contains(&"AccessToken"), "missing AccessToken tag");
+        assert!(tag_names.contains(&"Attachment"), "missing Attachment tag");
+        assert!(tag_names.contains(&"AutoConfig"), "missing AutoConfig tag");
+        assert!(tag_names.contains(&"Account"), "missing Account tag");
+        assert!(tag_names.contains(&"System"), "missing System tag");
+        assert!(tag_names.contains(&"Mailbox"), "missing Mailbox tag");
+        assert!(tag_names.contains(&"OAuth2"), "missing OAuth2 tag");
+        assert!(tag_names.contains(&"Message"), "missing Message tag");
+        assert!(tag_names.contains(&"Import"), "missing Import tag");
+        assert!(tag_names.contains(&"Users"), "missing Users tag");
+    }
+}

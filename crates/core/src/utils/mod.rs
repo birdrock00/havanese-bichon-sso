@@ -351,3 +351,150 @@ pub fn compute_content_hash(content: &[u8]) -> String {
     let hash = blake3::hash(content);
     hash.to_hex().to_string()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── hash ──────────────────────────────────────────────────────────
+
+    #[test]
+    fn hash_is_deterministic() {
+        let a = hash("hello world");
+        let b = hash("hello world");
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn hash_different_inputs_produce_different_outputs() {
+        let a = hash("hello");
+        let b = hash("world");
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn hash_empty_string() {
+        let h = hash("");
+        assert!(h < (1u64 << 53));
+    }
+
+    #[test]
+    fn hex_hash_is_deterministic() {
+        let a = hex_hash("test");
+        let b = hex_hash("test");
+        assert_eq!(a, b);
+        assert_eq!(a.len(), 32);
+    }
+
+    #[test]
+    fn hex_hash_different_inputs_produce_different_outputs() {
+        assert_ne!(hex_hash("a"), hex_hash("b"));
+    }
+
+    // ── create_hash / create_hash2 ────────────────────────────────────
+
+    #[test]
+    fn create_hash_deterministic() {
+        let a = create_hash(1, "INBOX");
+        let b = create_hash(1, "INBOX");
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn create_hash_different_accounts_differ() {
+        assert_ne!(create_hash(1, "INBOX"), create_hash(2, "INBOX"));
+    }
+
+    #[test]
+    fn create_hash_different_fields_differ() {
+        assert_ne!(create_hash(1, "INBOX"), create_hash(1, "Sent"));
+    }
+
+    #[test]
+    fn create_hash2_deterministic() {
+        let a = create_hash2(1, 100, "INBOX");
+        let b = create_hash2(1, 100, "INBOX");
+        assert_eq!(a, b);
+    }
+
+    #[test]
+    fn create_hash2_different_inputs_differ() {
+        assert_ne!(create_hash2(1, 100, "INBOX"), create_hash2(1, 200, "INBOX"));
+        assert_ne!(create_hash2(1, 100, "INBOX"), create_hash2(1, 100, "Sent"));
+    }
+
+    // ── compute_content_hash ──────────────────────────────────────────
+
+    #[test]
+    fn compute_content_hash_deterministic() {
+        let data = b"test content";
+        let a = compute_content_hash(data);
+        let b = compute_content_hash(data);
+        assert_eq!(a, b);
+        assert_eq!(a.len(), 64);
+    }
+
+    #[test]
+    fn compute_content_hash_different_content_differ() {
+        assert_ne!(compute_content_hash(b"a"), compute_content_hash(b"b"));
+    }
+
+    // ── validate_email ────────────────────────────────────────────────
+
+    #[test]
+    fn validate_email_valid() {
+        assert!(validate_email("user@example.com").is_ok());
+        assert!(validate_email("a@b.co").is_ok());
+        assert!(validate_email("test.user+tag@domain.com").is_ok());
+    }
+
+    #[test]
+    fn validate_email_invalid() {
+        assert!(validate_email("not-an-email").is_err());
+        assert!(validate_email("").is_err());
+        assert!(validate_email("@domain.com").is_err());
+        assert!(validate_email("user@").is_err());
+    }
+
+    // ── generate_token_impl ───────────────────────────────────────────
+
+    #[test]
+    fn generate_token_has_expected_length() {
+        let token = generate_token_impl(256);
+        // URL-safe base64 encodes 3 bytes → 4 chars, so length is roughly
+        // ceil(bit_strength / 24) * 4, but chars like /+=-_ are replaced
+        assert!(!token.is_empty());
+    }
+
+    #[test]
+    fn generate_token_does_not_contain_special_chars() {
+        for _ in 0..10 {
+            let token = generate_token_impl(256);
+            assert!(!token.contains('/'));
+            assert!(!token.contains('+'));
+            assert!(!token.contains('-'));
+            assert!(!token.contains('_'));
+        }
+    }
+
+    #[test]
+    fn generate_token_is_random() {
+        let a = generate_token_impl(256);
+        let b = generate_token_impl(256);
+        assert_ne!(a, b);
+    }
+
+    // ── decode_avatar_bytes ───────────────────────────────────────────
+
+    #[test]
+    fn decode_avatar_bytes_valid() {
+        // "avatar" in base64 = "YXZhdGFy"
+        let result = decode_avatar_bytes("YXZhdGFy").unwrap();
+        assert_eq!(result, b"avatar");
+    }
+
+    #[test]
+    fn decode_avatar_bytes_invalid_base64() {
+        assert!(decode_avatar_bytes("!!!invalid!!!").is_err());
+    }
+}

@@ -44,9 +44,7 @@ impl ImportApi {
         payload: Json<BatchEmlRequest>,
         context: WrappedContext,
     ) -> ApiResult<Json<BatchEmlResult>> {
-        context
-            .require_permission(Some(payload.0.account_id), Permission::DATA_IMPORT_BATCH)
-            .await?;
+        context.require_permission(Some(payload.0.account_id), Permission::DATA_IMPORT_BATCH)?;
         Ok(Json(ImportEmls::do_import(payload.0).await?))
     }
 }

@@ -39,7 +39,7 @@ pub struct AccessTokenCreateRequest {
 }
 
 impl AccessTokenCreateRequest {
-    pub async fn validate(&self) -> BichonResult<()> {
+    pub fn validate(&self) -> BichonResult<()> {
         if let Some(expire_in) = self.expire_in {
             if expire_in == 0 {
                 return Err(raise_error!(

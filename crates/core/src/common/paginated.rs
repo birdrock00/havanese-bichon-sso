@@ -178,3 +178,83 @@ impl<T> Paginated<T> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn paginate_vec_full_list_without_pagination() {
+        let items: Vec<i32> = (1..=10).collect();
+        let result = paginate_vec(&items, None, None).unwrap();
+        assert_eq!(result.items.len(), 10);
+        assert_eq!(result.total_items, 10);
+        assert_eq!(result.page, None);
+        assert_eq!(result.total_pages, None);
+    }
+
+    #[test]
+    fn paginate_vec_first_page() {
+        let items: Vec<i32> = (1..=25).collect();
+        let result = paginate_vec(&items, Some(1), Some(10)).unwrap();
+        assert_eq!(result.items, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        assert_eq!(result.total_items, 25);
+        assert_eq!(result.total_pages, Some(3));
+        assert_eq!(result.page, Some(1));
+    }
+
+    #[test]
+    fn paginate_vec_last_partial_page() {
+        let items: Vec<i32> = (1..=25).collect();
+        let result = paginate_vec(&items, Some(3), Some(10)).unwrap();
+        assert_eq!(result.items, vec![21, 22, 23, 24, 25]);
+        assert_eq!(result.total_items, 25);
+        assert_eq!(result.total_pages, Some(3));
+    }
+
+    #[test]
+    fn paginate_vec_page_beyond_range_returns_empty() {
+        let items: Vec<i32> = (1..=10).collect();
+        let result = paginate_vec(&items, Some(5), Some(10)).unwrap();
+        assert_eq!(result.items.len(), 0);
+        assert_eq!(result.total_items, 10);
+    }
+
+    #[test]
+    fn paginate_vec_empty_list() {
+        let items: Vec<i32> = vec![];
+        let result = paginate_vec(&items, Some(1), Some(10)).unwrap();
+        assert_eq!(result.items.len(), 0);
+        assert_eq!(result.total_items, 0);
+        assert_eq!(result.total_pages, Some(0));
+    }
+
+    #[test]
+    fn paginate_vec_zero_page_returns_error() {
+        let items: Vec<i32> = (1..=10).collect();
+        assert!(paginate_vec(&items, Some(0), Some(10)).is_err());
+    }
+
+    #[test]
+    fn paginate_vec_zero_page_size_returns_error() {
+        let items: Vec<i32> = (1..=10).collect();
+        assert!(paginate_vec(&items, Some(1), Some(0)).is_err());
+    }
+
+    #[test]
+    fn paginate_vec_single_item() {
+        let items = vec![42];
+        let result = paginate_vec(&items, Some(1), Some(10)).unwrap();
+        assert_eq!(result.items, vec![42]);
+        assert_eq!(result.total_items, 1);
+        assert_eq!(result.total_pages, Some(1));
+    }
+
+    #[test]
+    fn paginate_vec_exact_page_boundary() {
+        let items: Vec<i32> = (1..=20).collect();
+        let result = paginate_vec(&items, Some(2), Some(10)).unwrap();
+        assert_eq!(result.items, vec![11, 12, 13, 14, 15, 16, 17, 18, 19, 20]);
+        assert_eq!(result.total_pages, Some(2));
+    }
+}

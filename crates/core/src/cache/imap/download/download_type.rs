@@ -38,7 +38,7 @@ pub async fn decide_next_download_task(
     account: &AccountModel,
     trigger_type: TriggerType,
 ) -> BichonResult<DownloadTask> {
-    let state = match DownloadState::get(account.id).await? {
+    let state = match DownloadState::get(account.id)? {
         None => {
             DownloadState::init(account.id).await?;
             return Ok(DownloadTask::FullFetch);
@@ -56,7 +56,7 @@ pub async fn decide_next_download_task(
     };
 
     if should_start {
-        DownloadState::start_new_session(account.id, trigger_type).await?;
+        DownloadState::start_new_session(account.id, trigger_type)?;
         Ok(DownloadTask::TraceFetch)
     } else {
         Ok(DownloadTask::Idle)

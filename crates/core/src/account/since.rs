@@ -260,16 +260,44 @@ mod test {
     use crate::account::since::{DateSince, RelativeDate, Unit};
 
     #[test]
-    fn test1() {
+    fn fixed_date_valid() {
         let e = DateSince {
             fixed: Some("2014-09-12".to_string()),
             relative: None,
         };
+        assert!(e.validate().is_ok());
+        assert!(!e.since_date().unwrap().is_empty());
+    }
 
-        e.validate().unwrap();
+    #[test]
+    fn fixed_date_in_future_fails() {
+        let e = DateSince {
+            fixed: Some("2099-01-01".to_string()),
+            relative: None,
+        };
+        assert!(e.validate().is_err());
+    }
 
-        println!("{}", e.since_date().unwrap());
+    #[test]
+    fn fixed_date_before_1970_fails() {
+        let e = DateSince {
+            fixed: Some("1960-01-01".to_string()),
+            relative: None,
+        };
+        assert!(e.validate().is_err());
+    }
 
+    #[test]
+    fn fixed_date_bad_format_fails() {
+        let e = DateSince {
+            fixed: Some("01-01-2020".to_string()),
+            relative: None,
+        };
+        assert!(e.validate().is_err());
+    }
+
+    #[test]
+    fn relative_date_days_valid() {
         let e = DateSince {
             fixed: None,
             relative: Some(RelativeDate {
@@ -277,9 +305,63 @@ mod test {
                 value: 1,
             }),
         };
+        assert!(e.validate().is_ok());
+    }
 
-        e.validate().unwrap();
+    #[test]
+    fn relative_date_months_valid() {
+        let e = DateSince {
+            fixed: None,
+            relative: Some(RelativeDate {
+                unit: Unit::Months,
+                value: 3,
+            }),
+        };
+        assert!(e.validate().is_ok());
+    }
 
-        println!("{}", e.since_date().unwrap());
+    #[test]
+    fn relative_date_years_valid() {
+        let e = DateSince {
+            fixed: None,
+            relative: Some(RelativeDate {
+                unit: Unit::Years,
+                value: 1,
+            }),
+        };
+        assert!(e.validate().is_ok());
+    }
+
+    #[test]
+    fn relative_date_zero_value_fails() {
+        let e = DateSince {
+            fixed: None,
+            relative: Some(RelativeDate {
+                unit: Unit::Days,
+                value: 0,
+            }),
+        };
+        assert!(e.validate().is_err());
+    }
+
+    #[test]
+    fn both_fixed_and_relative_fails() {
+        let e = DateSince {
+            fixed: Some("2014-09-12".to_string()),
+            relative: Some(RelativeDate {
+                unit: Unit::Days,
+                value: 1,
+            }),
+        };
+        assert!(e.validate().is_err());
+    }
+
+    #[test]
+    fn neither_fixed_nor_relative_fails() {
+        let e = DateSince {
+            fixed: None,
+            relative: None,
+        };
+        assert!(e.validate().is_err());
     }
 }

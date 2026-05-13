@@ -11,7 +11,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 pub fn handle_migration(theme: &ColorfulTheme) {
     println!(
         "\n{}",
-        style("MIGRATION: Bichon v0.x Storage Architecture → v1.0")
+        style("MIGRATION: Bichon v0.3.7 Storage Architecture → v1.0.0")
             .bold()
             .yellow()
     );
@@ -19,8 +19,8 @@ pub fn handle_migration(theme: &ColorfulTheme) {
     println!(
         "{}",
         style(
-            "This tool migrates data from the legacy v0.x Tantivy-based storage \
-            architecture (used in versions 0.0.1 through 0.3.7) to the new v1.0 \
+            "This tool migrates data from the legacy v0.3.7 Tantivy-based storage \
+            architecture to the new v1.0.0 \
             separated index and Fjall-backed storage format."
         )
         .dim()
@@ -29,10 +29,10 @@ pub fn handle_migration(theme: &ColorfulTheme) {
     println!(
         "{}",
         style(
-            "Legacy v0.x architecture:\n\
+            "Legacy v0.3.7 architecture:\n\
             • envelope metadata stored in Tantivy\n\
             • message data stored in Tantivy\n\n\
-                New v1.0 architecture:\n\
+                New v1.0.0 architecture:\n\
             • mail indexes stored in Tantivy\n\
             • attachment indexes stored in Tantivy\n\
             • raw message data stored in Fjall\n\
@@ -223,7 +223,29 @@ pub fn handle_migration(theme: &ColorfulTheme) {
         return;
     }
 
-    println!("\n{} Migrating...", style("⌛").yellow());
+    // Step 1: Migrate metadata (meta.db + mailbox.db → memdb)
+    match crate::meta::migrate_metadata(&root_path) {
+        Ok(()) => {}
+        Err(e) => {
+            eprintln!(
+                "\n{} Metadata migration failed:\n{}",
+                style("✘").red().bold(),
+                style(e).red()
+            );
+            eprintln!(
+                "{}",
+                style("Aborting migration. No changes have been made to Tantivy data.")
+                    .yellow()
+            );
+            return;
+        }
+    }
+
+    println!(
+        "\n{} {}",
+        style("⌛").yellow(),
+        style("Step 2: Migrating email index and blob data...").cyan()
+    );
     let pb = ProgressBar::new(0);
     pb.set_style(ProgressStyle::default_bar()
     .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}")

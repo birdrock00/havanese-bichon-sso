@@ -16,29 +16,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::{
-    collections::{HashMap, HashSet},
-    sync::LazyLock,
-};
+use std::collections::{HashMap, HashSet};
 
-use crate::{
-    account::{old_state::AccountRunningState, state::DownloadState},
-    database::ModelsAdapter,
-};
 use mailbox::MailBox;
-use native_db::Models;
 
 pub mod download;
 pub mod mailbox;
 pub mod task;
-
-pub static MAILBOX_MODELS: LazyLock<Models> = LazyLock::new(|| {
-    let mut adapter = ModelsAdapter::new();
-    adapter.register_model::<MailBox>();
-    adapter.register_model::<AccountRunningState>();
-    adapter.register_model::<DownloadState>();
-    adapter.models
-});
 
 pub fn find_missing_mailboxes(
     local_mailboxes: &[MailBox],

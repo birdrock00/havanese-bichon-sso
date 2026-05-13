@@ -24,7 +24,7 @@ use crate::{
     {
         account::migration::AccountModel,
         common::auth::ClientContext,
-        database::{manager::DB_MANAGER, with_transaction},
+        database::{manager::DB_MANAGER, with_transaction, MemDbModel},
         error::{code::ErrorCode, BichonResult},
         users::{
             permissions::Permission,
@@ -43,8 +43,8 @@ pub struct BatchAccountRoleRequest {
 }
 
 impl BatchAccountRoleRequest {
-    pub async fn validate_existence(&self) -> BichonResult<()> {
-        let role = UserRole::find(self.role_id).await?.ok_or_else(|| {
+    pub fn validate_existence(&self) -> BichonResult<()> {
+        let role = UserRole::find(self.role_id)?.ok_or_else(|| {
             raise_error!(
                 format!("Role ID {} not found", self.role_id),
                 ErrorCode::ResourceNotFound
@@ -59,7 +59,7 @@ impl BatchAccountRoleRequest {
         }
 
         for id in &self.account_ids {
-            let exists = AccountModel::async_find(*id).await?; // Assuming an exists helper
+            let exists = AccountModel::find(*id)?; // Assuming an exists helper
             if exists.is_none() {
                 return Err(raise_error!(
                     format!("Account ID {} not found", id),
@@ -69,7 +69,7 @@ impl BatchAccountRoleRequest {
         }
 
         for id in &self.user_ids {
-            let exists = UserModel::find(*id).await?; // Assuming an exists helper
+            let exists = UserModel::find(*id)?; // Assuming an exists helper
             if exists.is_none() {
                 return Err(raise_error!(
                     format!("User ID {} not found", id),
@@ -81,44 +81,38 @@ impl BatchAccountRoleRequest {
         Ok(())
     }
 
-    async fn grant_batch_account_access(
+    fn grant_batch_account_access(
         account_ids: Vec<u64>,
         user_ids: Vec<u64>,
         role_id: u64,
     ) -> BichonResult<()> {
-        with_transaction(DB_MANAGER.meta_db(), move |rw| {
+        with_transaction(DB_MANAGER.db(), move |txn| {
+            let mut txn = txn;
             for &uid in &user_ids {
-                // Fetch the current user record from the database
-                let user = rw
-                    .get()
-                    .primary::<UserModel>(uid)
-                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                    .ok_or_else(|| {
-                        raise_error!(
-                            format!("User with id={} not found.", uid),
-                            ErrorCode::ResourceNotFound
-                        )
-                    })?;
+                let db = DB_MANAGER.db();
+                let coll = db.collection(UserModel::collection());
+                let key = uid.to_string();
+                let user: UserModel = coll
+                    .get_required(&key)
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
                 let mut updated_user = user.clone();
 
-                // Apply the role to each specified account_id
                 for &aid in &account_ids {
                     updated_user.account_access_map.insert(aid, role_id);
                 }
 
                 updated_user.updated_at = utc_now!();
 
-                // Save the updated user back to the database within the transaction
-                rw.update(user, updated_user)
+                txn = txn
+                    .upsert(UserModel::collection(), key, &updated_user)
                     .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
             }
-            Ok(())
+            Ok(txn)
         })
-        .await
     }
 
-    pub async fn do_assign(self, context: &ClientContext) -> BichonResult<()> {
+    pub fn do_assign(self, context: &ClientContext) -> BichonResult<()> {
         for account_id in &self.account_ids {
             // Get the user's specific access for this account
             let assigned_role_id =
@@ -134,7 +128,7 @@ impl BatchAccountRoleRequest {
                     })?;
 
             // Fetch the role definition from the database
-            let user_scoped_role = UserRole::find(*assigned_role_id).await?.ok_or_else(|| {
+            let user_scoped_role = UserRole::find(*assigned_role_id)?.ok_or_else(|| {
                 raise_error!(
                     "Assigned account role no longer exists".into(),
                     ErrorCode::InternalError
@@ -156,6 +150,6 @@ impl BatchAccountRoleRequest {
             // This is where you'd compare target_role.permissions vs manager's perms
         }
 
-        Self::grant_batch_account_access(self.account_ids, self.user_ids, self.role_id).await
+        Self::grant_batch_account_access(self.account_ids, self.user_ids, self.role_id)
     }
 }

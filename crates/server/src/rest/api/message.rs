@@ -35,8 +35,8 @@ use bichon_core::message::search::{search_messages_impl, EmailSearchRequest};
 use bichon_core::message::tags::TagCount;
 use bichon_core::message::tags::TagsRequest;
 use bichon_core::raise_error;
-use bichon_core::store::envelope::Envelope;
 use bichon_core::store::blob::get_reader;
+use bichon_core::store::envelope::Envelope;
 use bichon_core::store::tantivy::envelope::ENVELOPE_MANAGER;
 use bichon_core::store::tantivy::validate_facet;
 use bichon_core::users::permissions::Permission;
@@ -65,9 +65,7 @@ impl MessageApi {
     ) -> ApiResult<()> {
         let request = payload.0;
         for account_id in request.keys() {
-            context
-                .require_permission(Some(*account_id), Permission::DATA_DELETE)
-                .await?;
+            context.require_permission(Some(*account_id), Permission::DATA_DELETE)?;
         }
         Ok(delete_messages_impl(request).await?)
     }
@@ -84,15 +82,13 @@ impl MessageApi {
         payload: Json<EmailSearchRequest>,
         context: WrappedContext,
     ) -> ApiResult<Json<DataPage<Envelope>>> {
-        let authorized_ids: Option<HashSet<u64>> = if context
-            .has_permission(None, Permission::DATA_READ_ALL)
-            .await
-        {
-            None
-        } else {
-            Some(context.user.account_access_map.keys().cloned().collect())
-        };
-        Ok(Json(search_messages_impl(authorized_ids, payload.0).await?))
+        let authorized_ids: Option<HashSet<u64>> =
+            if context.has_permission(None, Permission::DATA_READ_ALL) {
+                None
+            } else {
+                Some(context.user.account_access_map.keys().cloned().collect())
+            };
+        Ok(Json(search_messages_impl(authorized_ids, payload.0)?))
     }
 
     /// Retrieves all messages belonging to a specific thread. Requires `thread_id`, `page`, and `page_size` query parameters.
@@ -115,12 +111,13 @@ impl MessageApi {
     ) -> ApiResult<Json<DataPage<Envelope>>> {
         let account_id = account_id.0;
         let thread_id = thread_id.0.trim();
-        context
-            .require_permission(Some(account_id), Permission::DATA_READ)
-            .await?;
-        Ok(Json(
-            get_thread_messages(account_id, thread_id, page.0, page_size.0).await?,
-        ))
+        context.require_permission(Some(account_id), Permission::DATA_READ)?;
+        Ok(Json(get_thread_messages(
+            account_id,
+            thread_id,
+            page.0,
+            page_size.0,
+        )?))
     }
 
     /// Fetches the content of a specific email.
@@ -138,12 +135,8 @@ impl MessageApi {
         context: WrappedContext,
     ) -> ApiResult<Json<FullMessageContent>> {
         let account_id = account_id.0;
-        context
-            .require_permission(Some(account_id), Permission::DATA_READ)
-            .await?;
-        Ok(Json(
-            retrieve_email_content(account_id, envelope_id.0).await?,
-        ))
+        context.require_permission(Some(account_id), Permission::DATA_READ)?;
+        Ok(Json(retrieve_email_content(account_id, envelope_id.0)?))
     }
 
     /// Retrieves the content of an email embedded as an attachment.
@@ -162,13 +155,13 @@ impl MessageApi {
         context: WrappedContext,
     ) -> ApiResult<Json<FullNestedMessageContent>> {
         let account_id = account_id.0;
-        context
-            .require_permission(Some(account_id), Permission::DATA_READ)
-            .await?;
+        context.require_permission(Some(account_id), Permission::DATA_READ)?;
         let content_hash = content_hash.0.trim();
-        Ok(Json(
-            retrieve_nested_eml_content(account_id, envelope_id.0, content_hash).await?,
-        ))
+        Ok(Json(retrieve_nested_eml_content(
+            account_id,
+            envelope_id.0,
+            content_hash,
+        )?))
     }
 
     /// Retrieves the envelope (metadata) of a specific message.
@@ -186,13 +179,10 @@ impl MessageApi {
         context: WrappedContext,
     ) -> ApiResult<Json<Envelope>> {
         let account_id = account_id.0;
-        context
-            .require_permission(Some(account_id), Permission::DATA_READ)
-            .await?;
+        context.require_permission(Some(account_id), Permission::DATA_READ)?;
         let envelope_id = envelope_id.0;
         let e = ENVELOPE_MANAGER
-            .get_envelope_by_id(account_id, &envelope_id)
-            .await?
+            .get_envelope_by_id(account_id, &envelope_id)?
             .ok_or_else(|| {
                 raise_error!(
                     format!(
@@ -220,12 +210,10 @@ impl MessageApi {
         context: WrappedContext,
     ) -> ApiResult<Attachment<Body>> {
         let account_id = account_id.0;
-        AccountModel::check_account_exists(account_id).await?;
-        context
-            .require_permission(Some(account_id), Permission::DATA_RAW_DOWNLOAD)
-            .await?;
+        AccountModel::check_account_exists(account_id)?;
+        context.require_permission(Some(account_id), Permission::DATA_RAW_DOWNLOAD)?;
         let envelope_id = envelope_id.0;
-        let reader = get_reader(account_id, envelope_id.clone()).await?;
+        let reader = get_reader(account_id, envelope_id.clone())?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
             .attachment_type(AttachmentType::Attachment)
@@ -247,9 +235,7 @@ impl MessageApi {
         context: WrappedContext,
     ) -> ApiResult<()> {
         let account_id = account_id.0;
-        context
-            .require_permission(Some(account_id), Permission::DATA_EXPORT_BATCH)
-            .await?;
+        context.require_permission(Some(account_id), Permission::DATA_EXPORT_BATCH)?;
         Ok(restore_emails(account_id, payload.0.envelope_ids).await?)
     }
 
@@ -271,12 +257,10 @@ impl MessageApi {
     ) -> ApiResult<Attachment<Body>> {
         let account_id = account_id.0;
         let envelope_id = envelope_id.0.trim().to_string();
-        AccountModel::check_account_exists(account_id).await?;
-        context
-            .require_permission(Some(account_id), Permission::DATA_READ)
-            .await?;
+        AccountModel::check_account_exists(account_id)?;
+        context.require_permission(Some(account_id), Permission::DATA_READ)?;
         let content_hash = content_hash.0.trim();
-        let reader = retrieve_attachment_content(account_id, envelope_id, content_hash).await?;
+        let reader = retrieve_attachment_content(account_id, envelope_id, content_hash)?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
             .attachment_type(AttachmentType::Attachment)
@@ -303,10 +287,8 @@ impl MessageApi {
     ) -> ApiResult<Attachment<Body>> {
         let account_id = account_id.0;
         let envelope_id = envelope_id.0.trim().to_string();
-        AccountModel::check_account_exists(account_id).await?;
-        context
-            .require_permission(Some(account_id), Permission::DATA_READ)
-            .await?;
+        AccountModel::check_account_exists(account_id)?;
+        context.require_permission(Some(account_id), Permission::DATA_READ)?;
         let content_hash = content_hash.0.trim();
         let nested_content_hash = nested_content_hash.0.trim();
         let reader = retrieve_nested_attachment_content(
@@ -314,8 +296,7 @@ impl MessageApi {
             envelope_id,
             content_hash,
             nested_content_hash,
-        )
-        .await?;
+        )?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
             .attachment_type(AttachmentType::Attachment)
@@ -326,15 +307,13 @@ impl MessageApi {
     /// Returns all facets in the index along with their document counts.
     #[oai(path = "/all-tags", method = "get", operation_id = "get_all_tags")]
     async fn get_all_tags(&self, context: WrappedContext) -> ApiResult<Json<Vec<TagCount>>> {
-        let authorized_ids: Option<HashSet<u64>> = if context
-            .has_permission(None, Permission::DATA_READ_ALL)
-            .await
-        {
-            None
-        } else {
-            Some(context.user.account_access_map.keys().cloned().collect())
-        };
-        Ok(Json(ENVELOPE_MANAGER.get_all_tags(authorized_ids).await?))
+        let authorized_ids: Option<HashSet<u64>> =
+            if context.has_permission(None, Permission::DATA_READ_ALL) {
+                None
+            } else {
+                Some(context.user.account_access_map.keys().cloned().collect())
+            };
+        Ok(Json(ENVELOPE_MANAGER.get_all_tags(authorized_ids)?))
     }
 
     /// Adds or removes facet tags for multiple emails across accounts.
@@ -354,9 +333,7 @@ impl MessageApi {
         }
 
         for account_id in req.updates.keys() {
-            context
-                .require_permission(Some(*account_id), Permission::DATA_MANAGE)
-                .await?;
+            context.require_permission(Some(*account_id), Permission::DATA_MANAGE)?;
         }
 
         ENVELOPE_MANAGER.update_envelope_tags(req).await?;
@@ -370,16 +347,12 @@ impl MessageApi {
         operation_id = "get_all_contacts"
     )]
     async fn get_all_contacts(&self, context: WrappedContext) -> ApiResult<Json<HashSet<String>>> {
-        let authorized_ids: Option<HashSet<u64>> = if context
-            .has_permission(None, Permission::DATA_READ_ALL)
-            .await
-        {
-            None
-        } else {
-            Some(context.user.account_access_map.keys().cloned().collect())
-        };
-        Ok(Json(
-            ENVELOPE_MANAGER.get_all_contacts(authorized_ids).await?,
-        ))
+        let authorized_ids: Option<HashSet<u64>> =
+            if context.has_permission(None, Permission::DATA_READ_ALL) {
+                None
+            } else {
+                Some(context.user.account_access_map.keys().cloned().collect())
+            };
+        Ok(Json(ENVELOPE_MANAGER.get_all_contacts(authorized_ids)?))
     }
 }

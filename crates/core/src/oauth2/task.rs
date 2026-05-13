@@ -34,7 +34,7 @@ impl BichonTask for OAuth2CleanTask {
 
         let task = move |_: Option<u64>| {
             Box::pin(async move {
-                OAuth2PendingEntity::clean().await?;
+                OAuth2PendingEntity::clean()?;
                 Ok(())
             })
         };

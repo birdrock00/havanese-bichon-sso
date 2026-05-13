@@ -433,13 +433,13 @@ pub async fn detach_and_store_attachments(
     attachment_infos
 }
 
-pub async fn reattach_eml_content(
+pub fn reattach_eml_content(
     account_id: u64,
     envelope_id: String,
 ) -> BichonResult<(Envelope, Bytes)> {
     let e = ENVELOPE_MANAGER
         .get_envelope_by_id(account_id, &envelope_id)
-        .await?
+        ?
         .ok_or_else(|| {
             raise_error!(
                 format!(

@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use bichon_core::oauth2::{flow::OAuth2Flow, pending::OAuth2PendingEntity};
 use poem::{
     handler,
@@ -56,7 +55,7 @@ pub async fn oauth2_callback(
         }
     };
 
-    let pending = match OAuth2PendingEntity::get(state).await {
+    let pending = match OAuth2PendingEntity::get(state) {
         Ok(Some(pending)) => pending,
         _ => {
             let message =
@@ -86,7 +85,7 @@ pub async fn oauth2_callback(
         .into_response());
     }
 
-    if let Err(e) = OAuth2PendingEntity::delete(state).await {
+    if let Err(e) = OAuth2PendingEntity::delete(state) {
         error!("Failed to delete pending OAuth2 entity: {}", e);
     }
 

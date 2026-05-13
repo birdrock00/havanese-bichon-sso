@@ -22,13 +22,13 @@ use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
 use crate::imap::executor::ImapExecutor;
 use crate::imap::session::SessionStream;
-use crate::utils::create_hash;
 use crate::raise_error;
+use crate::utils::create_hash;
 use async_imap::types::Name;
 use async_imap::Session;
 
 pub async fn get_account_mailboxes(account_id: u64, remote: bool) -> BichonResult<Vec<MailBox>> {
-    let account = AccountModel::check_account_exists(account_id).await?;
+    let account = AccountModel::check_account_exists(account_id)?;
     if remote {
         if matches!(account.account_type, AccountType::IMAP) {
             request_imap_all_mailbox_list(account_id).await
@@ -39,7 +39,7 @@ pub async fn get_account_mailboxes(account_id: u64, remote: bool) -> BichonResul
             ));
         }
     } else {
-        MailBox::list_all(account_id).await
+        MailBox::list_all(account_id)
     }
 }
 

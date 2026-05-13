@@ -30,3 +30,7 @@ tokio.workspace = true
 http.workspace = true
 urlencoding.workspace = true
 mimalloc.workspace = true
+
+[dev-dependencies]
+poem = { version = "3.1.12", features = ["test"] }
+tempfile = "3"

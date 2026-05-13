@@ -25,8 +25,7 @@ use crate::{
 use std::path::PathBuf;
 use std::sync::LazyLock;
 
-pub const META_FILE: &str = "meta.db";
-pub const MAILBOX_FILE: &str = "mailbox.db";
+const MEMDB_DIR: &str = "memdb";
 const INDICES: &str = "bichon-indices";
 const MAIL_METADATA: &str = "mail_metadata";
 const ATTACHMENT_METADATA: &str = "attachment_metadata";
@@ -43,8 +42,7 @@ pub static DATA_DIR_MANAGER: LazyLock<DataDirManager> =
 #[derive(Debug)]
 pub struct DataDirManager {
     pub root_dir: PathBuf,
-    pub meta_db: PathBuf,
-    pub mailbox_db: PathBuf,
+    pub memdb_dir: PathBuf,
     pub temp_dir: PathBuf,
     pub tls_cert: PathBuf,
     pub tls_key: PathBuf,
@@ -84,8 +82,7 @@ impl DataDirManager {
 
         Self {
             root_dir: root_dir.clone(),
-            meta_db: root_dir.join(META_FILE),
-            mailbox_db: root_dir.join(MAILBOX_FILE),
+            memdb_dir: root_dir.join(MEMDB_DIR),
             tls_key: root_dir.join(TLS_KEY),
             tls_cert: root_dir.join(TLS_CERT),
             log_dir: root_dir.join(LOG_DIR),

@@ -19,27 +19,21 @@
 use crate::{
     common::paginated::DataPage,
     database::{
-        async_secondary_find_impl, delete_impl, insert_impl, manager::DB_MANAGER,
-        paginate_query_primary_scan_all_impl, update_impl,
+        delete_impl, find_impl, insert_impl, manager::DB_MANAGER, paginate_impl, update_impl,
+        MemDbModel,
     },
     encrypt,
-    error::{code::ErrorCode, BichonResult},
-    id, raise_error, utc_now,
+    error::BichonResult,
+    id, utc_now,
 };
-use native_db::*;
-use native_model::{native_model, Model};
-//use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 /// Represents the OAuth2 configuration for a client, including initialization and runtime values.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
-#[native_model(id = 5, version = 1)]
-#[native_db(primary_key(pk -> String))]
 pub struct OAuth2 {
     /// A unique identifier for the OAuth2 configuration.
-    #[secondary_key(unique)]
     pub id: u64,
     /// A description of what this configuration is used for.
     pub description: Option<String>,
@@ -71,11 +65,16 @@ pub struct OAuth2 {
     pub updated_at: i64,
 }
 
-impl OAuth2 {
-    fn pk(&self) -> String {
-        format!("{}_{}", &self.created_at, &self.id)
+impl MemDbModel for OAuth2 {
+    fn collection() -> &'static str {
+        "oauth2_configs"
     }
+    fn key(&self) -> String {
+        self.id.to_string()
+    }
+}
 
+impl OAuth2 {
     pub fn new(request: OAuth2CreateRequest) -> BichonResult<Self> {
         let request = request.encrypt()?;
         Ok(OAuth2 {
@@ -116,59 +115,33 @@ impl OAuth2 {
         self.extra_params = None;
     }
 
-    pub async fn save(&self) -> BichonResult<()> {
-        insert_impl(DB_MANAGER.meta_db(), self.to_owned()).await?;
+    pub fn save(&self) -> BichonResult<()> {
+        insert_impl(DB_MANAGER.db(), self.to_owned())?;
         Ok(())
     }
 
-    pub async fn paginate_list(
+    pub fn paginate_list(
         page: Option<u64>,
         page_size: Option<u64>,
         desc: Option<bool>,
     ) -> BichonResult<DataPage<OAuth2>> {
-        paginate_query_primary_scan_all_impl(DB_MANAGER.meta_db(), page, page_size, desc)
-            .await
-            .map(DataPage::from)
+        let paginated = paginate_impl::<OAuth2>(DB_MANAGER.db(), page, page_size, desc)?;
+        Ok(DataPage::from(paginated))
     }
 
-    pub async fn get(id: u64) -> BichonResult<Option<OAuth2>> {
-        async_secondary_find_impl(DB_MANAGER.meta_db(), OAuth2Key::id, id).await
+    pub fn get(id: u64) -> BichonResult<Option<OAuth2>> {
+        let results = find_impl::<OAuth2>(DB_MANAGER.db(), &id.to_string())?;
+        Ok(results.into_iter().next())
     }
 
-    pub async fn delete(id: u64) -> BichonResult<()> {
-        delete_impl(DB_MANAGER.meta_db(), move |rw| {
-            rw.get()
-                .secondary::<OAuth2>(OAuth2Key::id, id)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                .ok_or_else(|| {
-                    raise_error!(
-                        format!(
-                            "The oauth2 entity with id={id} that you want to delete was not found."
-                        ),
-                        ErrorCode::ResourceNotFound
-                    )
-                })
-        })
-        .await
+    pub fn delete(id: u64) -> BichonResult<()> {
+        delete_impl::<OAuth2>(DB_MANAGER.db(), &id.to_string())
     }
 
-    pub async fn update(id: u64, request: OAuth2UpdateRequest) -> BichonResult<()> {
-        update_impl(
-            DB_MANAGER.meta_db(),
-            move |rw| {
-                rw.get()
-                    .secondary::<OAuth2>(OAuth2Key::id, id)
-                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                    .ok_or_else(|| {
-                        raise_error!(
-                            format!("The oauth2 entity with id={id} that you want to modify was not found."),
-                            ErrorCode::ResourceNotFound
-                        )
-                    })
-            },
-            |current| apply_update(current, request),
-        )
-        .await?;
+    pub fn update(id: u64, request: OAuth2UpdateRequest) -> BichonResult<()> {
+        update_impl(DB_MANAGER.db(), &id.to_string(), |current| {
+            apply_update(&current, request)
+        })?;
 
         Ok(())
     }

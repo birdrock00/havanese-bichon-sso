@@ -17,6 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
+    raise_error,
     {
         account::{
             migration::AccountModel,
@@ -34,7 +35,6 @@ use crate::{
         error::{code::ErrorCode, BichonResult},
         store::tantivy::envelope::ENVELOPE_MANAGER,
     },
-    raise_error,
 };
 
 use tokio_util::sync::CancellationToken;
@@ -45,12 +45,11 @@ pub async fn rebuild_cache(
     remote_mailboxes: &[MailBox],
     token: CancellationToken,
 ) -> BichonResult<()> {
-    MailBox::batch_insert(remote_mailboxes).await?;
+    MailBox::batch_insert(remote_mailboxes)?;
     DownloadState::init_folder_details(
         account.id,
         remote_mailboxes.iter().map(|m| m.name.clone()).collect(),
-    )
-    .await?;
+    )?;
 
     let mut has_error = false;
     let mut last_err = None;
@@ -61,8 +60,7 @@ pub async fn rebuild_cache(
                 account.id,
                 DownloadStatus::Cancelled,
                 Some("Received termination signal (User stop or System shutdown)".to_string()),
-            )
-            .await?;
+            )?;
             break;
         }
         if mailbox.exists == 0 {
@@ -77,8 +75,7 @@ pub async fn rebuild_cache(
                 0,
                 FolderStatus::Success,
                 None,
-            )
-            .await?;
+            )?;
             continue;
         }
         let account = account.clone();
@@ -94,9 +91,9 @@ pub async fn rebuild_cache(
                 continue;
             }
         };
-
+        
         match fetch_and_save_full_mailbox(&account, &mailbox, token.clone()).await {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(err) => {
                 has_error = true;
                 tracing::error!("Folder sync task failed: {:#?}", err);
@@ -124,12 +121,11 @@ pub async fn rebuild_cache_by_date(
     direction: FetchDirection,
     token: CancellationToken,
 ) -> BichonResult<()> {
-    MailBox::batch_insert(remote_mailboxes).await?;
+    MailBox::batch_insert(remote_mailboxes)?;
     DownloadState::init_folder_details(
         account.id,
         remote_mailboxes.iter().map(|m| m.name.clone()).collect(),
-    )
-    .await?;
+    )?;
 
     let mut has_error = false;
     let mut last_err = None;
@@ -140,8 +136,7 @@ pub async fn rebuild_cache_by_date(
                 account.id,
                 DownloadStatus::Cancelled,
                 Some("Received termination signal (User stop or System shutdown)".to_string()),
-            )
-            .await?;
+            )?;
             break;
         }
         if mailbox.exists == 0 {
@@ -157,8 +152,7 @@ pub async fn rebuild_cache_by_date(
                 0,
                 FolderStatus::Success,
                 None,
-            )
-            .await?;
+            )?;
             continue;
         }
         let account = account.clone();
@@ -224,8 +218,7 @@ pub async fn rebuild_mailbox_cache(
             0,
             FolderStatus::Success,
             None,
-        )
-        .await?;
+        )?;
         return Ok(());
     }
 
@@ -257,8 +250,7 @@ pub async fn rebuild_mailbox_cache_by_date(
             0,
             FolderStatus::Success,
             None,
-        )
-        .await?;
+        )?;
         return Ok(());
     }
 

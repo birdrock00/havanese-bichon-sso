@@ -16,15 +16,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use native_db::*;
-use native_model::{native_model, Model};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
-#[native_model(id = 2, version = 1)]
-#[native_db]
 pub struct SystemSetting {
-    #[primary_key]
     pub key: String,
     pub value: String,
     pub created_at: i64,

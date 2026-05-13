@@ -501,7 +501,7 @@ impl IndexManager {
         Ok(Box::new(BooleanQuery::new(subqueries)))
     }
 
-    pub async fn get_attachment_by_id(
+    pub fn get_attachment_by_id(
         &self,
         account_id: u64,
         id: &str,
@@ -541,7 +541,7 @@ impl IndexManager {
         }
     }
 
-    pub async fn top_10_largest_attachments(
+    pub fn top_10_largest_attachments(
         &self,
         accounts: &Option<HashSet<u64>>,
     ) -> BichonResult<Vec<LargestAttachment>> {
@@ -688,10 +688,7 @@ impl IndexManager {
         Ok(())
     }
 
-    pub async fn get_all_tags(
-        &self,
-        accounts: Option<HashSet<u64>>,
-    ) -> BichonResult<Vec<TagCount>> {
+    pub fn get_all_tags(&self, accounts: Option<HashSet<u64>>) -> BichonResult<Vec<TagCount>> {
         let searcher = self.reader.searcher();
 
         let query: Box<dyn Query> = match accounts {
@@ -798,7 +795,7 @@ impl IndexManager {
         Ok(())
     }
 
-    pub async fn search(
+    pub fn search(
         &self,
         accounts: Option<HashSet<u64>>,
         filter: AttachmentSearchFilter,
@@ -890,10 +887,7 @@ impl IndexManager {
         Ok(self.reader.searcher())
     }
 
-    pub async fn get_all_senders(
-        &self,
-        accounts: Option<HashSet<u64>>,
-    ) -> BichonResult<HashSet<String>> {
+    pub fn get_all_senders(&self, accounts: Option<HashSet<u64>>) -> BichonResult<HashSet<String>> {
         let searcher = self.create_searcher()?;
 
         let query: Box<dyn Query> = match accounts {
@@ -923,7 +917,7 @@ impl IndexManager {
             let doc: TantivyDocument = searcher
                 .doc(doc_address)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-            let contacts = extract_senders(&doc).await?;
+            let contacts = extract_senders(&doc)?;
             for value in contacts {
                 contacts_set.insert(value);
             }

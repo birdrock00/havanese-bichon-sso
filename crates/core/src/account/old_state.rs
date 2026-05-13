@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use native_db::*;
-use native_model::{native_model, Model};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -28,10 +26,7 @@ pub struct MailboxBatchProgress {
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
-#[native_model(id = 2, version = 1)]
-#[native_db]
 pub struct AccountRunningState {
-    #[primary_key]
     pub account_id: u64,
     pub last_incremental_sync_start: i64,
     pub last_incremental_sync_end: Option<i64>,

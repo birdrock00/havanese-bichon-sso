@@ -90,43 +90,86 @@ pub fn normalize_subject(raw_subject: Option<&str>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::envelope::utils::merge_contiguous_encoded_words;
+    use crate::envelope::utils::{merge_contiguous_encoded_words, normalize_subject};
 
+    // ── merge_contiguous_encoded_words ──────────────────────────────
 
-    #[tokio::test]
-    async fn test3() {
+    #[test]
+    fn merge_basic_utf8_b() {
         let s = "Hello =?UTF-8?B?SGVsbG8=?= =?UTF-8?B?V29ybGQ=?= !!!";
         assert_eq!(
             merge_contiguous_encoded_words(s),
             "Hello =?UTF-8?B?SGVsbG8=V29ybGQ=?= !!!"
         );
+    }
 
+    #[test]
+    fn merge_three_blocks() {
         let s = "=?UTF-8?B?QQ==?= =?UTF-8?B?Qg==?= =?UTF-8?B?Qw==?=";
         assert_eq!(
             merge_contiguous_encoded_words(s),
             "=?UTF-8?B?QQ==Qg==Qw==?="
         );
+    }
 
+    #[test]
+    fn merge_noncontiguous_blocks() {
         let s = "=?UTF-8?B?QQ==?= =?UTF-8?B?Qg==?= test =?UTF-8?B?Qw==?= =?UTF-8?B?RA==?=";
         assert_eq!(
             merge_contiguous_encoded_words(s),
             "=?UTF-8?B?QQ==Qg==?= test =?UTF-8?B?Qw==RA==?="
         );
+    }
 
+    #[test]
+    fn reject_different_charsets() {
         let s = "=?UTF-8?B?QQ==?= =?GBK?B?Qg==?=";
         assert_eq!(merge_contiguous_encoded_words(s), s);
+    }
+
+    #[test]
+    fn reject_different_encodings() {
         let s = "=?UTF-8?B?QQ==?= =?UTF-8?Q?Qg?=";
         assert_eq!(merge_contiguous_encoded_words(s), s);
+    }
 
+    #[test]
+    fn merge_case_insensitive_encoding() {
         let s = "=?UTF-8?b?QQ==?= =?UTF-8?B?Qg==?=";
         assert_eq!(merge_contiguous_encoded_words(s), "=?UTF-8?B?QQ==Qg==?=");
+    }
+
+    #[test]
+    fn single_encoded_word_unchanged() {
         let s = "Hello =?UTF-8?B?SGVsbG8=?= !!!";
         assert_eq!(merge_contiguous_encoded_words(s), s);
+    }
+
+    #[test]
+    fn multiple_spaces_between_words() {
         let s = "=?UTF-8?B?QQ==?=    =?UTF-8?B?Qg==?=";
         assert_eq!(merge_contiguous_encoded_words(s), "=?UTF-8?B?QQ==Qg==?=");
+    }
+
+    #[test]
+    fn plain_subject_line() {
         let s = "Just a normal subject line";
         assert_eq!(merge_contiguous_encoded_words(s), s);
+    }
+
+    #[test]
+    fn merge_quoted_printable() {
         let s = "=?UTF-8?Q?Hello_?= =?UTF-8?Q?World?=";
-        assert_eq!(merge_contiguous_encoded_words(s), "=?UTF-8?Q?Hello_World?=");
+        assert_eq!(
+            merge_contiguous_encoded_words(s),
+            "=?UTF-8?Q?Hello_World?="
+        );
+    }
+
+    // ── normalize_subject ───────────────────────────────────────────
+
+    #[test]
+    fn normalize_subject_none() {
+        assert_eq!(normalize_subject(None), "");
     }
 }

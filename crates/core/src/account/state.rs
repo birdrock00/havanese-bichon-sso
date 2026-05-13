@@ -17,14 +17,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    raise_error, utc_now,
-    {
-        database::{async_find_impl, delete_impl, manager::DB_MANAGER, update_impl, upsert_impl},
-        error::{code::ErrorCode, BichonResult},
-    },
+    database::{delete_impl, find_impl, manager::DB_MANAGER, update_impl, upsert_impl, MemDbModel},
+    error::BichonResult,
+    utc_now,
 };
-use native_db::*;
-use native_model::{native_model, Model};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -82,15 +78,21 @@ pub struct DownloadSession {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
-#[native_model(id = 3, version = 1)]
-#[native_db]
 pub struct DownloadState {
-    #[primary_key]
     pub account_id: u64,
     pub active_session: Option<DownloadSession>,
     pub history: Vec<DownloadSession>,
     pub last_trigger_at: i64,
     pub last_finished_at: Option<i64>,
+}
+
+impl MemDbModel for DownloadState {
+    fn collection() -> &'static str {
+        "download_states"
+    }
+    fn key(&self) -> String {
+        self.account_id.to_string()
+    }
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
@@ -122,14 +124,14 @@ impl DownloadState {
             history: Default::default(),
             last_finished_at: Default::default(),
         };
-        upsert_impl(DB_MANAGER.envelope_db(), state).await
+        upsert_impl(DB_MANAGER.db(), state)
     }
 
-    pub async fn get(account_id: u64) -> BichonResult<Option<DownloadState>> {
-        async_find_impl(DB_MANAGER.envelope_db(), account_id).await
+    pub fn get(account_id: u64) -> BichonResult<Option<DownloadState>> {
+        find_impl::<DownloadState>(DB_MANAGER.db(), &account_id.to_string())
     }
 
-    pub async fn start_new_session(account_id: u64, trigger: TriggerType) -> BichonResult<()> {
+    pub fn start_new_session(account_id: u64, trigger: TriggerType) -> BichonResult<()> {
         Self::update_state(account_id, move |current| {
             let mut updated = current.clone();
             updated.last_trigger_at = utc_now!();
@@ -151,10 +153,9 @@ impl DownloadState {
             updated.active_session = Some(new_session);
             Ok(updated)
         })
-        .await
     }
 
-    pub async fn update_session_status(
+    pub fn update_session_status(
         account_id: u64,
         status: DownloadStatus,
         message: Option<String>,
@@ -181,10 +182,9 @@ impl DownloadState {
             }
             Ok(updated)
         })
-        .await
     }
 
-    pub async fn update_folder_progress(
+    pub fn update_folder_progress(
         account_id: u64,
         folder_name: String,
         planned: u64,
@@ -213,10 +213,9 @@ impl DownloadState {
             }
             Ok(updated)
         })
-        .await
     }
 
-    pub async fn init_folder_details(account_id: u64, folders: Vec<String>) -> BichonResult<()> {
+    pub fn init_folder_details(account_id: u64, folders: Vec<String>) -> BichonResult<()> {
         Self::update_state(account_id, move |state| {
             let mut updated = state.clone();
             if let Some(ref mut session) = updated.active_session {
@@ -235,10 +234,9 @@ impl DownloadState {
             }
             Ok(updated)
         })
-        .await
     }
 
-    pub async fn append_session_error(account_id: u64, error: String) -> BichonResult<()> {
+    pub fn append_session_error(account_id: u64, error: String) -> BichonResult<()> {
         Self::update_state(account_id, move |current| {
             let mut updated = current.clone();
             if let Some(ref mut session) = updated.active_session {
@@ -254,53 +252,23 @@ impl DownloadState {
             }
             Ok(updated)
         })
-        .await
     }
 
-    async fn update_state(
+    fn update_state(
         account_id: u64,
-        updater: impl FnOnce(&DownloadState) -> BichonResult<DownloadState> + Send + 'static,
+        updater: impl FnOnce(DownloadState) -> BichonResult<DownloadState> + Send + 'static,
     ) -> BichonResult<()> {
-        if Self::get(account_id).await?.is_some() {
-            update_impl(
-                DB_MANAGER.envelope_db(),
-                move |rw| {
-                    rw.get()
-                        .primary::<DownloadState>(account_id)
-                        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                        .ok_or_else(|| {
-                            raise_error!(
-                                format!("Cannot find download info of account={}", account_id),
-                                ErrorCode::ResourceNotFound
-                            )
-                        })
-                },
-                updater,
-            )
-            .await?;
+        if Self::get(account_id)?.is_some() {
+            update_impl(DB_MANAGER.db(), &account_id.to_string(), updater)?;
         }
         Ok(())
     }
 
-    pub async fn delete(account_id: u64) -> BichonResult<()> {
-        if Self::get(account_id).await?.is_none() {
+    pub fn delete(account_id: u64) -> BichonResult<()> {
+        if Self::get(account_id)?.is_none() {
             return Ok(());
         }
 
-        delete_impl(DB_MANAGER.envelope_db(), move |rw| {
-            rw.get()
-                .primary::<DownloadState>(account_id)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                .ok_or_else(|| {
-                    raise_error!(
-                        format!(
-                            "DownloadState '{}' not found during deletion process.",
-                            account_id
-                        ),
-                        ErrorCode::ResourceNotFound
-                    )
-                })
-        })
-        .await
+        delete_impl::<DownloadState>(DB_MANAGER.db(), &account_id.to_string())
     }
 }

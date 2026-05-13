@@ -280,7 +280,7 @@ fn extract_vec_string_field(
     Ok(value)
 }
 
-pub async fn extract_contacts(doc: &TantivyDocument) -> BichonResult<HashSet<String>> {
+pub fn extract_contacts(doc: &TantivyDocument) -> BichonResult<HashSet<String>> {
     let fields = SchemaTools::email_fields();
     let mut all_contacts = HashSet::new();
 
@@ -305,7 +305,7 @@ pub async fn extract_contacts(doc: &TantivyDocument) -> BichonResult<HashSet<Str
     Ok(all_contacts)
 }
 
-pub async fn extract_senders(doc: &TantivyDocument) -> BichonResult<HashSet<String>> {
+pub fn extract_senders(doc: &TantivyDocument) -> BichonResult<HashSet<String>> {
     let fields = SchemaTools::attachment_fields();
     let mut senders = HashSet::new();
 

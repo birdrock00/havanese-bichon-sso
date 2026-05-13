@@ -94,21 +94,19 @@ impl EmailSearchRequest {
     }
 }
 
-pub async fn search_messages_impl(
+pub fn search_messages_impl(
     accounts: Option<HashSet<u64>>,
     request: EmailSearchRequest,
 ) -> BichonResult<DataPage<Envelope>> {
     request.validate()?;
-    ENVELOPE_MANAGER
-        .search(
-            accounts,
-            request.filter,
-            request.page,
-            request.page_size,
-            request.desc.unwrap_or(true),
-            request.sort_by.unwrap_or(SortBy::DATE),
-        )
-        .await
+    ENVELOPE_MANAGER.search(
+        accounts,
+        request.filter,
+        request.page,
+        request.page_size,
+        request.desc.unwrap_or(true),
+        request.sort_by.unwrap_or(SortBy::DATE),
+    )
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -169,19 +167,17 @@ impl AttachmentSearchRequest {
     }
 }
 
-pub async fn search_attachment_impl(
+pub fn search_attachment_impl(
     accounts: Option<HashSet<u64>>,
     request: AttachmentSearchRequest,
 ) -> BichonResult<DataPage<AttachmentModel>> {
     request.validate()?;
-    ATTACHMENT_MANAGER
-        .search(
-            accounts,
-            request.filter,
-            request.page,
-            request.page_size,
-            request.desc.unwrap_or(true),
-            request.sort_by.unwrap_or(SortBy::DATE),
-        )
-        .await
+    ATTACHMENT_MANAGER.search(
+        accounts,
+        request.filter,
+        request.page,
+        request.page_size,
+        request.desc.unwrap_or(true),
+        request.sort_by.unwrap_or(SortBy::DATE),
+    )
 }

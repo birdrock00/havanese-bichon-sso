@@ -21,17 +21,14 @@ use std::{
     fmt::{self, Display},
 };
 
-use native_db::*;
-use native_model::{native_model, Model};
-//use poem_openapi::{Enum, Object};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     id, raise_error, utc_now,
     {
         database::{
-            async_find_impl, delete_impl, insert_impl, list_all_impl, manager::DB_MANAGER,
-            update_impl, with_transaction,
+            delete_impl, find_impl, insert_impl, list_all_impl, manager::DB_MANAGER, update_impl,
+            with_transaction, MemDbModel,
         },
         error::{code::ErrorCode, BichonResult},
         users::{
@@ -184,10 +181,7 @@ pub enum RoleType {
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
-#[native_model(id = 9, version = 1)]
-#[native_db]
 pub struct UserRole {
-    #[primary_key]
     pub id: u64,
     pub name: String,
     pub description: Option<String>,
@@ -198,8 +192,17 @@ pub struct UserRole {
     pub updated_at: i64,
 }
 
+impl MemDbModel for UserRole {
+    fn collection() -> &'static str {
+        "roles"
+    }
+    fn key(&self) -> String {
+        self.id.to_string()
+    }
+}
+
 impl UserRole {
-    pub async fn ensure_default_roles_exists() -> BichonResult<()> {
+    pub fn ensure_default_roles_exists() -> BichonResult<()> {
         let builtin_roles = vec![
             (BuiltinRole::Admin, DEFAULT_ADMIN_ROLE_ID, RoleType::Global),
             (
@@ -224,24 +227,19 @@ impl UserRole {
             ),
         ];
 
-        with_transaction(DB_MANAGER.meta_db(), move |rw| {
+        with_transaction(DB_MANAGER.db(), move |txn| {
+            let mut txn = txn;
             let now = utc_now!();
-
             for (role, role_id, role_type) in builtin_roles {
-                let exists = rw
-                    .get()
-                    .primary::<UserRole>(role_id)
-                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                    .is_some();
-
+                let key = role_id.to_string();
+                let exists = find_impl::<UserRole>(DB_MANAGER.db(), &key)?.is_some();
                 if !exists {
                     let permissions: BTreeSet<String> = role
                         .get_permissions()
                         .into_iter()
                         .map(|s| s.to_string())
                         .collect();
-
-                    rw.insert(UserRole {
+                    let role_item = UserRole {
                         id: role_id,
                         name: role.to_string(),
                         description: Some(role.description().to_string()),
@@ -250,27 +248,28 @@ impl UserRole {
                         updated_at: now,
                         is_builtin: true,
                         role_type,
-                    })
-                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                    };
+                    txn = txn
+                        .insert(UserRole::collection(), role_item.key(), &role_item)
+                        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
                 }
             }
-            Ok(())
-        })
-        .await?;
+            Ok(txn)
+        })?;
 
         Ok(())
     }
 
-    pub async fn list_all() -> BichonResult<Vec<UserRole>> {
-        list_all_impl(DB_MANAGER.meta_db()).await
+    pub fn list_all() -> BichonResult<Vec<UserRole>> {
+        list_all_impl::<UserRole>(DB_MANAGER.db())
     }
 
-    pub async fn find(role_id: u64) -> BichonResult<Option<UserRole>> {
-        async_find_impl(DB_MANAGER.meta_db(), role_id).await
+    pub fn find(role_id: u64) -> BichonResult<Option<UserRole>> {
+        find_impl::<UserRole>(DB_MANAGER.db(), &role_id.to_string())
     }
 
-    pub async fn create(request: RoleCreateRequest) -> BichonResult<UserRole> {
-        let _ = &request.validate().await?;
+    pub fn create(request: RoleCreateRequest) -> BichonResult<UserRole> {
+        let _ = &request.validate()?;
         let now = utc_now!();
         let new_role = UserRole {
             id: id!(64),
@@ -282,21 +281,21 @@ impl UserRole {
             is_builtin: false,
             role_type: request.role_type,
         };
-        insert_impl(DB_MANAGER.meta_db(), new_role.clone()).await?;
+        insert_impl(DB_MANAGER.db(), new_role.clone())?;
         Ok(new_role)
     }
 
-    pub async fn update(id: u64, request: RoleUpdateRequest) -> BichonResult<()> {
+    pub fn update(id: u64, request: RoleUpdateRequest) -> BichonResult<()> {
         if is_builtin(id) && request.permissions.is_some() {
             return Err(raise_error!(
                 "The permissions of a builtin role are immutable. Please create a custom role instead.".into(),
                 ErrorCode::Forbidden
             ));
         }
-        let _ = &request.validate().await?;
+        let _ = &request.validate()?;
 
         if let Some(permissions) = &request.permissions {
-            let role = Self::find(id).await?.ok_or_else(|| {
+            let role = Self::find(id)?.ok_or_else(|| {
                 raise_error!(
                     format!("UserRole with id={} not found", id),
                     ErrorCode::ResourceNotFound
@@ -306,40 +305,27 @@ impl UserRole {
         }
 
         update_impl(
-            DB_MANAGER.meta_db(),
-            move |rw| {
-                rw.get()
-                    .primary::<UserRole>(id)
-                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                    .ok_or_else(|| {
-                        raise_error!(
-                            format!("UserRole with id={} not found", id),
-                            ErrorCode::ResourceNotFound
-                        )
-                    })
-            },
-            move |current| {
+            DB_MANAGER.db(),
+            &id.to_string(),
+            move |current: UserRole| {
                 let mut updated = current.clone();
                 if let Some(name) = request.name {
                     updated.name = name;
                 }
-
                 if let Some(desc) = request.description {
                     updated.description = Some(desc);
                 }
-
                 if let Some(permissions) = request.permissions {
                     updated.permissions = permissions;
                 }
                 updated.updated_at = utc_now!();
                 Ok(updated)
             },
-        )
-        .await?;
+        )?;
         Ok(())
     }
 
-    pub async fn delete(id: u64) -> BichonResult<()> {
+    pub fn delete(id: u64) -> BichonResult<()> {
         if is_builtin(id) {
             return Err(raise_error!(
                 format!("Cannot delete a default system role (ID: {}).", id),
@@ -347,7 +333,7 @@ impl UserRole {
             ));
         }
 
-        let all_users = UserModel::list_all().await?;
+        let all_users = UserModel::list_all()?;
         let active_users: Vec<String> = all_users
             .iter()
             .filter(|user| user.is_using_role(id))
@@ -365,17 +351,6 @@ impl UserRole {
             ));
         }
 
-        delete_impl(DB_MANAGER.meta_db(), move |rw| {
-            rw.get()
-                .primary::<UserRole>(id)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                .ok_or_else(|| {
-                    raise_error!(
-                        format!("UserRole '{}' not found during deletion process.", id),
-                        ErrorCode::ResourceNotFound
-                    )
-                })
-        })
-        .await
+        delete_impl::<UserRole>(DB_MANAGER.db(), &id.to_string())
     }
 }

@@ -57,8 +57,7 @@ pub async fn process_imap_download(
                 account_id,
                 DownloadStatus::Failed,
                 Some(format!("Failed to connect to IMAP server: {}", e)),
-            )
-            .await?;
+            )?;
             return Err(e);
         }
     };
@@ -67,8 +66,11 @@ pub async fn process_imap_download(
         Err(err) => {
             let err_msg = format!("Failed to fetch mailboxes: {}", err);
             warn!(account_id = account.id, error = %err, "{}", err_msg);
-            DownloadState::update_session_status(account_id, DownloadStatus::Failed, Some(err_msg))
-                .await?;
+            DownloadState::update_session_status(
+                account_id,
+                DownloadStatus::Failed,
+                Some(err_msg),
+            )?;
             return Ok(());
         }
     };
@@ -101,34 +103,27 @@ pub async fn process_imap_download(
         };
         match result {
             Ok(_) => {
-                DownloadState::update_session_status(account_id, DownloadStatus::Success, None)
-                    .await?;
+                DownloadState::update_session_status(account_id, DownloadStatus::Success, None)?;
             }
             Err(e) => {
                 DownloadState::update_session_status(
                     account_id,
                     DownloadStatus::Failed,
                     Some(format!("Email Download interrupted: {:#?}", e)),
-                )
-                .await?;
+                )?;
             }
         }
         return Ok(());
     }
 
-    let local_mailboxes = MailBox::list_all(account_id).await?;
+    let local_mailboxes = MailBox::list_all(account_id)?;
     match reconcile_mailboxes(account, &remote_mailboxes, &local_mailboxes, token).await {
-        Ok(_) => {
-            DownloadState::update_session_status(account_id, DownloadStatus::Success, None).await?
-        }
-        Err(e) => {
-            DownloadState::update_session_status(
-                account_id,
-                DownloadStatus::Failed,
-                Some(format!("Email Download interrupted: {:#?}", e)),
-            )
-            .await?
-        }
+        Ok(_) => DownloadState::update_session_status(account_id, DownloadStatus::Success, None)?,
+        Err(e) => DownloadState::update_session_status(
+            account_id,
+            DownloadStatus::Failed,
+            Some(format!("Email Download interrupted: {:#?}", e)),
+        )?,
     }
     let elapsed_time = start_time.elapsed().as_secs();
     debug!(

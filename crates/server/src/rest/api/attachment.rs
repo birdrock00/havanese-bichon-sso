@@ -52,17 +52,13 @@ impl AttachmentApi {
         payload: Json<AttachmentSearchRequest>,
         context: WrappedContext,
     ) -> ApiResult<Json<DataPage<AttachmentModel>>> {
-        let authorized_ids: Option<HashSet<u64>> = if context
-            .has_permission(None, Permission::DATA_READ_ALL)
-            .await
-        {
-            None
-        } else {
-            Some(context.user.account_access_map.keys().cloned().collect())
-        };
-        Ok(Json(
-            search_attachment_impl(authorized_ids, payload.0).await?,
-        ))
+        let authorized_ids: Option<HashSet<u64>> =
+            if context.has_permission(None, Permission::DATA_READ_ALL) {
+                None
+            } else {
+                Some(context.user.account_access_map.keys().cloned().collect())
+            };
+        Ok(Json(search_attachment_impl(authorized_ids, payload.0)?))
     }
 
     /// Retrieves the attachment (metadata) of a specific message.
@@ -80,13 +76,10 @@ impl AttachmentApi {
         context: WrappedContext,
     ) -> ApiResult<Json<AttachmentModel>> {
         let account_id = account_id.0;
-        context
-            .require_permission(Some(account_id), Permission::DATA_READ)
-            .await?;
+        context.require_permission(Some(account_id), Permission::DATA_READ)?;
         let attachment_id = attachment_id.0;
         let a = ATTACHMENT_MANAGER
-            .get_attachment_by_id(account_id, &attachment_id)
-            .await?
+            .get_attachment_by_id(account_id, &attachment_id)?
             .ok_or_else(|| {
                 raise_error!(
                     format!(
@@ -109,15 +102,13 @@ impl AttachmentApi {
         &self,
         context: WrappedContext,
     ) -> ApiResult<Json<Vec<TagCount>>> {
-        let authorized_ids: Option<HashSet<u64>> = if context
-            .has_permission(None, Permission::DATA_READ_ALL)
-            .await
-        {
-            None
-        } else {
-            Some(context.user.account_access_map.keys().cloned().collect())
-        };
-        Ok(Json(ATTACHMENT_MANAGER.get_all_tags(authorized_ids).await?))
+        let authorized_ids: Option<HashSet<u64>> =
+            if context.has_permission(None, Permission::DATA_READ_ALL) {
+                None
+            } else {
+                Some(context.user.account_access_map.keys().cloned().collect())
+            };
+        Ok(Json(ATTACHMENT_MANAGER.get_all_tags(authorized_ids)?))
     }
 
     /// Adds or removes facet tags for multiple emails across accounts.
@@ -137,9 +128,7 @@ impl AttachmentApi {
         }
 
         for account_id in req.updates.keys() {
-            context
-                .require_permission(Some(*account_id), Permission::DATA_MANAGE)
-                .await?;
+            context.require_permission(Some(*account_id), Permission::DATA_MANAGE)?;
         }
 
         ATTACHMENT_MANAGER.update_attachment_tags(req).await?;
@@ -156,17 +145,13 @@ impl AttachmentApi {
         &self,
         context: WrappedContext,
     ) -> ApiResult<Json<HashSet<String>>> {
-        let authorized_ids: Option<HashSet<u64>> = if context
-            .has_permission(None, Permission::DATA_READ_ALL)
-            .await
-        {
-            None
-        } else {
-            Some(context.user.account_access_map.keys().cloned().collect())
-        };
-        Ok(Json(
-            ATTACHMENT_MANAGER.get_all_senders(authorized_ids).await?,
-        ))
+        let authorized_ids: Option<HashSet<u64>> =
+            if context.has_permission(None, Permission::DATA_READ_ALL) {
+                None
+            } else {
+                Some(context.user.account_access_map.keys().cloned().collect())
+            };
+        Ok(Json(ATTACHMENT_MANAGER.get_all_senders(authorized_ids)?))
     }
 
     /// Retrieves unique metadata for all attachments across authorized accounts.
@@ -179,14 +164,12 @@ impl AttachmentApi {
         &self,
         context: WrappedContext,
     ) -> ApiResult<Json<AttachmentMetadata>> {
-        let authorized_ids: Option<HashSet<u64>> = if context
-            .has_permission(None, Permission::DATA_READ_ALL)
-            .await
-        {
-            None
-        } else {
-            Some(context.user.account_access_map.keys().cloned().collect())
-        };
+        let authorized_ids: Option<HashSet<u64>> =
+            if context.has_permission(None, Permission::DATA_READ_ALL) {
+                None
+            } else {
+                Some(context.user.account_access_map.keys().cloned().collect())
+            };
         Ok(Json(
             ATTACHMENT_MANAGER.collect_attachment_metadata(authorized_ids)?,
         ))

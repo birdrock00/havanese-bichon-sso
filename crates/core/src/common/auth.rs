@@ -16,12 +16,12 @@ pub struct ClientContext {
 }
 
 impl ClientContext {
-    pub async fn require_any_permission(
+    pub fn require_any_permission(
         &self,
         requirements: Vec<(Option<u64>, &str)>,
     ) -> BichonResult<()> {
         for (account_id, permission) in requirements {
-            if self.has_permission(account_id, permission).await {
+            if self.has_permission(account_id, permission) {
                 return Ok(());
             }
         }
@@ -31,18 +31,18 @@ impl ClientContext {
         ))
     }
 
-    pub async fn check_has_permission(
+    pub fn check_has_permission(
         user: &UserModel,
         account_id: Option<u64>,
         permission: &str,
     ) -> bool {
-        if user.is_admin().await {
+        if user.is_admin() {
             return true;
         }
 
         let mut global_perms = HashSet::new();
         for rid in &user.global_roles {
-            if let Some(role) = UserRole::find(*rid).await.ok().flatten() {
+            if let Some(role) = UserRole::find(*rid).ok().flatten() {
                 global_perms.extend(role.permissions);
             }
         }
@@ -53,7 +53,7 @@ impl ClientContext {
 
         if let Some(aid) = account_id {
             if let Some(role_id) = user.account_access_map.get(&aid) {
-                if let Some(role) = UserRole::find(*role_id).await.ok().flatten() {
+                if let Some(role) = UserRole::find(*role_id).ok().flatten() {
                     if role.permissions.contains(&permission.to_string())
                         || Self::check_account_logic(&role.permissions, permission)
                     {
@@ -66,14 +66,14 @@ impl ClientContext {
         false
     }
 
-    pub async fn has_permission(&self, account_id: Option<u64>, permission: &str) -> bool {
-        if self.user.is_admin().await {
+    pub fn has_permission(&self, account_id: Option<u64>, permission: &str) -> bool {
+        if self.user.is_admin() {
             return true;
         }
 
         let mut global_perms = HashSet::new();
         for rid in &self.user.global_roles {
-            if let Some(role) = UserRole::find(*rid).await.ok().flatten() {
+            if let Some(role) = UserRole::find(*rid).ok().flatten() {
                 global_perms.extend(role.permissions);
             }
         }
@@ -84,7 +84,7 @@ impl ClientContext {
 
         if let Some(aid) = account_id {
             if let Some(role_id) = self.user.account_access_map.get(&aid) {
-                if let Some(role) = UserRole::find(*role_id).await.ok().flatten() {
+                if let Some(role) = UserRole::find(*role_id).ok().flatten() {
                     if role.permissions.contains(&permission.to_string())
                         || Self::check_account_logic(&role.permissions, permission)
                     {
@@ -126,12 +126,12 @@ impl ClientContext {
         }
     }
 
-    pub async fn require_permission(
+    pub fn require_permission(
         &self,
         account_id: Option<u64>,
         permission: &str,
     ) -> BichonResult<()> {
-        if self.has_permission(account_id, permission).await {
+        if self.has_permission(account_id, permission) {
             Ok(())
         } else {
             Err(raise_error!(

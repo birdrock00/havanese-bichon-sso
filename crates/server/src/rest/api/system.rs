@@ -75,7 +75,6 @@ impl SystemApi {
     async fn list_proxy(&self, _context: WrappedContext) -> ApiResult<Json<Vec<Proxy>>> {
         //The proxy list is visible to all users.
         let proxies = Proxy::list_all()
-            .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         Ok(Json(proxies))
     }
@@ -88,8 +87,8 @@ impl SystemApi {
         id: Path<u64>,
         context: WrappedContext,
     ) -> ApiResult<()> {
-        context.require_permission(None, Permission::ROOT).await?;
-        Ok(Proxy::delete(id.0).await?)
+        context.require_permission(None, Permission::ROOT)?;
+        Ok(Proxy::delete(id.0)?)
     }
 
     /// Retrieve a specific proxy configuration by ID. Requires root permission.
@@ -100,16 +99,16 @@ impl SystemApi {
         id: Path<u64>,
         context: WrappedContext,
     ) -> ApiResult<Json<Proxy>> {
-        context.require_permission(None, Permission::ROOT).await?;
-        Ok(Json(Proxy::get(id.0).await?))
+        context.require_permission(None, Permission::ROOT)?;
+        Ok(Json(Proxy::get(id.0)?))
     }
 
     /// Create a new proxy configuration. Requires root permission.
     #[oai(path = "/proxy", method = "post", operation_id = "create_proxy")]
     async fn create_proxy(&self, url: PlainText<String>, context: WrappedContext) -> ApiResult<()> {
-        context.require_permission(None, Permission::ROOT).await?;
+        context.require_permission(None, Permission::ROOT)?;
         let entity = Proxy::new(url.0);
-        Ok(entity.save().await?)
+        Ok(entity.save()?)
     }
 
     /// Update the URL of a specific proxy by ID. Requires root permission.
@@ -120,8 +119,8 @@ impl SystemApi {
         url: PlainText<String>,
         context: WrappedContext,
     ) -> ApiResult<()> {
-        context.require_permission(None, Permission::ROOT).await?;
-        Ok(Proxy::update(id.0, url.0).await?)
+        context.require_permission(None, Permission::ROOT)?;
+        Ok(Proxy::update(id.0, url.0)?)
     }
     /// Get system configurations.
     ///
@@ -136,7 +135,7 @@ impl SystemApi {
         &self,
         context: WrappedContext,
     ) -> ApiResult<Json<SystemConfigurations>> {
-        context.require_permission(None, Permission::ROOT).await?;
+        context.require_permission(None, Permission::ROOT)?;
         let config: SystemConfigurations = SystemConfigurations::from(&*SETTINGS);
         Ok(Json(config))
     }

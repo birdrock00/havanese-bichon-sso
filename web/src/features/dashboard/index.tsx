@@ -71,14 +71,14 @@ const MetricCardSkeleton = () => (
 const EmptyChart = ({ title }: { title: string }) => (
   <div className="h-36 flex flex-col items-center justify-center text-muted-foreground">
     <Inbox className="h-12 w-12 mb-3 opacity-40" />
-    <p className="text-sm font-medium">{title}</p>
+    <p className="text-xs font-medium">{title}</p>
   </div>
 );
 
 const EmptyTable = ({ title }: { title: string }) => (
   <div className="py-10 text-center text-muted-foreground">
     <Inbox className="h-10 w-10 mx-auto mb-3 opacity-40" />
-    <p className="text-sm font-medium">{title}</p>
+    <p className="text-xs font-medium">{title}</p>
   </div>
 );
 

@@ -328,7 +328,14 @@ pub struct Settings {
 
 impl Settings {
     pub fn init() -> Self {
-        let s = Self::parse();
+        // `cargo test` passes test-filter names and flags (e.g. --nocapture)
+        // as extra positional arguments.  Try the full argv first; if clap
+        // rejects it, fall back to parsing with only the binary name so that
+        // the settings come entirely from environment variables.
+        let args: Vec<String> = std::env::args().collect();
+        let s = Self::try_parse_from(&args).unwrap_or_else(|_| {
+            Self::parse_from(std::iter::once(args[0].clone()))
+        });
         if s.bichon_encrypt_password.is_none() && s.bichon_encrypt_password_file.is_none() {
             panic!(
                 "One of --bichon_encrypt_password or --bichon_encrypt_password_file has to be set"

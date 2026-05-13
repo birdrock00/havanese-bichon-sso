@@ -44,10 +44,7 @@ impl AutoConfigApi {
         email_address: Path<String>,
         context: WrappedContext,
     ) -> ApiResult<Json<MailServerConfig>> {
-        context
-            .require_permission(None, Permission::ACCOUNT_CREATE)
-            .await?;
-
+        context.require_permission(None, Permission::ACCOUNT_CREATE)?;
         let result = resolve_autoconfig(email_address.0.trim())
             .await?
             .ok_or_else(|| {

@@ -19,7 +19,7 @@
 use std::collections::BTreeSet;
 
 use crate::{
-    decode_mailbox_name,
+    decode_mailbox_name, raise_error,
     {
         account::migration::{AccountModel, AccountType},
         cache::imap::mailbox::{AttributeEnum, MailBox},
@@ -27,7 +27,6 @@ use crate::{
         imap::{executor::ImapExecutor, session::SessionStream},
         mailbox::list::convert_names_to_mailboxes,
     },
-    raise_error,
 };
 use async_imap::{types::Name, Session};
 use tracing::{debug, info, warn};
@@ -62,7 +61,7 @@ pub async fn get_download_folders(
         mailboxes.iter().map(|(m, _)| m.name.clone()).collect(),
     )
     .await?;
-    let account = AccountModel::async_get(account.id).await?;
+    let account = AccountModel::get(account.id)?;
     let subscribed = &account.download_folders.unwrap_or_default();
     let is_noselect = |mailbox: &MailBox| {
         mailbox
@@ -110,7 +109,7 @@ pub async fn get_download_folders(
                 .iter()
                 .map(|n| decode_mailbox_name!(n.name().to_string()))
                 .collect();
-            AccountModel::update_download_folders(account.id, sync_folders).await?;
+            AccountModel::update_download_folders(account.id, sync_folders)?;
         } else {
             warn!(
                 "Account {}: No subscribed mailboxes found. This is unexpected — IMAP server should at least provide INBOX.",
@@ -131,7 +130,7 @@ pub async fn detect_mailbox_changes(
 ) -> BichonResult<()> {
     if account.known_folders.is_none() {
         // First time sync: just save without comparing
-        AccountModel::update_known_folders(account.id, all_names).await?;
+        AccountModel::update_known_folders(account.id, all_names)?;
         return Ok(());
     }
     let known_folders = account.known_folders.clone().unwrap_or_default();
@@ -160,7 +159,7 @@ pub async fn detect_mailbox_changes(
             // Note: When all subscribed folders are deleted (remaining_sync_folders empty),
             // the system's default behavior is to automatically fall back to syncing
             // only the default folders (INBOX and Sent) in subsequent operations
-            AccountModel::update_download_folders(account.id, remaining_sync_folders).await?;
+            AccountModel::update_download_folders(account.id, remaining_sync_folders)?;
         }
 
         info!(
@@ -179,7 +178,7 @@ pub async fn detect_mailbox_changes(
 
     // Update known folders only if there were changes
     if has_changes {
-        AccountModel::update_known_folders(account.id, all_names).await?;
+        AccountModel::update_known_folders(account.id, all_names)?;
     }
     Ok(())
 }

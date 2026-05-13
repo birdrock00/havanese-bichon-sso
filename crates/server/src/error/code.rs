@@ -53,3 +53,106 @@ impl IntoStatusCode for ErrorCode {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn invalid_parameter_is_bad_request() {
+        assert_eq!(
+            ErrorCode::InvalidParameter.status(),
+            StatusCode::BAD_REQUEST
+        );
+    }
+
+    #[test]
+    fn permission_denied_is_unauthorized() {
+        assert_eq!(
+            ErrorCode::PermissionDenied.status(),
+            StatusCode::UNAUTHORIZED
+        );
+    }
+
+    #[test]
+    fn forbidden_is_forbidden() {
+        assert_eq!(ErrorCode::Forbidden.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[test]
+    fn resource_not_found_is_not_found() {
+        assert_eq!(
+            ErrorCode::ResourceNotFound.status(),
+            StatusCode::NOT_FOUND
+        );
+    }
+
+    #[test]
+    fn internal_error_is_internal_server_error() {
+        assert_eq!(
+            ErrorCode::InternalError.status(),
+            StatusCode::INTERNAL_SERVER_ERROR
+        );
+    }
+
+    #[test]
+    fn too_many_request_is_429() {
+        assert_eq!(
+            ErrorCode::TooManyRequest.status(),
+            StatusCode::TOO_MANY_REQUESTS
+        );
+    }
+
+    #[test]
+    fn already_exists_is_conflict() {
+        assert_eq!(ErrorCode::AlreadyExists.status(), StatusCode::CONFLICT);
+    }
+
+    #[test]
+    fn method_not_allowed_is_405() {
+        assert_eq!(
+            ErrorCode::MethodNotAllowed.status(),
+            StatusCode::METHOD_NOT_ALLOWED
+        );
+    }
+
+    #[test]
+    fn every_error_code_maps_to_valid_status() {
+        // Ensure all variants produce a status code in the 4xx or 5xx range
+        let codes = [
+            ErrorCode::InvalidParameter,
+            ErrorCode::MissingConfiguration,
+            ErrorCode::Incompatible,
+            ErrorCode::PermissionDenied,
+            ErrorCode::AccountDisabled,
+            ErrorCode::OAuth2ItemDisabled,
+            ErrorCode::Forbidden,
+            ErrorCode::ResourceNotFound,
+            ErrorCode::RequestTimeout,
+            ErrorCode::PayloadTooLarge,
+            ErrorCode::TooManyRequest,
+            ErrorCode::AlreadyExists,
+            ErrorCode::InternalError,
+            ErrorCode::AutoconfigFetchFailed,
+            ErrorCode::ImapCommandFailed,
+            ErrorCode::ImapUnexpectedResult,
+            ErrorCode::HttpResponseError,
+            ErrorCode::ImapAuthenticationFailed,
+            ErrorCode::MissingRefreshToken,
+            ErrorCode::NetworkError,
+            ErrorCode::ConnectionTimeout,
+            ErrorCode::ConnectionPoolTimeout,
+            ErrorCode::UnhandledPoemError,
+            ErrorCode::MethodNotAllowed,
+        ];
+        for code in &codes {
+            let status = code.status();
+            assert!(
+                status.is_client_error() || status.is_server_error(),
+                "{:?} should map to 4xx or 5xx, got {}",
+                code,
+                status
+            );
+        }
+    }
+}

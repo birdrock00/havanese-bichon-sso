@@ -16,12 +16,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
-use crate::oauth2::{
-    entity::OAuth2, pending::OAuth2PendingEntity, token::OAuth2AccessToken,
-};
+use crate::oauth2::{entity::OAuth2, pending::OAuth2PendingEntity, token::OAuth2AccessToken};
 use crate::settings::proxy::Proxy;
 use crate::{decrypt, encrypt, raise_error};
 use oauth2::{
@@ -65,9 +62,9 @@ impl OAuth2Flow {
         Self { oauth2_id }
     }
 
-    pub async fn authorize_url(&self, account_id: u64) -> BichonResult<String> {
+    pub fn authorize_url(&self, account_id: u64) -> BichonResult<String> {
         // Fetch OAuth2 entity or return a custom error if not found
-        let entity = self.fetch_oauth2_entity().await?;
+        let entity = self.fetch_oauth2_entity()?;
 
         if !entity.enabled {
             return Err(raise_error!(
@@ -107,8 +104,7 @@ impl OAuth2Flow {
             account_id,
             csrf_state.secret(),
             pkce_code_verifier.secret(),
-        )
-        .await?;
+        )?;
         // Return the authorization URL
         Ok(authorize_url.to_string())
     }
@@ -119,9 +115,9 @@ impl OAuth2Flow {
         code_verifier: &str,
         code: &str,
     ) -> BichonResult<()> {
-        let entity = self.fetch_oauth2_entity().await?;
+        let entity = self.fetch_oauth2_entity()?;
         let client = self.build_oauth2_client(&entity)?;
-        let http_client = build_http_client(entity.use_proxy).await?;
+        let http_client = build_http_client(entity.use_proxy)?;
 
         let token_response = client
             .exchange_code(AuthorizationCode::new(code.to_owned()))
@@ -142,13 +138,11 @@ impl OAuth2Flow {
             .secret()
             .to_owned();
 
-        self.save_oauth2_entity(account_id, access_token, refresh_token)
-            .await?;
-
+        self.save_oauth2_entity(account_id, access_token, refresh_token)?;
         Ok(())
     }
 
-    async fn save_oauth2_entity(
+    fn save_oauth2_entity(
         &self,
         account_id: u64,
         access_token: String,
@@ -156,10 +150,10 @@ impl OAuth2Flow {
     ) -> BichonResult<()> {
         let token =
             OAuth2AccessToken::create(account_id, self.oauth2_id, access_token, refresh_token)?;
-        token.save_or_update().await
+        token.save_or_update()
     }
 
-    async fn update_oauth2_entity(
+    fn update_oauth2_entity(
         &self,
         account_id: u64,
         access_token: String,
@@ -170,20 +164,19 @@ impl OAuth2Flow {
             encrypt!(&access_token)?,
             encrypt!(&refresh_token)?,
         )
-        .await
     }
 
     pub async fn refresh_access_token(&self, token: &OAuth2AccessToken) -> BichonResult<()> {
-        let entity = self.fetch_oauth2_entity().await?;
+        let entity = self.fetch_oauth2_entity()?;
         if !entity.enabled {
-            OAuth2AccessToken::delete_by_oauth2_id(token.oauth2_id).await?;
+            OAuth2AccessToken::delete_by_oauth2_id(token.oauth2_id)?;
             return Err(raise_error!(
                 "OAuth2 authentication is disabled for this client".into(),
                 ErrorCode::OAuth2ItemDisabled
             ));
         }
         let client = self.build_oauth2_client(&entity)?;
-        let http_client = build_http_client(entity.use_proxy).await?;
+        let http_client = build_http_client(entity.use_proxy)?;
 
         let refresh_token = token.refresh_token.clone().ok_or_else(|| {
             raise_error!(
@@ -218,15 +211,13 @@ impl OAuth2Flow {
             .refresh_token()
             .map(|r| r.secret().to_owned())
             .unwrap_or_else(|| refresh_token.clone());
-        self.update_oauth2_entity(token.account_id, access_token, new_refresh_token)
-            .await?;
-
+        self.update_oauth2_entity(token.account_id, access_token, new_refresh_token)?;
         Ok(())
     }
 
     // Helper function to fetch the OAuth2 entity
-    async fn fetch_oauth2_entity(&self) -> BichonResult<OAuth2> {
-        OAuth2::get(self.oauth2_id).await?.ok_or_else(|| {
+    fn fetch_oauth2_entity(&self) -> BichonResult<OAuth2> {
+        OAuth2::get(self.oauth2_id)?.ok_or_else(|| {
             raise_error!(
                 format!("OAuth2 entity with id '{}' not found", self.oauth2_id),
                 ErrorCode::ResourceNotFound
@@ -254,7 +245,7 @@ impl OAuth2Flow {
     }
 
     // Helper function to save the pending OAuth2 state
-    async fn save_pending_oauth2_state(
+    fn save_pending_oauth2_state(
         &self,
         account_id: u64,
         csrf_state: &str,
@@ -267,14 +258,13 @@ impl OAuth2Flow {
             pkce_code_verifier.to_owned(),
         )
         .save()
-        .await
     }
 }
 
 // Helper function to build the HTTP client
-async fn build_http_client(use_proxy: Option<u64>) -> BichonResult<reqwest::Client> {
+fn build_http_client(use_proxy: Option<u64>) -> BichonResult<reqwest::Client> {
     if let Some(proxy_id) = use_proxy {
-        let proxy = Proxy::get(proxy_id).await?;
+        let proxy = Proxy::get(proxy_id)?;
         return oauth2::reqwest::ClientBuilder::new()
             .redirect(oauth2::reqwest::redirect::Policy::none())
             .proxy(reqwest::Proxy::all(&proxy.url).map_err(|e| {

@@ -21,6 +21,7 @@ use dialoguer::{theme::ColorfulTheme, Select};
 
 use crate::{migrate::handle_migration, reset::handle_reset_password};
 
+pub mod meta;
 pub mod migrate;
 pub mod reset;
 
@@ -34,7 +35,7 @@ async fn main() {
 
     let main_options = vec![
         "Reset Admin Password",
-        "Migrate Legacy v0.x Storage to v1.0",
+        "Migrate Legacy v0.3.7 Storage to v1.0.0",
         "Exit",
     ];
 

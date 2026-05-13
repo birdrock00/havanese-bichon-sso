@@ -106,11 +106,9 @@ pub async fn extract_client_context(req: &Request) -> Result<ClientContext> {
     })?;
 
     // Validate and update access token
-    let user = AccessTokenModel::resolve_user_from_token(&token)
-        .await
-        .map_err(|e| {
-            create_api_error_response(&format!("{:#?}", e), ErrorCode::PermissionDenied)
-        })?;
+    let user = AccessTokenModel::resolve_user_from_token(&token).map_err(|e| {
+        create_api_error_response(&format!("{:#?}", e), ErrorCode::PermissionDenied)
+    })?;
 
     return Ok(ClientContext {
         ip_addr: Some(ip_addr),

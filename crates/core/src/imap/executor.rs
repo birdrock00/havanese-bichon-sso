@@ -18,13 +18,13 @@
 
 use crate::account::migration::AccountModel;
 use crate::account::state::{DownloadState, FolderStatus};
-use crate::cache::imap::mailbox::MailBox;
 use crate::cache::imap::download::flow::{generate_uid_sequence_hashset, DEFAULT_BATCH_SIZE};
+use crate::cache::imap::mailbox::MailBox;
 use crate::envelope::extractor::extract_envelope_and_store_it;
 use crate::error::code::ErrorCode;
 use crate::imap::session::SessionStream;
-use crate::{error::BichonResult, imap::manager::ImapConnectionManager};
 use crate::raise_error;
+use crate::{error::BichonResult, imap::manager::ImapConnectionManager};
 use async_imap::types::Name;
 use async_imap::Session;
 use futures::TryStreamExt;
@@ -106,9 +106,8 @@ impl ImapExecutor {
                     0,
                     FolderStatus::Failed,
                     Some(err_msg.clone()),
-                )
-                .await?;
-                DownloadState::append_session_error(account.id, err_msg).await?;
+                )?;
+                DownloadState::append_session_error(account.id, err_msg)?;
                 return Err(e);
             }
         };
@@ -126,8 +125,7 @@ impl ImapExecutor {
                 0,
                 FolderStatus::Success,
                 Some(msg),
-            )
-            .await?;
+            )?;
             return Ok(());
         }
         info!(
@@ -166,12 +164,11 @@ impl ImapExecutor {
                         current_processed,
                         FolderStatus::Downloading,
                         None,
-                    )
-                    .await?;
+                    )?;
                 }
                 Err(e) => {
                     let err_msg = format!("Batch {} failed: {:#?}", index, e);
-                    DownloadState::append_session_error(account.id, err_msg.clone()).await?;
+                    DownloadState::append_session_error(account.id, err_msg.clone())?;
                     DownloadState::update_folder_progress(
                         account.id,
                         mailbox.name.clone(),
@@ -179,8 +176,7 @@ impl ImapExecutor {
                         current_processed,
                         FolderStatus::Failed,
                         Some(err_msg),
-                    )
-                    .await?;
+                    )?;
                     has_error_or_cancel = true;
                     break;
                 }
@@ -195,8 +191,7 @@ impl ImapExecutor {
                 current_processed,
                 FolderStatus::Success,
                 None,
-            )
-            .await?;
+            )?;
         }
 
         Ok(())

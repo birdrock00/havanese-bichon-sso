@@ -36,8 +36,8 @@ use crate::{
     raise_error,
     settings::dir::DATA_DIR_MANAGER,
     store::{
-        envelope::Envelope,
         blob::BLOB_MANAGER,
+        envelope::Envelope,
         tantivy::{
             fatal_commit,
             fields::{
@@ -322,7 +322,7 @@ impl IndexManager {
 
         if let Some(ref body_val) = filter.body {
             let query_parser = QueryParser::for_index(&self.index, vec![f.f_body]);
-            
+
             let q = query_parser
                 .parse_query(body_val)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
@@ -518,7 +518,7 @@ impl IndexManager {
         Box::new(boolean_query)
     }
 
-    pub async fn get_envelope_by_id(
+    pub fn get_envelope_by_id(
         &self,
         account_id: u64,
         envelope_id: &str,
@@ -558,7 +558,7 @@ impl IndexManager {
         }
     }
 
-    pub async fn top_10_largest_emails(
+    pub fn top_10_largest_emails(
         &self,
         accounts: &Option<HashSet<u64>>,
     ) -> BichonResult<Vec<LargestEmail>> {
@@ -625,7 +625,7 @@ impl IndexManager {
         }
     }
 
-    pub async fn get_max_uid(&self, account_id: u64, mailbox_id: u64) -> BichonResult<Option<u64>> {
+    pub fn get_max_uid(&self, account_id: u64, mailbox_id: u64) -> BichonResult<Option<u64>> {
         let searcher = self.create_searcher()?;
 
         let query = self.mailbox_query(account_id, mailbox_id);
@@ -646,7 +646,7 @@ impl IndexManager {
         Ok(Self::extract_max_uid(&agg_res))
     }
 
-    pub async fn get_account_stats(&self, account_id: u64) -> BichonResult<AccountStats> {
+    pub fn get_account_stats(&self, account_id: u64) -> BichonResult<AccountStats> {
         let searcher = self.create_searcher()?;
         let query = self.account_query(account_id);
 
@@ -705,7 +705,7 @@ impl IndexManager {
     pub async fn delete_account_envelopes(&self, account_id: u64) -> BichonResult<()> {
         let query = self.account_query(account_id);
         let (eml_content_hashes, attachments_content_hashes) =
-            self.collect_content_hashes(query).await?;
+            self.collect_content_hashes(query)?;
 
         let query = self.account_query(account_id);
 
@@ -718,8 +718,7 @@ impl IndexManager {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         if !eml_content_hashes.is_empty() || !attachments_content_hashes.is_empty() {
-            self.cleanup_unused_content(eml_content_hashes, attachments_content_hashes)
-                .await?;
+            self.cleanup_unused_content(eml_content_hashes, attachments_content_hashes)?;
         }
         Ok(())
     }
@@ -738,7 +737,7 @@ impl IndexManager {
 
         for mailbox_id in &mailbox_ids {
             let query = self.mailbox_query(account_id, *mailbox_id);
-            let (eml_hashes, attachment_hashes) = self.collect_content_hashes(query).await?;
+            let (eml_hashes, attachment_hashes) = self.collect_content_hashes(query)?;
             eml_content_hashes.extend(eml_hashes);
             attachments_content_hashes.extend(attachment_hashes);
         }
@@ -758,13 +757,12 @@ impl IndexManager {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         if !eml_content_hashes.is_empty() || !attachments_content_hashes.is_empty() {
-            self.cleanup_unused_content(eml_content_hashes, attachments_content_hashes)
-                .await?;
+            self.cleanup_unused_content(eml_content_hashes, attachments_content_hashes)?;
         }
         Ok(())
     }
 
-    async fn collect_content_hashes(
+    fn collect_content_hashes(
         &self,
         query: Box<dyn Query>,
     ) -> BichonResult<(HashSet<String>, HashSet<String>)> {
@@ -802,7 +800,7 @@ impl IndexManager {
         Ok((eml_content_hashes, attachments_content_hashes))
     }
 
-    async fn cleanup_unused_content(
+    fn cleanup_unused_content(
         &self,
         eml_content_hashes: HashSet<String>,
         attachments_content_hashes: HashSet<String>,
@@ -862,7 +860,7 @@ impl IndexManager {
 
             for eid in unique_ids {
                 let query = self.envelope_query(*account_id, eid);
-                let (eml_hashes, attachment_hashes) = self.collect_content_hashes(query).await?;
+                let (eml_hashes, attachment_hashes) = self.collect_content_hashes(query)?;
                 eml_content_hashes.extend(eml_hashes);
                 attachments_content_hashes.extend(attachment_hashes);
             }
@@ -887,8 +885,7 @@ impl IndexManager {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         if !eml_content_hashes.is_empty() || !attachments_content_hashes.is_empty() {
-            self.cleanup_unused_content(eml_content_hashes, attachments_content_hashes)
-                .await?;
+            self.cleanup_unused_content(eml_content_hashes, attachments_content_hashes)?;
         }
 
         Ok(())
@@ -918,10 +915,7 @@ impl IndexManager {
         Ok(())
     }
 
-    pub async fn get_all_tags(
-        &self,
-        accounts: Option<HashSet<u64>>,
-    ) -> BichonResult<Vec<TagCount>> {
+    pub fn get_all_tags(&self, accounts: Option<HashSet<u64>>) -> BichonResult<Vec<TagCount>> {
         let searcher = self.reader.searcher();
 
         let query: Box<dyn Query> = match accounts {
@@ -945,7 +939,7 @@ impl IndexManager {
         Ok(all_facets)
     }
 
-    pub async fn get_all_contacts(
+    pub fn get_all_contacts(
         &self,
         accounts: Option<HashSet<u64>>,
     ) -> BichonResult<HashSet<String>> {
@@ -977,7 +971,7 @@ impl IndexManager {
             let doc: TantivyDocument = searcher
                 .doc(doc_address)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-            let contacts = extract_contacts(&doc).await?;
+            let contacts = extract_contacts(&doc)?;
             for value in contacts {
                 contacts_set.insert(value);
             }
@@ -1067,7 +1061,7 @@ impl IndexManager {
         Ok(())
     }
 
-    pub async fn search(
+    pub fn search(
         &self,
         accounts: Option<HashSet<u64>>,
         filter: EmailSearchFilter,
@@ -1159,7 +1153,7 @@ impl IndexManager {
         Ok(self.reader.searcher())
     }
 
-    pub async fn num_messages_in_thread(
+    pub fn num_messages_in_thread(
         &self,
         searcher: &Searcher,
         account_id: u64,
@@ -1207,7 +1201,7 @@ impl IndexManager {
         }
     }
 
-    pub async fn list_thread_envelopes(
+    pub fn list_thread_envelopes(
         &self,
         account_id: u64,
         thread_id: &str,
@@ -1218,9 +1212,7 @@ impl IndexManager {
         assert!(page > 0, "Page number must be greater than 0");
         assert!(page_size > 0, "Page size must be greater than 0");
         let searcher = self.create_searcher()?;
-        let total = self
-            .num_messages_in_thread(&searcher, account_id, thread_id)
-            .await?;
+        let total = self.num_messages_in_thread(&searcher, account_id, thread_id)?;
         if total == 0 {
             return Ok(DataPage {
                 current_page: Some(page),
@@ -1271,7 +1263,7 @@ impl IndexManager {
         })
     }
 
-    pub async fn get_dashboard_stats(
+    pub fn get_dashboard_stats(
         &self,
         accounts: &Option<HashSet<u64>>,
     ) -> BichonResult<DashboardStats> {

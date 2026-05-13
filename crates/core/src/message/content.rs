@@ -16,11 +16,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::base64_encode;
 use crate::account::migration::AccountModel;
-use crate::envelope::extractor::{
-    extract_envelope_from_nested_message, reattach_eml_content,
-};
+use crate::base64_encode;
+use crate::envelope::extractor::{extract_envelope_from_nested_message, reattach_eml_content};
 use crate::error::code::ErrorCode;
 use crate::store::envelope::Envelope;
 use crate::utils::compute_content_hash;
@@ -159,12 +157,12 @@ pub struct FullNestedMessageContent {
     pub envelope: Envelope,
 }
 
-pub async fn retrieve_email_content(
+pub fn retrieve_email_content(
     account_id: u64,
     envelope_id: String,
 ) -> BichonResult<FullMessageContent> {
-    AccountModel::check_account_exists(account_id).await?;
-    let (envelope, eml) = reattach_eml_content(account_id, envelope_id).await?;
+    AccountModel::check_account_exists(account_id)?;
+    let (envelope, eml) = reattach_eml_content(account_id, envelope_id)?;
     let message = MessageParser::default().parse(&eml).ok_or_else(|| {
         raise_error!(
             "Failed to parse EML data — the message may be corrupted.".into(),
@@ -232,12 +230,12 @@ pub async fn retrieve_email_content(
     })
 }
 
-pub async fn retrieve_nested_eml_content(
+pub fn retrieve_nested_eml_content(
     account_id: u64,
     envelope_id: String,
     content_hash: &str,
 ) -> BichonResult<FullNestedMessageContent> {
-    let (_, eml) = reattach_eml_content(account_id, envelope_id).await?;
+    let (_, eml) = reattach_eml_content(account_id, envelope_id)?;
     let parent_message = MessageParser::default().parse(&eml).ok_or_else(|| {
         raise_error!(
             "Failed to parse parent EML".into(),

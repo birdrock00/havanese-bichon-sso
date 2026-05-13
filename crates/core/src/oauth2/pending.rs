@@ -16,33 +16,25 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::{
-    {
-        database::{
-            batch_delete_impl, delete_impl, async_find_impl, insert_impl, manager::DB_MANAGER,
-        },
-        error::{code::ErrorCode, BichonResult},
+    database::{
+        batch_delete_impl, delete_impl, find_impl, insert_impl, list_all_impl, manager::DB_MANAGER,
+        MemDbModel,
     },
-    raise_error, utc_now,
+    error::BichonResult,
+    utc_now,
 };
-use itertools::Itertools;
-use native_db::*;
-use native_model::{native_model, Model};
 use serde::{Deserialize, Serialize};
 
 const EXPIRATION_DURATION_MS: i64 = 24 * 60 * 60 * 1000;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
-#[native_model(id = 6, version = 1)]
-#[native_db]
 pub struct OAuth2PendingEntity {
     /// Unique identifier for the OAuth2 request record
     pub oauth2_id: u64,
 
     pub account_id: u64,
     /// CSRF protection state parameter used to verify the integrity of the authorization request
-    #[primary_key]
     pub state: String,
 
     /// PKCE code verifier used in the authorization code exchange process to ensure security
@@ -52,13 +44,17 @@ pub struct OAuth2PendingEntity {
     pub created_at: i64,
 }
 
+impl MemDbModel for OAuth2PendingEntity {
+    fn collection() -> &'static str {
+        "oauth2_pending"
+    }
+    fn key(&self) -> String {
+        self.state.clone()
+    }
+}
+
 impl OAuth2PendingEntity {
-    pub fn new(
-        oauth2_id: u64,
-        account_id: u64,
-        state: String,
-        code_verifier: String,
-    ) -> Self {
+    pub fn new(oauth2_id: u64, account_id: u64, state: String, code_verifier: String) -> Self {
         Self {
             oauth2_id,
             account_id,
@@ -68,66 +64,35 @@ impl OAuth2PendingEntity {
         }
     }
 
-    pub async fn save(&self) -> BichonResult<()> {
-        insert_impl(DB_MANAGER.meta_db(), self.to_owned()).await
+    pub fn save(&self) -> BichonResult<()> {
+        insert_impl(DB_MANAGER.db(), self.to_owned())
     }
 
-    pub async fn delete(state: &str) -> BichonResult<()> {
-        let state = state.to_string();
-        delete_impl(DB_MANAGER.meta_db(), move |rw| {
-            rw.get().primary::<OAuth2PendingEntity>(state.clone())
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-            .ok_or_else(|| raise_error!(format!(
-                "The oauth2 pending entity with state={state} that you want to delete was not found."
-            ), ErrorCode::ResourceNotFound))
-        }).await
+    pub fn delete(state: &str) -> BichonResult<()> {
+        delete_impl::<OAuth2PendingEntity>(DB_MANAGER.db(), state)
     }
 
-    pub async fn clean() -> BichonResult<()> {
-        batch_delete_impl(DB_MANAGER.meta_db(), |rw| {
-            let all: Vec<OAuth2PendingEntity> = rw
-                .scan()
-                .primary()
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                .all()
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                .try_collect()
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-
-            let now = utc_now!();
-            let to_delete: Vec<OAuth2PendingEntity> = all
-                .into_iter()
-                .filter(|e| now - e.created_at > EXPIRATION_DURATION_MS)
-                .collect();
-            Ok(to_delete)
-        })
-        .await?;
+    pub fn clean() -> BichonResult<()> {
+        let all = list_all_impl::<OAuth2PendingEntity>(DB_MANAGER.db())?;
+        let now = utc_now!();
+        let to_delete: Vec<String> = all
+            .into_iter()
+            .filter(|e| now - e.created_at > EXPIRATION_DURATION_MS)
+            .map(|e| e.state)
+            .collect();
+        if !to_delete.is_empty() {
+            batch_delete_impl::<OAuth2PendingEntity>(DB_MANAGER.db(), to_delete)?;
+        }
         Ok(())
     }
 
-    pub async fn get(state: &str) -> BichonResult<Option<OAuth2PendingEntity>> {
-        let entity =
-            async_find_impl::<OAuth2PendingEntity>(DB_MANAGER.meta_db(), state.to_string())
-                .await?;
+    pub fn get(state: &str) -> BichonResult<Option<OAuth2PendingEntity>> {
+        let entity = find_impl::<OAuth2PendingEntity>(DB_MANAGER.db(), state)?;
 
         match entity {
             Some(entity) => {
-                let state = state.to_string();
                 if utc_now!() - entity.created_at > EXPIRATION_DURATION_MS {
-                    delete_impl(DB_MANAGER.meta_db(), move |rw| {
-                        rw.get()
-                            .primary::<OAuth2PendingEntity>(state)
-                            .map_err(|e| {
-                                raise_error!(format!("{:#?}", e), ErrorCode::InternalError)
-                            })?
-                            .ok_or_else(|| {
-                                raise_error!(
-                                    "OAuth2 pending entity not found".into(),
-                                    ErrorCode::ResourceNotFound
-                                )
-                            })
-                    })
-                    .await?;
+                    delete_impl::<OAuth2PendingEntity>(DB_MANAGER.db(), state)?;
                     return Ok(None);
                 }
                 Ok(Some(entity))

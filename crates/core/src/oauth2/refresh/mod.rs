@@ -38,7 +38,7 @@ impl BichonTask for OAuth2RefreshTask {
                 debug!("Starting OAuth2 token refresh task");
 
                 // Try to retrieve all OAuth2 access tokens
-                match OAuth2AccessToken::list_all().await {
+                match OAuth2AccessToken::list_all() {
                     Ok(all_tokens) => {
                         let need_refresh: Vec<OAuth2AccessToken> = all_tokens
                             .into_iter()

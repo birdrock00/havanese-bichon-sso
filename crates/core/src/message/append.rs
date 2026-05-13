@@ -1,12 +1,11 @@
 use crate::{
-    encode_mailbox_name,
+    encode_mailbox_name, raise_error,
     {
         account::migration::{AccountModel, AccountType},
         envelope::extractor::reattach_eml_content,
         error::{code::ErrorCode, BichonResult},
         imap::executor::ImapExecutor,
     },
-    raise_error,
 };
 //use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
@@ -32,7 +31,7 @@ pub async fn restore_emails(account_id: u64, envelope_ids: Vec<String>) -> Bicho
         ));
     }
 
-    let account = AccountModel::check_account_exists(account_id).await?;
+    let account = AccountModel::check_account_exists(account_id)?;
     if !matches!(account.account_type, AccountType::IMAP) {
         return Err(raise_error!(
             "Account type is not IMAP".into(),
@@ -44,7 +43,7 @@ pub async fn restore_emails(account_id: u64, envelope_ids: Vec<String>) -> Bicho
     let mut session = ImapExecutor::create_connection(account_id).await?;
     for envelope_id in envelope_ids {
         let result: BichonResult<()> = async {
-            let (envelope, eml) = reattach_eml_content(account_id, envelope_id.clone()).await?;
+            let (envelope, eml) = reattach_eml_content(account_id, envelope_id.clone())?;
             if let Some(mailbox_name) = envelope.mailbox_name {
                 ImapExecutor::append(
                     &mut session,

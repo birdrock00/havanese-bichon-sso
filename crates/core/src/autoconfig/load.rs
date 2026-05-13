@@ -16,23 +16,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::autoconfig::entity::{MailServerConfig, ServerConfig};
 use crate::error::code::ErrorCode;
 use crate::{
-    {
-        account::entity::Encryption, autoconfig::CachedMailSettings, error::BichonResult,
-    },
     raise_error,
+    {account::entity::Encryption, autoconfig::CachedMailSettings, error::BichonResult},
 };
 use autoconfig::config::{Server, ServerType};
 use email_address::EmailAddress;
 use std::str::FromStr;
 use tracing::error;
 
-pub async fn resolve_autoconfig(
-    email: impl AsRef<str>,
-) -> BichonResult<Option<MailServerConfig>> {
+pub async fn resolve_autoconfig(email: impl AsRef<str>) -> BichonResult<Option<MailServerConfig>> {
     let email = email.as_ref();
     let email_address = EmailAddress::from_str(email).map_err(|error| {
         raise_error!(
@@ -43,7 +38,7 @@ pub async fn resolve_autoconfig(
 
     let domain = email_address.domain();
     // try read local cache first
-    if let Some(cached_entity) = CachedMailSettings::get(domain).await? {
+    if let Some(cached_entity) = CachedMailSettings::get(domain)? {
         return Ok(Some(cached_entity.config));
     }
 
@@ -66,12 +61,12 @@ pub async fn resolve_autoconfig(
         .incoming_servers()
         .into_iter()
         .find(|s| matches!(s.server_type(), ServerType::Imap));
-    
+
     let imap_server = match imap_server {
         Some(imap) => imap,
         None => return Ok(None),
     };
-    
+
     let get_encryption = |server: &Server| {
         server
             .security_type()
@@ -109,6 +104,6 @@ pub async fn resolve_autoconfig(
         imap: imap_config,
         oauth2: config.oauth2().map(|f| f.into()),
     };
-    CachedMailSettings::add(domain.into(), result.clone()).await?;
+    CachedMailSettings::add(domain.into(), result.clone())?;
     Ok(Some(result))
 }

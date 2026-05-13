@@ -34,8 +34,8 @@ pub struct MinimalUser {
 }
 
 impl MinimalUser {
-    pub async fn list_all() -> BichonResult<Vec<MinimalUser>> {
-        let all_users = list_all_impl::<UserModel>(DB_MANAGER.meta_db()).await?;
+    pub fn list_all() -> BichonResult<Vec<MinimalUser>> {
+        let all_users = list_all_impl::<UserModel>(DB_MANAGER.db())?;
         let minimal_list = all_users
             .into_iter()
             .map(|user| MinimalUser {

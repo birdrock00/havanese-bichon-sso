@@ -32,9 +32,9 @@ pub struct LoginPayload {
 /// Accepts a plain text password and returns the `root_token`
 /// on successful authentication.
 #[handler]
-pub async fn login(payload: Json<LoginPayload>) -> Response {
+pub fn login(payload: Json<LoginPayload>) -> Response {
     let payload = payload.0;
-    match UserModel::authenticate_user(payload.username, payload.password).await {
+    match UserModel::authenticate_user(payload.username, payload.password) {
         Ok(result) => match serde_json::to_string(&result) {
             Ok(json_string) => Response::builder()
                 .status(http::StatusCode::OK)

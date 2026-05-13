@@ -16,31 +16,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use native_db::*;
-use native_model::{native_model, Model};
 //use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    id,
-    {
-        database::{
-            async_find_impl, delete_impl, insert_impl, list_all_impl, manager::DB_MANAGER,
-            update_impl,
-        },
-        error::{code::ErrorCode, BichonResult},
-        utils::net::parse_proxy_addr,
+    database::{
+        delete_impl, find_impl, insert_impl, list_all_impl, manager::DB_MANAGER, update_impl,
+        MemDbModel,
     },
-    raise_error, utc_now,
+    error::{code::ErrorCode, BichonResult},
+    id, raise_error, utc_now,
+    utils::net::parse_proxy_addr,
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
-#[native_model(id = 8, version = 1)]
-#[native_db]
 pub struct Proxy {
     /// The unique identifier for this proxy configuration.
-    #[primary_key]
     pub id: u64,
 
     /// The proxy URL (e.g., socks5://127.0.0.1:1080) used to route network requests.
@@ -51,6 +43,15 @@ pub struct Proxy {
 
     /// The last update timestamp of this record, represented as milliseconds since the Unix epoch.
     pub updated_at: i64,
+}
+
+impl MemDbModel for Proxy {
+    fn collection() -> &'static str {
+        "proxies"
+    }
+    fn key(&self) -> String {
+        self.id.to_string()
+    }
 }
 
 impl Proxy {
@@ -64,59 +65,37 @@ impl Proxy {
         }
     }
 
-    pub async fn get(id: u64) -> BichonResult<Proxy> {
-        async_find_impl(DB_MANAGER.meta_db(), id)
-            .await?
-            .ok_or_else(|| {
-                raise_error!(
-                    format!("Proxy with id={} not found", id),
-                    ErrorCode::ResourceNotFound
-                )
-            })
-    }
-
-    pub async fn list_all() -> BichonResult<Vec<Proxy>> {
-        list_all_impl(DB_MANAGER.meta_db()).await
-    }
-
-    pub async fn delete(id: u64) -> BichonResult<()> {
-        delete_impl(DB_MANAGER.meta_db(), move |rw| {
-            rw.get()
-                .primary::<Proxy>(id)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                .ok_or_else(|| raise_error!("proxy missing".into(), ErrorCode::InternalError))
+    pub fn get(id: u64) -> BichonResult<Proxy> {
+        let key = id.to_string();
+        find_impl::<Proxy>(DB_MANAGER.db(), &key)?.ok_or_else(|| {
+            raise_error!(
+                format!("Proxy with id={} not found", id),
+                ErrorCode::ResourceNotFound
+            )
         })
-        .await
     }
 
-    pub async fn update(id: u64, url: String) -> BichonResult<()> {
-        update_impl(
-            DB_MANAGER.meta_db(),
-            move |rw| {
-                rw.get()
-                    .primary::<Proxy>(id)
-                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                    .ok_or_else(|| {
-                        raise_error!(
-                            format!("Proxy with id={} not found", id),
-                            ErrorCode::ResourceNotFound
-                        )
-                    })
-            },
-            move |current| {
-                let mut updated = current.clone();
-                updated.url = url;
-                updated.updated_at = utc_now!();
-                Ok(updated)
-            },
-        )
-        .await?;
+    pub fn list_all() -> BichonResult<Vec<Proxy>> {
+        list_all_impl::<Proxy>(DB_MANAGER.db())
+    }
+
+    pub fn delete(id: u64) -> BichonResult<()> {
+        delete_impl::<Proxy>(DB_MANAGER.db(), &id.to_string())
+    }
+
+    pub fn update(id: u64, url: String) -> BichonResult<()> {
+        update_impl(DB_MANAGER.db(), &id.to_string(), move |current: Proxy| {
+            let mut updated = current.clone();
+            updated.url = url;
+            updated.updated_at = utc_now!();
+            Ok(updated)
+        })?;
         Ok(())
     }
 
-    pub async fn save(&self) -> BichonResult<()> {
+    pub fn save(&self) -> BichonResult<()> {
         self.validate()?;
-        insert_impl(DB_MANAGER.meta_db(), self.to_owned()).await
+        insert_impl(DB_MANAGER.db(), self.to_owned())
     }
 
     /// Validate that the URL is a valid SOCKS5 proxy URL.

@@ -20,9 +20,7 @@ use crate::account::entity::AuthType;
 use crate::account::migration::{AccountModel, AccountType};
 use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
-use crate::imap::capabilities::{
-    capability_to_string, check_capabilities, fetch_capabilities,
-};
+use crate::imap::capabilities::{capability_to_string, check_capabilities, fetch_capabilities};
 use crate::imap::client::Client;
 use crate::imap::oauth2::OAuth2;
 use crate::imap::session::SessionStream;
@@ -73,7 +71,7 @@ impl ImapConnectionManager {
                 })
             }
             AuthType::OAuth2 => {
-                let record = OAuth2AccessToken::get(account.id).await?;
+                let record = OAuth2AccessToken::get(account.id)?;
                 let access_token = record.and_then(|r| r.access_token).ok_or_else(|| {
                     raise_error!(
                         "Imap auth type is OAuth2, but OAuth2 authorization is not yet complete."
@@ -85,7 +83,10 @@ impl ImapConnectionManager {
                     .authenticate(OAuth2::new(login_name.clone(), access_token))
                     .await
                     .map_err(|e| {
-                        error!("IMAP OAuth2 auth failed for username '{}': {}", login_name, e);
+                        error!(
+                            "IMAP OAuth2 auth failed for username '{}': {}",
+                            login_name, e
+                        );
                         e
                     })
             }
@@ -93,7 +94,7 @@ impl ImapConnectionManager {
     }
 
     pub async fn build(account_id: u64) -> BichonResult<Session<Box<dyn SessionStream>>> {
-        let account = AccountModel::async_get(account_id).await?;
+        let account = AccountModel::get(account_id)?;
         let client = match Self::create_client(&account).await {
             Ok(client) => client,
             Err(error) => {
@@ -116,7 +117,7 @@ impl ImapConnectionManager {
         match fetch_capabilities(&mut session).await {
             Ok(capabilities) => {
                 let to_save: Vec<String> = capabilities.iter().map(capability_to_string).collect();
-                AccountModel::update_capabilities(account_id, to_save).await?;
+                AccountModel::update_capabilities(account_id, to_save)?;
                 if let Err(error) = check_capabilities(&capabilities) {
                     error!("Failed to check IMAP capabilities: {:#?}", error);
                     return Err(error);

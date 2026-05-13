@@ -38,11 +38,9 @@ impl AccessTokenApi {
         &self,
         context: WrappedContext,
     ) -> ApiResult<Json<Vec<AccessTokenResp>>> {
-        context
-            .require_permission(None, Permission::TOKEN_MANAGE)
-            .await?;
+        context.require_permission(None, Permission::TOKEN_MANAGE)?;
 
-        Ok(Json(AccessTokenModel::list_all_api_tokens().await?))
+        Ok(Json(AccessTokenModel::list_all_api_tokens()?))
     }
 
     /// Deletes a specific access token.
@@ -58,14 +56,12 @@ impl AccessTokenApi {
         context: WrappedContext,
     ) -> ApiResult<()> {
         let token = token.0.trim();
-        let token = AccessTokenModel::get_token(token).await?;
+        let token = AccessTokenModel::get_token(token)?;
         if context.user.id != token.user_id {
-            context
-                .require_permission(None, Permission::TOKEN_MANAGE)
-                .await?;
+            context.require_permission(None, Permission::TOKEN_MANAGE)?;
         }
 
-        Ok(AccessTokenModel::delete(&token.token).await?)
+        Ok(AccessTokenModel::delete(&token.token)?)
     }
 
     /// Creates a new api token.
@@ -83,12 +79,10 @@ impl AccessTokenApi {
         let current_user_id = context.user.id;
         let target_user_id = payload.0.user_id.unwrap_or(current_user_id);
         if target_user_id != current_user_id {
-            context
-                .require_permission(None, Permission::USER_MANAGE)
-                .await?;
+            context.require_permission(None, Permission::USER_MANAGE)?;
         }
 
-        let token_string = AccessTokenModel::create_api_token(target_user_id, payload.0).await?;
+        let token_string = AccessTokenModel::create_api_token(target_user_id, payload.0)?;
         Ok(PlainText(token_string))
     }
 }

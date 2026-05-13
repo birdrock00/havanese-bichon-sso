@@ -67,7 +67,7 @@ pub struct ImportEmls;
 
 impl ImportEmls {
     pub async fn do_import(request: BatchEmlRequest) -> BichonResult<BatchEmlResult> {
-        let account = AccountModel::check_account_exists(request.account_id).await?;
+        let account = AccountModel::check_account_exists(request.account_id)?;
         
         if !account.enabled {
             return Err(raise_error!("The account is disabled and cannot be used for this operation.".into(), ErrorCode::InvalidParameter));
@@ -75,7 +75,7 @@ impl ImportEmls {
 
         let mailbox_id = match account.account_type {
             AccountType::IMAP => {
-                let all_mailboxes = MailBox::list_all(account.id).await?;
+                let all_mailboxes = MailBox::list_all(account.id)?;
                 let mailbox = all_mailboxes.into_iter().find(|m| m.name == request.mail_folder);
                 
                 match mailbox {
@@ -105,7 +105,7 @@ impl ImportEmls {
                 };
                 let mailbox_id = mailbox.id;
                 // Upsert the mailbox, creating it if it doesn't exist
-                MailBox::batch_upsert(&[mailbox]).await?;
+                MailBox::batch_upsert(&[mailbox])?;
                 mailbox_id
             },
         };

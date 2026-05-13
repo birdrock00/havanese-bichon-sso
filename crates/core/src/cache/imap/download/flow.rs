@@ -17,6 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
+    raise_error,
     {
         account::{
             migration::AccountModel,
@@ -34,7 +35,6 @@ use crate::{
         imap::executor::ImapExecutor,
         store::tantivy::envelope::ENVELOPE_MANAGER,
     },
-    raise_error,
 };
 use std::time::Instant;
 use tokio_util::sync::CancellationToken;
@@ -67,9 +67,8 @@ pub async fn fetch_and_save_by_date(
                 0,
                 FolderStatus::Failed,
                 Some(err_msg.clone()),
-            )
-            .await?;
-            DownloadState::append_session_error(account_id, err_msg).await?;
+            )?;
+            DownloadState::append_session_error(account_id, err_msg)?;
             return Err(e);
         }
     };
@@ -93,9 +92,8 @@ pub async fn fetch_and_save_by_date(
                     0,
                     FolderStatus::Failed,
                     Some(err_msg.clone()),
-                )
-                .await?;
-                DownloadState::append_session_error(account_id, err_msg).await?;
+                )?;
+                DownloadState::append_session_error(account_id, err_msg)?;
                 return Err(e);
             }
         };
@@ -109,8 +107,7 @@ pub async fn fetch_and_save_by_date(
             0,
             FolderStatus::Success,
             None,
-        )
-        .await?;
+        )?;
         return Ok(());
     }
 
@@ -145,8 +142,7 @@ pub async fn fetch_and_save_by_date(
         0,
         FolderStatus::Pending,
         None,
-    )
-    .await?;
+    )?;
 
     let mut current_processed = 0u64;
     let mut has_error_or_cancel = false;
@@ -156,8 +152,7 @@ pub async fn fetch_and_save_by_date(
                 account_id,
                 DownloadStatus::Cancelled,
                 Some("User stopped or system shutdown".to_string()),
-            )
-            .await?;
+            )?;
             DownloadState::update_folder_progress(
                 account_id,
                 mailbox.name.clone(),
@@ -165,8 +160,7 @@ pub async fn fetch_and_save_by_date(
                 current_processed,
                 FolderStatus::Cancelled,
                 None,
-            )
-            .await?;
+            )?;
             has_error_or_cancel = true;
             break;
         }
@@ -189,12 +183,11 @@ pub async fn fetch_and_save_by_date(
                     current_processed,
                     FolderStatus::Downloading,
                     None,
-                )
-                .await?;
+                )?;
             }
             Err(e) => {
                 let err_msg = format!("Batch {} failed: {:#?}", index, e);
-                DownloadState::append_session_error(account_id, err_msg.clone()).await?;
+                DownloadState::append_session_error(account_id, err_msg.clone())?;
                 DownloadState::update_folder_progress(
                     account_id,
                     mailbox.name.clone(),
@@ -202,8 +195,7 @@ pub async fn fetch_and_save_by_date(
                     current_processed,
                     FolderStatus::Failed,
                     Some(err_msg),
-                )
-                .await?;
+                )?;
                 has_error_or_cancel = true;
                 break;
             }
@@ -217,8 +209,7 @@ pub async fn fetch_and_save_by_date(
             current_processed,
             FolderStatus::Success,
             None,
-        )
-        .await?;
+        )?;
     }
     session.logout().await.ok();
     Ok(())
@@ -243,9 +234,8 @@ pub async fn fetch_and_save_full_mailbox(
                 0,
                 FolderStatus::Failed,
                 Some(err_msg.clone()),
-            )
-            .await?;
-            DownloadState::append_session_error(account_id, err_msg).await?;
+            )?;
+            DownloadState::append_session_error(account_id, err_msg)?;
             return Err(e);
         }
     };
@@ -261,10 +251,9 @@ pub async fn fetch_and_save_full_mailbox(
                 0,
                 FolderStatus::Failed,
                 Some(err_msg.clone()),
-            )
-            .await?;
+            )?;
 
-            DownloadState::append_session_error(account_id, err_msg).await?;
+            DownloadState::append_session_error(account_id, err_msg)?;
             session.logout().await.ok();
             return Err(raise_error!(
                 format!("{:#?}", e),
@@ -307,8 +296,7 @@ pub async fn fetch_and_save_full_mailbox(
                 account_id,
                 DownloadStatus::Cancelled,
                 Some("User stopped or system shutdown".to_string()),
-            )
-            .await?;
+            )?;
             DownloadState::update_folder_progress(
                 account_id,
                 mailbox.name.clone(),
@@ -316,8 +304,7 @@ pub async fn fetch_and_save_full_mailbox(
                 current_processed,
                 FolderStatus::Cancelled,
                 None,
-            )
-            .await?;
+            )?;
             has_error_or_cancel = true;
             break;
         }
@@ -344,12 +331,11 @@ pub async fn fetch_and_save_full_mailbox(
                     current_processed,
                     FolderStatus::Downloading,
                     None,
-                )
-                .await?;
+                )?;
             }
             Err(e) => {
                 let err_msg = format!("Batch {} failed: {:#?}", page, e);
-                DownloadState::append_session_error(account_id, err_msg.clone()).await?;
+                DownloadState::append_session_error(account_id, err_msg.clone())?;
                 DownloadState::update_folder_progress(
                     account_id,
                     mailbox.name.clone(),
@@ -357,8 +343,7 @@ pub async fn fetch_and_save_full_mailbox(
                     current_processed,
                     FolderStatus::Failed,
                     Some(err_msg),
-                )
-                .await?;
+                )?;
                 has_error_or_cancel = true;
                 break;
             }
@@ -373,8 +358,7 @@ pub async fn fetch_and_save_full_mailbox(
             current_processed,
             FolderStatus::Success,
             None,
-        )
-        .await?;
+        )?;
     }
     session.logout().await.ok();
     Ok(())
@@ -452,8 +436,7 @@ pub async fn reconcile_mailboxes(
         DownloadState::init_folder_details(
             account.id,
             remote_mailboxes.iter().map(|m| m.name.clone()).collect(),
-        )
-        .await?;
+        )?;
 
         for (local_mailbox, remote_mailbox) in &existing_mailboxes {
             if token.is_cancelled() {
@@ -461,8 +444,7 @@ pub async fn reconcile_mailboxes(
                     account.id,
                     DownloadStatus::Cancelled,
                     Some("Received termination signal (User stop or System shutdown)".to_string()),
-                )
-                .await?;
+                )?;
                 break;
             }
 
@@ -482,9 +464,8 @@ pub async fn reconcile_mailboxes(
                         0,
                         FolderStatus::Failed,
                         Some(err_msg.clone()),
-                    )
-                    .await?;
-                    DownloadState::append_session_error(account_id, err_msg).await?;
+                    )?;
+                    DownloadState::append_session_error(account_id, err_msg)?;
                     continue;
                 }
                 info!(
@@ -500,8 +481,7 @@ pub async fn reconcile_mailboxes(
                     0,
                     FolderStatus::Downloading,
                     Some("UID validity changed, rebuilding...".into()),
-                )
-                .await?;
+                )?;
 
                 match &account.date_since {
                     Some(date_since) => {
@@ -547,7 +527,7 @@ pub async fn reconcile_mailboxes(
         }
         //The metadata of this mailbox must only be updated after a successful synchronization;
         //otherwise, it may cause synchronization errors and result in missing emails in the local sync results.
-        MailBox::batch_upsert(&mailboxes_to_update).await?;
+        MailBox::batch_upsert(&mailboxes_to_update)?;
     }
 
     debug!(
@@ -559,7 +539,7 @@ pub async fn reconcile_mailboxes(
     let missing_mailboxes = find_missing_mailboxes(local_mailboxes, remote_mailboxes);
     //Mail folders that are not locally need to be downloaded.
     if !missing_mailboxes.is_empty() {
-        MailBox::batch_insert(&missing_mailboxes).await?;
+        MailBox::batch_insert(&missing_mailboxes)?;
 
         let mut has_error = false;
         let mut last_err = None;
@@ -569,8 +549,7 @@ pub async fn reconcile_mailboxes(
                     account.id,
                     DownloadStatus::Cancelled,
                     Some("Received termination signal (User stop or System shutdown)".to_string()),
-                )
-                .await?;
+                )?;
                 break;
             }
             if mailbox.exists > 0 {
@@ -650,9 +629,7 @@ async fn perform_incremental_sync(
     token: CancellationToken,
 ) -> BichonResult<()> {
     if remote_mailbox.exists > 0 {
-        let local_max_uid = ENVELOPE_MANAGER
-            .get_max_uid(account.id, local_mailbox.id)
-            .await?;
+        let local_max_uid = ENVELOPE_MANAGER.get_max_uid(account.id, local_mailbox.id)?;
         match local_max_uid {
             Some(max_uid) => {
                 let mut session = ImapExecutor::create_connection(account.id).await?;

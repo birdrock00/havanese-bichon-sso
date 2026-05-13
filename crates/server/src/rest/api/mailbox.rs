@@ -53,9 +53,7 @@ impl MailBoxApi {
         context: WrappedContext,
     ) -> ApiResult<Json<Vec<MailBox>>> {
         let account_id = account_id.0;
-        context
-            .require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)
-            .await?;
+        context.require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)?;
         let remote = remote.0.unwrap_or(false);
         Ok(Json(get_account_mailboxes(account_id, remote).await?))
     }
@@ -82,9 +80,7 @@ impl MailBoxApi {
     ) -> ApiResult<()> {
         let account_id = account_id.0;
         let mailbox_id = mailbox_id.0;
-        context
-            .require_permission(Some(account_id), Permission::DATA_DELETE)
-            .await?;
+        context.require_permission(Some(account_id), Permission::DATA_DELETE)?;
         Ok(delete_mailbox_impl(account_id, mailbox_id).await?)
     }
 }

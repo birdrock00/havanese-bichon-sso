@@ -50,7 +50,7 @@ impl BichonContext {
     }
 
     pub async fn start_account_downloader(&self) -> BichonResult<()> {
-        let accounts = AccountModel::list_all().await?;
+        let accounts = AccountModel::list_all()?;
         let active_accounts: Vec<AccountModel> = accounts
             .into_iter()
             .filter(|a| a.enabled && matches!(a.account_type, AccountType::IMAP))

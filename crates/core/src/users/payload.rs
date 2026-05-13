@@ -95,7 +95,7 @@ pub struct RoleCreateRequest {
 }
 
 impl RoleCreateRequest {
-    pub async fn validate(&self) -> BichonResult<()> {
+    pub fn validate(&self) -> BichonResult<()> {
         let trimmed_name = self.name.trim();
         if trimmed_name.is_empty() {
             return Err(raise_error!(
@@ -148,7 +148,7 @@ pub struct RoleUpdateRequest {
 }
 
 impl RoleUpdateRequest {
-    pub async fn validate(&self) -> BichonResult<()> {
+    pub fn validate(&self) -> BichonResult<()> {
         // 1. Ensure at least one field is provided for the update
         if self.name.is_none() && self.description.is_none() && self.permissions.is_none() {
             return Err(raise_error!(
@@ -216,7 +216,10 @@ impl RoleUpdateRequest {
 pub struct UserCreateRequest {
     pub username: String,
 
-    #[cfg_attr(feature = "web-api", oai(validator(custom = "crate::common::validator::EmailValidator")))]
+    #[cfg_attr(
+        feature = "web-api",
+        oai(validator(custom = "crate::common::validator::EmailValidator"))
+    )]
     pub email: String,
 
     pub password: String,
@@ -236,7 +239,7 @@ pub struct UserCreateRequest {
 }
 
 impl UserCreateRequest {
-    pub async fn validate(&self) -> BichonResult<()> {
+    pub fn validate(&self) -> BichonResult<()> {
         let username_len = self.username.len();
 
         // 1. Username constraints
@@ -279,7 +282,7 @@ impl UserCreateRequest {
         validate_theme(&self.theme)?;
         validate_language(&self.language)?;
 
-        let all_roles = UserRole::list_all().await?;
+        let all_roles = UserRole::list_all()?;
         let role_type_map: HashMap<u64, RoleType> =
             all_roles.into_iter().map(|r| (r.id, r.role_type)).collect();
 
@@ -302,7 +305,7 @@ impl UserCreateRequest {
         }
 
         for (aid, rid) in &self.account_access_map {
-            if AccountModel::async_find(*aid).await?.is_none() {
+            if AccountModel::find(*aid)?.is_none() {
                 return Err(raise_error!(
                     format!("Account {} not found", aid),
                     ErrorCode::InvalidParameter
@@ -353,7 +356,10 @@ impl UserCreateRequest {
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct UserUpdateRequest {
     pub username: Option<String>,
-    #[cfg_attr(feature = "web-api", oai(validator(custom = "crate::common::validator::EmailValidator")))]
+    #[cfg_attr(
+        feature = "web-api",
+        oai(validator(custom = "crate::common::validator::EmailValidator"))
+    )]
     pub email: Option<String>,
     pub password: Option<String>,
     pub avatar_base64: Option<String>,
@@ -367,7 +373,7 @@ pub struct UserUpdateRequest {
 }
 
 impl UserUpdateRequest {
-    pub async fn validate(&self) -> BichonResult<()> {
+    pub fn validate(&self) -> BichonResult<()> {
         if let Some(username) = &self.username {
             let len = username.len();
             if len < 3 || len > 32 {
@@ -391,7 +397,7 @@ impl UserUpdateRequest {
         validate_theme(&self.theme)?;
         validate_language(&self.language)?;
 
-        let all_roles = UserRole::list_all().await?;
+        let all_roles = UserRole::list_all()?;
         let role_type_map: HashMap<u64, RoleType> =
             all_roles.into_iter().map(|r| (r.id, r.role_type)).collect();
 
@@ -423,7 +429,7 @@ impl UserUpdateRequest {
 
         if let Some(account_access_map) = &self.account_access_map {
             for (aid, rid) in account_access_map {
-                if AccountModel::async_find(*aid).await?.is_none() {
+                if AccountModel::find(*aid)?.is_none() {
                     return Err(raise_error!(
                         format!("Account {} not found", aid),
                         ErrorCode::InvalidParameter

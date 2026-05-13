@@ -40,11 +40,8 @@ pub struct UsersApi;
 impl UsersApi {
     #[oai(path = "/list-roles", method = "get", operation_id = "list_roles")]
     async fn list_roles(&self, context: WrappedContext) -> ApiResult<Json<Vec<UserRole>>> {
-        context
-            .require_permission(None, Permission::USER_MANAGE)
-            .await?;
-
-        Ok(Json(UserRole::list_all().await?))
+        context.require_permission(None, Permission::USER_MANAGE)?;
+        Ok(Json(UserRole::list_all()?))
     }
 
     #[oai(path = "/roles/:id", method = "delete", operation_id = "remove_role")]
@@ -55,10 +52,8 @@ impl UsersApi {
         context: WrappedContext,
     ) -> ApiResult<()> {
         let id = id.0;
-        context
-            .require_permission(None, Permission::USER_MANAGE)
-            .await?;
-        Ok(UserRole::delete(id).await?)
+        context.require_permission(None, Permission::USER_MANAGE)?;
+        Ok(UserRole::delete(id)?)
     }
 
     /// Create a new account
@@ -69,10 +64,8 @@ impl UsersApi {
         payload: Json<RoleCreateRequest>,
         context: WrappedContext,
     ) -> ApiResult<Json<UserRole>> {
-        context
-            .require_permission(None, Permission::USER_MANAGE)
-            .await?;
-        let role = UserRole::create(payload.0).await?;
+        context.require_permission(None, Permission::USER_MANAGE)?;
+        let role = UserRole::create(payload.0)?;
         Ok(Json(role))
     }
 
@@ -87,20 +80,16 @@ impl UsersApi {
         context: WrappedContext,
     ) -> ApiResult<()> {
         let id = id.0;
-        context
-            .require_permission(None, Permission::USER_MANAGE)
-            .await?;
-        Ok(UserRole::update(id, payload.0).await?)
+        context.require_permission(None, Permission::USER_MANAGE)?;
+        Ok(UserRole::update(id, payload.0)?)
     }
 
     #[oai(path = "/list-users", method = "get", operation_id = "list_users")]
     async fn list_users(&self, context: WrappedContext) -> ApiResult<Json<Vec<UserView>>> {
-        context
-            .require_permission(None, Permission::USER_MANAGE)
-            .await?;
-        let roles = UserRole::list_all().await?;
+        context.require_permission(None, Permission::USER_MANAGE)?;
+        let roles = UserRole::list_all()?;
         let role_lookup: BTreeMap<u64, UserRole> = roles.into_iter().map(|r| (r.id, r)).collect();
-        let users = UserModel::list_all().await?;
+        let users = UserModel::list_all()?;
         let users = users.into_iter().map(|u| u.to_view(&role_lookup)).collect();
         Ok(Json(users))
     }
@@ -116,13 +105,11 @@ impl UsersApi {
         context: WrappedContext,
     ) -> ApiResult<Json<Vec<AccessTokenModel>>> {
         let target_user_id = id.0;
-        let tokens = AccessTokenModel::get_user_api_tokens(target_user_id).await?;
+        let tokens = AccessTokenModel::get_user_api_tokens(target_user_id)?;
         if context.user.id == target_user_id {
             return Ok(Json(tokens));
         }
-        context
-            .require_permission(None, Permission::USER_MANAGE)
-            .await?;
+        context.require_permission(None, Permission::USER_MANAGE)?;
         Ok(Json(tokens))
     }
 
@@ -134,10 +121,8 @@ impl UsersApi {
         context: WrappedContext,
     ) -> ApiResult<()> {
         let id = id.0;
-        context
-            .require_permission(None, Permission::USER_MANAGE)
-            .await?;
-        Ok(UserModel::remove(id).await?)
+        context.require_permission(None, Permission::USER_MANAGE)?;
+        Ok(UserModel::remove(id)?)
     }
 
     #[oai(path = "/users", method = "post", operation_id = "create_user")]
@@ -146,11 +131,9 @@ impl UsersApi {
         payload: Json<UserCreateRequest>,
         context: WrappedContext,
     ) -> ApiResult<Json<UserView>> {
-        context
-            .require_permission(None, Permission::USER_MANAGE)
-            .await?;
-        let user = UserModel::create(payload.0).await?;
-        let roles = UserRole::list_all().await?;
+        context.require_permission(None, Permission::USER_MANAGE)?;
+        let user = UserModel::create(payload.0)?;
+        let roles = UserRole::list_all()?;
         let role_lookup: BTreeMap<u64, UserRole> = roles.into_iter().map(|r| (r.id, r)).collect();
         Ok(Json(user.to_view(&role_lookup)))
     }
@@ -165,19 +148,15 @@ impl UsersApi {
         let target_id = id.0;
         let current_user_id = context.user.id;
         if current_user_id != target_id {
-            context
-                .require_permission(None, Permission::USER_MANAGE)
-                .await?;
+            context.require_permission(None, Permission::USER_MANAGE)?;
         }
         let mut update_data = payload.0;
-        if current_user_id == target_id
-            && !context.has_permission(None, Permission::USER_MANAGE).await
-        {
+        if current_user_id == target_id && !context.has_permission(None, Permission::USER_MANAGE) {
             update_data.global_roles = None;
             update_data.account_access_map = None;
             update_data.acl = None;
         }
-        Ok(UserModel::update(target_id, update_data).await?)
+        Ok(UserModel::update(target_id, update_data)?)
     }
 
     #[oai(
@@ -186,7 +165,7 @@ impl UsersApi {
         operation_id = "get_current_user"
     )]
     async fn get_current_user(&self, context: WrappedContext) -> ApiResult<Json<UserView>> {
-        let roles = UserRole::list_all().await?;
+        let roles = UserRole::list_all()?;
         let role_lookup: BTreeMap<u64, UserRole> = roles.into_iter().map(|r| (r.id, r)).collect();
         Ok(Json(context.0.user.to_view(&role_lookup)))
     }
@@ -200,15 +179,12 @@ impl UsersApi {
         &self,
         context: WrappedContext,
     ) -> ApiResult<Json<Vec<MinimalUser>>> {
-        let is_admin = context.user.is_admin().await;
-        let minimal_list = MinimalUser::list_all().await?;
+        let is_admin = context.user.is_admin();
+        let minimal_list = MinimalUser::list_all()?;
         if is_admin {
             return Ok(Json(minimal_list));
         }
-        context
-            .require_permission(None, Permission::USER_VIEW)
-            .await?;
-
+        context.require_permission(None, Permission::USER_VIEW)?;
         Ok(Json(minimal_list))
     }
 
@@ -218,10 +194,8 @@ impl UsersApi {
         operation_id = "list_account_roles"
     )]
     async fn list_account_roles(&self, context: WrappedContext) -> ApiResult<Json<Vec<UserRole>>> {
-        context
-            .require_permission(None, Permission::USER_VIEW)
-            .await?;
-        let all = UserRole::list_all().await?;
+        context.require_permission(None, Permission::USER_VIEW)?;
+        let all = UserRole::list_all()?;
         Ok(Json(
             all.into_iter()
                 .filter(|r| matches!(r.role_type, RoleType::Account))

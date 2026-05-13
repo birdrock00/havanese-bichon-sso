@@ -17,17 +17,18 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    account::migration::AccountModel, common::paginated::DataPage, error::BichonResult, store::{envelope::Envelope, tantivy::envelope::ENVELOPE_MANAGER}
+    account::migration::AccountModel,
+    common::paginated::DataPage,
+    error::BichonResult,
+    store::{envelope::Envelope, tantivy::envelope::ENVELOPE_MANAGER},
 };
 
-pub async fn get_thread_messages(
+pub fn get_thread_messages(
     account_id: u64,
     thread_id: &str,
     page: u64,
     page_size: u64,
 ) -> BichonResult<DataPage<Envelope>> {
-    AccountModel::check_account_exists(account_id).await?;
-    ENVELOPE_MANAGER
-        .list_thread_envelopes(account_id, thread_id, page, page_size, true)
-        .await
+    AccountModel::check_account_exists(account_id)?;
+    ENVELOPE_MANAGER.list_thread_envelopes(account_id, thread_id, page, page_size, true)
 }

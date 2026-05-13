@@ -16,16 +16,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 use crate::database::manager::DB_MANAGER;
-use crate::database::{delete_impl, async_find_impl, upsert_impl};
-use crate::error::code::ErrorCode;
-use crate::raise_error;
-use crate::{
-    autoconfig::entity::MailServerConfig, error::BichonResult, utc_now,
-};
-use native_db::*;
-use native_model::{native_model, Model};
+use crate::database::{delete_impl, upsert_impl};
+use crate::database::{find_impl, MemDbModel};
+use crate::{autoconfig::entity::MailServerConfig, error::BichonResult, utc_now};
 use serde::{Deserialize, Serialize};
 
 pub mod entity;
@@ -36,45 +30,39 @@ mod tests;
 const EXPIRE_TIME_MS: i64 = 30 * 24 * 60 * 60 * 1000;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
-#[native_model(id = 3, version = 1)]
-#[native_db]
 pub struct CachedMailSettings {
-    #[primary_key]
     pub domain: String,
     pub config: MailServerConfig,
     pub created_at: i64,
 }
 
+impl MemDbModel for CachedMailSettings {
+    fn collection() -> &'static str {
+        "autoconfig"
+    }
+    fn key(&self) -> String {
+        self.domain.clone()
+    }
+}
+
 impl CachedMailSettings {
-    pub async fn add(domain: String, config: MailServerConfig) -> BichonResult<()> {
+    pub fn add(domain: String, config: MailServerConfig) -> BichonResult<()> {
         Self {
             domain,
             config,
             created_at: utc_now!(),
         }
         .save()
-        .await
     }
 
-    async fn save(&self) -> BichonResult<()> {
-        upsert_impl(DB_MANAGER.meta_db(), self.to_owned()).await
+    fn save(&self) -> BichonResult<()> {
+        upsert_impl(DB_MANAGER.db(), self.to_owned())
     }
 
-    pub async fn get(domain: &str) -> BichonResult<Option<CachedMailSettings>> {
-        if let Some(found) =
-            async_find_impl::<CachedMailSettings>(DB_MANAGER.meta_db(), domain.to_string()).await?
-        {
+    pub fn get(domain: &str) -> BichonResult<Option<CachedMailSettings>> {
+        if let Some(found) = find_impl::<CachedMailSettings>(DB_MANAGER.db(), domain)? {
             if (utc_now!() - found.created_at) > EXPIRE_TIME_MS {
-                let domain = domain.to_string();
-                delete_impl(DB_MANAGER.meta_db(), |rw| {
-                    rw.get()
-                        .primary::<CachedMailSettings>(domain)
-                        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                        .ok_or_else(|| {
-                            raise_error!("auto config cache miss".into(), ErrorCode::InternalError)
-                        })
-                })
-                .await?;
+                delete_impl::<CachedMailSettings>(DB_MANAGER.db(), domain)?;
                 Ok(None)
             } else {
                 Ok(Some(found))

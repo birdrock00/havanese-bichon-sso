@@ -16,108 +16,33 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::account::migration::AccountModel;
-use crate::cache::imap::MAILBOX_MODELS;
-use crate::error::{code::ErrorCode, BichonError};
-use crate::settings::cli::SETTINGS;
 use crate::settings::dir::DATA_DIR_MANAGER;
-use crate::users::UserModel;
-use crate::{database::META_MODELS, error::BichonResult};
-use crate::raise_error;
-use native_db::{Builder, Database};
-use std::sync::{Arc, LazyLock};
-use tracing::info;
+use memdb::{Durability, MemDb};
+use std::sync::LazyLock;
+use std::time::Duration;
 
 pub static DB_MANAGER: LazyLock<DatabaseManager> = LazyLock::new(DatabaseManager::new);
 
-/// Metadata database instance
 pub struct DatabaseManager {
-    meta_db: Arc<Database<'static>>,
-    /// Envelope database instance
-    envelope_db: Arc<Database<'static>>,
+    db: MemDb,
 }
 
 impl DatabaseManager {
     fn new() -> Self {
-        let meta_db = Self::init_meta_database().expect("Failed to initialize metadata database");
-        let envelope_db =
-            Self::init_evenlope_database().expect("Failed to initialize evenlope database");
-        DatabaseManager {
-            meta_db,
-            envelope_db,
-        }
+        let db_path = &DATA_DIR_MANAGER.memdb_dir;
+        std::fs::create_dir_all(db_path).expect("Failed to create memdb data directory");
+
+        let db = MemDb::open_with(db_path, Durability::Full)
+            .expect("Failed to open memdb database");
+
+        // Start periodic snapshot worker (every 5 minutes)
+        db.start_snapshot_worker(Duration::from_secs(300));
+
+        DatabaseManager { db }
     }
 
-    /// Get a reference to the metadata database
-    pub fn meta_db(&self) -> &Arc<Database<'static>> {
-        &self.meta_db
-    }
-
-    pub fn envelope_db(&self) -> &Arc<Database<'static>> {
-        &self.envelope_db
-    }
-
-    /// Initialize metadata database with a fixed or configured file path
-    fn init_meta_database() -> BichonResult<Arc<Database<'static>>> {
-        let mut database = Builder::new()
-            .set_cache_size(
-                SETTINGS
-                    .bichon_metadata_cache_size
-                    .unwrap_or(134217728)
-                    .max(67108864),
-            ) //default 128MB
-            .create(&META_MODELS, DATA_DIR_MANAGER.meta_db.clone())
-            .map_err(Self::handle_database_error)?;
-
-        let rw = database
-            .rw_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        rw.migrate::<AccountModel>()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        rw.migrate::<UserModel>()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        rw.commit()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-
-        database
-            .compact()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Ok(Arc::new(database))
-    }
-
-    fn init_evenlope_database() -> BichonResult<Arc<Database<'static>>> {
-        info!(
-            "Initializing envelope database at: {:?}",
-            &DATA_DIR_MANAGER.mailbox_db
-        );
-
-        let mut database = Builder::new()
-            .set_cache_size(
-                SETTINGS
-                    .bichon_envelope_cache_size
-                    .unwrap_or(134217728)
-                    .max(67108864),
-            ) //default 128MB
-            .create(&MAILBOX_MODELS, DATA_DIR_MANAGER.mailbox_db.clone())
-            .map_err(Self::handle_database_error)?;
-
-        let rw = database
-            .rw_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        rw.commit()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-
-        database
-            .compact()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-
-        Ok(Arc::new(database))
-    }
-
-    fn handle_database_error(error: native_db::db_type::Error) -> BichonError {
-        raise_error!(
-            format!("Failed to create database: {:?}", error),
-            ErrorCode::InternalError
-        )
+    /// Get a reference to the MemDb instance.
+    pub fn db(&self) -> &MemDb {
+        &self.db
     }
 }

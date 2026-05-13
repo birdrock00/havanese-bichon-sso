@@ -25,7 +25,7 @@ use bichon_core::cache::imap::mailbox::{Attribute, AttributeEnum};
 use bichon_core::common::signal::SIGNAL_MANAGER;
 use bichon_core::envelope::extractor::extract_envelope_from_smtp;
 use bichon_core::error::BichonResult;
-use bichon_core::settings::cli::{SETTINGS, SmtpEncryptionMode};
+use bichon_core::settings::cli::{SmtpEncryptionMode, SETTINGS};
 use bichon_core::utils::create_hash;
 use bichon_core::{
     account::migration::AccountModel,
@@ -283,7 +283,7 @@ where
             let username = username.clone();
             if let Ok(decoded) = BASE64_STANDARD.decode(trimmed) {
                 let password = String::from_utf8_lossy(&decoded);
-                match AccessTokenModel::resolve_user_from_token(&password).await {
+                match AccessTokenModel::resolve_user_from_token(&password) {
                     Ok(user) => {
                         session.authenticated = true;
                         session.user = Some(user);
@@ -394,7 +394,7 @@ where
         } else {
             let addr = extract_address(&trimmed[8..]);
             //println!("DEBUG: SMTP RCPT TO extracted address -> '{}'", addr);
-            let account_result = AccountModel::find_by_email(addr.as_str()).await;
+            let account_result = AccountModel::find_by_email(addr.as_str());
 
             match account_result {
                 Ok(Some(account)) => {
@@ -405,8 +405,7 @@ where
                                 user,
                                 Some(account.id),
                                 Permission::DATA_SMTP_INGEST,
-                            )
-                            .await;
+                            );
 
                             if !has_perm {
                                 tracing::warn!(
@@ -528,7 +527,7 @@ async fn verify_plain_auth<S: AsyncRead + AsyncWrite + Unpin>(
             let username = String::from_utf8_lossy(parts[1]);
             let password = String::from_utf8_lossy(parts[2]);
 
-            match AccessTokenModel::resolve_user_from_token(&password).await {
+            match AccessTokenModel::resolve_user_from_token(&password) {
                 Ok(user) => {
                     session.authenticated = true;
                     session.user = Some(user);
@@ -632,7 +631,7 @@ async fn parse_email(data: &[u8], session: &Session) -> BichonResult<()> {
     };
     let mailbox_id = mailbox.id;
 
-    if let Err(e) = MailBox::batch_upsert(&[mailbox]).await {
+    if let Err(e) = MailBox::batch_upsert(&[mailbox]) {
         tracing::error!("SMTP: Failed to upsert mailbox for {}: {:?}", rcpt.email, e);
         return Err(e.into());
     }

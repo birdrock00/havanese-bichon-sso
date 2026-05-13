@@ -41,3 +41,33 @@ impl Validator<String> for EmailValidator {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn valid_email_passes() {
+        let validator = EmailValidator;
+        assert!(validator.check(&"user@example.com".to_string()));
+        assert!(validator.check(&"a@b.co".to_string()));
+        assert!(validator.check(&"test.user+tag@domain.com".to_string()));
+    }
+
+    #[test]
+    fn invalid_email_fails() {
+        let validator = EmailValidator;
+        assert!(!validator.check(&"not-an-email".to_string()));
+        assert!(!validator.check(&"".to_string()));
+        assert!(!validator.check(&"@domain.com".to_string()));
+        assert!(!validator.check(&"user@".to_string()));
+    }
+
+    #[test]
+    fn display_message() {
+        assert_eq!(
+            EmailValidator.to_string(),
+            "Not a valid email address"
+        );
+    }
+}

@@ -45,3 +45,47 @@ pub fn extract_text(html: String) -> String {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn extract_text_from_plain_html() {
+        let html = "<html><body><p>Hello World</p></body></html>".to_string();
+        let text = extract_text(html);
+        assert!(text.contains("Hello World"));
+    }
+
+    #[test]
+    fn extract_text_strips_tags() {
+        let html = "<div><h1>Title</h1><p>Paragraph with <b>bold</b> text.</p></div>".to_string();
+        let text = extract_text(html);
+        assert!(text.contains("Title"));
+        assert!(text.contains("Paragraph"));
+        assert!(text.contains("bold"));
+        assert!(!text.contains("<h1>"));
+        assert!(!text.contains("<b>"));
+    }
+
+    #[test]
+    fn extract_text_empty_string() {
+        let html = "".to_string();
+        let text = extract_text(html);
+        assert!(text.is_empty());
+    }
+
+    #[test]
+    fn extract_text_plain_text_passthrough() {
+        let html = "Just some plain text without any HTML tags.".to_string();
+        let text = extract_text(html);
+        assert!(text.contains("plain text"));
+    }
+
+    #[test]
+    fn extract_text_with_links() {
+        let html = "<a href=\"https://example.com\">Click here</a>".to_string();
+        let text = extract_text(html);
+        assert!(text.contains("Click here"));
+    }
+}

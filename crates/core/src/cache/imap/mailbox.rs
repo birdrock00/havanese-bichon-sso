@@ -17,33 +17,24 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    decode_mailbox_name, encode_mailbox_name,
+    decode_mailbox_name, encode_mailbox_name, raise_error,
     {
         database::{
-            async_filter_by_secondary_key_impl, async_find_impl, batch_delete_impl,
-            batch_insert_impl, batch_upsert_impl, delete_impl, filter_by_secondary_key_impl,
-            find_impl, manager::DB_MANAGER,
+            batch_delete_impl, batch_insert_impl, batch_upsert_impl, delete_impl, filter_impl,
+            find_impl, manager::DB_MANAGER, MemDbModel,
         },
         error::{code::ErrorCode, BichonResult},
     },
-    raise_error,
 };
 use async_imap::types::{Name, NameAttribute};
-use itertools::Itertools;
-use native_db::*;
-use native_model::{native_model, Model};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
-#[native_model(id = 1, version = 1)]
-#[native_db]
 pub struct MailBox {
     /// The unique identifier for the mailbox
-    #[primary_key]
     pub id: u64,
     /// The ID of the account associated with the mailbox
-    #[secondary_key]
     pub account_id: u64,
     /// The unique, decoded, human-readable name of the mailbox (e.g., "INBOX", "Sent Items").
     /// This is the decoded name as presented to users, derived from the IMAP server's mailbox name
@@ -67,23 +58,22 @@ pub struct MailBox {
     pub uid_validity: Option<u32>,
 }
 
+impl MemDbModel for MailBox {
+    fn collection() -> &'static str {
+        "mailboxes"
+    }
+    fn key(&self) -> String {
+        self.id.to_string()
+    }
+}
+
 impl MailBox {
     pub fn encoded_name(&self) -> String {
         encode_mailbox_name!(&self.name)
     }
 
-    pub async fn async_get(id: u64) -> BichonResult<MailBox> {
-        let result = async_find_impl::<MailBox>(DB_MANAGER.envelope_db(), id).await?;
-        Ok(result.ok_or_else(|| {
-            raise_error!(
-                format!("mailbox {} not found", id),
-                ErrorCode::InternalError
-            )
-        })?)
-    }
-
     pub fn get(id: u64) -> BichonResult<MailBox> {
-        let result = find_impl::<MailBox>(DB_MANAGER.envelope_db(), id)?;
+        let result = find_impl::<MailBox>(DB_MANAGER.db(), &id.to_string())?;
         Ok(result.ok_or_else(|| {
             raise_error!(
                 format!("mailbox {} not found", id),
@@ -92,55 +82,34 @@ impl MailBox {
         })?)
     }
 
-    pub async fn delete(id: u64) -> BichonResult<()> {
-        delete_impl(DB_MANAGER.envelope_db(), move |rw| {
-            rw.get()
-                .primary::<MailBox>(id)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                .ok_or_else(|| raise_error!("mailbox missing".into(), ErrorCode::InternalError))
-        })
-        .await
+    pub fn delete(id: u64) -> BichonResult<()> {
+        delete_impl::<MailBox>(DB_MANAGER.db(), &id.to_string())
     }
 
-    pub async fn list_all(account_id: u64) -> BichonResult<Vec<MailBox>> {
-        async_filter_by_secondary_key_impl(
-            DB_MANAGER.envelope_db(),
-            MailBoxKey::account_id,
-            account_id,
-        )
-        .await
+    pub fn list_all(account_id: u64) -> BichonResult<Vec<MailBox>> {
+        filter_impl::<MailBox, _>(DB_MANAGER.db(), move |m| m.account_id == account_id)
     }
 
     pub fn find_mailbox(account_id: u64, mailbox_id: u64) -> BichonResult<Option<MailBox>> {
-        let all: Vec<MailBox> = filter_by_secondary_key_impl(
-            DB_MANAGER.envelope_db(),
-            MailBoxKey::account_id,
-            account_id,
-        )?;
+        let all = filter_impl::<MailBox, _>(DB_MANAGER.db(), move |m| m.account_id == account_id)?;
         Ok(all.into_iter().find(|m| m.id == mailbox_id))
     }
 
-    pub async fn batch_insert(mailboxes: &[MailBox]) -> BichonResult<()> {
-        batch_insert_impl(DB_MANAGER.envelope_db(), mailboxes.to_vec()).await
+    pub fn batch_insert(mailboxes: &[MailBox]) -> BichonResult<()> {
+        batch_insert_impl(DB_MANAGER.db(), mailboxes.to_vec())
     }
 
-    pub async fn batch_upsert(mailboxes: &[MailBox]) -> BichonResult<()> {
-        batch_upsert_impl(DB_MANAGER.envelope_db(), mailboxes.to_vec()).await
+    pub fn batch_upsert(mailboxes: &[MailBox]) -> BichonResult<()> {
+        batch_upsert_impl(DB_MANAGER.db(), mailboxes.to_vec())
     }
 
-    pub async fn clean(account_id: u64) -> BichonResult<()> {
-        batch_delete_impl(DB_MANAGER.envelope_db(), move |rw| {
-            let mailboxes: Vec<MailBox> = rw
-                .scan()
-                .secondary::<MailBox>(MailBoxKey::account_id)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                .start_with(account_id)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                .try_collect()
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-            Ok(mailboxes)
-        })
-        .await?;
+    pub fn clean(account_id: u64) -> BichonResult<()> {
+        let mailboxes =
+            filter_impl::<MailBox, _>(DB_MANAGER.db(), move |m| m.account_id == account_id)?;
+        let keys: Vec<String> = mailboxes.iter().map(|m| m.id.to_string()).collect();
+        if !keys.is_empty() {
+            batch_delete_impl::<MailBox>(DB_MANAGER.db(), keys)?;
+        }
         Ok(())
     }
 }

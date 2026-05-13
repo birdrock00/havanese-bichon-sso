@@ -226,7 +226,7 @@ impl BlobManager {
     }
 }
 
-pub async fn get_reader(account_id: u64, eid: String) -> BichonResult<Cursor<Bytes>> {
-    let (_, data) = reattach_eml_content(account_id, eid).await?;
+pub fn get_reader(account_id: u64, eid: String) -> BichonResult<Cursor<Bytes>> {
+    let (_, data) = reattach_eml_content(account_id, eid)?;
     Ok(Cursor::new(data))
 }

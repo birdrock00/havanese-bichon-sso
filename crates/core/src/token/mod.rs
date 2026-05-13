@@ -18,12 +18,11 @@
 
 use std::collections::HashMap;
 
-use super::error::code::ErrorCode;
 use crate::database::manager::DB_MANAGER;
 use crate::database::{
-    async_filter_by_secondary_key_impl, async_find_impl, delete_impl, with_transaction,
+    MemDbModel, delete_impl, filter_impl, find_impl, insert_impl, list_all_impl, update_impl, with_transaction
 };
-use crate::database::{insert_impl, list_all_impl, update_impl};
+use crate::error::code::ErrorCode;
 use crate::raise_error;
 use crate::settings::cli::SETTINGS;
 use crate::token::view::AccessTokenResp;
@@ -31,35 +30,11 @@ use crate::users::UserModel;
 use crate::{
     error::BichonResult, generate_token, token::payload::AccessTokenCreateRequest, utc_now,
 };
-use native_db::*;
-use native_model::{native_model, Model};
 //use poem_openapi::{Enum, Object};
 use serde::{Deserialize, Serialize};
 
 pub mod payload;
 pub mod view;
-
-// Starting from version 0.2.0, this model is deprecated/no longer used
-// #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize, Object)]
-// #[native_model(id = 1, version = 1)]
-// #[native_db]
-// pub struct AccessToken {
-//     /// The unique token string used for authentication
-//     #[primary_key]
-//     pub token: String,
-//     /// A set of account information associated with the token.
-//     pub accounts: BTreeSet<AccountInfo>,
-//     /// The timestamp (in milliseconds since epoch) when the token was created.
-//     pub created_at: i64,
-//     /// The timestamp (in milliseconds since epoch) when the token was last updated.
-//     pub updated_at: i64,
-//     /// An optional description of the token's purpose or usage.
-//     pub description: Option<String>,
-//     /// The timestamp (in milliseconds since epoch) when the token was last used.
-//     pub last_access_at: i64,
-//     /// Optional access control settings
-//     pub acl: Option<AccessControl>,
-// }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Enum))]
@@ -70,14 +45,10 @@ pub enum TokenType {
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
-#[native_model(id = 11, version = 1)]
-#[native_db]
 pub struct AccessTokenModel {
     /// The ID of the user who owns this token
-    #[secondary_key]
     pub user_id: u64,
     /// The unique token string used for authentication
-    #[primary_key]
     pub token: String,
     /// An optional name of the token.
     pub name: Option<String>,
@@ -92,6 +63,15 @@ pub struct AccessTokenModel {
     pub expire_at: Option<i64>,
     /// The timestamp (in milliseconds since epoch) when the token was last used.
     pub last_access_at: i64,
+}
+
+impl MemDbModel for AccessTokenModel {
+    fn collection() -> &'static str {
+        "tokens"
+    }
+    fn key(&self) -> String {
+        self.token.clone()
+    }
 }
 
 impl AccessTokenModel {
@@ -127,74 +107,56 @@ impl AccessTokenModel {
         }
     }
 
-    pub async fn reset_webui_token(user_id: u64) -> BichonResult<String> {
-        let old_token = Self::get_user_webui_token(user_id).await?;
+    pub fn reset_webui_token(user_id: u64) -> BichonResult<String> {
+        let old_token = Self::get_user_webui_token(user_id)?;
         let new_token = Self::new_webui_token(user_id);
         let new_token_str = new_token.token.clone();
 
         match old_token {
             Some(old) => {
-                with_transaction(DB_MANAGER.meta_db(), move |rw| {
-                    rw.remove(old)
-                        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-
-                    rw.insert(new_token)
-                        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-
-                    Ok(())
-                })
-                .await?;
+                with_transaction(DB_MANAGER.db(), move |txn| {
+                    let txn = txn.delete(AccessTokenModel::collection(), old.token.clone());
+                    txn.insert(AccessTokenModel::collection(), new_token.key(), &new_token)
+                        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
+                })?;
             }
             None => {
-                insert_impl(DB_MANAGER.meta_db(), new_token).await?;
+                insert_impl(DB_MANAGER.db(), new_token)?;
             }
         }
 
         Ok(new_token_str)
     }
 
-    pub async fn get_user_webui_token(user_id: u64) -> BichonResult<Option<AccessTokenModel>> {
-        let tokens = async_filter_by_secondary_key_impl::<AccessTokenModel>(
-            DB_MANAGER.meta_db(),
-            AccessTokenModelKey::user_id,
-            user_id,
-        )
-        .await?;
-
+    pub fn get_user_webui_token(user_id: u64) -> BichonResult<Option<AccessTokenModel>> {
+        let tokens =
+            filter_impl::<AccessTokenModel, _>(DB_MANAGER.db(), move |t| t.user_id == user_id)?;
         Ok(tokens
             .into_iter()
             .find(|t| t.token_type == TokenType::WebUI))
     }
 
-    pub async fn get_user_api_tokens(user_id: u64) -> BichonResult<Vec<AccessTokenModel>> {
-        let tokens = async_filter_by_secondary_key_impl::<AccessTokenModel>(
-            DB_MANAGER.meta_db(),
-            AccessTokenModelKey::user_id,
-            user_id,
-        )
-        .await?;
-
+    pub fn get_user_api_tokens(user_id: u64) -> BichonResult<Vec<AccessTokenModel>> {
+        let tokens =
+            filter_impl::<AccessTokenModel, _>(DB_MANAGER.db(), move |t| t.user_id == user_id)?;
         Ok(tokens
             .into_iter()
             .filter(|t| t.token_type == TokenType::Api)
             .collect())
     }
 
-    pub async fn resolve_user_from_token(token: &str) -> BichonResult<UserModel> {
-        let token = token.to_string();
-        let token_option = async_find_impl::<AccessTokenModel>(DB_MANAGER.meta_db(), token).await?;
-        let token = match token_option {
-            Some(token) => token,
-            None => {
-                return Err(raise_error!(
+    pub fn resolve_user_from_token(token: &str) -> BichonResult<UserModel> {
+        let token_str = token.to_string();
+        let token_model = find_impl::<AccessTokenModel>(DB_MANAGER.db(), &token_str)?
+            .ok_or_else(|| {
+                raise_error!(
                     "Invalid access token provided. Please check your credentials.".into(),
                     ErrorCode::PermissionDenied
-                ))
-            }
-        };
+                )
+            })?;
 
-        if matches!(token.token_type, TokenType::WebUI) {
-            let life = utc_now!() - token.created_at;
+        if matches!(token_model.token_type, TokenType::WebUI) {
+            let life = utc_now!() - token_model.created_at;
             let max_life = SETTINGS.bichon_webui_token_expiration_hours * 60 * 60 * 1000;
 
             if life > (max_life as i64) {
@@ -205,8 +167,8 @@ impl AccessTokenModel {
             }
         }
 
-        if matches!(token.token_type, TokenType::Api) {
-            if let Some(expire_at) = token.expire_at {
+        if matches!(token_model.token_type, TokenType::Api) {
+            if let Some(expire_at) = token_model.expire_at {
                 if utc_now!() > expire_at {
                     return Err(raise_error!(
                         "Your API token has expired and is no longer valid.".into(),
@@ -214,87 +176,57 @@ impl AccessTokenModel {
                     ));
                 }
             }
-            let token = token.token.clone();
-            update_impl(
-                DB_MANAGER.meta_db(),
-                |rw| {
-                    rw.get()
-                        .primary::<AccessTokenModel>(token)
-                        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                        .ok_or_else(|| {
-                            raise_error!(
-                                "The access token does not exist or has been reset.".into(),
-                                ErrorCode::ResourceNotFound
-                            )
-                        })
-                },
-                |current| {
-                    let mut updated = current.clone();
-                    updated.last_access_at = utc_now!();
-                    Ok(updated)
-                },
-            )
-            .await?;
+            update_impl(DB_MANAGER.db(), &token_str, |current: AccessTokenModel| {
+                let mut updated = current.clone();
+                updated.last_access_at = utc_now!();
+                Ok(updated)
+            })?;
         }
 
-        let user = UserModel::find(token.user_id)
-            .await?
+        let user = UserModel::find(token_model.user_id)
+            ?
             .ok_or_else(|| raise_error!("The user associated with this access token does not exist or may have been deleted.".into(), ErrorCode::ResourceNotFound))?;
         Ok(user)
     }
 
-    pub async fn create_api_token(
+    pub fn create_api_token(
         user_id: u64,
         request: AccessTokenCreateRequest,
     ) -> BichonResult<String> {
         // Validate request parameters first
-        request.validate().await?;
+        request.validate()?;
         let expire_at = request
             .expire_in
             .map(|hours| utc_now!() + (hours as i64) * 60 * 60 * 1000);
         let token = generate_token!(128);
         let access_token =
             AccessTokenModel::new_api_token(token.clone(), user_id, request.name, expire_at);
-        insert_impl(DB_MANAGER.meta_db(), access_token).await?;
+        insert_impl(DB_MANAGER.db(), access_token)?;
         Ok(token)
     }
 
-    pub async fn delete(token: &str) -> BichonResult<()> {
-        let token = token.to_string();
-        delete_impl(DB_MANAGER.meta_db(), move |rw| {
-            rw.get()
-                .primary::<AccessTokenModel>(token.clone())
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-                .ok_or_else(|| {
-                    raise_error!(
-                        format!("Token '{}' not found during deletion process.", token),
-                        ErrorCode::ResourceNotFound
-                    )
-                })
+    pub fn delete(token: &str) -> BichonResult<()> {
+        delete_impl::<AccessTokenModel>(DB_MANAGER.db(), token)
+    }
+
+    pub fn get_token(token: &str) -> BichonResult<AccessTokenModel> {
+        find_impl::<AccessTokenModel>(DB_MANAGER.db(), token)?.ok_or_else(|| {
+            raise_error!(
+                format!("Access token '{}' not found", token),
+                ErrorCode::ResourceNotFound
+            )
         })
-        .await
     }
 
-    pub async fn get_token(token: &str) -> BichonResult<AccessTokenModel> {
-        async_find_impl(DB_MANAGER.meta_db(), token.to_string())
-            .await?
-            .ok_or_else(|| {
-                raise_error!(
-                    format!("Access token '{}' not found", token),
-                    ErrorCode::ResourceNotFound
-                )
-            })
-    }
+    pub fn list_all_api_tokens() -> BichonResult<Vec<AccessTokenResp>> {
+        let users = UserModel::list_all()?;
+        let all = list_all_impl::<AccessTokenModel>(DB_MANAGER.db())?;
 
-    pub async fn list_all_api_tokens() -> BichonResult<Vec<AccessTokenResp>> {
-        let users = UserModel::list_all().await?;
-        let mut all = list_all_impl::<AccessTokenModel>(DB_MANAGER.meta_db()).await?;
-
-        all.retain(|t| t.token_type == TokenType::Api);
         let user_map: HashMap<u64, UserModel> = users.into_iter().map(|u| (u.id, u)).collect();
 
         let resp = all
             .into_iter()
+            .filter(|t| t.token_type == TokenType::Api)
             .map(|token| {
                 let user = user_map.get(&token.user_id);
                 AccessTokenResp {

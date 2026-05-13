@@ -99,7 +99,7 @@ impl AccountDownTask {
                         SYNC_TASKS.set_busy(id, false).await;
                     });
                 });
-                let account = AccountModel::async_get(account_id).await.ok();
+                let account = AccountModel::get(account_id).ok();
                 match account {
                     Some(account) => {
                         if !account.enabled {
@@ -115,7 +115,7 @@ impl AccountDownTask {
                         } else {
                             if let Some(imap) = &account.imap {
                                 if let AuthType::OAuth2 = imap.auth.auth_type {
-                                    if OAuth2AccessToken::get(account.id).await?.is_none() {
+                                    if OAuth2AccessToken::get(account.id)?.is_none() {
                                         if utc_now!() % 300_000 == 0 {
                                             warn!("Account {}: download aborted. OAuth2 authorization not completed. Please visit the rustmailer admin page to authorize this account.", account_id);
                                         }
@@ -133,8 +133,7 @@ impl AccountDownTask {
                                 DownloadState::append_session_error(
                                     account.id,
                                     format!("error in account download task: {:#?}", e),
-                                )
-                                .await?;
+                                )?;
                                 error!(
                                     "Failed to download mailbox data for '{}': {:?}",
                                     account_id, e
@@ -228,7 +227,7 @@ impl AccountDownTask {
             if token_clone.is_cancelled() {
                 return;
             }
-            let account = match AccountModel::async_get(account_id).await {
+            let account = match AccountModel::get(account_id) {
                 Ok(acc) => acc,
                 Err(e) => {
                     error!("Failed to fetch account {}: {:?}", account_id, e);
@@ -240,7 +239,7 @@ impl AccountDownTask {
             {
                 error!("Manual download failed for {}: {:?}", account_id, e);
                 let error_msg = format!("error in account download task: {:#?}", e);
-                let _ = DownloadState::append_session_error(account.id, error_msg).await;
+                let _ = DownloadState::append_session_error(account.id, error_msg);
             }
         });
         {

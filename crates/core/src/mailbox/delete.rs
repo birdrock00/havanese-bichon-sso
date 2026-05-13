@@ -23,11 +23,11 @@ use crate::{
 };
 
 pub async fn delete_mailbox_impl(account_id: u64, mailbox_id: u64) -> BichonResult<()> {
-    let mailbox = MailBox::async_get(mailbox_id).await?;
+    let mailbox = MailBox::get(mailbox_id)?;
 
     let name = mailbox.name;
     let delimiter = mailbox.delimiter.unwrap_or("/".to_owned());
-    let all_mailboxes = MailBox::list_all(account_id).await?;
+    let all_mailboxes = MailBox::list_all(account_id)?;
 
     let prefix = format!("{}{}", name, delimiter);
     let ids_to_delete: Vec<u64> = all_mailboxes
@@ -41,7 +41,7 @@ pub async fn delete_mailbox_impl(account_id: u64, mailbox_id: u64) -> BichonResu
     }
 
     for id in &ids_to_delete {
-        MailBox::delete(*id).await?;
+        MailBox::delete(*id)?;
     }
 
     ENVELOPE_MANAGER

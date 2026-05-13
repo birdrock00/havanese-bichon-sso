@@ -16,74 +16,44 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::{path::Path, rc::Rc};
+use std::path::Path;
 
-use native_db::{Builder, Database};
+use memdb::{Durability, MemDb};
 
 use crate::{
-    account::migration::AccountV3,
-    database::META_MODELS,
+    database::MemDbModel,
     error::{code::ErrorCode, BichonResult},
     raise_error,
-    token::{AccessTokenModel, AccessTokenModelKey, TokenType},
     users::{UserModel, DEFAULT_ADMIN_USER_ID},
     utils::encrypt::internal_encrypt_string,
 };
-use itertools::Itertools;
 
-pub fn init_meta_database(path: impl AsRef<Path>) -> BichonResult<Rc<Database<'static>>> {
-    let database = Builder::new()
-        .set_cache_size(134217728)
-        .create(&META_MODELS, path)
-        .map_err(|e| {
-            raise_error!(
-                format!("Failed to open database: {:?}", e),
-                ErrorCode::InternalError
-            )
-        })?;
-
-    Ok(Rc::new(database))
+pub fn open_database(path: impl AsRef<Path>) -> BichonResult<MemDb> {
+    MemDb::open_with(path, Durability::Full).map_err(|e| {
+        raise_error!(
+            format!("Failed to open database: {:?}", e),
+            ErrorCode::InternalError
+        )
+    })
 }
 
-pub fn list_all_accounts(database: &Rc<Database<'static>>) -> BichonResult<Vec<AccountV3>> {
-    let r_transaction = database
-        .r_transaction()
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    let entities: Vec<AccountV3> = r_transaction
-        .scan()
-        .primary()
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-        .all()
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-        .try_collect()
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    Ok(entities)
-}
-
-pub fn find_admin(database: &Rc<Database<'static>>) -> BichonResult<Option<UserModel>> {
-    let r_transaction = database
-        .r_transaction()
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    let entity: Option<UserModel> = r_transaction
-        .get()
-        .primary(DEFAULT_ADMIN_USER_ID)
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    return Ok(entity);
+pub fn find_admin(db: &MemDb) -> BichonResult<Option<UserModel>> {
+    let key = DEFAULT_ADMIN_USER_ID.to_string();
+    let coll = db.collection(UserModel::collection());
+    coll.get(&key)
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
 }
 
 pub fn update_admin_password(
-    database: &Rc<Database<'static>>,
+    db: &MemDb,
     password: String,
     encrypt_key: &str,
 ) -> BichonResult<()> {
-    let rw_transaction = database
-        .rw_transaction()
+    let key = DEFAULT_ADMIN_USER_ID.to_string();
+    let coll = db.collection(UserModel::collection());
+    let entity: UserModel = coll
+        .get_required(&key)
         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    let entity: UserModel = rw_transaction
-        .get()
-        .primary(DEFAULT_ADMIN_USER_ID)
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-        .ok_or_else(|| raise_error!("admin is not found".into(), ErrorCode::InternalError))?;
 
     let mut updated = entity.clone();
     updated.password = Some(
@@ -91,53 +61,8 @@ pub fn update_admin_password(
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?,
     );
 
-    rw_transaction
-        .update(entity, updated)
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    rw_transaction
-        .commit()
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    return Ok(());
-}
-
-pub fn reset_webui_token(database: &Rc<Database<'static>>) -> BichonResult<()> {
-    let rw_transaction = database
-        .rw_transaction()
+    coll.upsert(&key, &updated)
         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
-    let tokens: Vec<AccessTokenModel> = rw_transaction
-        .scan()
-        .secondary(AccessTokenModelKey::user_id)
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-        .start_with(DEFAULT_ADMIN_USER_ID)
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-        .try_collect()
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-
-    let webui_token = tokens
-        .into_iter()
-        .find(|t| t.token_type == TokenType::WebUI);
-
-    let new_token = AccessTokenModel::new_webui_token(DEFAULT_ADMIN_USER_ID);
-    match webui_token {
-        Some(current) => {
-            rw_transaction
-                .remove(current)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-
-            rw_transaction
-                .insert(new_token)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        }
-        None => {
-            rw_transaction
-                .insert(new_token)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        }
-    }
-
-    rw_transaction
-        .commit()
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
     Ok(())
 }

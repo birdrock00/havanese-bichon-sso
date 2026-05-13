@@ -52,13 +52,13 @@ impl OAuth2Api {
         context: WrappedContext,
     ) -> ApiResult<Json<OAuth2>> {
         let id = id.0;
-        let mut oauth2 = OAuth2::get(id).await?.ok_or_else(|| {
+        let mut oauth2 = OAuth2::get(id)?.ok_or_else(|| {
             raise_error!(
                 format!("OAuth2 configuration id='{id}' not found"),
                 ErrorCode::ResourceNotFound
             )
         })?;
-        if context.has_permission(None, Permission::ROOT).await {
+        if context.has_permission(None, Permission::ROOT) {
             return Ok(Json(oauth2));
         }
         oauth2.scrub_sensitive_fields();
@@ -80,8 +80,8 @@ impl OAuth2Api {
         id: Path<u64>,
         context: WrappedContext,
     ) -> ApiResult<()> {
-        context.require_permission(None, Permission::ROOT).await?;
-        Ok(OAuth2::delete(id.0).await?)
+        context.require_permission(None, Permission::ROOT)?;
+        Ok(OAuth2::delete(id.0)?)
     }
 
     /// Creates a new OAuth2 configuration.
@@ -99,9 +99,9 @@ impl OAuth2Api {
         request: Json<OAuth2CreateRequest>,
         context: WrappedContext,
     ) -> ApiResult<()> {
-        context.require_permission(None, Permission::ROOT).await?;
+        context.require_permission(None, Permission::ROOT)?;
         let entity = OAuth2::new(request.0)?;
-        Ok(entity.save().await?)
+        Ok(entity.save()?)
     }
 
     /// Updates an existing OAuth2 configuration.
@@ -121,8 +121,8 @@ impl OAuth2Api {
         payload: Json<OAuth2UpdateRequest>,
         context: WrappedContext,
     ) -> ApiResult<()> {
-        context.require_permission(None, Permission::ROOT).await?;
-        Ok(OAuth2::update(id.0, payload.0).await?)
+        context.require_permission(None, Permission::ROOT)?;
+        Ok(OAuth2::update(id.0, payload.0)?)
     }
 
     /// Lists OAuth2 configurations with pagination and sorting options.
@@ -144,8 +144,8 @@ impl OAuth2Api {
         desc: Query<Option<bool>>,
         context: WrappedContext,
     ) -> ApiResult<Json<DataPage<OAuth2>>> {
-        let mut list = OAuth2::paginate_list(page.0, page_size.0, desc.0).await?;
-        if context.has_permission(None, Permission::ROOT).await {
+        let mut list = OAuth2::paginate_list(page.0, page_size.0, desc.0)?;
+        if context.has_permission(None, Permission::ROOT) {
             return Ok(Json(list));
         }
         //Non-root users can only view masked data.
@@ -172,15 +172,13 @@ impl OAuth2Api {
         context: WrappedContext,
     ) -> ApiResult<PlainText<String>> {
         let request = request.0;
-        context
-            .require_any_permission(vec![
-                (None, Permission::ACCOUNT_CREATE),
-                (Some(request.account_id), Permission::ACCOUNT_MANAGE),
-            ])
-            .await?;
+        context.require_any_permission(vec![
+            (None, Permission::ACCOUNT_CREATE),
+            (Some(request.account_id), Permission::ACCOUNT_MANAGE),
+        ])?;
 
         let flow = OAuth2Flow::new(request.oauth2_id);
-        Ok(PlainText(flow.authorize_url(request.account_id).await?))
+        Ok(PlainText(flow.authorize_url(request.account_id)?))
     }
 
     /// Retrieves OAuth2 access tokens for a specified account.
@@ -198,17 +196,13 @@ impl OAuth2Api {
         context: WrappedContext,
     ) -> ApiResult<Json<OAuth2AccessToken>> {
         let account = account_id.0;
-        context
-            .require_permission(Some(account), Permission::ACCOUNT_MANAGE)
-            .await?;
-        Ok(Json(OAuth2AccessToken::get(account).await?.ok_or_else(
-            || {
-                raise_error!(
-                    "OAuth2 access tokens not found".into(),
-                    ErrorCode::ResourceNotFound
-                )
-            },
-        )?))
+        context.require_permission(Some(account), Permission::ACCOUNT_MANAGE)?;
+        Ok(Json(OAuth2AccessToken::get(account)?.ok_or_else(|| {
+            raise_error!(
+                "OAuth2 access tokens not found".into(),
+                ErrorCode::ResourceNotFound
+            )
+        })?))
     }
 
     /// Configures an external OAuth2 token for a specified account.
@@ -239,12 +233,10 @@ impl OAuth2Api {
         context: WrappedContext,
     ) -> ApiResult<()> {
         let account_id = account_id.0;
-        AccountModel::check_account_exists(account_id).await?;
+        AccountModel::check_account_exists(account_id)?;
         // Check account access permissions
-        context
-            .require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)
-            .await?;
-        OAuth2AccessToken::upsert_external_oauth_token(account_id, request.0).await?;
+        context.require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)?;
+        OAuth2AccessToken::upsert_external_oauth_token(account_id, request.0)?;
         Ok(())
     }
 }

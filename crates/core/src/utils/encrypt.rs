@@ -136,12 +136,49 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_encrypt_decrypt() {
-        let password = "my_secure_passwasdasdasdasdasord";
-        let plaintext = "Helloasdasdasdasdasd, World!";
+    fn test_encrypt_decrypt_roundtrip() {
+        let password = "my_secure_password";
+        let plaintext = "Hello, World!";
         let encrypted = internal_encrypt_string(password, plaintext).unwrap();
-        println!("{}", &encrypted);
         let decrypted = internal_decrypt_string(password, &encrypted).unwrap();
         assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_wrong_password_fails() {
+        let encrypted =
+            internal_encrypt_string("correct_password", "secret").unwrap();
+        assert!(internal_decrypt_string("wrong_password", &encrypted).is_err());
+    }
+
+    #[test]
+    fn test_empty_string() {
+        let encrypted = internal_encrypt_string("pw", "").unwrap();
+        let decrypted = internal_decrypt_string("pw", &encrypted).unwrap();
+        assert_eq!(decrypted, "");
+    }
+
+    #[test]
+    fn test_unicode_content() {
+        let plaintext = "你好世界 🌍 émoji test";
+        let encrypted = internal_encrypt_string("pw", plaintext).unwrap();
+        let decrypted = internal_decrypt_string("pw", &encrypted).unwrap();
+        assert_eq!(decrypted, plaintext);
+    }
+
+    #[test]
+    fn test_encryption_produces_different_ciphertexts() {
+        let p1 = internal_encrypt_string("pw", "data").unwrap();
+        let p2 = internal_encrypt_string("pw", "data").unwrap();
+        // Same plaintext should produce different ciphertexts (random salt+nonce)
+        assert_ne!(p1, p2);
+    }
+
+    #[test]
+    fn test_decrypt_corrupted_data_fails() {
+        let mut encrypted = internal_encrypt_string("pw", "data").unwrap();
+        // Corrupt the base64 data by modifying a character
+        encrypted.push('X');
+        assert!(internal_decrypt_string("pw", &encrypted).is_err());
     }
 }

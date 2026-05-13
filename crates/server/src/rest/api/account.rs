@@ -56,10 +56,8 @@ impl AccountApi {
         context: WrappedContext,
     ) -> ApiResult<Json<AccountModel>> {
         let account_id = account_id.0;
-        context
-            .require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)
-            .await?;
-        Ok(Json(AccountModel::async_get(account_id).await?))
+        context.require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)?;
+        Ok(Json(AccountModel::get(account_id)?))
     }
 
     /// Delete an account by ID - WARNING: This permanently removes the account and all associated resources
@@ -75,10 +73,9 @@ impl AccountApi {
         context: WrappedContext,
     ) -> ApiResult<()> {
         let account_id = account_id.0;
-        context
-            .require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)
-            .await?;
-        Ok(AccountModel::delete(account_id).await?)
+        context.require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)?;
+        AccountModel::delete(account_id).await?;
+        Ok(())
     }
 
     /// Create a new account
@@ -89,9 +86,7 @@ impl AccountApi {
         payload: Json<AccountCreateRequest>,
         context: WrappedContext,
     ) -> ApiResult<Json<AccountModel>> {
-        context
-            .require_permission(None, Permission::ACCOUNT_CREATE)
-            .await?;
+        context.require_permission(None, Permission::ACCOUNT_CREATE)?;
         let account = AccountModel::create_account(context.user.id, payload.0).await?;
         Ok(Json(account))
     }
@@ -111,10 +106,8 @@ impl AccountApi {
         context: WrappedContext,
     ) -> ApiResult<()> {
         let account_id = account_id.0;
-        context
-            .require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)
-            .await?;
-        Ok(AccountModel::update(account_id, payload.0, true).await?)
+        context.require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)?;
+        Ok(AccountModel::update(account_id, payload.0, true)?)
     }
 
     /// List accounts with optional pagination parameters
@@ -129,16 +122,15 @@ impl AccountApi {
         desc: Query<Option<bool>>,
         context: WrappedContext,
     ) -> ApiResult<Json<DataPage<AccountResp>>> {
-        let is_admin = context.user.is_admin().await;
+        let is_admin = context.user.is_admin();
         let sort_desc = desc.0.unwrap_or(true);
 
-        let user_map: HashMap<u64, UserModel> = UserModel::list_all()
-            .await?
+        let user_map: HashMap<u64, UserModel> = UserModel::list_all()?
             .into_iter()
             .map(|u| (u.id, u))
             .collect();
         let page_data: DataPage<AccountModel> = if is_admin {
-            AccountModel::paginate_list(page.0, page_size.0, desc.0).await?
+            AccountModel::paginate_list(page.0, page_size.0, desc.0)?
         } else {
             let authorized_ids: HashSet<u64> =
                 context.user.account_access_map.keys().cloned().collect();
@@ -153,8 +145,7 @@ impl AccountApi {
                 }));
             }
 
-            let mut accounts: Vec<AccountModel> = AccountModel::list_all()
-                .await?
+            let mut accounts: Vec<AccountModel> = AccountModel::list_all()?
                 .into_iter()
                 .filter(|acct| authorized_ids.contains(&acct.id))
                 .collect();
@@ -198,11 +189,9 @@ impl AccountApi {
         context: WrappedContext,
     ) -> ApiResult<Json<DownloadState>> {
         let account_id = account_id.0;
-        AccountModel::check_account_exists(account_id).await?;
-        context
-            .require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)
-            .await?;
-        let state = DownloadState::get(account_id).await?;
+        AccountModel::check_account_exists(account_id)?;
+        context.require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)?;
+        let state = DownloadState::get(account_id)?;
         let state = state.unwrap_or(DownloadState::empty(account_id));
         Ok(Json(state))
     }
@@ -220,16 +209,14 @@ impl AccountApi {
         context: WrappedContext,
     ) -> ApiResult<()> {
         let account_id = account_id.0;
-        let account = AccountModel::check_account_exists(account_id).await?;
+        let account = AccountModel::check_account_exists(account_id)?;
         if !matches!(account.account_type, AccountType::IMAP) {
             return Err(raise_error!(
                 format!("Manual download is not supported for '{:#?}' accounts. Only IMAP accounts are supported.", account.account_type),
                 ErrorCode::InvalidParameter
             ))?;
         }
-        context
-            .require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)
-            .await?;
+        context.require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)?;
         SYNC_TASKS.start_manual_task(account_id).await?;
         Ok(())
     }
@@ -247,7 +234,7 @@ impl AccountApi {
         context: WrappedContext,
     ) -> ApiResult<()> {
         let account_id = account_id.0;
-        let account = AccountModel::check_account_exists(account_id).await?;
+        let account = AccountModel::check_account_exists(account_id)?;
 
         if !matches!(account.account_type, AccountType::IMAP) {
             return Err(raise_error!(
@@ -255,9 +242,7 @@ impl AccountApi {
                 ErrorCode::InvalidParameter
             ))?;
         }
-        context
-            .require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)
-            .await?;
+        context.require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)?;
 
         if !SYNC_TASKS.is_manual_running(account_id).await {
             return Err(raise_error!(
@@ -282,11 +267,9 @@ impl AccountApi {
         context: WrappedContext,
     ) -> ApiResult<Json<AccountStats>> {
         let account_id = account_id.0;
-        AccountModel::check_account_exists(account_id).await?;
-        context
-            .require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)
-            .await?;
-        let state = ENVELOPE_MANAGER.get_account_stats(account_id).await?;
+        AccountModel::check_account_exists(account_id)?;
+        context.require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)?;
+        let state = ENVELOPE_MANAGER.get_account_stats(account_id)?;
         Ok(Json(state))
     }
 
@@ -304,10 +287,10 @@ impl AccountApi {
         only_nosync: Query<Option<bool>>,
         context: WrappedContext,
     ) -> ApiResult<Json<Vec<MinimalAccount>>> {
-        let is_admin = context.user.is_admin().await;
+        let is_admin = context.user.is_admin();
         let only_nosync = only_nosync.0.unwrap_or_default();
 
-        let minimal_list = AccountModel::minimal_list(only_nosync).await?;
+        let minimal_list = AccountModel::minimal_list(only_nosync)?;
         if is_admin {
             return Ok(Json(minimal_list));
         }
@@ -323,8 +306,8 @@ impl AccountApi {
         req: Json<BatchAccountRoleRequest>,
         context: WrappedContext,
     ) -> ApiResult<()> {
-        req.validate_existence().await?;
-        req.0.do_assign(&context).await?;
+        req.validate_existence()?;
+        req.0.do_assign(&context)?;
         Ok(())
     }
 }

@@ -111,7 +111,7 @@ async fn connect_with_optional_proxy(
 ) -> BichonResult<TcpStream> {
     // Try if proxy is enabled
     if let Some(proxy_id) = use_proxy {
-        let proxy = Proxy::get(proxy_id).await?;
+        let proxy = Proxy::get(proxy_id)?;
         let proxy = parse_proxy_addr(&proxy.url)?;
         return timeout(TIMEOUT, Socks5Stream::connect(proxy, address))
             .await

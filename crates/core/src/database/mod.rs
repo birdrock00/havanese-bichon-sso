@@ -16,332 +16,157 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::account::migration::{AccountV1, AccountV2, AccountV3, AccountV4};
-use crate::autoconfig::CachedMailSettings;
 use crate::common::paginated::Paginated;
 use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
-use crate::oauth2::entity::OAuth2;
-use crate::oauth2::pending::OAuth2PendingEntity;
-use crate::oauth2::token::OAuth2AccessToken;
-use crate::settings::proxy::Proxy;
-use crate::settings::system::SystemSetting;
-use crate::token::AccessTokenModel;
-use crate::users::role::UserRole;
-use crate::users::{BichonUser, BichonUserV2};
 use crate::raise_error;
-use db_type::{KeyOptions, ToKeyDefinition};
-use itertools::Itertools;
-use native_db::*;
+use memdb::{MemDb, Transaction};
+use serde::de::DeserializeOwned;
 use serde::Serialize;
-use std::sync::{Arc, LazyLock};
-use transaction::RwTransaction;
 
 pub mod manager;
 
-pub static META_MODELS: LazyLock<Models> = LazyLock::new(|| {
-    let mut adapter = ModelsAdapter::new();
-    adapter.register_metadata_models();
-    adapter.models
-});
-
-pub struct ModelsAdapter {
-    pub models: Models,
+/// Trait for models that can be stored in MemDb collections.
+pub trait MemDbModel: Serialize + DeserializeOwned + Clone + Send + 'static {
+    /// The collection name this model is stored under.
+    fn collection() -> &'static str;
+    /// The primary key as a string for MemDb storage.
+    fn key(&self) -> String;
 }
 
-impl ModelsAdapter {
-    pub fn new() -> Self {
-        ModelsAdapter {
-            models: Models::new(),
-        }
+// ─── Insert ───────────────────────────────────────────────────────────────
+
+pub fn insert_impl<M: MemDbModel>(db: &MemDb, item: M) -> BichonResult<()> {
+    let coll = db.collection(M::collection());
+    let key = item.key();
+    coll.insert(key, &item)
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
+}
+
+pub fn batch_insert_impl<M: MemDbModel>(db: &MemDb, items: Vec<M>) -> BichonResult<()> {
+    let txn = db.transaction();
+    let mut txn = txn;
+    for item in &items {
+        txn = txn
+            .insert(M::collection(), item.key(), item)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
     }
+    txn.commit()
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
+}
 
-    pub fn register_model<T: ToInput>(&mut self) {
-        self.models.define::<T>().expect("failed to define model ");
+// ─── Upsert ────────────────────────────────────────────────────────────────
+
+pub fn upsert_impl<M: MemDbModel>(db: &MemDb, item: M) -> BichonResult<()> {
+    let coll = db.collection(M::collection());
+    coll.upsert(item.key(), &item)
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
+}
+
+pub fn batch_upsert_impl<M: MemDbModel>(db: &MemDb, items: Vec<M>) -> BichonResult<()> {
+    let txn = db.transaction();
+    let mut txn = txn;
+    for item in &items {
+        txn = txn
+            .upsert(M::collection(), item.key(), item)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
     }
-
-    pub fn register_metadata_models(&mut self) {
-        //Starting from version 0.2.0, `AccessToken` is deprecated/no longer used, but its ID must not be reused, otherwise it may cause model errors.
-        //self.register_model::<AccessToken>();
-        self.register_model::<SystemSetting>();
-        self.register_model::<CachedMailSettings>();
-        self.register_model::<AccountV1>();
-        self.register_model::<AccountV2>();
-        self.register_model::<AccountV3>();
-        self.register_model::<AccountV4>();
-        self.register_model::<OAuth2>();
-        self.register_model::<OAuth2PendingEntity>();
-        self.register_model::<OAuth2AccessToken>();
-        self.register_model::<Proxy>();
-        self.register_model::<UserRole>();
-        self.register_model::<BichonUser>();
-        self.register_model::<BichonUserV2>();
-        self.register_model::<AccessTokenModel>();
-    }
+    txn.commit()
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
 }
 
-pub async fn insert_impl<T: ToInput + Clone + Send + 'static>(
-    database: &Arc<Database<'static>>,
-    item: T,
-) -> BichonResult<()> {
-    let db = database.clone();
-    tokio::task::spawn_blocking(move || {
-        let rw_transaction = db
-            .rw_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        rw_transaction
-            .insert(item)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        rw_transaction
-            .commit()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Ok(())
-    })
-    .await
-    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+// ─── Find ──────────────────────────────────────────────────────────────────
+
+pub fn find_impl<M: MemDbModel>(db: &MemDb, key: &str) -> BichonResult<Option<M>> {
+    let coll = db.collection(M::collection());
+    coll.get(key)
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
 }
 
-pub async fn batch_insert_impl<T: ToInput + Clone + Send + 'static>(
-    database: &Arc<Database<'static>>,
-    batch: Vec<T>,
-) -> BichonResult<()> {
-    let db = database.clone();
-    tokio::task::spawn_blocking(move || {
-        let rw_transaction = db
-            .rw_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        for item in batch {
-            rw_transaction
-                .insert(item)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        }
-        rw_transaction
-            .commit()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Ok(())
-    })
-    .await
-    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+// ─── Filter (replaces secondary key queries) ──────────────────────────────
+
+pub fn filter_impl<M, F>(db: &MemDb, predicate: F) -> BichonResult<Vec<M>>
+where
+    M: MemDbModel,
+    F: Fn(&M) -> bool + Send + 'static,
+{
+    let coll = db.collection(M::collection());
+    coll.filter(predicate)
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
 }
 
-pub async fn batch_upsert_impl<T: ToInput + Clone + Send + 'static>(
-    database: &Arc<Database<'static>>,
-    batch: Vec<T>,
-) -> BichonResult<()> {
-    let db = database.clone();
-    tokio::task::spawn_blocking(move || {
-        let rw_transaction = db
-            .rw_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        for item in batch {
-            rw_transaction
-                .upsert(item)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        }
-        rw_transaction
-            .commit()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Ok(())
-    })
-    .await
-    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-}
+// ─── Update (read-modify-write under a single spawn_blocking) ─────────────
 
-pub async fn upsert_impl<T: ToInput + Clone + Send + 'static>(
-    database: &Arc<Database<'static>>,
-    item: T,
-) -> BichonResult<()> {
-    let db = database.clone();
-    tokio::task::spawn_blocking(move || {
-        let rw_transaction = db
-            .rw_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        rw_transaction
-            .upsert(item)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        rw_transaction
-            .commit()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Ok(())
-    })
-    .await
-    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-}
-
-pub async fn update_impl<T: ToInput + Clone + std::fmt::Debug + Send + 'static>(
-    database: &Arc<Database<'static>>,
-    current: impl FnOnce(&RwTransaction) -> BichonResult<T> + Send + 'static,
-    updated: impl FnOnce(&T) -> BichonResult<T> + Send + 'static,
-) -> BichonResult<T> {
-    let db = database.clone();
-    tokio::task::spawn_blocking(move || {
-        let rw = db
-            .rw_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        let current_item = current(&rw)?;
-        let updated_item = updated(&current_item)?;
-        rw.update(current_item, updated_item.clone())
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        rw.commit()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Ok(updated_item)
-    })
-    .await
-    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-}
-
-pub async fn async_find_impl<T: ToInput + Clone + Send + 'static>(
-    database: &Arc<Database<'static>>,
-    key: impl ToKey + Send + 'static,
-) -> BichonResult<Option<T>> {
-    let db = database.clone();
-    tokio::task::spawn_blocking(move || {
-        let r_transaction = db
-            .r_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        let entity: Option<T> = r_transaction
-            .get()
-            .primary(key)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Ok(entity)
-    })
-    .await
-    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-}
-
-pub fn find_impl<T: ToInput + Clone + Send + 'static>(
-    database: &Arc<Database<'static>>,
-    key: impl ToKey + Send + 'static,
-) -> BichonResult<Option<T>> {
-    let db = database.clone();
-    let r_transaction = db
-        .r_transaction()
+pub fn update_impl<M: MemDbModel>(
+    db: &MemDb,
+    key: &str,
+    update_fn: impl FnOnce(M) -> BichonResult<M> + Send + 'static,
+) -> BichonResult<M> {
+    let coll = db.collection(M::collection());
+    let current: M = coll
+        .get_required(key)
         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    let entity: Option<T> = r_transaction
-        .get()
-        .primary(key)
+    let updated = update_fn(current)?;
+    coll.upsert(key, &updated)
         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    Ok(entity)
+    Ok(updated)
 }
 
-pub async fn delete_impl<T: ToInput + Clone + Send + 'static>(
-    database: &Arc<Database<'static>>,
-    delete: impl FnOnce(&RwTransaction) -> BichonResult<T> + Send + 'static,
-) -> BichonResult<()> {
-    let db = database.clone();
-    tokio::task::spawn_blocking(move || {
-        let rw_transaction = db
-            .rw_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        let to_delete = delete(&rw_transaction)?;
-        rw_transaction
-            .remove::<T>(to_delete)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        rw_transaction
-            .commit()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Ok(())
-    })
-    .await
-    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+// ─── Delete ────────────────────────────────────────────────────────────────
+
+pub fn delete_impl<M: MemDbModel>(db: &MemDb, key: &str) -> BichonResult<()> {
+    let coll = db.collection(M::collection());
+    let existed = coll
+        .delete(key)
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+    if !existed {
+        return Err(raise_error!(
+            format!("{} '{}' not found for deletion", M::collection(), key),
+            ErrorCode::ResourceNotFound
+        ));
+    }
+    Ok(())
 }
 
-pub async fn batch_delete_impl<T: ToInput + Clone + Send + 'static>(
-    database: &Arc<Database<'static>>,
-    delete: impl FnOnce(&RwTransaction) -> BichonResult<Vec<T>> + Send + 'static,
-) -> BichonResult<usize> {
-    let db = database.clone();
-    tokio::task::spawn_blocking(move || {
-        let rw_transaction = db
-            .rw_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        let to_delete = delete(&rw_transaction)?;
-        let delete_count = to_delete.len();
-        for item in to_delete {
-            rw_transaction
-                .remove(item)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        }
-        rw_transaction
-            .commit()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Ok(delete_count)
-    })
-    .await
-    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+pub fn batch_delete_impl<M: MemDbModel>(db: &MemDb, keys: Vec<String>) -> BichonResult<usize> {
+    let txn = db.transaction();
+    let mut txn = txn;
+    let mut count = 0usize;
+    for key in &keys {
+        txn = txn.delete(M::collection(), key.clone());
+        count += 1;
+    }
+    txn.commit()
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+    Ok(count)
 }
 
-pub async fn list_all_impl<T: ToInput + Clone + Send + 'static>(
-    database: &Arc<Database<'static>>,
-) -> BichonResult<Vec<T>> {
-    let db = database.clone();
-    tokio::task::spawn_blocking(move || {
-        let r_transaction = db
-            .r_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        let entities: Vec<T> = r_transaction
-            .scan()
-            .primary()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-            .all()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-            .try_collect()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Ok(entities)
-    })
-    .await
-    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+// ─── List / Count ──────────────────────────────────────────────────────────
+
+pub fn list_all_impl<M: MemDbModel>(db: &MemDb) -> BichonResult<Vec<M>> {
+    let coll = db.collection(M::collection());
+    coll.list_all()
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
 }
 
-pub async fn with_transaction(
-    database: &Arc<Database<'static>>,
-    f: impl FnOnce(&RwTransaction) -> BichonResult<()> + Send + 'static,
-) -> BichonResult<()> {
-    let db: Arc<Database<'_>> = database.clone();
-    tokio::task::spawn_blocking(move || {
-        let rw_transaction = db
-            .rw_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        f(&rw_transaction)?;
-        rw_transaction
-            .commit()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Ok(())
-    })
-    .await
-    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+pub fn count_impl<M: MemDbModel>(db: &MemDb) -> BichonResult<usize> {
+    let coll = db.collection(M::collection());
+    Ok(coll.count())
 }
 
-// For tables with a creation timestamp, place the creation time at the front of the primary key.
-// This allows sorting by time, as the data is stored in dictionary order based on the primary key.
-// If reverse sorting by time is needed, the iterator can be reversed.
-pub async fn paginate_query_primary_scan_all_impl<
-    T: ToInput + Serialize + std::fmt::Debug + std::marker::Unpin + Send + Sync + 'static,
->(
-    database: &Arc<Database<'static>>,
+// ─── Paginate ──────────────────────────────────────────────────────────────
+
+pub fn paginate_impl<M: MemDbModel>(
+    db: &MemDb,
     page: Option<u64>,
     page_size: Option<u64>,
     desc: Option<bool>,
-) -> BichonResult<Paginated<T>> {
-    let db = database.clone();
+) -> BichonResult<Paginated<M>> {
+    let coll = db.collection(M::collection());
+    let total_items = coll.count() as u64;
 
-    tokio::task::spawn_blocking(move || {
-        let r_transaction = db
-            .r_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        let total_items = r_transaction
-            .len()
-            .primary::<T>()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-
-        // Validate page and page_size
-        let (offset, total_pages) = if let (Some(p), Some(s)) = (page, page_size) {
-            if p == 0 || s == 0 {
-                return Err(raise_error!(
-                    "'page' and 'page_size' must be greater than 0.".into(),
-                    ErrorCode::InvalidParameter
-                ));
-            }
+    let (offset, total_pages) = match (page, page_size) {
+        (Some(p), Some(s)) if p > 0 && s > 0 => {
             let offset = (p - 1) * s;
             let total_pages = if total_items > 0 {
                 (total_items as f64 / s as f64).ceil() as u64
@@ -349,158 +174,52 @@ pub async fn paginate_query_primary_scan_all_impl<
                 0
             };
             (Some(offset), Some(total_pages))
-        } else {
-            (None, None)
-        };
-
-        // Handle empty result early
-        if let Some(offset) = offset {
-            if offset >= total_items {
-                return Ok(Paginated::new(
-                    page,
-                    page_size,
-                    total_items,
-                    total_pages,
-                    vec![],
-                ));
-            }
         }
+        (Some(0), _) | (_, Some(0)) => {
+            return Err(raise_error!(
+                "'page' and 'page_size' must be greater than 0.".into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+        _ => (None, None),
+    };
 
-        let scan = r_transaction
-            .scan()
-            .primary()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        let iter = scan
-            .all()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-
-        // Collect items based on the reverse flag and pagination
-        let items: Vec<T> = match desc {
-            Some(true) => iter
-                .rev()
-                .skip(offset.unwrap_or(0) as usize)
-                .take(page_size.unwrap_or(total_items) as usize)
-                .try_collect()
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?,
-            _ => iter
-                .skip(offset.unwrap_or(0) as usize)
-                .take(page_size.unwrap_or(total_items) as usize)
-                .try_collect()
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?,
-        };
-
-        Ok(Paginated::new(
-            page,
-            page_size,
-            total_items,
-            total_pages,
-            items,
-        ))
-    })
-    .await
-    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-}
-
-pub async fn async_filter_by_secondary_key_impl<T: ToInput + Clone + Send + 'static>(
-    database: &Arc<Database<'static>>,
-    key_def: impl ToKeyDefinition<KeyOptions> + Send + 'static,
-    start_with: impl ToKey + Send + 'static,
-) -> BichonResult<Vec<T>> {
-    let db = database.clone();
-    tokio::task::spawn_blocking(move || {
-        let r_transaction = db
-            .r_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        let entities: Vec<T> = r_transaction
-            .scan()
-            .secondary(key_def)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-            .start_with(start_with)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-            .try_collect()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Ok(entities)
-    })
-    .await
-    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-}
-
-pub fn filter_by_secondary_key_impl<T: ToInput + Clone + Send + 'static>(
-    database: &Arc<Database<'static>>,
-    key_def: impl ToKeyDefinition<KeyOptions> + Send + 'static,
-    start_with: impl ToKey + Send + 'static,
-) -> BichonResult<Vec<T>> {
-    let db = database.clone();
-    let r_transaction = db
-        .r_transaction()
+    let all: Vec<M> = coll
+        .list_all()
         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    let entities: Vec<T> = r_transaction
-        .scan()
-        .secondary(key_def)
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-        .start_with(start_with)
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-        .try_collect()
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    Ok(entities)
+
+    let items: Vec<M> = match desc {
+        Some(true) => {
+            let iter: Vec<M> = all.into_iter().rev().collect();
+            let skip = offset.unwrap_or(0) as usize;
+            let take = page_size.unwrap_or(total_items) as usize;
+            iter.into_iter().skip(skip).take(take).collect()
+        }
+        _ => {
+            let skip = offset.unwrap_or(0) as usize;
+            let take = page_size.unwrap_or(total_items) as usize;
+            all.into_iter().skip(skip).take(take).collect()
+        }
+    };
+
+    Ok(Paginated::new(
+        page,
+        page_size,
+        total_items,
+        total_pages,
+        items,
+    ))
 }
 
-pub async fn count_by_unique_secondary_key_impl<T: ToInput + Clone + Send + 'static>(
-    database: &Arc<Database<'static>>,
-    key_def: impl ToKeyDefinition<KeyOptions> + Send + 'static,
-) -> BichonResult<usize> {
-    let db = database.clone();
-    tokio::task::spawn_blocking(move || {
-        let r_transaction = db
-            .r_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        let count = r_transaction
-            .scan()
-            .secondary::<T>(key_def)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-            .all()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-            .count();
-        Ok(count)
-    })
-    .await
-    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-}
+// ─── Transaction ───────────────────────────────────────────────────────────
 
-pub async fn async_secondary_find_impl<T: ToInput + Clone + Send + 'static>(
-    database: &Arc<Database<'static>>,
-    key_def: impl ToKeyDefinition<KeyOptions> + Send + 'static,
-    key: impl ToKey + Send + 'static,
-) -> BichonResult<Option<T>> {
-    let db = database.clone();
-    tokio::task::spawn_blocking(move || {
-        let r_transaction = db
-            .r_transaction()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-
-        let entities: Option<T> = r_transaction
-            .get()
-            .secondary(key_def, key)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-
-        Ok(entities)
-    })
-    .await
-    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-}
-
-pub fn secondary_find_impl<T: ToInput + Clone + Send + 'static>(
-    database: &Arc<Database<'static>>,
-    key_def: impl ToKeyDefinition<KeyOptions> + Send + 'static,
-    key: impl ToKey + Send + 'static,
-) -> BichonResult<Option<T>> {
-    let db = database.clone();
-    let r_transaction = db
-        .r_transaction()
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    let entities: Option<T> = r_transaction
-        .get()
-        .secondary(key_def, key)
-        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-    Ok(entities)
+/// Execute operations within a single atomic transaction (one WAL entry).
+pub fn with_transaction(
+    db: &MemDb,
+    f: impl FnOnce(Transaction) -> BichonResult<Transaction> + Send + 'static,
+) -> BichonResult<()> {
+    let txn = db.transaction();
+    let txn = f(txn)?;
+    txn.commit()
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
 }

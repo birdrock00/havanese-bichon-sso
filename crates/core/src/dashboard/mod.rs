@@ -62,29 +62,21 @@ pub struct DashboardStats {
 
 impl DashboardStats {
     pub async fn get(context: ClientContext) -> BichonResult<Self> {
-        let has_all_accounts = context
-            .has_permission(None, Permission::ACCOUNT_MANAGE_ALL)
-            .await;
-
+        let has_all_accounts = context.has_permission(None, Permission::ACCOUNT_MANAGE_ALL);
         let authorized_ids: Option<HashSet<u64>> = if has_all_accounts {
             None
         } else {
             Some(context.user.account_access_map.keys().cloned().collect())
         };
 
-        let mut stat = ENVELOPE_MANAGER
-            .get_dashboard_stats(&authorized_ids)
-            .await?;
+        let mut stat = ENVELOPE_MANAGER.get_dashboard_stats(&authorized_ids)?;
 
-        stat.top_largest_emails = ENVELOPE_MANAGER
-            .top_10_largest_emails(&authorized_ids)
-            .await?;
-        stat.top_largest_attachments = ATTACHMENT_MANAGER
-            .top_10_largest_attachments(&authorized_ids)
-            .await?;
+        stat.top_largest_emails = ENVELOPE_MANAGER.top_10_largest_emails(&authorized_ids)?;
+        stat.top_largest_attachments =
+            ATTACHMENT_MANAGER.top_10_largest_attachments(&authorized_ids)?;
 
         stat.account_count = if has_all_accounts {
-            AccountModel::count().await?
+            AccountModel::count()?
         } else {
             authorized_ids.as_ref().map(|ids| ids.len()).unwrap_or(0)
         };
@@ -196,18 +188,11 @@ impl LargestAttachment {
         let size_bytes = value.as_u64().ok_or_else(|| {
             raise_error!("'size' field is not a u64".into(), ErrorCode::InternalError)
         })?;
-        let value = document.get_first(fields.f_name_exact).ok_or_else(|| {
-            raise_error!(
-                "'name_exact' field not found".into(),
-                ErrorCode::InternalError
-            )
-        })?;
-        let name = value.as_str().map(|s| s.to_string()).ok_or_else(|| {
-            raise_error!(
-                "'name_exact' field is not a string".into(),
-                ErrorCode::InternalError
-            )
-        })?;
+        let name = document
+            .get_first(fields.f_name_exact)
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| "Unknown".to_string());
 
         let value = document.get_first(fields.f_id).ok_or_else(|| {
             raise_error!(

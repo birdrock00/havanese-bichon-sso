@@ -1,8 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use bichon_core::{
-    admin::meta::{find_admin, init_meta_database, update_admin_password},
-    error::BichonError,
+    admin::meta::{find_admin, open_database, update_admin_password},
     utils::encrypt::internal_decrypt_string,
 };
 use console::{style, Emoji};
@@ -19,9 +18,9 @@ pub fn handle_reset_password(theme: &ColorfulTheme) {
             if !path.exists() {
                 return Err("Directory does not exist.");
             }
-            let has_metadata = path.join("meta.db").exists();
-            if !has_metadata {
-                return Err("Invalid directory: 'meta.db' not found.");
+            let memdb_dir = path.join("memdb");
+            if !memdb_dir.exists() || !memdb_dir.is_dir() {
+                return Err("Invalid directory: 'memdb' data directory not found.");
             }
             Ok(())
         })
@@ -29,39 +28,11 @@ pub fn handle_reset_password(theme: &ColorfulTheme) {
         .unwrap();
 
     let root_path = PathBuf::from(&root_dir_str);
-    let database = match init_meta_database(&root_path.join("meta.db")) {
-        Ok(database) => database,
-        Err(e) => match e {
-            BichonError::Generic {
-                message,
-                location,
-                code,
-            } => {
-                if message.contains("RedbDatabaseError(DatabaseAlreadyOpen") {
-                    println!("\n{}", style("ERROR: Database is locked.").red().bold());
-                    println!(
-                        "{}",
-                        style("The Bichon service is likely still running.").yellow()
-                    );
-                    println!(
-                        "Since the database cannot be shared between multiple instances, \n\
-                     you must {} the Bichon service before proceeding.",
-                        style("STOP").underlined().bold()
-                    );
-                    std::process::exit(1);
-                } else {
-                    eprintln!(
-                        "\n{} (Code: {:#?})\nLocation: {}\nMessage: {}",
-                        style("A database error occurred:").red().bold(),
-                        code,
-                        location,
-                        message
-                    );
-                    std::process::exit(1);
-                }
-            }
-        },
-    };
+    let database = open_database(&root_path.join("memdb")).unwrap_or_else(|e| {
+        eprintln!("\n{} Failed to open database.", style("ERROR:").red().bold());
+        eprintln!("Details: {:?}", e);
+        std::process::exit(1);
+    });
 
     let admin = find_admin(&database);
 

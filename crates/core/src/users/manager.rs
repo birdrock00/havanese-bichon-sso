@@ -26,7 +26,7 @@ pub struct UserManager;
 
 impl Initialize for UserManager {
     async fn initialize() -> BichonResult<()> {
-        UserRole::ensure_default_roles_exists().await?;
-        UserModel::ensure_default_admin_exists().await
+        UserRole::ensure_default_roles_exists()?;
+        UserModel::ensure_default_admin_exists()
     }
 }
