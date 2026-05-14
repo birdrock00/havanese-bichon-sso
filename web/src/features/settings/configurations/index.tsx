@@ -35,10 +35,10 @@ import { get_system_configurations } from "@/api/system/api"
 import { useQuery } from "@tanstack/react-query"
 import { useTranslation } from "react-i18next"
 
-const formatMB = (bytes?: number) => {
-  if (!bytes) return "—"
-  return `${(bytes / 1024 / 1024).toFixed(0)} MB`
-}
+// const formatMB = (bytes?: number) => {
+//   if (!bytes) return "—"
+//   return `${(bytes / 1024 / 1024).toFixed(0)} MB`
+// }
 
 function BooleanBadge({ value }: { value: boolean }) {
   const { t } = useTranslation()
