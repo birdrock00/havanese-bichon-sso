@@ -100,6 +100,7 @@
     "auth": "Авторизация",
     "authType": "тип_авторизации",
     "autoConfiguring": "Автонастройка...",
+    "autoDownloadNewMailboxesDescription": "Автоматически добавлять новые папки в список загрузки.",
     "beforeRelative": "Скачать только старые письма",
     "beforeRelativeValue": "Скачать письма за {{value}} {{unit}} назад",
     "cancelDownload": "Отменить загрузку",

@@ -62,9 +62,21 @@ impl AccountDownTask {
         }
     }
 
-    async fn is_busy(&self, account_id: u64) -> bool {
-        self.busy_accounts.lock().await.contains(&account_id)
+    /// Atomically check and set busy. Returns true if we claimed the slot,
+    /// false if another task is already busy on this account.
+    async fn try_set_busy(&self, account_id: u64) -> bool {
+        let mut guard = self.busy_accounts.lock().await;
+        if guard.contains(&account_id) {
+            false
+        } else {
+            guard.insert(account_id);
+            true
+        }
     }
+
+    // async fn is_busy(&self, account_id: u64) -> bool {
+    //     self.busy_accounts.lock().await.contains(&account_id)
+    // }
 
     pub async fn start_download_task(&self, account_id: u64, email: String) {
         let task_name = format!("account-download-task-{}-{}", account_id, &email);
@@ -85,7 +97,7 @@ impl AccountDownTask {
                     return Ok(());
                 }
 
-                if SYNC_TASKS.is_busy(account_id).await {
+                if !SYNC_TASKS.try_set_busy(account_id).await {
                     warn!(
                         "Account {}: Scheduled task skipped (Previous sync still active).",
                         account_id
@@ -93,7 +105,6 @@ impl AccountDownTask {
                     return Ok(());
                 }
 
-                SYNC_TASKS.set_busy(account_id, true).await;
                 let _busy_guard = scopeguard::guard(account_id, |id| {
                     tokio::spawn(async move {
                         SYNC_TASKS.set_busy(id, false).await;
@@ -205,9 +216,9 @@ impl AccountDownTask {
                     ErrorCode::Forbidden
                 ));
             }
-            if self.is_busy(account_id).await {
+            if !self.try_set_busy(account_id).await {
                 return Err(raise_error!(
-                    "The background synchronization is currently active. Please try again in a few seconds.".into(), 
+                    "The background synchronization is currently active. Please try again in a few seconds.".into(),
                     ErrorCode::Forbidden
                 ));
             }
@@ -216,7 +227,7 @@ impl AccountDownTask {
         let cancel_token = CancellationToken::new();
         let token_clone = cancel_token.clone();
         let handle = tokio::spawn(async move {
-            SYNC_TASKS.set_busy(account_id, true).await;
+            // busy already claimed by caller via try_set_busy
             let _cleanup = scopeguard::guard(account_id, |id| {
                 tokio::spawn(async move {
                     SYNC_TASKS.set_busy(id, false).await;

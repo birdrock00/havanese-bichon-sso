@@ -100,6 +100,8 @@
     "auth": "Auth",
     "authType": "auth_type",
     "autoConfiguring": "Auto-configuring...",
+    "autoDownloadNewMailboxes": "Auto-add new mailboxes",
+    "autoDownloadNewMailboxesDescription": "Automatically add newly discovered folders to the download list.",
     "beforeRelative": "Download Old Emails Only",
     "beforeRelativeValue": "Download emails before {{value}} {{unit}} ago",
     "cancelDownload": "Cancel download",

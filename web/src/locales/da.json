@@ -100,6 +100,7 @@
     "auth": "Godkendelse",
     "authType": "godkendelsestype",
     "autoConfiguring": "Konfigurerer automatisk...",
+    "autoDownloadNewMailboxesDescription": "Føj automatisk nye mapper til downloadlisten.",
     "beforeRelative": "Download kun gamle e-mails",
     "beforeRelativeValue": "Download e-mails før {{value}} {{unit}} siden",
     "cancelDownload": "Annuller download",

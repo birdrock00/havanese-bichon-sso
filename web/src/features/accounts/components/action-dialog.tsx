@@ -114,6 +114,7 @@ export type Account = {
   folder_limit?: number;
   download_interval_min: number;
   download_batch_size: number;
+  auto_download_new_mailboxes: boolean;
 };
 
 const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
@@ -138,6 +139,7 @@ const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
       .int()
       .min(10, { message: t('validation.singleRequestBatchSizeTooSmall') })
       .max(200, { message: t('validation.singleRequestBatchSizeTooLarge') }),
+    auto_download_new_mailboxes: z.boolean(),
   });
 
 type Step = {
@@ -151,7 +153,7 @@ export type Steps = [...Step[]];
 const getSteps = (t: (key: string) => string): Steps => [
   { id: "step-1", name: t('accounts.steps.emailAddress'), fields: ["email", "account_name"] },
   { id: "step-2", name: t('accounts.steps.imap'), fields: ["imap", "use_dangerous", "login_name"] },
-  { id: "step-3", name: t('accounts.steps.syncPreferences'), fields: ["enabled", "date_since", "date_before", "folder_limit", "download_interval_min", "download_batch_size"] },
+  { id: "step-3", name: t('accounts.steps.syncPreferences'), fields: ["enabled", "date_since", "date_before", "folder_limit", "download_interval_min", "download_batch_size", "auto_download_new_mailboxes"] },
   { id: "step-4", name: t('accounts.steps.summary'), fields: [] },
 ];
 
@@ -184,6 +186,7 @@ const defaultValues: Account = {
   folder_limit: undefined,
   download_interval_min: 60,
   download_batch_size: 30,
+  auto_download_new_mailboxes: true,
 };
 
 const emptyImap: ImapConfig = {
@@ -212,6 +215,7 @@ const mapCurrentRowToFormValues = (currentRow: AccountModel): Account => {
     folder_limit: currentRow.folder_limit ?? undefined,
     download_interval_min: currentRow.download_interval_min ?? 60,
     download_batch_size: currentRow.download_batch_size ?? 30,
+    auto_download_new_mailboxes: currentRow.auto_download_new_mailboxes ?? true,
   };
 };
 
@@ -293,6 +297,7 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
         folder_limit: data.folder_limit,
         download_interval_min: data.download_interval_min,
         download_batch_size: data.download_batch_size,
+        auto_download_new_mailboxes: data.auto_download_new_mailboxes,
       };
       if (isEdit) {
         const isAllMode = !data.date_since && !data.date_before;

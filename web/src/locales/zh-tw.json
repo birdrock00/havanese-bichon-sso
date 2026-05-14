@@ -100,6 +100,7 @@
     "auth": "驗證",
     "authType": "驗證類型",
     "autoConfiguring": "正在自動設定...",
+    "autoDownloadNewMailboxesDescription": "自動將新發現的郵件夾添加到下載列表中。",
     "beforeRelative": "僅下載舊郵件",
     "beforeRelativeValue": "下載 {{value}} {{unit}} 之前的郵件",
     "cancelDownload": "取消下載",

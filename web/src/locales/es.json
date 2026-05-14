@@ -100,6 +100,7 @@
     "auth": "Autenticación",
     "authType": "tipo de autenticación",
     "autoConfiguring": "Autoconfigurando...",
+    "autoDownloadNewMailboxesDescription": "Añadir automáticamente las nuevas carpetas a la lista de descarga.",
     "beforeRelative": "Descargar solo correos antiguos",
     "beforeRelativeValue": "Descargar correos de hace {{value}} {{unit}}",
     "cancelDownload": "Cancelar descarga",

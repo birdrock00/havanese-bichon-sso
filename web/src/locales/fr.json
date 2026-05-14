@@ -100,6 +100,7 @@
     "auth": "Auth.",
     "authType": "type_auth",
     "autoConfiguring": "Configuration automatique...",
+    "autoDownloadNewMailboxesDescription": "Ajouter automatiquement les nouveaux dossiers à la liste de téléchargement.",
     "beforeRelative": "Télécharger uniquement les anciens e-mails",
     "beforeRelativeValue": "Télécharger les e-mails d'il y a {{value}} {{unit}}",
     "cancelDownload": "Annuler le téléchargement",

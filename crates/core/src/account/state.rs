@@ -136,7 +136,12 @@ impl DownloadState {
             let mut updated = current.clone();
             updated.last_trigger_at = utc_now!();
 
-            if let Some(old_session) = updated.active_session.take() {
+            if let Some(mut old_session) = updated.active_session.take() {
+                if old_session.status == DownloadStatus::Running {
+                    old_session.status = DownloadStatus::Cancelled;
+                    old_session.end_time = Some(utc_now!());
+                    old_session.message = Some("Interrupted by a new download session.".into());
+                }
                 updated.history.push(old_session);
                 if updated.history.len() > 30 {
                     updated.history.remove(0);

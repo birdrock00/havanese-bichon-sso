@@ -175,6 +175,16 @@ pub async fn detect_mailbox_changes(
             "Account {}: New folders detected: {:?}",
             account.id, new_folders
         );
+        if account.auto_download_new_mailboxes.unwrap_or(false) {
+            let mut updated: Vec<String> = download_folders.to_vec();
+            updated.extend(new_folders.iter().cloned());
+            AccountModel::update_download_folders(account.id, updated)?;
+            info!(
+                "Account {}: Auto-added {} new folders to download list",
+                account.id,
+                new_folders.len()
+            );
+        }
     }
 
     // Update known folders only if there were changes

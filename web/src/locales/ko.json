@@ -100,6 +100,7 @@
     "auth": "인증",
     "authType": "인증 유형",
     "autoConfiguring": "자동 구성 중...",
+    "autoDownloadNewMailboxesDescription": "새로 발견된 폴더를 다운로드 목록에 자동으로 추가합니다.",
     "beforeRelative": "이전 이메일만 다운로드",
     "beforeRelativeValue": "{{value}} {{unit}} 전의 이메일 다운로드",
     "cancelDownload": "다운로드 취소",

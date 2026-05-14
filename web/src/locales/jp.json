@@ -100,6 +100,7 @@
     "auth": "認証",
     "authType": "認証タイプ",
     "autoConfiguring": "自動設定中...",
+    "autoDownloadNewMailboxesDescription": "新しく見つかったフォルダーを自動的にダウンロード一覧に追加します。",
     "beforeRelative": "古いメールのみダウンロード",
     "beforeRelativeValue": "{{value}} {{unit}}前より古いメールをダウンロード",
     "cancelDownload": "ダウンロードをキャンセル",

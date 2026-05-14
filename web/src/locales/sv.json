@@ -100,6 +100,7 @@
     "auth": "Auth",
     "authType": "auth_typ",
     "autoConfiguring": "Konfigurerar automatiskt...",
+    "autoDownloadNewMailboxesDescription": "Lägg automatiskt till nya mappar i hämtningslistan.",
     "beforeRelative": "Ladda ner endast gamla e-postmeddelanden",
     "beforeRelativeValue": "Ladda ner e-post från {{value}} {{unit}} sedan",
     "cancelDownload": "Avbryt hämtning",

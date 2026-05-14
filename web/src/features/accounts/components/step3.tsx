@@ -234,6 +234,24 @@ export default function Step3() {
 
             <FormField
                 control={control}
+                name="auto_download_new_mailboxes"
+                render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                        <FormControl>
+                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                            <FormLabel>{t('accounts.autoDownloadNewMailboxes')}</FormLabel>
+                            <FormDescription>{t('accounts.autoDownloadNewMailboxesDescription')}</FormDescription>
+                        </div>
+                    </FormItem>
+                )}
+            />
+
+            <hr className="my-4" />
+
+            <FormField
+                control={control}
                 name="folder_limit"
                 render={({ field }) => (
                     <FormItem>

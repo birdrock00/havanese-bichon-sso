@@ -100,6 +100,7 @@
     "auth": "Authentifizierung",
     "authType": "Authentifizierungstyp",
     "autoConfiguring": "Automatische Konfiguration läuft...",
+    "autoDownloadNewMailboxesDescription": "Neu entdeckte Ordner automatisch zur Download-Liste hinzufügen.",
     "beforeRelative": "Nur alte E-Mails herunterladen",
     "beforeRelativeValue": "E-Mails von vor {{value}} {{unit}} herunterladen",
     "cancelDownload": "Download abbrechen",

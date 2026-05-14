@@ -100,6 +100,8 @@
     "auth": "认证",
     "authType": "认证类型",
     "autoConfiguring": "自动配置中...",
+    "autoDownloadNewMailboxes": "自动添加新邮件夹",
+    "autoDownloadNewMailboxesDescription": "自动将新发现的邮件夹添加到下载列表中。",
     "beforeRelative": "仅下载旧邮件",
     "beforeRelativeValue": "下载 {{value}} {{unit}} 之前的邮件",
     "cancelDownload": "取消下载",

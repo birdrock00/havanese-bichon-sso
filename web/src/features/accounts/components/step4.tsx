@@ -168,6 +168,11 @@ export default function Step4() {
                     <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.downloadBatchSize')}:</AccordionTrigger>
                     <AccordionContent>{summaryData.download_batch_size}</AccordionContent>
                 </AccordionItem>
+
+                <AccordionItem key="auto_download_new_mailboxes" value="auto_download_new_mailboxes">
+                    <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.autoDownloadNewMailboxes')}:</AccordionTrigger>
+                    <AccordionContent>{summaryData.auto_download_new_mailboxes ? t('common.yes') : t('common.no')}</AccordionContent>
+                </AccordionItem>
             </Accordion>
         </div>
     );
