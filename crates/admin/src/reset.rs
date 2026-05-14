@@ -29,7 +29,10 @@ pub fn handle_reset_password(theme: &ColorfulTheme) {
 
     let root_path = PathBuf::from(&root_dir_str);
     let database = open_database(&root_path.join("memdb")).unwrap_or_else(|e| {
-        eprintln!("\n{} Failed to open database.", style("ERROR:").red().bold());
+        eprintln!(
+            "\n{} Failed to open database.",
+            style("ERROR:").red().bold()
+        );
         eprintln!("Details: {:?}", e);
         std::process::exit(1);
     });
@@ -75,7 +78,7 @@ pub fn handle_reset_password(theme: &ColorfulTheme) {
             .unwrap();
 
         let raw_key = if method == 0 {
-            Password::with_theme(theme)
+            Input::with_theme(theme)
                 .with_prompt("Enter Encryption Password")
                 .interact()
                 .unwrap()
