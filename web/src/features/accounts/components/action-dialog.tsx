@@ -182,7 +182,7 @@ const defaultValues: Account = {
   date_since: undefined,
   date_before: undefined,
   folder_limit: undefined,
-  download_interval_min: 10,
+  download_interval_min: 60,
   download_batch_size: 30,
 };
 
@@ -210,7 +210,7 @@ const mapCurrentRowToFormValues = (currentRow: AccountModel): Account => {
     date_since: currentRow.date_since ?? undefined,
     date_before: currentRow.date_before ?? undefined,
     folder_limit: currentRow.folder_limit ?? undefined,
-    download_interval_min: currentRow.download_interval_min ?? 10,
+    download_interval_min: currentRow.download_interval_min ?? 60,
     download_batch_size: currentRow.download_batch_size ?? 30,
   };
 };

@@ -455,7 +455,7 @@ export function DownloadFoldersDialog({ currentRow, open, onOpenChange }: Props)
                         </div>
                     </div>
 
-                    <ScrollArea className="flex-1 min-h-0 w-full pr-4 -mr-4 py-1">
+                    <ScrollArea className="h-[calc(100%-500px)] flex-1 min-h-0 w-full pr-4 -mr-4 py-1">
                         {isLoading && (
                             <div className="p-8 space-y-8">
                                 <div className="flex flex-col items-center gap-3 text-muted-foreground">
