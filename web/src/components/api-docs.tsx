@@ -27,7 +27,11 @@ import { Separator } from "./ui/separator";
 export default function APIDocs() {
   const { t } = useTranslation()
 
-  const base_url = (window as any).__BICHON_BASE__ || '';
+  const rawBase: string = (window as any).__BICHON_BASE__ || '';
+  const normalized = rawBase.replace(/\/+$/, '');
+  const base_url = normalized.startsWith('http')
+    ? normalized
+    : `${window.location.origin}${normalized}`;
 
   const docsOptions = [
     { name: t('apiDocs.swaggerUI'), path: `${base_url}/api-docs/swagger` },

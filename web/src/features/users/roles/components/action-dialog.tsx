@@ -145,7 +145,7 @@ export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl w-[95vw] max-h-[90vh] flex flex-col p-0 overflow-hidden">
-        <div className="p-6 border-b bg-white">
+        <div className="p-6 border-b bg-card">
           <DialogHeader>
             <DialogTitle>
               {isEdit ? t('roles.title.edit', { name: currentRow?.name }) : t('roles.title.create')}
@@ -160,7 +160,7 @@ export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
           <form
             id="role-form"
             onSubmit={form.handleSubmit((v) => mutation.mutate(v))}
-            className="flex-1 overflow-y-auto p-6 bg-slate-50/50"
+            className="flex-1 overflow-y-auto p-6 bg-muted/30"
           >
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
               <div className="lg:col-span-1 space-y-6">
@@ -169,11 +169,11 @@ export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-[11px] font-bold text-slate-500 uppercase">
+                      <FormLabel className="text-[11px] font-bold text-muted-foreground uppercase">
                         {t('roles.form.name_label')}
                       </FormLabel>
                       <FormControl>
-                        <Input {...field} className="bg-white" />
+                        <Input {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -184,7 +184,7 @@ export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
                   name="role_type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-[11px] font-bold text-slate-500 uppercase">
+                      <FormLabel className="text-[11px] font-bold text-muted-foreground uppercase">
                         {t('roles.form.type_label')}
                       </FormLabel>
                       <FormControl>
@@ -208,7 +208,7 @@ export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
                                   'flex items-center justify-between p-3 rounded-md border-2 transition-all',
                                   isSelected
                                     ? 'border-primary bg-primary/5 shadow-sm'
-                                    : 'border-slate-200 bg-white',
+                                    : 'border-border bg-card',
                                   disabled
                                     ? 'opacity-40 cursor-not-allowed'
                                     : 'cursor-pointer hover:shadow-sm'
@@ -236,11 +236,11 @@ export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-[11px] font-bold text-slate-500 uppercase">
+                      <FormLabel className="text-[11px] font-bold text-muted-foreground uppercase">
                         {t('roles.form.desc_label')}
                       </FormLabel>
                       <FormControl>
-                        <Textarea {...field} className="bg-white min-h-[120px]" />
+                        <Textarea {...field} className="min-h-[120px]" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -256,7 +256,7 @@ export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
                     <FormItem>
                       <FormLabel className="mb-4 block border-b pb-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-slate-500 uppercase">
+                          <span className="text-[11px] font-bold text-muted-foreground uppercase">
                             {t('roles.form.matrix_label', { type: t(`roles.types.${selectedType}`) })}
                           </span>
 
@@ -290,7 +290,7 @@ export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
                       >
                         {CATEGORY_MAP[selectedType].map((cat) => (
                           <div key={cat.titleKey} className="space-y-4">
-                            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                            <h3 className="text-[11px] font-black text-muted-foreground/70 uppercase tracking-widest">
                               {t(cat.titleKey)}
                             </h3>
 
@@ -307,8 +307,8 @@ export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
                                     className={cn(
                                       'flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition',
                                       checked
-                                        ? 'bg-white border-primary/30 shadow-sm'
-                                        : 'bg-slate-50/50 border-slate-100 opacity-70'
+                                        ? 'bg-card border-primary/30 shadow-sm'
+                                        : 'bg-muted/30 border-border/50 opacity-70'
                                     )}
                                   >
                                     <Checkbox
@@ -323,7 +323,7 @@ export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
                                     />
                                     <div>
                                       <div className="text-xs font-bold">{item.label}</div>
-                                      <code className="text-[10px] text-slate-400">
+                                      <code className="text-[10px] text-muted-foreground/70">
                                         {item.value}
                                       </code>
                                     </div>
@@ -344,7 +344,7 @@ export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
           </form>
         </Form>
 
-        <div className="p-4 border-t bg-white flex justify-end gap-3">
+        <div className="p-4 border-t bg-card flex justify-end gap-3">
           <Button variant="outline" size="sm" onClick={() => handleOpenChange(false)}>
             {t('roles.actions.cancel')}
           </Button>

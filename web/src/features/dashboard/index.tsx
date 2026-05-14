@@ -278,9 +278,11 @@ export default function MailArchiveDashboard() {
                             const dataPoint = payload[0].payload;
                             const fullDate = formatTooltipDate(dataPoint.timestamp_ms, currentLocale);
                             return (
-                              <div className="p-2 border rounded-lg shadow-md bg-white dark:bg-gray-800">
-                                <p className="font-semibold text-xs mb-1">{fullDate}</p>
-                                <p className="text-xs">{t('dashboard.emails')}: {formatNumber(dataPoint.count)}</p>
+                              <div className="p-2 border rounded-lg shadow-md bg-background">
+                                <p className="font-semibold text-xs mb-1 text-foreground">{fullDate}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {t('dashboard.emails')}: <span className="font-medium text-foreground">{formatNumber(dataPoint.count)}</span>
+                                </p>
                               </div>
                             );
                           }
@@ -329,6 +331,9 @@ export default function MailArchiveDashboard() {
                         fontSize: '12px',
                         padding: '4px 8px',
                         borderRadius: '6px',
+                        backgroundColor: 'hsl(var(--background))',
+                        border: '1px solid hsl(var(--border))',
+                        color: 'hsl(var(--foreground))',
                       }}
                       itemStyle={{
                         fontSize: '12px',
