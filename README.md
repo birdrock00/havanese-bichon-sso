@@ -1,15 +1,8 @@
-<div align="center">
+<p align="center">
+    <img width="200" height="175" alt="Bichon Logo" src="https://github.com/user-attachments/assets/06dc3b67-7d55-4a93-a3de-8b90951c575b" />
+</p>
 
-<h1 align="center">
-  <img width="200" height="175" alt="image" src="https://github.com/user-attachments/assets/06dc3b67-7d55-4a93-a3de-8b90951c575b" />
-  <br>
-  Bichon
-  <br>
-</h1>
-
-<h3 align="center">
-  A lightweight, high-performance Rust email archiver with WebUI
-</h3>
+<H1 align="center">BICHON</H1>
 
 <p align="center">
   <a href="https://github.com/rustmailer/bichon/stargazers">
@@ -44,103 +37,73 @@
   </a>
 </p>
 
-</div>
+<p align="center">A self-hosted email archiving server built in Rust. Download emails from IMAP accounts, builds a full-text search index, and serves a REST API with an embedded WebUI. Purpose-built for long-term preservation, unified cross-account search, and programmatic access to archived email.</p>
 
-Bichon is an open-source email archiving system that **synchronizes emails from IMAP servers**, **indexes them for full-text search**, and provides a **REST API** for programmatic access.
-**Unlike email clients**, Bichon is designed for **archiving and searching** rather than sending/receiving emails. It runs as a **standalone server application** that continuously synchronizes configured email accounts and maintains a **searchable local archive**.
-Built in Rust, it requires no external dependencies and provides fast, efficient email archiving, management, and search through a built-in WebUI. Its name is inspired by the puppy my daughter adopted last month.
+[![Watch the demo](https://img.youtube.com/vi/fMlayXo3Bo0/maxresdefault.jpg)](https://www.youtube.com/watch?v=fMlayXo3Bo0)
 
-## Key Differences from Email Clients
+> [!NOTE]
+> Bichon is an **archiver**, not an email client. It does not send, compose, forward, or reply to emails. Its optional SMTP server is for **receiving** emails only.
 
-### Core Comparison
+## Contents
 
-| Feature | Email Clients | Bichon |
-|---------|---------------|--------|
-| **Primary Purpose** | Send/receive emails, real-time communication | Archive, search, manage historical emails |
-| **Sending Capability** | ✅ Supports sending emails | ❌ No email sending support |
-| **Runtime Mode** | Desktop/mobile applications | Server-side application |
-| **Data Storage** | Local cache + server | Local archive store |
-| **Search Capability** | Basic search | Full-text indexing, advanced search |
-| **API Interface** | Typically not provided | Complete REST API |
-| **Multi-account Management** | Limited | Supports unified search across accounts |
+- [Features](#features)
+- [Quick Start](#quick-start)
+  - [Docker (Recommended)](#docker-recommended)
+  - [Docker Compose](#docker-compose)
+  - [Binary Installation](#binary-installation)
+  - [Build from Source](#build-from-source)
+- [Configuration Reference](#configuration-reference)
+  - [Required Settings](#required-settings)
+  - [Server & Networking](#server--networking)
+  - [Logging](#logging)
+  - [CORS](#cors)
+  - [TLS & HTTPS](#tls--https)
+  - [SMTP Server](#smtp-server)
+  - [Storage Paths](#storage-paths)
+  - [Performance Tuning](#performance-tuning)
+- [Authentication & RBAC](#authentication--rbac)
+- [CLI Tools](#cli-tools)
+- [API Reference](#api-reference)
+- [Import & Export](#import--export)
+- [Architecture](#architecture)
+- [Storage & Backup](#storage--backup)
+- [Internationalization](#internationalization)
+- [Data Migration (v0.x → v1.0)](#data-migration-v0x--v10)
+- [FAQ](#faq)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [Tech Stack](#tech-stack)
+- [License](#license)
 
-### 🧠 Intelligent Storage & De-duplication
+## Features
 
-Bichon implements a **Single-Instance Storage** philosophy at the account level to maximize storage efficiency and write performance.
+- **Multi-Account IMAP Download**: Download multi-account concurrently. Supports password (PLAIN/LOGIN) and OAuth 2.0 (SASL XOAUTH2) with automatic token refresh and PKCE. SSL/TLS, STARTTLS, or plain connections with optional self-signed certificate acceptance.
+- **Incremental Download**: UID-based delta fetching downloads only new messages after the initial download. UIDVALIDITY changes are detected and trigger automatic cache rebuilds.
+- **Fetch Scoping**: Filter download by date range, mailbox folder limit, or specific folder names. Configurable per-account SOCKS5 proxy routing.
+- **Auto-Configuration**: Discover IMAP server settings automatically from an email domain.
+- **Full-Text Search**: Search across subject, body, sender, recipients, attachment properties, and more. Optimized for European languages.
+- **Advanced Filters**: Date range, size range, attachment presence, file type, content category, and facet-based tag combinations.
+- **Thread Grouping**: Reconstruct and view complete conversation threads across folders.
+- **Attachment Search**: Browse and filter attachments by sender, file type, size, and other attachment properties.
+- **Faceted Tags**: Add, remove, or overwrite tags on messages and attachments. Filter by tag combinations with real-time count updates.
+- **Contacts View**: Extracted and deduplicated sender/recipient address book across all authorized accounts.
+- **Three-Layer Storage**: Tantivy for full-text indexing (Zstd compression), Fjall with LZ4 for compressed blob storage, and memdb for relational metadata. All embedded — zero external dependencies.
+- **Content Deduplication**: Identical email bodies and attachments stored once via BLAKE3 content hashing. Folder moves update metadata only.
+- **Dashboard Analytics**: Email volume trends, top senders, storage usage breakdown, attachment statistics, and per-account activity. Scoped by user permissions.
+- **OpenAPI 3.0**: Interactive API documentation at `/api-docs` (Swagger UI, ReDoc, Scalar). All endpoints documented with request/response schemas.
+- **Multi-User RBAC**: 5 built-in roles (Admin, Manager, Member, AccountManager, AccountViewer) plus custom roles with 22 granular permissions.
+- **Account-Level Isolation**: Grant users access to specific accounts with scoped roles. Permissions enforced at the API layer.
+- **CLI Import Tools**: Import from EML directories, MBOX files (including Gmail variants), Thunderbird profiles, and Outlook PST files.
+- **CLI Export**: Download account data as MBOX via `bichonctl`.
+- **Bulk Restore**: Restore emails in bulk back to their original IMAP accounts.
+- **Embedded SMTP Server**: Receive emails directly at the gateway level. STARTTLS or TLS encryption. AUTH PLAIN/LOGIN with API token authentication.
+- **Admin Tooling**: Password reset for locked-out admins. Non-destructive v0.3.7 to v1.0 data migration.
+- **API Token Management**: Create, list, and revoke long-lived API tokens for programmatic access.
+- **SOCKS5 Proxy Management**: Configure and manage proxy profiles for routing IMAP traffic per account.
 
-* **Message-ID Centric**: Every email is uniquely identified by its `Message-ID`.
-* **High-Performance Writes**: Uses an idempotent "Delete-then-Write" strategy to ensure the fastest possible indexing speed.
-* **Automatic State Updates**: Moving an email between folders (e.g., from Inbox to Trash) will update the existing record rather than creating a duplicate.
-* **Lean Imports**: Duplicate emails encountered during `nosync` bulk imports are automatically merged.
+## Quick Start
 
-👉 [**Deep Dive: How Bichon handles de-duplication**](https://github.com/rustmailer/bichon/wiki/De%E2%80%90duplication)
-
-
----
-
-### 📢 Shape the Future of Bichon!
-
-We’ve just reached **1.5k Stars**! To help us prioritize the **2026 Roadmap** (e.g., S3 support, Enterprise SSO, etc.), please take 1 minute to fill out our [User Feedback Survey](https://docs.google.com/forms/d/e/1FAIpQLScOlwsiUMfyQPBCLW2MLkygdRmAutEgvXDYPzzvEGPz0HFPXQ/viewform). 
-
-*Your input helps us keep the core engine free and fast!*
-
----
-
-
-## 🚀 Features
-
-* **Lightweight & Standalone** — Pure Rust, no external database, with built-in WebUI
-* **Multi-Account Sync** — Download and manage emails from multiple accounts
-* **Flexible Fetching** — Sync by date range, email count, or specific mailboxes
-* **IMAP & OAuth2 Auth** — Password or OAuth2 login with automatic token refresh
-* **Proxy & Auto Config** — Supports network proxies and automatic IMAP discovery
-* **Unified Search** — Search across all accounts by sender, subject, body, date, size, attachments, and more
-* **Tags & Facets** — Organize emails using Tantivy facet-based tags
-* **Compressed Storage** — Transparent compression and deduplication for efficient storage
-* **Email Management** — Browse, view threads, bulk clean up, export EML or attachments
-* **Dashboard & Analytics** — Visual insights into email volume, trends, and top senders
-* **Internationalized WebUI** — Frontend available in 18 languages
-* **OpenAPI Access** — OpenAPI docs with access-token authentication
-* **Multi-User & Role-Based Access Control (RBAC)** — Supports multiple users with fine-grained, role-based permissions
-* **Email Import (EML, MBOX & PST)** — Import existing mail archives via the bichonctl CLI
-
-## 🐾 Why Create Bichon?
-
-A few months ago, I released **rustmailer**, an email API middleware:  
-https://github.com/rustmailer/rustmailer
-
-Since then, I’ve received many emails asking whether it could also archive emails, perform unified search, and support full-text indexing—not just querying recipients.  
-But rustmailer was designed as a middleware focused on providing API services.  
-Adding archiving and full-text search would complicate its core purpose and go far beyond its original scope.
-
-Meanwhile, I realized that email archiving itself only requires a small portion of rustmailer’s functionality, plus a search engine.  
-With that combination, building a dedicated, efficient archiver becomes much simpler.
-
-Using the experience gained from rustmailer, I designed and built **Bichon** in less than two weeks, followed by another two weeks of testing and optimization.  
-It has now reached a stable, usable state—and I decided to release it publicly.
-
-**Bichon is completely free**.  
-You can download and use it however you like.  
-It’s not perfect, but I hope it brings you value.
-## 📸 Snapshot
-<img width="1914" height="904" alt="image" src="https://github.com/user-attachments/assets/3a456999-e4eb-441e-9052-3a727dea66a0" />
-<img width="1900" height="907" alt="image" src="https://github.com/user-attachments/assets/95db0a05-4b55-4e18-b418-9d40361d6fea" />
-<img width="1912" height="904" alt="image" src="https://github.com/user-attachments/assets/96b0ebc2-4778-452b-891f-dc9acf8e381f" />
-<img width="1909" height="904" alt="image" src="https://github.com/user-attachments/assets/ab4bf6ae-faa6-4b49-ae39-705eb9d4487f" />
-<img width="1910" height="910" alt="image" src="https://github.com/user-attachments/assets/bcf9cca2-d690-4e7b-b2c9-c52a31c7b999" />
-<img width="1915" height="903" alt="image" src="https://github.com/user-attachments/assets/242817d7-3e12-4cbb-afb0-c5ef7366178d" />
-<img width="1910" height="1055" alt="image" src="https://github.com/user-attachments/assets/9bde665e-7717-447f-ad29-f743a32a4dc0" />
-<img width="1913" height="909" alt="image" src="https://github.com/user-attachments/assets/6fd54cb0-c86f-4ceb-a955-c81107614fc4" />
-<img width="1916" height="814" alt="image" src="https://github.com/user-attachments/assets/6a079d98-ff6c-46f4-9ec6-e76d320bff5d" />
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=rustmailer/bichon&type=date&legend=top-left)](https://www.star-history.com/#rustmailer/bichon&type=date&legend=top-left)
-
-
-## 🚀 Quick Start
-
-### Docker Deployment (Recommended)
+### Docker (Recommended)
 
 ```bash
 # Pull the image
@@ -155,30 +118,19 @@ docker run -d \
   -p 15630:15630 \
   -v $(pwd)/bichon-data:/data \
   --user 1000:1000 \
-  -e BICHON_LOG_LEVEL=info \
   -e BICHON_ROOT_DIR=/data \
+  -e BICHON_ENCRYPT_PASSWORD=your-secure-password-here \
   rustmailer/bichon:latest
 ```
 
-### Optional: Custom storage layout
+Open **[http://localhost:15630](http://localhost:15630)** in your browser.
 
-```bash
-docker run -d \
-  --name bichon \
-  -p 15630:15630 \
-  -v $(pwd)/bichon-data:/data \
-  -v $(pwd)/envelope:/envelope \
-  -v $(pwd)/eml:/eml \
-  --user 1000:1000 \
-  -e BICHON_ROOT_DIR=/data \
-  -e BICHON_INDEX_DIR=/envelope \
-  -e BICHON_DATA_DIR=/eml \
-  rustmailer/bichon:latest
-```
+> [!IMPORTANT]
+> Default login: username `admin`, password `admin@bichon`. **Change this immediately** via Settings → Profile.
 
-### Recommended docker-compose example
+### Docker Compose
 
-```bash
+```yaml
 services:
   bichon:
     image: rustmailer/bichon:latest
@@ -190,388 +142,510 @@ services:
     user: "1000:1000"
     environment:
       BICHON_ROOT_DIR: /data
+      BICHON_ENCRYPT_PASSWORD: your-secure-password-here
       BICHON_LOG_LEVEL: info
-
 ```
 
-### User and permissions
+### Binary Installation
 
-`PUID` and `PGID` are no longer used to create users or groups inside the container.
+Download from the [Releases](https://github.com/rustmailer/bichon/releases) page:
 
-Please use Docker’s native `--user` option (or `user:` in docker-compose) to specify the UID and GID:
+| Platform | Archive |
+|----------|---------|
+| Linux (GNU) | `bichon-x.x.x-x86_64-unknown-linux-gnu.tar.gz` |
+| Linux (MUSL) | `bichon-x.x.x-x86_64-unknown-linux-musl.tar.gz` |
+| macOS | `bichon-x.x.x-x86_64-apple-darwin.tar.gz` |
+| Windows | `bichon-x.x.x-x86_64-pc-windows-msvc.zip` |
 
 ```bash
-docker run --user 1000:1000 ...
-```
-
-This ensures container file permissions match the ownership of host-mounted directories.
-
-
-## CORS Configuration (Important for Browser Access)
-
-Starting from **v0.1.4**, Bichon changes how `BICHON_CORS_ORIGINS` works:
-
-### **🔄 New Behavior in v0.1.4**
-
-* If **`BICHON_CORS_ORIGINS` is not set**, Bichon now **allows all origins**.
-  This makes local testing and simple deployments much easier.
-* If you **do set** `BICHON_CORS_ORIGINS`, then **you must explicitly list each allowed origin**.
-* `*` is **not supported** and will **not work** — you must provide exact URLs.
-
-#### How CORS Matching Works
-
-When a browser accesses Bichon, it will send an `Origin` header.
-
-* **Incoming Origin** = the exact address the browser is using
-* **Configured origins** = the list you passed to `BICHON_CORS_ORIGINS`
-
-If Configured origins does not contain the Incoming Origin exactly as a full string match, the browser request will be rejected.
-
-Example debug log:
-
-```
-2025-12-06T23:56:30.422+08:00 DEBUG bichon::modules::rest: CORS: Incoming Origin = "http://localhost:15630"
-2025-12-06T23:56:30.422+08:00 DEBUG bichon::modules::rest: CORS: Configured origins = ["http://192.168.3.2:15630"]
-```
-
-In this example:
-
-* Browser is using `http://localhost:15630`
-* But the configured origin is `http://192.168.3.2:15630`
-
-→ **CORS will fail**, and you can immediately see why.
-
-#### When Should You Configure CORS?
-
-It is strongly recommended to configure CORS in production environments to ensure that only trusted browser origins can access Bichon.
-If you want to access Bichon from a browser:
-
-* Add the exact **IP** with port
-* Or the exact **hostname** with port
-* Or the **domain** (port optional if it's 80)
-
-Examples:
-
-```
-http://192.168.1.16:15630
-http://myserver.local:15630
-http://mydomain.com
-```
-
-If you access Bichon in **multiple different ways**, list all of them:
-
-```
--e BICHON_CORS_ORIGINS="http://192.168.1.16:15630,http://myserver.local:15630,http://mydomain.com"
-```
-
-> **Do not add a trailing slash**
-> (`http://192.168.1.16:15630/` will not match)
->
-> **Do not use `*`**, it is not supported.
-
-#### How to Enable Debug Logs (Highly Recommended for CORS Issues)
-
-Set environment variable:
-
-```
-BICHON_LOG_LEVEL=debug
-```
-
-Or via command-line:
-
-```
---bichon-log-level debug
-```
-
-Default is `info`, so CORS logs will not appear unless debug logging is enabled.
-
----
-
-#### ⚠️ Note on Running Bichon in a Container
-
-> ⚠️ **Note:** If you are running Bichon in a container (via **Docker Compose** or **docker run**), be careful with **quotes in environment variable values**.
-
-For example, **do not** write:
-
-```bash
--e BICHON_CORS_ORIGINS="http://localhost:15630,http://myserver.local:15630"
-```
-
-* The outer quotes (`"`) will be passed literally into the container and may cause CORS misconfiguration.
-
-**Correct way:**
-
-```bash
--e BICHON_CORS_ORIGINS=http://localhost:15630,http://myserver.local:15630
-```
-
-Or using YAML literal style for Docker Compose:
-
-```yaml
-environment:
-  BICHON_CORS_ORIGINS: |
-    http://localhost:15630,http://myserver.local:15630
-```
-
-This ensures that the configured origins are interpreted correctly inside the container.
-
-> ⚠️ **Note:** This fucking problem I actually didn’t know about myself; thanks to [gall-1](https://github.com/gall-1) for pointing it out.
-
-
-### Binary Deployment
-
-Download the appropriate binary for your platform from the [Releases](https://github.com/rustmailer/bichon/releases) page:
-
-- Linux (GNU): `bichon-x.x.x-x86_64-unknown-linux-gnu.tar.gz`
-- Linux (MUSL): `bichon-x.x.x-x86_64-unknown-linux-musl.tar.gz`
-- macOS: `bichon-x.x.x-x86_64-apple-darwin.tar.gz`
-- Windows: `bichon-x.x.x-x86_64-pc-windows-msvc.zip`
-
-Extract and run:
-
-```bash
-# Linux/macOS
-./bichon --bichon-root-dir /tmp/bichon-data
+# Linux / macOS
+./bichon --bichon-root-dir /path/to/data --bichon-encrypt-password your-password
 
 # Windows
-.\bichon.exe --bichon-root-dir e:\bichon-data
+.\bichon.exe --bichon-root-dir E:\bichon-data --bichon-encrypt-password your-password
 ```
 
-* --bichon-root-dir argument is required and must be an absolute path.
+`--bichon-root-dir` **must be an absolute path**. All Bichon data lives under this directory.
 
-* If you are accessing Bichon from a proxy domain **mydomain** argument --bichon-cors-origins="https://mydomain" is required.
-  
-## 🔐 Setting the Bichon Encryption Password
+### Build from Source
 
-Please refer to the following documentation for detailed instructions on how to set the Bichon encryption password:
+**Prerequisites:** Rust (latest stable), Node.js 20+, pnpm
 
-👉 [https://github.com/rustmailer/bichon/wiki/Setting-the-Bichon-Encryption-Password](https://github.com/rustmailer/bichon/wiki/Setting-the-Bichon-Encryption-Password)
-
-All configuration methods, including command-line options, environment variables, and password file support (v0.2.0+), are documented there.
-
-## 🔑 User Authentication & Admin Account
-
-Starting from **Bichon v0.2.0**, the authentication model has been updated.
-
-### Built-in Admin User (v0.2.0+)
-
-* Bichon no longer uses the legacy single-account `root / root` login.
-* The system now ships with a built-in **admin** user by default.
-* **Default credentials:**
-
-  * **Username:** `admin`
-  * **Password:** `admin@bichon`
-
-> The legacy `root` account and the `root / root` default credentials **no longer exist**.
-
-
-### Mandatory Access Token Authentication
-
-* From **v0.2.0 onward**, **access-token–based authentication is always enabled**.
-* The startup flag and environment variable
-  `--bichon-enable-access-token` / `BICHON_ENABLE_ACCESS_TOKEN`
-  are **deprecated and no longer used**.
-* No additional configuration is required to enable authentication.
-
-
-### Managing Account Information
-
-After logging in, the admin user can manage their profile directly in the WebUI:
-
-1. Log in to the WebUI using the default admin credentials.
-2. Navigate to **Settings → Profile**.
-3. Update:
-
-   * Username
-   * Password
-   * Avatar and other profile information
-
-⚠️ **Security Notice:**
-For security reasons, you should **change the default admin password immediately after the first login**.
-
-## 📦 Import Existing Mail Archives
-
-If you already have existing emails stored as **EML** or **MBOX** files, you can import them into Bichon using the `bichonctl` CLI.
-
-This allows you to:
-
-- Index historical emails
-- Perform full-text search immediately
-- Manage imported data just like synced IMAP emails
-
-📖 **Full documentation:**  
-👉 https://github.com/rustmailer/bichon/wiki/Using-Bichonctl-For-Email-Import
-
-
-## 📖 Documentation
-
-> Under construction. Documentation will be available soon.
-[Bichon Wiki](https://github.com/rustmailer/bichon/wiki).
-
-## FAQ
-
-please see the FAQ in the project Wiki:
-
-👉 [https://github.com/rustmailer/bichon/wiki/FAQ](https://github.com/rustmailer/bichon/wiki/FAQ-(Frequently-Asked-Questions))
-
-
-## 💡 User Case Showcase
-
-We have collected a real-world case study from a user processing email data, which demonstrates Bichon's performance and storage efficiency in a live environment.
-This case involves ingesting and indexing data from **126 email accounts**. The total original data volume was **229 GB**, comprising **460,000 emails**.
-
-### 📊 Performance Data Overview
-
-<img width="945" height="582" alt="image" src="https://github.com/user-attachments/assets/934ed6dd-c1da-4483-84fa-6d5b1bf6ca72" />
-
-A special thank you to **[@rallisf1](https://github.com/rallisf1)** for sharing this usage scenario and the detailed data.
-
-#### 🤝 Open Invitation
-
-This data is provided solely as a **reference** for real-world usage. We encourage more users to share their Bichon usage screenshots and metrics (e.g., ingestion volume, compression ratio, search speed, etc.) to help the community conduct a more comprehensive assessment of Bichon's suitability and performance.
-
----
-
-## Roadmap
-
-* [x] Multi-user support with account/password login  
-  * [x] System-level roles (admin / user)  
-  * [x] Per-mail-account permissions
-
-* [x] `bichonctl` command-line tool
-
-  * [x] Import emails from `eml`, `mbox`, `pst` (Single file)
-
-* [ ] Manual sync controls
-
-  * Sync on demand
-  * Sync a single folder
-  * Verify completeness by comparing with the mail server
-
-* [ ] Post-sync server cleanup
-
-  * Clean up server-side emails after successful sync
-  * Free up mailbox space (e.g. Gmail)
-
-* [ ] Email export
-
-  * Export by folder
-  * Export by entire account
-
-* [ ] Account-to-account email sync
-
-  * Sync emails to a specified target account
-  * Support mailbox migration
-
-* [ ] SMTP server / gateway support
-
-  * Provide a lightweight SMTP receiving service
-  * Allow direct forwarding of incoming mail to Bichon at the gateway level
-  * Achieve more reliable, real-time, complete email archiving & backup
-  * Optional: support alias / catch-all / domain-level routing
-
-* [ ] MCP Server
-
-  * Provide an LLM interface for advanced email search and intelligent processing
-  * Enable natural language queries to search and understand email content
-  * Make Bichon capable of smarter email interaction and analysis
-
-## 🛠️ Tech Stack
-
-- **Backend**: Rust + Poem
-- **Frontend**: React + TypeScript + Vite + ShadCN UI
-- **Core Engine (Storage & Search)**: Tantivy
-  - Acts as both the primary storage for email content and the full-text search index. This unified approach ensures high performance and eliminates data redundancy.
-- **Metadata Storage**: Native_DB
-  - Used exclusively for lightweight configuration and account metadata.
-- **Email Protocols**: IMAP (Supports standard Password & OAuth2)
-
-## 🤝 Contributing
-
-Contributions of all kinds are welcome!
-Whether you’d like to submit code, report a bug, or share practical suggestions that can help improve the project, your input is highly appreciated.
-Feel free to open an Issue or a Pull Request anytime. You can also reach out on Discord if you’d like to discuss ideas or improvements.
-<a href="https://discord.gg/Bq4M2cDmF4">
-    <img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?logo=discord&logoColor=white" alt="Discord">
-</a>
-
-## 🧑‍💻 Developer Guide
-
-To build or contribute to Bichon, the following environment is recommended:
-
-### Prerequisites
-- **Rust**: Use the latest stable toolchain for best compatibility and performance.
-- **Node.js**: Version **20+** is required.
-- **pnpm**: Recommended package manager for the WebUI.
-
-### Steps
-
-#### 1. Clone the repository
 ```bash
 git clone https://github.com/rustmailer/bichon.git
 cd bichon
+
+# Build the WebUI (required before building the server)
+cd web && pnpm install && pnpm run build && cd ..
+
+# Build and run
+export BICHON_ENCRYPT_PASSWORD=dev-password
+cargo run -- --bichon-root-dir /tmp/bichon-data
 ```
 
-#### 2. Build the WebUI
+For frontend development:
 
 ```bash
-cd web
-pnpm install
-pnpm run build
+cd web && pnpm run dev   # Vite dev server with API proxy to Rust backend
 ```
 
-Run the WebUI in development mode if needed:
+> [!TIP]
+> The WebUI must be built at least once (`pnpm run build`) for the server to serve the frontend. In dev mode (`pnpm run dev`), Vite proxies API calls to the Rust server automatically.
+
+## Configuration Reference
+
+All settings accept both CLI flags (`--bichon-http-port`) and environment variables (`BICHON_HTTP_PORT`). CLI flags take precedence over environment variables.
+
+### Required Settings
+
+| Variable | CLI Flag | Description |
+|----------|----------|-------------|
+| `BICHON_ROOT_DIR` | `--bichon-root-dir` | **Required.** Absolute path for all persistent data |
+| `BICHON_ENCRYPT_PASSWORD` | `--bichon-encrypt-password` | Password used to encrypt stored credentials (IMAP passwords, OAuth tokens) |
+| `BICHON_ENCRYPT_PASSWORD_FILE` | `--bichon-encrypt-password-file` | Alternative: read the encryption password from a file |
+
+> [!NOTE]
+> If both password options are set, the direct value takes precedence over the file.
+
+### Server & Networking
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BICHON_HTTP_PORT` | `15630` | HTTP server port |
+| `BICHON_BIND_IP` | `0.0.0.0` | IP address to bind to (IPv4 or IPv6) |
+| `BICHON_PUBLIC_URL` | `http://localhost:15630` | Public-facing URL used in OAuth redirects and docs |
+| `BICHON_BASE_URL` | `/` | Base path for WebUI when behind a reverse proxy (e.g. `/bichon`) |
+| `BICHON_WEBUI_TOKEN_EXPIRATION_HOURS` | `168` | Access token lifetime in hours (default 7 days) |
+| `BICHON_HTTP_COMPRESSION_ENABLED` | `true` | Enable gzip/brotli/zstd response compression |
+
+### Logging
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BICHON_LOG_LEVEL` | `info` | Log level: `trace`, `debug`, `info`, `warn`, `error` |
+| `BICHON_ANSI_LOGS` | `true` | Colorized terminal output |
+| `BICHON_JSON_LOGS` | `false` | JSON-formatted logs for log aggregators |
+| `BICHON_LOG_TO_FILE` | `false` | Persist logs to files under root dir |
+| `BICHON_MAX_SERVER_LOG_FILES` | `5` | Max log files to retain |
+
+### CORS
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BICHON_CORS_ORIGINS` | *(allow all)* | Comma-separated list of allowed origins: `http://192.168.1.16:15630,http://myserver.local:15630` |
+| `BICHON_CORS_MAX_AGE` | `86400` | Cache duration for CORS preflight in seconds |
+
+> [!WARNING]
+> If `BICHON_CORS_ORIGINS` is **not set**, all origins are allowed. If you set it, only exact matches pass. Wildcards (`*`) are **not supported**. Do not add trailing slashes. When using Docker, avoid wrapping the value in quotes.
+
+### TLS & HTTPS
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BICHON_ENABLE_REST_HTTPS` | `false` | Serve the API over HTTPS (requires valid certificate) |
+
+### SMTP Server
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BICHON_ENABLE_SMTP` | `false` | Enable the embedded SMTP receiver |
+| `BICHON_SMTP_PORT` | `2525` | SMTP listening port |
+| `BICHON_SMTP_ENCRYPTION` | `starttls` | Encryption mode: `none`, `starttls`, or `tls` |
+| `BICHON_SMTP_AUTH_REQUIRED` | `true` | Require authentication for SMTP connections |
+| `BICHON_SMTP_TLS_KEY_PATH` | — | Absolute path to SMTP TLS private key |
+| `BICHON_SMTP_TLS_CERT_PATH` | — | Absolute path to SMTP TLS certificate chain |
+
+### Storage Paths
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BICHON_INDEX_DIR` | `{root}/bichon-indices` | Tantivy full-text index directory |
+| `BICHON_DATA_DIR` | `{root}/bichon-storage` | Fjall blob storage directory |
+
+> [!TIP]
+> Place `BICHON_INDEX_DIR` on fast SSD storage for responsive search, and `BICHON_DATA_DIR` on high-capacity HDD for cost-effective blob storage.
+
+### Performance Tuning
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BICHON_SYNC_CONCURRENCY` | `num_cpus × 2` | Max concurrent account sync tasks |
+| `BICHON_METADATA_CACHE_SIZE` | `134217728` (128 MB) | Metadata DB cache in bytes |
+| `BICHON_ENVELOPE_CACHE_SIZE` | `134217728` (128 MB) | Envelope index cache in bytes |
+
+## Authentication & RBAC
+
+### Authentication
+
+1. `POST /api/login` with username + password returns a JWT access token
+2. All `/api/v1/*` endpoints require `Authorization: Bearer <token>`
+3. Tokens expire after the configured duration (`BICHON_WEBUI_TOKEN_EXPIRATION_HOURS`, default 7 days)
+4. Long-lived API tokens can be created via WebUI or API for programmatic access
+
+### Default Admin Account
+
+On first start, Bichon creates a built-in admin user:
+
+- **Username:** `admin`
+- **Password:** `admin@bichon`
+
+> [!IMPORTANT]
+> **Change the password immediately** via WebUI: Settings → Profile. If locked out, use the `bichon-admin` CLI tool to reset it.
+
+### Built-in Roles
+
+| Role | Type | Scope | Description |
+|------|------|-------|-------------|
+| **Admin** | Global | Unrestricted | Full system access — users, roles, tokens, all accounts, all data operations |
+| **Manager** | Global | ACL-scoped | Create accounts, view users, manage authorized accounts and their data |
+| **Member** | Global | Minimal | Basic login access; data access granted through account-level role assignments |
+| **AccountManager** | Account | Per-account | Full control over an assigned account — config, sync, data read/write/delete, import, SMTP ingest |
+| **AccountViewer** | Account | Per-account | Read-only access to an assigned account's messages and metadata |
+
+### Permission Reference
+
+**Global permissions:**
+
+| Permission | Description |
+|------------|-------------|
+| `system:access` | Login and access the dashboard |
+| `system:root` | Manage system configurations (OAuth providers, proxy settings) |
+| `user:manage` | Create, update, and delete users |
+| `user:view` | View user list and basic profiles |
+| `token:manage` | View and revoke all API tokens |
+| `account:create` | Connect new email accounts to the system |
+| `account:manage:all` | Manage configurations for all email accounts |
+| `data:read:all` | Search and read messages across all accounts |
+| `data:manage:all` | Manage tags and metadata for all accounts |
+| `data:raw:download:all` | Download raw EML files from any account |
+| `data:delete:all` | Permanently delete messages from any account |
+| `data:export:batch:all` | Export messages in bulk from all accounts |
+
+**Account-scoped permissions (require ACL assignment):**
+
+| Permission | Description |
+|------------|-------------|
+| `account:manage` | Modify configuration and sync settings for authorized accounts |
+| `account:read_details` | View status and details of authorized accounts |
+| `data:read` | Read messages from authorized accounts |
+| `data:manage` | Manage tags and metadata for authorized accounts |
+| `data:raw:download` | Download raw EML files from authorized accounts |
+| `data:delete` | Delete messages from authorized accounts |
+| `data:export:batch` | Export messages from authorized accounts |
+| `data:import:batch` | Import EML/PST data into authorized accounts |
+| `data:smtp:ingest` | Receive and archive emails via SMTP for authorized accounts |
+
+> [!TIP]
+> Built-in role permissions are immutable. Create **custom roles** via WebUI (`/users/roles`) or API for any combination of the permissions above.
+
+## CLI Tools
+
+### bichonctl — Import & Export
 
 ```bash
-pnpm run dev
+./bichonctl --config config.toml
 ```
 
-#### 3. Build or Run the Backend
+Creates a `config.toml` on first run with your server URL and API token.
 
-After the WebUI is built, return to the project root:
+| Operation | Description |
+|-----------|-------------|
+| **EML Directory** | Recursively scan a directory tree of `.eml` files; preserves folder structure |
+| **MBOX** | Stream-import from a single `.mbox` archive (including Gmail's MBOX variant) |
+| **Thunderbird** | Import directly from a local Thunderbird profile directory |
+| **PST** | Import from Outlook Personal Storage `.pst` files |
+| **Export to MBOX** | Download account data as an `.mbox` file |
+
+All imports are processed server-side — the server handles MIME parsing, indexing, deduplication, and storage.
+
+### bichon-admin — Administration
 
 ```bash
-cd ..
-cargo build
+./bichon-admin
 ```
 
-Or run directly:
+Interactive menu with two operations:
+
+| Operation | Description |
+|-----------|-------------|
+| **Reset Admin Password** | Reset the built-in admin password when locked out |
+| **Migrate v0.3.7 → v1.0** | Non-destructive migration from legacy storage layout to v1.0 architecture |
+
+## API Reference
+
+Interactive API documentation is available at:
+
+| Endpoint | UI |
+|----------|----|
+| `/api-docs/swagger` | Swagger UI |
+| `/api-docs/redoc` | ReDoc |
+| `/api-docs/scalar` | Scalar |
+| `/api-docs/spec.json` | Raw OpenAPI 3.0 JSON |
+| `/api-docs/spec.yaml` | Raw OpenAPI 3.0 YAML |
+
+All `/api/v1/*` endpoints require `Authorization: Bearer <token>`.
+
+## Import & Export
+
+### Supported Formats
+
+| Format | Tool | Notes |
+|--------|------|-------|
+| **EML Directory** | `bichonctl` | Recursive `.eml` scan; preserves folder hierarchy |
+| **MBOX** | `bichonctl` | Single-file streaming import; supports Gmail's MBOX variant |
+| **Thunderbird** | `bichonctl` | Reads directly from local Thunderbird profile directory |
+| **PST** | `bichonctl` | Outlook Personal Storage (`.pst`) file parsing |
+| **API Import** | `POST /api/v1/import` | Base64-encoded EML payloads for programmatic use |
+| **MBOX Export** | `bichonctl` | Download account data as `.mbox` file |
+
+All imports flow through the Bichon REST API. The server parses MIME, extracts metadata, indexes content into Tantivy, deduplicates by BLAKE3 content hash, and stores raw blobs in Fjall.
+
+## Architecture
+
+### Workspace Crates
+
+```
+bichon/
+├── crates/
+│   ├── memdb/         Embedded key-value database layer (WAL, transactions)
+│   ├── core/          Library — IMAP sync, search, storage, auth, models
+│   ├── server/        Binary — Poem web server + embedded WebUI (rust-embed)
+│   ├── cli/           Binary — bichonctl import/export CLI
+│   └── admin/         Binary — bichon-admin password reset & migration
+└── web/               React + TypeScript + Vite + ShadCN UI frontend
+```
+
+### Three-Layer Storage
+
+```
+Request Layer
+    REST API (Poem)  │  WebUI (React)
+─────────────────────┼────────────────────
+Storage Layer         │
+                      │
+  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+  │    memdb     │  │   Tantivy    │  │    Fjall     │
+  │  (metadata)  │  │  (full-text) │  │   (blobs)    │
+  │              │  │              │  │              │
+  │ • accounts   │  │ • envelope   │  │ • raw emails │
+  │ • users      │  │ • attachment │  │ • attachments│
+  │ • roles      │  │ • tags       │  │   LZ4 compr. │
+  │ • config     │  │ • contacts   │  │              │
+  │ • proxies    │  │   Zstd compr.│  │ BLAKE3 hash  │
+  └──────────────┘  └──────────────┘  └──────────────┘
+```
+
+- **memdb**: Key-value metadata store. Houses accounts, users, roles, OAuth2 configs, proxy settings, and system configuration. All operations wrapped in `tokio::spawn_blocking`.
+- **Tantivy**: Full-text search indices with Zstd compression support. Two separate indices: envelope (email metadata + body text) and attachment (file metadata + extracted text). Batch-committed every 1,000 documents or 60 seconds.
+- **Fjall**: LZ4-compressed LSM tree key-value store. Two keyspaces — `email_keyspace` and `attachments_keyspace`. Content-hash addressed (BLAKE3) with insert-time deduplication. Values larger than 1 KB stored as separate files (KV separation).
+
+### IMAP Download Pipeline
+
+```
+Schedule tick (every 10s)
+        │
+        ▼
+  reconcile_mailboxes()
+  Compare local vs. remote
+        │
+   ┌────┴────┐
+   ▼         ▼
+UID OK    UID changed / new
+(incremental)  (full rebuild)
+   │         │
+   ▼         ▼
+fetch new   fetch all
+(max+1:*)   (1:* batched)
+   │         │
+   └────┬────┘
+        ▼
+extract_envelope_and_store_it()
+        │
+   ┌────┼────┐
+   ▼    ▼    ▼
+Tantivy Fjall memdb
+```
+
+- Per-account background tasks managed by a global download-task singleton
+- Concurrency controlled by semaphore (default: `num_cpus × 2`)
+- Manual sync via `POST /api/v1/accounts/:id/start-download`; cancel with `cancel-download`
+- Busy-check prevents overlapping manual and automatic syncs on the same account
+
+## Storage & Backup
+
+### Data Directory Layout
+
+```
+{root}/
+├── bichon-indices/         Tantivy full-text index (envelope + attachment)
+├── bichon-storage/         Fjall LZ4-compressed blob store
+├── memdb/                  Metadata database (accounts, users, roles, config)
+├── logs/                   Server logs (when BICHON_LOG_TO_FILE=true)
+```
+
+### Backup
+Back up the entire `BICHON_ROOT_DIR` (and `BICHON_INDEX_DIR` / `BICHON_DATA_DIR` if overridden). **All three layers must be backed up together** for consistency.
+
+> [!WARNING]
+> Do not place `BICHON_ROOT_DIR` or index/data directories directly on network-mounted storage (NFS, SMB, etc.). This can cause index corruption and data loss. Always run Bichon on local storage and use rsync or similar tools to sync to remote destinations.
 
 ```bash
-export BICHON_ENCRYPT_PASSWORD=dummy-password-for-testing
-cargo run -- --bichon-root-dir e:\bichon-data
+# Example with rsync
+rsync -avz /path/to/bichon-data/ backup-server:/backups/bichon/
 ```
 
-`--bichon-root-dir` specifies the directory where **all Bichon data** will be stored.
-`BICHON_ENCRYPT_PASSWORD` is the password used to encrypt the sensitive data (see `cargo run -- --help` for alternative ways to specify this).
+### Encryption
+Stored credentials (IMAP passwords, OAuth tokens) are encrypted with AES-256-GCM via `ring`. The encryption key is derived from `BICHON_ENCRYPT_PASSWORD`.
 
-### WebUI Access
+> [!NOTE]
+> Re-encrypting stored secrets after a password change is not yet supported. If this is a required feature for your use case, please open an issue.
 
-* The WebUI runs on **[http://localhost:15630](http://localhost:15630)** by default.
-* **HTTPS is not enabled** in development or default builds.  
+## Internationalization
+The WebUI is available in **18 languages**:
 
-<cite/>
+| Code | Language | Code | Language |
+|------|----------|------|----------|
+| `ar` | العربية | `it` | Italiano |
+| `da` | Dansk | `jp` | 日本語 |
+| `de` | Deutsch | `ko` | 한국어 |
+| `en` | English | `nl` | Nederlands |
+| `es` | Español | `no` | Norsk |
+| `fi` | Suomi | `pl` | Polski |
+| `fr` | Français | `pt` | Português |
+| `it` | Italiano | `ru` | Русский |
+| `zh` | 中文 | `sv` | Svenska |
+| `zh-tw` | 繁體中文 | | |
 
-## 📄 License
+Language preference and UI theme are saved to your user profile and can be changed anytime from the WebUI settings.
 
-This project is licensed under [AGPLv3](LICENSE).
+## Data Migration (v0.3.7 → v1.0)
 
-## 🔗 Links
+Bichon v1.0 introduced a redesigned storage architecture:
 
-- [Docker Hub](https://hub.docker.com/r/rustmailer/bichon)
-- [Issue Tracker](https://github.com/rustmailer/bichon/issues)
+| Layer | v0.3.7 (Legacy) | v1.0 |
+|-------|---------------|------|
+| **Index** | Tantivy (shared) | Tantivy (separate envelope + attachment indices) |
+| **Raw data** | Tantivy (inline) | Fjall (LZ4-compressed key-value store) |
+| **Metadata** | Tantivy (shared) | memdb (dedicated embedded DB) |
+
+If you ran Bichon prior to v1.0, migrate your data:
+
+```bash
+./bichon-admin
+# Select "Migrate Legacy v0.3.7 Storage to v1.0"
+```
+
+> [!NOTE]
+> The migration is **non-destructive** — original v0.3.7 files remain in place and are not modified. You can safely remove them manually after verifying the migration was successful.
+
+## FAQ
+
+### CORS errors when accessing the WebUI
+
+1. Enable debug logging: `BICHON_LOG_LEVEL=debug`
+2. Check the server logs for the incoming `Origin` header and configured origins
+3. Ensure the browser's exact origin matches an entry in `BICHON_CORS_ORIGINS` (no trailing slash, no wildcards)
+4. In Docker, do **not** quote the value: `-e BICHON_CORS_ORIGINS=http://192.168.1.16:15630`
+
+### "Legacy data layout detected" error on startup
+
+Your data was created by Bichon v0.3.7 and must be migrated. Run `./bichon-admin` and select the migration option.
+
+### How do I run Bichon behind a reverse proxy?
+
+Set `BICHON_BASE_URL=/bichon` (or your sub-path) and configure your proxy:
+
+```nginx
+# nginx example
+location /bichon/ {
+    proxy_pass http://127.0.0.1:15630/;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+```
+
+### Can Bichon send emails?
+
+No. Bichon is an **archiver**, not an email client. The optional SMTP server **receives** emails only — it cannot send, forward, or reply.
+
+### What hardware does Bichon need?
+
+- **Minimal:** 1 CPU core, 512 MB RAM
+- **Recommended (100+ accounts, 200+ GB):** 4+ cores, 2+ GB RAM
+- Indices benefit from SSD storage; blob storage can use HDD
+
+### How do I reset the admin password?
+
+```bash
+./bichon-admin
+# Select "Reset Admin Password"
+```
+
+### Where can I get help?
+
+- [GitHub Issues](https://github.com/rustmailer/bichon/issues)
 - [Discord](https://discord.gg/Bq4M2cDmF4)
+- [Wiki](https://github.com/rustmailer/bichon/wiki)
 
+## Roadmap
 
-## 💖 Support & Promotion
+- [x] Multi-account IMAP Download (Password + OAuth2)
+- [x] Full-text search with faceted tags
+- [x] Multi-user support with RBAC and custom roles
+- [x] WebUI in 18 languages with dark/light themes
+- [x] Dashboard with analytics
+- [x] CLI import: EML, MBOX, Thunderbird, PST
+- [x] CLI export: MBOX
+- [x] Embedded SMTP server
+- [x] Data migration tooling (v0.3.7 → v1.0)
+- [x] On-demand manual download controls
+- [ ] Post-download server cleanup (free remote mailbox space)
+- [ ] Account-to-account email merge / migration
+- [ ] MCP Server for LLM-powered email search and analysis
+- [ ] S3-compatible storage backend
+- [ ] Enterprise SSO (OIDC / SAML)
 
-Bichon is an open-source email platform focused on privacy, local ownership, and long-term stability.
+## Contributing
 
-The project is freely available and fully functional for everyone.
+Contributions of all kinds are welcome — code, bug reports, documentation, or feature suggestions.
 
-Some members of the community choose to support the project financially. This support helps sustain ongoing development and long-term maintenance, while keeping the project independent and user-driven.
+```bash
+git clone https://github.com/rustmailer/bichon.git
+cd bichon
 
-Support is always optional. You can also contribute by sharing feedback, reporting issues, or recommending Bichon to others.
+# Build WebUI
+cd web && pnpm install && pnpm run build && cd ..
 
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20the%20Project-FFDD00?logo=buy-me-a-coffee)](https://buymeacoffee.com/rustmailer)
+# Build backend
+cargo build
 
+# Run tests
+cargo test
+```
+
+> [!IMPORTANT]
+> Before implementing a new feature or making significant changes, please **open an issue first** to discuss your idea with the maintainer and ensure it aligns with the project's scope.
+
+Feel free to open an [Issue](https://github.com/rustmailer/bichon/issues) or join the [Discord](https://discord.gg/Bq4M2cDmF4) to discuss ideas.
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | Rust, Tokio, Poem + Poem OpenAPI |
+| **Full-text search** | Tantivy (Zstd compression) |
+| **Blob storage** | Fjall (LSM tree, LZ4 compression, KV separation) |
+| **Metadata DB** | memdb (embedded key-value store with WAL) |
+| **IMAP** | async-imap, rustls (ring), SOCKS5 proxy support |
+| **SMTP** | Embedded receiver (AUTH PLAIN/LOGIN, STARTTLS/TLS) |
+| **Cryptography** | AES-256-GCM (ring), BLAKE3 (content hashing) |
+| **Frontend** | React 18, TypeScript, Vite 6, ShadCN UI, TanStack Router/Query/Table |
+| **Charts** | Recharts |
+| **i18n** | i18next (18 languages) |
+| **Allocator** | mimalloc |
+| **Container** | Ubuntu 24.04, Docker |
+
+## License
+
+Bichon is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+Copyright &copy; 2025–2026 [rustmailer.com](https://rustmailer.com)
