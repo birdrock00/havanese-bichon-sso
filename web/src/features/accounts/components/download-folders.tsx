@@ -331,7 +331,7 @@ export function DownloadFoldersDialog({ currentRow, open, onOpenChange }: Props)
 
     function handleSuccess() {
         toast({
-            title: t('accounts.accountSyncFoldersUpdated'),
+            title: t('accounts.download_folders_updated'),
             description: t('accounts.accountUpdatedDesc'),
             action: <ToastAction altText={t('common.close')}>{t('common.close')}</ToastAction>,
         });
@@ -348,7 +348,7 @@ export function DownloadFoldersDialog({ currentRow, open, onOpenChange }: Props)
 
         toast({
             variant: "destructive",
-            title: t('accounts.accountSyncFoldersUpdateFailed'),
+            title: t('accounts.download_folders_update_failed'),
             description: errorMessage as string,
             action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
         });
