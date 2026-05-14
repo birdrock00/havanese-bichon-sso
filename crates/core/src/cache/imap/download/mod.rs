@@ -53,10 +53,12 @@ pub async fn process_imap_download(
     let mut session = match ImapExecutor::create_connection(account_id).await {
         Ok(session) => session,
         Err(e) => {
+            let err_msg = format!("Failed to connect to IMAP server: {:#?}", e);
+            DownloadState::append_session_error(account_id, err_msg.clone())?;
             DownloadState::update_session_status(
                 account_id,
                 DownloadStatus::Failed,
-                Some(format!("Failed to connect to IMAP server: {}", e)),
+                Some(err_msg),
             )?;
             return Err(e);
         }
@@ -64,8 +66,9 @@ pub async fn process_imap_download(
     let remote_mailboxes = match get_download_folders(account, &mut session).await {
         Ok(mailboxes) => mailboxes,
         Err(err) => {
-            let err_msg = format!("Failed to fetch mailboxes: {}", err);
+            let err_msg = format!("Failed to fetch mailboxes: {:#?}", err);
             warn!(account_id = account.id, error = %err, "{}", err_msg);
+            DownloadState::append_session_error(account_id, err_msg.clone())?;
             DownloadState::update_session_status(
                 account_id,
                 DownloadStatus::Failed,
@@ -106,10 +109,12 @@ pub async fn process_imap_download(
                 DownloadState::update_session_status(account_id, DownloadStatus::Success, None)?;
             }
             Err(e) => {
+                let err_msg = format!("Email Download interrupted: {:#?}", e);
+                DownloadState::append_session_error(account_id, err_msg.clone())?;
                 DownloadState::update_session_status(
                     account_id,
                     DownloadStatus::Failed,
-                    Some(format!("Email Download interrupted: {:#?}", e)),
+                    Some(err_msg),
                 )?;
             }
         }
@@ -119,11 +124,15 @@ pub async fn process_imap_download(
     let local_mailboxes = MailBox::list_all(account_id)?;
     match reconcile_mailboxes(account, &remote_mailboxes, &local_mailboxes, token).await {
         Ok(_) => DownloadState::update_session_status(account_id, DownloadStatus::Success, None)?,
-        Err(e) => DownloadState::update_session_status(
-            account_id,
-            DownloadStatus::Failed,
-            Some(format!("Email Download interrupted: {:#?}", e)),
-        )?,
+        Err(e) => {
+            let err_msg = format!("Email Download interrupted: {:#?}", e);
+            DownloadState::append_session_error(account_id, err_msg.clone())?;
+            DownloadState::update_session_status(
+                account_id,
+                DownloadStatus::Failed,
+                Some(err_msg),
+            )?;
+        }
     }
     let elapsed_time = start_time.elapsed().as_secs();
     debug!(

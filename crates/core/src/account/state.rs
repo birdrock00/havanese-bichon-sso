@@ -239,11 +239,15 @@ impl DownloadState {
     pub fn append_session_error(account_id: u64, error: String) -> BichonResult<()> {
         Self::update_state(account_id, move |current| {
             let mut updated = current.clone();
-            if let Some(ref mut session) = updated.active_session {
-                let new_error = AccountError {
-                    error,
-                    at: utc_now!(),
-                };
+            let new_error = AccountError {
+                error,
+                at: utc_now!(),
+            };
+            let target = updated
+                .active_session
+                .as_mut()
+                .or_else(|| updated.history.last_mut());
+            if let Some(session) = target {
                 session.errors.push(new_error);
                 let to_remove = session.errors.len().saturating_sub(30);
                 if to_remove > 0 {
