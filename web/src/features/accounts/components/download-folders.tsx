@@ -161,6 +161,7 @@ export function DownloadFoldersDialog({ currentRow, open, onOpenChange }: Props)
     const [treeData, setTreeData] = useState<TreeViewBaseItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | undefined>(undefined);
+    const [fetchProgress, setFetchProgress] = useState<{ examined: number; total: number } | null>(null);
     const queryClient = useQueryClient();
     const { t } = useTranslation()
     const { theme } = useTheme()
@@ -168,42 +169,65 @@ export function DownloadFoldersDialog({ currentRow, open, onOpenChange }: Props)
     useEffect(() => {
         if (!open) return;
         let cancelled = false;
-        const fetchMailboxes = async () => {
-            setIsLoading(true);
-            try {
-                const data = await list_mailboxes(currentRow.id, true);
-                if (!cancelled) {
-                    setMailboxes(data);
-                    const allIds = data.map(mailbox => String(mailbox.id));
-                    setAllIds(allIds);
+        let pollingTimer: ReturnType<typeof setTimeout> | null = null;
 
-                    const tree = buildTree(data);
-                    setTreeData(tree);
-                    const itemsWithChildren = getParentIds(tree);
-                    setItemsWithChildren(itemsWithChildren);
-                    setExpandedItems(itemsWithChildren);
-                    const download_folders = data
-                        .filter(mailbox => currentRow.download_folders.includes(mailbox.name))
-                        .map(mailbox => mailbox.id.toString());
-                    setSelectedItems(download_folders);
+        const processMailboxes = (data: MailboxData[]) => {
+            setMailboxes(data);
+            const allIds = data.map(mailbox => String(mailbox.id));
+            setAllIds(allIds);
+            const tree = buildTree(data);
+            setTreeData(tree);
+            const itemsWithChildren = getParentIds(tree);
+            setItemsWithChildren(itemsWithChildren);
+            setExpandedItems(itemsWithChildren);
+            const download_folders = data
+                .filter(mailbox => currentRow.download_folders.includes(mailbox.name))
+                .map(mailbox => mailbox.id.toString());
+            setSelectedItems(download_folders);
+        };
+
+        const fetchMailboxes = async () => {
+            try {
+                const response = await list_mailboxes(currentRow.id, true);
+                if (cancelled) return;
+
+                if (response.status === "ready") {
+                    processMailboxes(response.mailboxes);
                     setError(undefined);
+                    setIsLoading(false);
+                } else if (response.status === "fetching") {
+                    setIsLoading(true);
+                    setError(undefined);
+                    if (response.examined != null && response.total != null && response.total > 0) {
+                        setFetchProgress({ examined: response.examined, total: response.total });
+                    }
+                    pollingTimer = setTimeout(fetchMailboxes, 2000);
+                } else if (response.status === "error") {
+                    setIsLoading(false);
+                    setError(response.error || "Unknown error");
                 }
             } catch (err: any) {
-                if (axios.isAxiosError(err)) {
-                    const resData = err.response?.data;
-                    if (resData) {
-                        setError(`Error ${resData.code || ''}: ${resData.message || ''}`);
+                if (!cancelled) {
+                    if (axios.isAxiosError(err)) {
+                        const resData = err.response?.data;
+                        if (resData) {
+                            setError(`Error ${resData.code || ''}: ${resData.message || ''}`);
+                        } else {
+                            setError(err.message);
+                        }
                     } else {
-                        setError(err.message);
+                        setError(err.message || String(err));
                     }
+                    setIsLoading(false);
                 }
-            } finally {
-                if (!cancelled) setIsLoading(false);
             }
         };
+
+        setIsLoading(true);
         fetchMailboxes();
         return () => {
             cancelled = true;
+            if (pollingTimer) clearTimeout(pollingTimer);
         };
     }, [currentRow, open]);
 
@@ -455,12 +479,16 @@ export function DownloadFoldersDialog({ currentRow, open, onOpenChange }: Props)
                         </div>
                     </div>
 
-                    <ScrollArea className="h-[calc(100%-500px)] flex-1 min-h-0 w-full pr-4 -mr-4 py-1">
+                    <ScrollArea className="h-[32rem] flex-1 min-h-0 w-full pr-4 -mr-4 py-1">
                         {isLoading && (
                             <div className="p-8 space-y-8">
                                 <div className="flex flex-col items-center gap-3 text-muted-foreground">
                                     <Loader2 className="h-6 w-6 animate-spin" />
-                                    <span className="text-sm font-medium">{t('accounts.folderSync.loadingMailboxFolders')}</span>
+                                    <span className="text-sm font-medium">
+                                        {fetchProgress && fetchProgress.total > 0
+                                            ? `${t('accounts.folderSync.loadingMailboxFolders')} (${fetchProgress.examined}/${fetchProgress.total})`
+                                            : t('accounts.folderSync.loadingMailboxFolders')}
+                                    </span>
                                 </div>
 
                                 <div className="space-y-2">

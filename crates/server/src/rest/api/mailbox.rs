@@ -19,9 +19,8 @@
 use crate::common::auth::WrappedContext;
 use crate::rest::api::ApiTags;
 use crate::rest::ApiResult;
-use bichon_core::cache::imap::mailbox::MailBox;
 use bichon_core::mailbox::delete::delete_mailbox_impl;
-use bichon_core::mailbox::list::get_account_mailboxes;
+use bichon_core::mailbox::list::{get_account_mailboxes, MailboxListResponse};
 use bichon_core::users::permissions::Permission;
 use poem_openapi::param::{Path, Query};
 use poem_openapi::payload::Json;
@@ -51,7 +50,7 @@ impl MailBoxApi {
         account_id: Path<u64>,
         remote: Query<Option<bool>>,
         context: WrappedContext,
-    ) -> ApiResult<Json<Vec<MailBox>>> {
+    ) -> ApiResult<Json<MailboxListResponse>> {
         let account_id = account_id.0;
         context.require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)?;
         let remote = remote.0.unwrap_or(false);

@@ -23,6 +23,7 @@ use crate::{
     {
         account::migration::{AccountModel, AccountType},
         cache::imap::mailbox::{AttributeEnum, MailBox},
+        cache::imap::mailbox_cache,
         error::{code::ErrorCode, BichonResult},
         imap::{executor::ImapExecutor, session::SessionStream},
         mailbox::list::convert_names_to_mailboxes,
@@ -179,6 +180,7 @@ pub async fn detect_mailbox_changes(
     // Update known folders only if there were changes
     if has_changes {
         AccountModel::update_known_folders(account.id, all_names)?;
+        mailbox_cache::invalidate(account.id).await;
     }
     Ok(())
 }

@@ -310,7 +310,7 @@ impl MemDb {
             }
         }
 
-        eprintln!("[memdb] snapshot saved at seq={last_seq}");
+        //eprintln!("[memdb] snapshot saved at seq={last_seq}");
         Ok(())
     }
 

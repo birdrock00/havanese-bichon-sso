@@ -22,6 +22,7 @@ use mailbox::MailBox;
 
 pub mod download;
 pub mod mailbox;
+pub mod mailbox_cache;
 pub mod task;
 
 pub fn find_missing_mailboxes(

@@ -32,8 +32,16 @@ export interface MailboxData {
     unseen: number | null;
 }
 
+export interface MailboxListResponse {
+    mailboxes: MailboxData[];
+    status: "ready" | "fetching" | "error";
+    error?: string | null;
+    examined?: number | null;
+    total?: number | null;
+}
+
 export const list_mailboxes = async (accountId: number, remote: boolean) => {
-    const response = await axiosInstance.get<MailboxData[]>(`api/v1/list-mailboxes/${accountId}?remote=${remote}`);
+    const response = await axiosInstance.get<MailboxListResponse>(`api/v1/list-mailboxes/${accountId}?remote=${remote}`);
     return response.data;
 };
 

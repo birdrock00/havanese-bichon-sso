@@ -181,7 +181,7 @@ export function MailboxPopover() {
 
     const { data: activeMailboxes = [], isLoading: activeIsLoading } = useQuery({
         queryKey: ['search-mailboxes', activeAccountId],
-        queryFn: () => list_mailboxes(activeAccountId!, false),
+        queryFn: async () => (await list_mailboxes(activeAccountId!, false)).mailboxes,
         enabled: !!activeAccountId,      
     });
 
