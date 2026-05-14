@@ -213,22 +213,6 @@ pub struct Settings {
         })
     )]
     pub bichon_data_dir: Option<String>,
-    #[clap(
-        long,
-        env,
-        default_value = "134217728",
-        help = "Set the cache size for bichon metadata database in bytes"
-    )]
-    pub bichon_metadata_cache_size: Option<usize>,
-
-    #[clap(
-        long,
-        env,
-        default_value = "134217728",
-        help = "Set the cache size for envelope database in bytes"
-    )]
-    pub bichon_envelope_cache_size: Option<usize>,
-
     /// Enables or disables HTTPS for REST API endpoints.
     ///
     /// When set to `true`, the REST API will use HTTPS with a valid SSL/TLS certificate for secure communication.

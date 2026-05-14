@@ -200,8 +200,6 @@ export default function ServerConfigurationsPage() {
                 <SettingRow label="BICHON_ROOT_DIR" value={<span className="font-mono">{data!.bichon_root_dir}</span>} />
                 <SettingRow label="BICHON_DATA_DIR" value={data!.bichon_data_dir ? <span className="font-mono">{data!.bichon_data_dir}</span> : "—"} />
                 <SettingRow label="BICHON_INDEX_DIR" value={data!.bichon_index_dir ? <span className="font-mono">{data!.bichon_index_dir}</span> : "—"} />
-                <SettingRow label="BICHON_METADATA_CACHE_SIZE" value={formatMB(data!.bichon_metadata_cache_size)} />
-                <SettingRow label="BICHON_ENVELOPE_CACHE_SIZE" value={formatMB(data!.bichon_envelope_cache_size)} />
               </SettingsCard>
 
               <SettingsCard
