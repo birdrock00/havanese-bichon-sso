@@ -39,8 +39,6 @@
 
 <p align="center">A self-hosted email archiving server built in Rust. Download emails from IMAP accounts, builds a full-text search index, and serves a REST API with an embedded WebUI. Purpose-built for long-term preservation, unified cross-account search, and programmatic access to archived email.</p>
 
-<p align="center">A self-hosted email archiving server built in Rust. Download emails from IMAP accounts, builds a full-text search index, and serves a REST API with an embedded WebUI. Purpose-built for long-term preservation, unified cross-account search, and programmatic access to archived email.</p>
-
 <p align="center">
   <a href="https://www.youtube.com/watch?v=fMlayXo3Bo0">
     <img src="https://img.youtube.com/vi/fMlayXo3Bo0/maxresdefault.jpg" alt="Watch the demo"/>
@@ -48,6 +46,7 @@
   <br/>
   <em>▶ Click to watch the demo</em>
 </p>
+
 > [!NOTE]
 > Bichon is an **archiver**, not an email client. It does not send, compose, forward, or reply to emails. Its optional SMTP server is for **receiving** emails only.
 
