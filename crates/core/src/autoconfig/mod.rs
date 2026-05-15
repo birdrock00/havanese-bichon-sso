@@ -22,6 +22,7 @@ use crate::database::{find_impl, MemDbModel};
 use crate::{autoconfig::entity::MailServerConfig, error::BichonResult, utc_now};
 use serde::{Deserialize, Serialize};
 
+pub mod client;
 pub mod entity;
 pub mod load;
 #[cfg(test)]

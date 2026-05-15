@@ -16,16 +16,49 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::account::entity::Encryption;
+use crate::autoconfig::client::{self, MailConfig};
 use crate::autoconfig::entity::{MailServerConfig, ServerConfig};
+use crate::autoconfig::CachedMailSettings;
 use crate::error::code::ErrorCode;
-use crate::{
-    raise_error,
-    {account::entity::Encryption, autoconfig::CachedMailSettings, error::BichonResult},
-};
-use autoconfig::config::{Server, ServerType};
+use crate::error::BichonResult;
+use crate::raise_error;
 use email_address::EmailAddress;
 use std::str::FromStr;
 use tracing::error;
+
+/// Map an autoconfig XML `socketType` value to our `Encryption` enum.
+pub(crate) fn socket_type_to_encryption(raw: &str) -> Encryption {
+    match raw.to_ascii_uppercase().as_str() {
+        "SSL" | "TLS" => Encryption::Ssl,
+        "STARTTLS" => Encryption::StartTls,
+        _ => Encryption::None,
+    }
+}
+
+/// Convert the raw `MailConfig` discovered by `client::fetch` into a
+/// `MailServerConfig` suitable for account provisioning.
+pub(crate) fn mail_config_to_server_config(config: &MailConfig) -> Option<MailServerConfig> {
+    let imap = config.incoming.iter().find(|s| {
+        let p = s.protocol.to_ascii_lowercase();
+        p == "imap" || p == "imaps"
+    })?;
+
+    let encryption = socket_type_to_encryption(&imap.socket_type);
+    let port = if imap.port != 0 {
+        imap.port
+    } else {
+        match encryption {
+            Encryption::Ssl => 993,
+            _ => 143,
+        }
+    };
+
+    Some(MailServerConfig {
+        imap: ServerConfig::new(imap.hostname.clone(), port, encryption),
+        oauth2: None,
+    })
+}
 
 pub async fn resolve_autoconfig(email: impl AsRef<str>) -> BichonResult<Option<MailServerConfig>> {
     let email = email.as_ref();
@@ -37,73 +70,38 @@ pub async fn resolve_autoconfig(email: impl AsRef<str>) -> BichonResult<Option<M
     })?;
 
     let domain = email_address.domain();
-    // try read local cache first
+    // Try local cache first
     if let Some(cached_entity) = CachedMailSettings::get(domain)? {
         return Ok(Some(cached_entity.config));
     }
 
-    let config = autoconfig::from_addr(email_address.email().as_ref())
-        .await
-        .map_err(|e| {
-            error!(email = %email, domain = %domain, error = ?e, "Autoconfig fetch failed");
-            raise_error!(
-                format!(
-                    "Failed to fetch autoconfig for email '{}': {:#?}",
-                    email_address.email(),
-                    e
-                ),
-                ErrorCode::AutoconfigFetchFailed
-            )
-        })?;
-
-    let imap_server = config
-        .email_provider()
-        .incoming_servers()
-        .into_iter()
-        .find(|s| matches!(s.server_type(), ServerType::Imap));
-
-    let imap_server = match imap_server {
-        Some(imap) => imap,
-        None => return Ok(None),
-    };
-
-    let get_encryption = |server: &Server| {
-        server
-            .security_type()
-            .map_or(Encryption::None, |encryption| match encryption {
-                autoconfig::config::SecurityType::Plain => Encryption::None,
-                autoconfig::config::SecurityType::Starttls => Encryption::StartTls,
-                autoconfig::config::SecurityType::Tls => Encryption::Ssl,
-            })
-    };
-
-    let get_port = |server: &Server, encryption: &Encryption, tls_port: u16, non_tls_port: u16| {
-        server.port().map_or_else(
-            || match encryption {
-                Encryption::StartTls => tls_port,
-                _ => non_tls_port,
-            },
-            ToOwned::to_owned,
+    let config = client::fetch(domain).await.map_err(|e| {
+        error!(
+            email = %email,
+            domain = %domain,
+            error = ?e,
+            "Autoconfig fetch failed"
+        );
+        raise_error!(
+            format!(
+                "Failed to fetch autoconfig for email '{}': {:#?}",
+                email_address.email(),
+                e
+            ),
+            ErrorCode::AutoconfigFetchFailed
         )
-    };
+    })?;
 
-    let get_hostname = |server: &Server, default_prefix: &str| {
-        server.hostname().map_or_else(
-            || format!("{}.{}", default_prefix, domain),
-            ToOwned::to_owned,
+    let result = mail_config_to_server_config(&config).ok_or_else(|| {
+        raise_error!(
+            format!(
+                "No IMAP server found in autoconfig for email: {}",
+                email_address.email()
+            ),
+            ErrorCode::ResourceNotFound
         )
-    };
+    })?;
 
-    let imap_encryption = get_encryption(imap_server);
-    let imap_config = ServerConfig::new(
-        get_hostname(imap_server, "imap"),
-        get_port(imap_server, &imap_encryption, 993, 143),
-        imap_encryption,
-    );
-    let result = MailServerConfig {
-        imap: imap_config,
-        oauth2: config.oauth2().map(|f| f.into()),
-    };
     CachedMailSettings::add(domain.into(), result.clone())?;
     Ok(Some(result))
 }

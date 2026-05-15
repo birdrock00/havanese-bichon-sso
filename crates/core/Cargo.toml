@@ -56,7 +56,6 @@ governor.workspace = true
 lru.workspace = true
 time.workspace = true
 murmur3.workspace = true
-autoconfig.workspace = true
 dashmap.workspace = true
 itoa.workspace = true
 html2text.workspace = true
@@ -70,3 +69,5 @@ tokio-util.workspace = true
 whichlang = "0.1.1"
 deunicode = "1.6.2"
 scopeguard = "1.2.0"
+quick-xml = { version = "0.40.0", features = ["serialize"] }
+hickory-resolver = "0.26.0-alpha.1"

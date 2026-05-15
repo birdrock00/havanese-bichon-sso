@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-use autoconfig::config::OAuth2Config as XOAuth2Config;
 use serde::{Deserialize, Serialize};
 
 use crate::account::entity::Encryption;
@@ -55,18 +53,6 @@ pub struct OAuth2Config {
     /// URL of the authorization server's token endpoint
     pub token_url: String,
 }
-
-impl From<&XOAuth2Config> for OAuth2Config {
-    fn from(value: &XOAuth2Config) -> Self {
-        Self {
-            issuer: value.issuer().into(),
-            scope: value.scope().into_iter().map(Into::into).collect(),
-            auth_url: value.auth_url().into(),
-            token_url: value.token_url().into(),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct MailServerConfig {
