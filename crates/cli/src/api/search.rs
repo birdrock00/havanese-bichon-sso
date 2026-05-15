@@ -5,11 +5,11 @@ use bichon_core::{
 };
 use reqwest::Client;
 
-use crate::BichonCtlConfig;
+use crate::BichonCliConfig;
 
 pub async fn search_messages(
     client: &Client,
-    config: &BichonCtlConfig,
+    config: &BichonCliConfig,
     page: u64,
     page_size: u64,
 ) -> Option<DataPage<Envelope>> {

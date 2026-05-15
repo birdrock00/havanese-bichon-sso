@@ -29,10 +29,10 @@ use reqwest::Client;
 
 use bichon_core::base64_encode_url_safe;
 
-use crate::{BichonCtlConfig, api::sender::send_batch_request};
+use crate::{BichonCliConfig, api::sender::send_batch_request};
 
 pub async fn handle_eml_directory_import(
-    config: &BichonCtlConfig,
+    config: &BichonCliConfig,
     account_id: u64,
     theme: &ColorfulTheme,
 ) {
@@ -100,7 +100,7 @@ fn scan_dir(
 }
 
 async fn process_and_upload(
-    config: &BichonCtlConfig,
+    config: &BichonCliConfig,
     account_id: u64,
     tasks: HashMap<String, Vec<PathBuf>>,
 ) {

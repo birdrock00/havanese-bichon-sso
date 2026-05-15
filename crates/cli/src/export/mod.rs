@@ -1,7 +1,7 @@
 use crate::api::download::download_and_export_with_json_header;
 use crate::api::search::search_messages;
 use crate::api::stats::fetch_account_stats;
-use crate::BichonCtlConfig;
+use crate::BichonCliConfig;
 use bichon_core::account::payload::MinimalAccount;
 use console::style;
 use dialoguer::Confirm;
@@ -12,7 +12,7 @@ use std::path::{Path, PathBuf};
 use sysinfo::Disks;
 
 pub async fn handle_account_export(
-    config: &BichonCtlConfig,
+    config: &BichonCliConfig,
     account: MinimalAccount,
     theme: &ColorfulTheme,
 ) {

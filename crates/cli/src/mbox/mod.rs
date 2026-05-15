@@ -22,7 +22,7 @@ use std::path::PathBuf;
 use crate::api::sender::send_batch_request;
 use crate::mbox::gmail::determine_folder;
 use crate::mbox::reader::MboxFile;
-use crate::BichonCtlConfig;
+use crate::BichonCliConfig;
 use bichon_core::base64_encode_url_safe;
 use bichon_core::envelope::meta::{parse_bichon_metadata, BichonMetadata};
 use console::style;
@@ -36,7 +36,7 @@ pub mod gmail;
 pub mod reader;
 
 pub async fn handle_mbox_single_file_import(
-    config: &BichonCtlConfig,
+    config: &BichonCliConfig,
     account_id: u64,
     theme: &ColorfulTheme,
 ) {
@@ -120,7 +120,7 @@ pub async fn handle_mbox_single_file_import(
 pub async fn run_import(
     account_id: u64,
     mbox_path: &PathBuf,
-    config: &BichonCtlConfig,
+    config: &BichonCliConfig,
     target_folder: Option<String>,
 ) {
     let client = Client::new();

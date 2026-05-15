@@ -94,7 +94,7 @@
 - **Multi-User RBAC**: 5 built-in roles (Admin, Manager, Member, AccountManager, AccountViewer) plus custom roles with 22 granular permissions.
 - **Account-Level Isolation**: Grant users access to specific accounts with scoped roles. Permissions enforced at the API layer.
 - **CLI Import Tools**: Import from EML directories, MBOX files (including Gmail variants), Thunderbird profiles, and Outlook PST files.
-- **CLI Export**: Download account data as MBOX via `bichonctl`.
+- **CLI Export**: Download account data as MBOX via `bichon-cli`.
 - **Bulk Restore**: Restore emails in bulk back to their original IMAP accounts.
 - **Embedded SMTP Server**: Receive emails directly at the gateway level. STARTTLS or TLS encryption. AUTH PLAIN/LOGIN with API token authentication.
 - **Admin Tooling**: Password reset for locked-out admins. Non-destructive v0.3.7 to v1.0 data migration.
@@ -340,10 +340,10 @@ On first start, Bichon creates a built-in admin user:
 
 ## CLI Tools
 
-### bichonctl — Import & Export
+### bichon-cli — Import & Export
 
 ```bash
-./bichonctl --config config.toml
+./bichon-cli --config config.toml
 ```
 
 Creates a `config.toml` on first run with your server URL and API token.
@@ -391,12 +391,12 @@ All `/api/v1/*` endpoints require `Authorization: Bearer <token>`.
 
 | Format | Tool | Notes |
 |--------|------|-------|
-| **EML Directory** | `bichonctl` | Recursive `.eml` scan; preserves folder hierarchy |
-| **MBOX** | `bichonctl` | Single-file streaming import; supports Gmail's MBOX variant |
-| **Thunderbird** | `bichonctl` | Reads directly from local Thunderbird profile directory |
-| **PST** | `bichonctl` | Outlook Personal Storage (`.pst`) file parsing |
+| **EML Directory** | `bichon-cli` | Recursive `.eml` scan; preserves folder hierarchy |
+| **MBOX** | `bichon-cli` | Single-file streaming import; supports Gmail's MBOX variant |
+| **Thunderbird** | `bichon-cli` | Reads directly from local Thunderbird profile directory |
+| **PST** | `bichon-cli` | Outlook Personal Storage (`.pst`) file parsing |
 | **API Import** | `POST /api/v1/import` | Base64-encoded EML payloads for programmatic use |
-| **MBOX Export** | `bichonctl` | Download account data as `.mbox` file |
+| **MBOX Export** | `bichon-cli` | Download account data as `.mbox` file |
 
 All imports flow through the Bichon REST API. The server parses MIME, extracts metadata, indexes content into Tantivy, deduplicates by BLAKE3 content hash, and stores raw blobs in Fjall.
 
@@ -410,7 +410,7 @@ bichon/
 │   ├── memdb/         Embedded key-value database layer (WAL, transactions)
 │   ├── core/          Library — IMAP sync, search, storage, auth, models
 │   ├── server/        Binary — Poem web server + embedded WebUI (rust-embed)
-│   ├── cli/           Binary — bichonctl import/export CLI
+│   ├── cli/           Binary — bichon-cli import/export CLI
 │   └── admin/         Binary — bichon-admin password reset & migration
 └── web/               React + TypeScript + Vite + ShadCN UI frontend
 ```

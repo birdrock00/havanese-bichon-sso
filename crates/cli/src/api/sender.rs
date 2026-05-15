@@ -21,11 +21,11 @@ use reqwest::Client;
 
 use bichon_core::import::BatchEmlRequest;
 
-use crate::BichonCtlConfig;
+use crate::BichonCliConfig;
 
 pub async fn send_batch_request(
     client: &Client,
-    config: &BichonCtlConfig,
+    config: &BichonCliConfig,
     account_id: u64,
     folder: &str,
     emls: Vec<String>,

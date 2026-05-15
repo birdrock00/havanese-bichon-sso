@@ -1,4 +1,4 @@
-use crate::BichonCtlConfig;
+use crate::BichonCliConfig;
 use bichon_core::{base64_encode, envelope::meta::BichonMetadata, store::envelope::Envelope};
 use chrono::{TimeZone, Utc};
 use reqwest::Client;
@@ -6,7 +6,7 @@ use tokio::io::AsyncWriteExt;
 
 pub async fn download_and_export_with_json_header(
     client: &Client,
-    config: &BichonCtlConfig,
+    config: &BichonCliConfig,
     envelope: Envelope,
     file: &mut tokio::fs::File,
 ) -> bool {

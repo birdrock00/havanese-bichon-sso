@@ -39,7 +39,7 @@ pub mod thunderbird;
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "bichonctl",
+    name = "bichon-cli",
     author = "rustmailer",
     version = bichon_version!(),
     about = "A CLI tool to import email data into Bichon service"
@@ -57,7 +57,7 @@ pub struct BichonCli {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct BichonCtlConfig {
+pub struct BichonCliConfig {
     pub base_url: String,
     pub api_token: String,
 }
@@ -67,11 +67,11 @@ async fn main() {
     let cli = BichonCli::parse();
     let theme = ColorfulTheme::default();
     let config_path = &cli.config;
-    let mut current_config: Option<BichonCtlConfig> = None;
+    let mut current_config: Option<BichonCliConfig> = None;
 
     if config_path.exists() {
         if let Ok(content) = fs::read_to_string(config_path) {
-            if let Ok(config) = toml::from_str::<BichonCtlConfig>(&content) {
+            if let Ok(config) = toml::from_str::<BichonCliConfig>(&content) {
                 println!("{}", style("✔ Existing configuration found:").green());
                 println!("  Base URL: {}", style(&config.base_url).yellow());
                 println!(" API Token: {}", style(&config.api_token).yellow());
@@ -105,7 +105,7 @@ async fn main() {
                 .interact_text()
                 .unwrap();
 
-            let conf = BichonCtlConfig {
+            let conf = BichonCliConfig {
                 base_url: url,
                 api_token: token,
             };

@@ -25,7 +25,7 @@ use outlook_pst::ltp::prop_context::PropertyValue;
 
 use crate::api::sender::send_batch_request;
 use crate::pst::encoding::decode_subject;
-use crate::BichonCtlConfig;
+use crate::BichonCliConfig;
 use bichon_core::base64_encode_url_safe;
 use dialoguer::Confirm;
 use outlook_pst::messaging::attachment::AttachmentProperties;
@@ -60,7 +60,7 @@ pub struct EmailAttachment {
     pub data: Option<Vec<u8>>,
 }
 
-pub async fn handle_pst_import(config: &BichonCtlConfig, account_id: u64, theme: &ColorfulTheme) {
+pub async fn handle_pst_import(config: &BichonCliConfig, account_id: u64, theme: &ColorfulTheme) {
     let path_str: String = Input::with_theme(theme)
         .with_prompt("Enter the path to your SINGLE .pst file")
         .validate_with(|input: &String| {
@@ -115,7 +115,7 @@ pub async fn handle_pst_import(config: &BichonCtlConfig, account_id: u64, theme:
     }
 }
 
-async fn parse_pst(pst_path: PathBuf, config: &BichonCtlConfig, account_id: u64) {
+async fn parse_pst(pst_path: PathBuf, config: &BichonCliConfig, account_id: u64) {
     let client = Client::new();
 
     let pst_store = match outlook_pst::open_store(&pst_path) {
@@ -161,7 +161,7 @@ fn process_folder_recursively<'a>(
     client: &'a Client,
     folder: &'a Rc<dyn Folder>,
     parent_path: &'a str,
-    config: &'a BichonCtlConfig,
+    config: &'a BichonCliConfig,
     account_id: u64,
 ) -> Pin<Box<dyn Future<Output = ()> + 'a>> {
     Box::pin(async move {
@@ -407,7 +407,7 @@ fn extract_recipients_list(message: &Rc<dyn Message>) -> (Vec<String>, Vec<Strin
 
 async fn send_to_bichon(
     client: &Client,
-    config: &BichonCtlConfig,
+    config: &BichonCliConfig,
     account_id: u64,
     folder_path: &str,
     emls: Vec<String>,

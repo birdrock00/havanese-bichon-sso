@@ -27,10 +27,10 @@ use bichon_core::{
     users::{permissions::Permission, view::UserView},
 };
 
-use crate::BichonCtlConfig;
+use crate::BichonCliConfig as BichonCliConfig;
 
 pub async fn verify_user_and_get_account(
-    config: &BichonCtlConfig,
+    config: &BichonCliConfig,
     theme: &ColorfulTheme,
     only_nosync: bool,
 ) -> MinimalAccount {

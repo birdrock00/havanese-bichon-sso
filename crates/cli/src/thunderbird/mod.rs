@@ -18,12 +18,12 @@
 
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::{mbox::run_import, BichonCtlConfig};
+use crate::{mbox::run_import, BichonCliConfig};
 use console::style;
 use dialoguer::{theme::ColorfulTheme, Confirm, Input};
 
 pub async fn handle_thunderbird_import(
-    config: &BichonCtlConfig,
+    config: &BichonCliConfig,
     account_id: u64,
     theme: &ColorfulTheme,
 ) {
