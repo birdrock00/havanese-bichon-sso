@@ -19,8 +19,8 @@ VERSION=$(sed -n 's/^version = "\(.*\)"/\1/p' ../Cargo.toml)
 echo "Step 3: Extracted version: $VERSION"
 
 # Step 4: Copy the compiled RustMailer binary to current directory (docker/)
-cp ../target/release/bichon .
-echo "Step 4: Copied bichon binary"
+cp ../target/release/bichon-server .
+echo "Step 4: Copied bichon-server binary"
 
 # Step 5: Build Docker image with version tag
 sudo docker build --build-arg CRATE_VERSION=$VERSION -t bichon:$VERSION .

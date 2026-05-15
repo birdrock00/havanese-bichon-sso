@@ -12,17 +12,17 @@ LABEL description="Dockerized Bichon service"
 WORKDIR /opt/bichon
 
 # Copy compiled binary (ensure it's statically linked or compatible with bullseye)
-COPY ${TARGETARCH}/bichon /opt/bichon/bichon
+COPY ${TARGETARCH}/bichon-server /opt/bichon/bichon-server
 COPY ${TARGETARCH}/LICENSE /opt/bichon/
 
 
 # cli tools
-COPY ${TARGETARCH}/bichonctl /usr/local/bin/bichonctl
+COPY ${TARGETARCH}/bichon-cli /usr/local/bin/bichon-cli
 COPY ${TARGETARCH}/bichon-admin /usr/local/bin/bichon-admin
 
 # Set permissions
-RUN chmod +x /opt/bichon/bichon
-RUN chmod +x /usr/local/bin/bichonctl
+RUN chmod +x /opt/bichon/bichon-server
+RUN chmod +x /usr/local/bin/bichon-cli
 RUN chmod +x /usr/local/bin/bichon-admin
 
 
@@ -40,4 +40,4 @@ WORKDIR /data
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD curl -fs http://localhost:15630/api/status || exit 1
 
-CMD ["/opt/bichon/bichon"]
+CMD ["/opt/bichon/bichon-server"]

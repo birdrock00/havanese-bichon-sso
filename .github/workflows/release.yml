@@ -5,8 +5,8 @@ on:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
 env:
-  BINARY_NAME: bichon
-  BINARY_CTL: bichonctl
+  BINARY_NAME: bichon-server
+  BINARY_CLI: bichon-cli
   BINARY_ADMIN: bichon-admin
 
 permissions:
@@ -82,18 +82,18 @@ jobs:
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           cargo install cross --force
-          cross build --release --features vendored-openssl --target=${{ matrix.target }}
+          cross build --release --target=${{ matrix.target }}
 
       - name: Build Rust backend
         if: matrix.target != 'aarch64-unknown-linux-gnu'
         run: |
-          cargo build --release --features vendored-openssl --target=${{ matrix.target }}  
+          cargo build --release --target=${{ matrix.target }}  
 
       - name: Strip binary (Linux and macOS)
         if: matrix.os != 'windows-latest' && matrix.target != 'aarch64-unknown-linux-gnu'
         run: |
           strip target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}
-          strip target/${{ matrix.target }}/release/${{ env.BINARY_CTL }}
+          strip target/${{ matrix.target }}/release/${{ env.BINARY_CLI }}
           strip target/${{ matrix.target }}/release/${{ env.BINARY_ADMIN }}
 
       - name: Pack artifact (Linux/macOS)
@@ -104,7 +104,7 @@ jobs:
           BINARY="target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}"
           cp README.md LICENSE release/
           cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} release/
-          cp target/${{ matrix.target }}/release/${{ env.BINARY_CTL }} release/
+          cp target/${{ matrix.target }}/release/${{ env.BINARY_CLI }} release/
           cp target/${{ matrix.target }}/release/${{ env.BINARY_ADMIN }} release/
           tar -czvf "${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz" -C release .
           mv "${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz" release/
@@ -123,7 +123,7 @@ jobs:
           mkdir -p release
 
           Copy-Item "target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe" release/
-          Copy-Item "target/${{ matrix.target }}/release/${{ env.BINARY_CTL }}.exe" release/
+          Copy-Item "target/${{ matrix.target }}/release/${{ env.BINARY_CLI }}.exe" release/
           Copy-Item "target/${{ matrix.target }}/release/${{ env.BINARY_ADMIN }}.exe" release/
 
           Copy-Item -Path README.md -Destination release/
