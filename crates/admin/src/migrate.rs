@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use bichon_core::migrate::{
-    do_migrate, is_tantivy_index_dir,
+    count_eml_segments, do_migrate_segment, is_tantivy_index_dir,
     store::{LegacyDirs, NewDirs},
 };
 use console::style;
@@ -234,8 +234,7 @@ pub fn handle_migration(theme: &ColorfulTheme) {
             );
             eprintln!(
                 "{}",
-                style("Aborting migration. No changes have been made to Tantivy data.")
-                    .yellow()
+                style("Aborting migration. No changes have been made to Tantivy data.").yellow()
             );
             return;
         }
@@ -246,48 +245,179 @@ pub fn handle_migration(theme: &ColorfulTheme) {
         style("⌛").yellow(),
         style("Step 2: Migrating email index and blob data...").cyan()
     );
-    let pb = ProgressBar::new(0);
-    pb.set_style(ProgressStyle::default_bar()
-    .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}")
-    .unwrap()
-    .progress_chars("#>-"));
-    let legacy = LegacyDirs::new(index_path, data_path);
-    let new_dirs = NewDirs::new(new_index_path, new_data_path);
-    if let Err(e) = do_migrate(legacy, new_dirs, |msg| {
-        if let Some(data) = msg.strip_prefix("PROGRESS:") {
-            let parts: Vec<&str> = data.split(':').collect();
-            if parts.len() == 2 {
-                let migrated = parts[0].parse::<u64>().unwrap_or(0);
-                let skipped = parts[1].parse::<u64>().unwrap_or(0);
 
-                pb.set_position(migrated + skipped);
-                pb.set_message(format!(
-                    "Migrated: {}, {} {}",
-                    style(migrated).green(),
-                    style(skipped).red(),
-                    style("skipped").dim()
-                ));
-            }
-        } else if let Some(total) = msg.strip_prefix("TOTAL:") {
-            pb.set_length(total.parse().unwrap_or(0));
-        } else if msg.starts_with("WARN:") {
-            pb.println(format!("{} {}", style("⚠").yellow(), &msg[5..]));
-        } else if let Some(done_data) = msg.strip_prefix("DONE:") {
-            let parts: Vec<&str> = done_data.split(':').collect();
-            pb.finish_with_message(format!(
-                "Migration finished. Total: {}, Skipped: {}",
-                parts.get(0).unwrap_or(&"0"),
-                parts.get(1).unwrap_or(&"0")
-            ));
+    println!(
+        "\n{} {}",
+        style("ℹ").blue(),
+        style("Batch size controls memory usage during migration:").dim()
+    );
+    println!(
+        "  {} 1000  — ~500MB RAM  (slower, low memory)",
+        style("•").dim()
+    );
+    println!("  {} 3000  — ~1GB RAM    (recommended)", style("•").dim());
+    println!(
+        "  {} 5000  — ~2GB RAM    (faster, high memory)",
+        style("•").dim()
+    );
+    println!(
+        "  {} Note: actual memory usage depends on your average email size.",
+        style("•").yellow()
+    );
+    println!(
+        "  {}       If your mailbox contains many large attachments, use a smaller batch size.\n",
+        style(" ").dim()
+    );
+
+    let batch_size: u32 = {
+        let input: String = Input::with_theme(&ColorfulTheme::default())
+            .with_prompt("Enter batch size (affects memory usage, see notes above)")
+            .default("3000".to_string())
+            .validate_with(|s: &String| match s.trim().parse::<usize>() {
+                Ok(n) if n > 0 => Ok(()),
+                _ => Err("Please enter a valid positive number"),
+            })
+            .interact_text()
+            .unwrap_or("3000".to_string());
+        input.trim().parse::<u32>().unwrap_or(3000)
+    };
+
+    println!(
+        "{} Using batch size: {}\n",
+        style("✓").green(),
+        style(batch_size).cyan().bold()
+    );
+
+    println!(
+        "{} Using batch size: {}\n",
+        style("✓").green(),
+        style(batch_size).cyan().bold()
+    );
+
+    let legacy = LegacyDirs::new(index_path.clone(), data_path.clone());
+    let total_segments = match count_eml_segments(&legacy) {
+        Ok(n) => n,
+        Err(e) => {
+            eprintln!(
+                "\n{} Failed to count EML segments:\n{:?}",
+                style("✘").red().bold(),
+                e
+            );
+            return;
         }
-    }) {
-        eprintln!(
-            "\n{} Migration failed:\n{:?}",
-            style("✘").red().bold(),
-            style(e).red()
+    };
+
+    if total_segments == 0 {
+        println!(
+            "{} {}",
+            style("✔").green(),
+            style("No EML segments found. Nothing to migrate.").bold()
         );
         return;
     }
+
+    println!(
+        "{} EML segments to migrate: {}",
+        style("⌛").yellow(),
+        style(total_segments).cyan()
+    );
+
+    let pb = ProgressBar::new(total_segments as u64);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta}) {msg}",
+            )
+            .unwrap()
+            .progress_chars("#>-"),
+    );
+
+    let mut grand_total_migrated: usize = 0;
+    let mut grand_total_skipped: usize = 0;
+
+    for seg_idx in 0..total_segments {
+        let seg_total: std::cell::Cell<usize> = std::cell::Cell::new(0);
+
+        pb.set_message(format!("Segment {}/{}", seg_idx + 1, total_segments));
+        let legacy = LegacyDirs::new(index_path.clone(), data_path.clone());
+        match do_migrate_segment(
+            batch_size,
+            legacy,
+            NewDirs::new(new_index_path.clone(), new_data_path.clone()),
+            seg_idx,
+            |msg| {
+                if let Some(data) = msg.strip_prefix("TOTAL:") {
+                    seg_total.set(data.parse().unwrap_or(0));
+                } else if let Some(data) = msg.strip_prefix("PHASE1:") {
+                    let parts: Vec<&str> = data.split('/').collect();
+                    let scanned: usize = parts.get(0).and_then(|s| s.parse().ok()).unwrap_or(0);
+                    let total: usize = parts
+                        .get(1)
+                        .and_then(|s| s.split_once(" skipped:").map(|(n, _)| n))
+                        .and_then(|s| s.parse().ok())
+                        .unwrap_or(0);
+                    let skipped: usize = data
+                        .split_once("skipped:")
+                        .and_then(|(_, s)| s.parse().ok())
+                        .unwrap_or(0);
+                    let pct = if total > 0 {
+                        (scanned * 100) / total
+                    } else {
+                        0
+                    };
+                    pb.set_message(format!(
+                        "Segment {}/{} [scanning {}/{} skipped:{} {}%]",
+                        seg_idx + 1,
+                        total_segments,
+                        scanned,
+                        total,
+                        skipped,
+                        pct,
+                    ));
+                } else if let Some(data) = msg.strip_prefix("PROGRESS:") {
+                    let parts: Vec<&str> = data.split(':').collect();
+                    let migrated: usize = parts.get(0).and_then(|s| s.parse().ok()).unwrap_or(0);
+                    let total = seg_total.get();
+                    let pct = if total > 0 {
+                        (migrated * 100) / total
+                    } else {
+                        0
+                    };
+                    pb.set_message(format!(
+                        "Segment {}/{} [migrating {}/{} {}%]",
+                        seg_idx + 1,
+                        total_segments,
+                        migrated,
+                        total,
+                        pct,
+                    ));
+                } else if let Some(warn) = msg.strip_prefix("WARN:") {
+                    pb.println(format!("{} {}", style("⚠").yellow(), warn));
+                } else if let Some(done_data) = msg.strip_prefix("DONE:") {
+                    let parts: Vec<&str> = done_data.split(':').collect();
+                    let migrated: usize = parts.get(0).and_then(|s| s.parse().ok()).unwrap_or(0);
+                    let skipped: usize = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
+                    grand_total_migrated += migrated;
+                    grand_total_skipped += skipped;
+                }
+            },
+        ) {
+            Ok(()) => {}
+            Err(e) => {
+                pb.finish_with_message(format!("{}", style("Migration failed.").red()));
+                eprintln!("\n{} {:?}", style("✘").red().bold(), e);
+                return;
+            }
+        }
+
+        pb.set_position((seg_idx + 1) as u64);
+    }
+
+    pb.finish_with_message(format!(
+        "Migration finished. Total: {}, Skipped: {}",
+        grand_total_migrated, grand_total_skipped
+    ));
+
     println!(
         "{} {}",
         style("✔").green(),

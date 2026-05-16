@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
     error::{code::ErrorCode, BichonResult},
@@ -10,7 +10,11 @@ use crate::{
     settings::cli::SETTINGS,
 };
 use tantivy::{
-    collector::TopDocs, query::AllQuery, schema::Value, DocAddress, Index, TantivyDocument,
+    collector::TopDocs,
+    columnar::Column,
+    query::TermQuery,
+    schema::{IndexRecordOption, Value},
+    DocAddress, Index, TantivyDocument, Term,
 };
 
 pub mod legacy;
@@ -41,6 +45,18 @@ pub fn is_tantivy_index_dir(dir: &PathBuf) -> std::io::Result<bool> {
     }
 
     Ok(has_meta_json && match_count >= 3)
+}
+
+/// Return the number of segments in the legacy EML Tantivy index.
+/// Each segment can be passed to `do_migrate_segment` for bounded-memory batch migration.
+pub fn count_eml_segments(legacy: &LegacyDirs) -> BichonResult<usize> {
+    let eml_index = Index::open_in_dir(&legacy.eml_dir)
+        .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
+    let reader = eml_index
+        .reader()
+        .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
+    let searcher = reader.searcher();
+    Ok(searcher.segment_readers().len())
 }
 
 pub fn check_data_status() -> std::io::Result<bool> {
@@ -97,12 +113,22 @@ fn is_dir_not_empty(path: &PathBuf) -> std::io::Result<bool> {
     Ok(entries.next().is_some())
 }
 
-const PAGE_SIZE: usize = 100;
-
-pub fn do_migrate<F>(legacy: LegacyDirs, new_dirs: NewDirs, mut on_progress: F) -> BichonResult<()>
+/// Migrate all documents from a single EML segment to the new storage layout.
+///
+/// This is the core of the batch migration strategy: each Process B invocation
+/// handles exactly one EML segment, so peak memory is bounded by that segment's
+/// size regardless of the total archive size.
+pub fn do_migrate_segment<F>(
+    batch_size: u32,
+    legacy: LegacyDirs,
+    new_dirs: NewDirs,
+    segment_index: usize,
+    mut on_progress: F,
+) -> BichonResult<()>
 where
     F: FnMut(&str),
 {
+    // ── open legacy indices ────────────────────────────────────────────
     let envelope_index = Index::open_in_dir(&legacy.envelope_dir)
         .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
     let eml_index = Index::open_in_dir(&legacy.eml_dir)
@@ -118,114 +144,172 @@ where
     let envelope_searcher = envelope_reader.searcher();
     let eml_searcher = eml_reader.searcher();
 
-    let total_count = envelope_searcher.num_docs();
-    on_progress(&format!("TOTAL:{}", total_count));
-
     let ef = SchemaTools::envelope_fields();
     let mf = SchemaTools::eml_fields();
 
-    let mut writer = NewIndexWriter::open(new_dirs)?;
+    let eml_segments = eml_searcher.segment_readers();
+    let eml_segment = eml_segments.get(segment_index).ok_or_else(|| {
+        raise_error!(
+            format!(
+                "segment index {} out of range ({} segments)",
+                segment_index,
+                eml_segments.len()
+            ),
+            ErrorCode::InternalError
+        )
+    })?;
 
-    let mut offset = 0usize;
-    let mut total_migrated = 0usize;
-    let mut total_skipped = 0usize;
+    let num_docs = eml_segment.num_docs();
+    if num_docs == 0 {
+        on_progress("TOTAL:0");
+        on_progress("DONE:0:0");
+        return Ok(());
+    }
 
-    loop {
-        let page: Vec<(_, DocAddress)> = envelope_searcher
-            .search(
-                &AllQuery,
-                &TopDocs::with_limit(PAGE_SIZE)
-                    .and_offset(offset)
-                    .order_by_score(),
-            )
+    on_progress(&format!("TOTAL:{}", num_docs));
+
+    let max_doc = eml_segment.max_doc();
+    let ff = eml_segment.fast_fields();
+    let f_id_col: Column<u64> = ff.u64("id").map_err(|e| {
+        raise_error!(
+            format!("failed to open f_id fast field: {e:#?}"),
+            ErrorCode::InternalError
+        )
+    })?;
+
+    // ── Phase 1: build eid → (uid, internal_date) from envelope, then drop it ──
+    let mut envelope_map: HashMap<u64, (u32, i64)> = HashMap::with_capacity(num_docs as usize);
+
+    let mut env_scanned = 0u32;
+    let mut env_skipped = 0u32;
+    for doc_id in 0..max_doc {
+        if eml_segment.is_deleted(doc_id) {
+            continue;
+        }
+        let eid = f_id_col.values.get_val(doc_id);
+
+        let term = Term::from_field_u64(ef.f_id, eid);
+        let query = TermQuery::new(term, IndexRecordOption::Basic);
+        let hits: Vec<(_, DocAddress)> = envelope_searcher
+            .search(&query, &TopDocs::with_limit(1).order_by_score())
             .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
 
-        if page.is_empty() {
-            break;
-        }
-        let fetched = page.len();
-
-        for (_, doc_address) in page {
-            let doc: TantivyDocument = envelope_searcher
-                .doc(doc_address)
+        if let Some((_, addr)) = hits.first() {
+            let env_doc: TantivyDocument = envelope_searcher
+                .doc(*addr)
                 .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
-
-            let eid = match doc.get_first(ef.f_id).and_then(|v| v.as_u64()) {
-                Some(v) => v,
-                None => {
-                    total_skipped += 1;
-                    continue;
-                }
-            };
-            let account_id = match doc.get_first(ef.f_account_id).and_then(|v| v.as_u64()) {
-                Some(v) => v,
-                None => {
-                    total_skipped += 1;
-                    continue;
-                }
-            };
-            let mailbox_id = doc
-                .get_first(ef.f_mailbox_id)
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0);
-            let uid = doc
+            let uid = env_doc
                 .get_first(ef.f_uid)
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0) as u32;
-            let internal_date = doc
+            let internal_date = env_doc
                 .get_first(ef.f_internal_date)
                 .and_then(|v| v.as_i64())
                 .unwrap_or(0);
+            envelope_map.insert(eid, (uid, internal_date));
+            env_scanned += 1;
+        } else {
+            env_skipped += 1;
+        }
 
-            let eml_term = tantivy::Term::from_field_u64(mf.f_id, eid);
-            let eml_query =
-                tantivy::query::TermQuery::new(eml_term, tantivy::schema::IndexRecordOption::Basic);
-            let eml_hits: Vec<(_, DocAddress)> = eml_searcher
-                .search(&eml_query, &TopDocs::with_limit(1).order_by_score())
-                .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
+        if env_scanned % 10 == 0 {
+            on_progress(&format!(
+                "PHASE1:{}/{} skipped:{}",
+                env_scanned, max_doc, env_skipped
+            ));
+        }
+    }
 
-            let eml_bytes = match eml_hits.first() {
-                Some((_, addr)) => {
-                    let eml_doc: TantivyDocument = eml_searcher
-                        .doc(*addr)
-                        .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
-                    match eml_doc.get_first(mf.f_eml).and_then(|v| v.as_bytes()) {
-                        Some(b) => b.to_vec(),
-                        None => {
-                            on_progress(&format!("WARN: Account {} ID {} eml field missing", account_id, eid));
-                            total_skipped += 1;
-                            continue;
-                        }
-                    }
-                }
+    // Free the envelope index before the heavy EML processing.
+    drop(envelope_searcher);
+    drop(envelope_reader);
+    drop(envelope_index);
+
+    // ── Phase 2: process EML docs, streaming one at a time ─────────────
+    let mut writer = NewIndexWriter::open(new_dirs)?;
+
+    let mut total_migrated = 0usize;
+    let mut total_skipped = 0usize;
+
+    // Recreate the StoreReader periodically to bound any internal caches.
+    //const CHUNK_SIZE: u32 = 3000;
+    let mut chunk_start = 0u32;
+
+    while chunk_start < max_doc {
+        let chunk_end = (chunk_start + batch_size).min(max_doc);
+        let store_reader = eml_segment
+            .get_store_reader(2)
+            .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
+
+        for doc_id in chunk_start..chunk_end {
+            if eml_segment.is_deleted(doc_id) {
+                continue;
+            }
+
+            let eid = f_id_col.values.get_val(doc_id);
+
+            let (uid, internal_date) = match envelope_map.get(&eid) {
+                Some(v) => *v,
                 None => {
-                    on_progress(&format!("WARN:Account {} ID {} eml not found", account_id, eid));
+                    on_progress(&format!("WARN: eid {} envelope not found", eid));
                     total_skipped += 1;
                     continue;
                 }
             };
 
-            if let Err(e) = writer.ingest(&eml_bytes, account_id, mailbox_id, uid, internal_date) {
-                on_progress(&format!("ERROR:Account {} ID {} ingest failed: {}", account_id, eid, e));
+            let eml_doc: TantivyDocument = store_reader
+                .get(doc_id)
+                .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
+
+            let account_id = match eml_doc.get_first(mf.f_account_id).and_then(|v| v.as_u64()) {
+                Some(v) => v,
+                None => {
+                    on_progress(&format!("WARN: eid {} account_id missing", eid));
+                    total_skipped += 1;
+                    continue;
+                }
+            };
+            let mailbox_id = eml_doc
+                .get_first(mf.f_mailbox_id)
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+
+            // Borrow directly from eml_doc — no .to_vec() clone.
+            let eml_bytes = match eml_doc.get_first(mf.f_eml).and_then(|v| v.as_bytes()) {
+                Some(b) => b,
+                None => {
+                    on_progress(&format!("WARN: eid {} eml bytes missing", eid));
+                    total_skipped += 1;
+                    continue;
+                }
+            };
+
+            if let Err(e) = writer.ingest(eml_bytes, account_id, mailbox_id, uid, internal_date) {
+                on_progress(&format!(
+                    "ERROR: Account {} eid {} ingest failed: {}",
+                    account_id, eid, e
+                ));
                 total_skipped += 1;
                 continue;
             }
 
             total_migrated += 1;
 
-            if total_migrated % 100 == 0 || total_migrated == total_count as usize {
-                on_progress(&format!("PROGRESS:{}:{}", total_migrated, total_skipped));
+            if total_migrated % 10 == 0 || total_migrated as u32 == num_docs {
+                on_progress(&format!("PROGRESS:{}:{}", total_migrated, num_docs));
             }
         }
 
-        offset += fetched;
-        if fetched < PAGE_SIZE {
-            break;
-        }
+        drop(store_reader);
+
+        // Flush Fjall buffers via ingestion API — bypasses memtable/WAL.
+        writer.flush_fjall_buffers()?;
+
+        chunk_start = chunk_end;
     }
 
-    writer.commit()?;
-
+    writer.finish_writers()?;
+    on_progress(&format!("DONE:{}:{}", total_migrated, total_skipped));
     Ok(())
 }
 

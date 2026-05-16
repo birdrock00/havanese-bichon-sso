@@ -301,6 +301,7 @@ dependencies = [
  "indicatif",
  "itertools",
  "memdb",
+ "mimalloc",
  "native_db",
  "native_model",
  "serde",

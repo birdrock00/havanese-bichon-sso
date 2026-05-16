@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Instant};
 
 use bytes::Bytes;
 use mail_parser::MimeHeaders;
@@ -13,7 +13,10 @@ use fjall::{
     CompressionType, Database, Keyspace, KeyspaceCreateOptions, KvSeparationOptions,
 };
 use mail_parser::MessageParser;
-use tantivy::{Index, IndexWriter, TantivyDocument};
+use tantivy::{
+    indexer::{LogMergePolicy, NoMergePolicy},
+    Index, IndexWriter, TantivyDocument,
+};
 use uuid::Uuid;
 
 use crate::{
@@ -121,14 +124,16 @@ pub fn detach_attachments_standalone(
 }
 
 pub struct NewIndexWriter {
-    pub envelope_writer: IndexWriter,
-    pub attachment_writer: IndexWriter,
+    pub envelope_writer: Option<IndexWriter>,
+    pub attachment_writer: Option<IndexWriter>,
     pub email_ks: Keyspace,
     pub attachment_ks: Keyspace,
     pending: usize,
+    email_buf: Vec<(String, Vec<u8>)>,
+    attachment_buf: Vec<(String, Vec<u8>)>,
 }
 
-const COMMIT_THRESHOLD: usize = 500;
+//const COMMIT_THRESHOLD: usize = 500;
 
 impl NewIndexWriter {
     pub fn open(dirs: NewDirs) -> BichonResult<Self> {
@@ -153,9 +158,15 @@ impl NewIndexWriter {
             .register("euro", EuroTokenizer::new());
 
         let envelope_writer = envelope_index
-            .writer_with_num_threads(2, 128 * 1024 * 1024)
+            .writer_with_num_threads(3, 256 * 1024 * 1024)
             .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
 
+        // let mut merge_policy = LogMergePolicy::default();
+        // merge_policy.set_min_num_segments(25);
+        // merge_policy.set_min_layer_size(10_000);
+        // merge_policy.set_max_docs_before_merge(100_000);
+
+        envelope_writer.set_merge_policy(Box::new(NoMergePolicy));
         // ── attachment index ─────────────────────────────────────────────
         std::fs::create_dir_all(&dirs.attachment_dir)
             .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
@@ -176,21 +187,30 @@ impl NewIndexWriter {
             .tokenizers()
             .register("euro", EuroTokenizer::new());
         let attachment_writer = attachment_index
-            .writer_with_num_threads(2, 64 * 1024 * 1024)
+            .writer_with_num_threads(3, 256 * 1024 * 1024)
             .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
+
+        // let mut merge_policy = LogMergePolicy::default();
+        // merge_policy.set_min_num_segments(25);
+        // merge_policy.set_min_layer_size(10_000);
+        // merge_policy.set_max_docs_before_merge(100_000);
+
+        attachment_writer.set_merge_policy(Box::new(NoMergePolicy));
 
         // ── blob store ───────────────────────────────────────────────────
         std::fs::create_dir_all(&dirs.storage_dir)
             .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
         let db = Database::builder(&dirs.storage_dir)
-            .cache_size(64 * 1024 * 1024)
+            .cache_size(8 * 1024 * 1024)
+            .journal_compression(CompressionType::None)
+            .max_journaling_size(64 * 1024 * 1024)
             .open()
             .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
 
         let email_ks = db
             .keyspace("email", || {
                 KeyspaceCreateOptions::default()
-                    .max_memtable_size(16 * 1024 * 1024)
+                    .max_memtable_size(4 * 1024 * 1024)
                     .data_block_size_policy(BlockSizePolicy::all(4 * 1024))
                     .data_block_compression_policy(CompressionPolicy::all(CompressionType::Lz4))
                     .with_kv_separation(Some(
@@ -205,7 +225,7 @@ impl NewIndexWriter {
         let attachment_ks = db
             .keyspace("attachments", || {
                 KeyspaceCreateOptions::default()
-                    .max_memtable_size(16 * 1024 * 1024)
+                    .max_memtable_size(4 * 1024 * 1024)
                     .data_block_size_policy(BlockSizePolicy::all(4 * 1024))
                     .data_block_compression_policy(CompressionPolicy::all(CompressionType::Lz4))
                     .with_kv_separation(Some(
@@ -218,11 +238,13 @@ impl NewIndexWriter {
             .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
 
         Ok(Self {
-            envelope_writer,
-            attachment_writer,
+            envelope_writer: Some(envelope_writer),
+            attachment_writer: Some(attachment_writer),
             email_ks,
             attachment_ks,
             pending: 0,
+            email_buf: Vec::new(),
+            attachment_buf: Vec::new(),
         })
     }
 
@@ -299,23 +321,11 @@ impl NewIndexWriter {
         // ── detach attachments → blob ──────────────────────────────────────
         let (stripped_eml, attachment_output) = detach_attachments_standalone(eml_bytes, &message);
 
-        if !self
-            .email_ks
-            .contains_key(&email_content_hash)
-            .unwrap_or(false)
-        {
-            self.email_ks
-                .insert(&email_content_hash, stripped_eml.as_slice())
-                .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
-        }
-
-        // write attachment blobs
+        // Buffer for bulk ingestion — sorted + flushed later.
+        self.email_buf
+            .push((email_content_hash.clone(), stripped_eml));
         for (hash, data) in &attachment_output.blobs {
-            if !self.attachment_ks.contains_key(hash).unwrap_or(false) {
-                self.attachment_ks
-                    .insert(hash, data.as_ref())
-                    .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
-            }
+            self.attachment_buf.push((hash.clone(), data.to_vec()));
         }
 
         // ── build envelope doc ────────────────────────────────────────────
@@ -390,35 +400,151 @@ impl NewIndexWriter {
         let envelope_doc = ea.to_document(&text, 0)?;
 
         self.envelope_writer
+            .as_mut()
+            .unwrap()
             .add_document(envelope_doc)
             .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
 
         for doc in attachment_docs {
             self.attachment_writer
+                .as_mut()
+                .unwrap()
                 .add_document(doc)
                 .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
         }
 
         self.pending += 1;
-        if self.pending >= COMMIT_THRESHOLD {
-            self.commit()?;
+        // if self.pending >= COMMIT_THRESHOLD {
+        //     self.commit()?;
+        // }
+
+        Ok(())
+    }
+
+    /// Commit pending Tantivy documents (mid-stream) — frees the in-memory
+    /// term dictionary / postings that accumulate in the IndexWriter.
+    fn commit_tantivy(&mut self) -> BichonResult<()> {
+        if self.pending == 0 {
+            return Ok(());
+        }
+        println!("Tantivy committing... this may take 2-3 minutes, please wait.");
+        let start = Instant::now();
+        if let Some(writer) = self.envelope_writer.as_mut() {
+            writer
+                .commit()
+                .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
+        }
+        if let Some(writer) = self.attachment_writer.as_mut() {
+            writer
+                .commit()
+                .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
+        }
+        println!("tantivy commit elasped: {:#?}", start.elapsed());
+        tracing::info!(count = self.pending, "committed tantivy batch");
+        self.pending = 0;
+        Ok(())
+    }
+
+    /// Final commit + segment merge for Tantivy writers (called once at end).
+    pub fn finish_writers(&mut self) -> BichonResult<()> {
+        self.commit_tantivy()?;
+
+        for (name, writer_opt) in [
+            ("envelope", &mut self.envelope_writer),
+            ("attachment", &mut self.attachment_writer),
+        ] {
+            if let Some(writer) = writer_opt.as_mut() {
+                let reader = writer
+                    .index()
+                    .reader()
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                let seg_ids: Vec<_> = reader
+                    .searcher()
+                    .segment_readers()
+                    .iter()
+                    .map(|r| r.segment_id())
+                    .collect();
+                println!("merging {} {} segments...", seg_ids.len(), name);
+                if seg_ids.len() > 1 {
+                    let _ = writer.merge(&seg_ids);
+                }
+            }
+
+            if let Some(writer) = writer_opt.take() {
+                println!("waiting for {} merge to finish...", name);
+                let start = std::time::Instant::now();
+                let _ = writer.wait_merging_threads();
+                println!("{} merge done: {:#?}", name, start.elapsed());
+            }
         }
 
         Ok(())
     }
 
-    pub fn commit(&mut self) -> BichonResult<()> {
-        if self.pending == 0 {
-            return Ok(());
+    /// Sort buffered (hash, data) pairs, dedup, and write via Fjall's
+    /// ingestion API — writes SSTables directly, bypassing memtable and WAL.
+    /// Also commits the Tantivy writers to bound their in-memory state.
+    pub fn flush_fjall_buffers(&mut self) -> BichonResult<()> {
+        self.commit_tantivy()?;
+
+        if !self.email_buf.is_empty() {
+            self.email_buf.sort_by(|a, b| a.0.cmp(&b.0));
+            self.email_buf.dedup_by(|a, b| a.0 == b.0);
+
+            let mut ingestion = self.email_ks.start_ingestion().map_err(|e| {
+                raise_error!(
+                    format!("email ingestion start: {e:#?}"),
+                    ErrorCode::InternalError
+                )
+            })?;
+            for (hash, data) in &self.email_buf {
+                ingestion
+                    .write(hash.as_bytes(), data.as_slice())
+                    .map_err(|e| {
+                        raise_error!(
+                            format!("email ingestion write: {e:#?}"),
+                            ErrorCode::InternalError
+                        )
+                    })?;
+            }
+            ingestion.finish().map_err(|e| {
+                raise_error!(
+                    format!("email ingestion finish: {e:#?}"),
+                    ErrorCode::InternalError
+                )
+            })?;
+            self.email_buf.clear();
         }
-        self.envelope_writer
-            .commit()
-            .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
-        self.attachment_writer
-            .commit()
-            .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
-        tracing::info!(count = self.pending, "committed batch");
-        self.pending = 0;
+
+        if !self.attachment_buf.is_empty() {
+            self.attachment_buf.sort_by(|a, b| a.0.cmp(&b.0));
+            self.attachment_buf.dedup_by(|a, b| a.0 == b.0);
+
+            let mut ingestion = self.attachment_ks.start_ingestion().map_err(|e| {
+                raise_error!(
+                    format!("attachment ingestion start: {e:#?}"),
+                    ErrorCode::InternalError
+                )
+            })?;
+            for (hash, data) in &self.attachment_buf {
+                ingestion
+                    .write(hash.as_bytes(), data.as_slice())
+                    .map_err(|e| {
+                        raise_error!(
+                            format!("attachment ingestion write: {e:#?}"),
+                            ErrorCode::InternalError
+                        )
+                    })?;
+            }
+            ingestion.finish().map_err(|e| {
+                raise_error!(
+                    format!("attachment ingestion finish: {e:#?}"),
+                    ErrorCode::InternalError
+                )
+            })?;
+            self.attachment_buf.clear();
+        }
+
         Ok(())
     }
 }
