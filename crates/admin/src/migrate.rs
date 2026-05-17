@@ -11,7 +11,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 pub fn handle_migration(theme: &ColorfulTheme) {
     println!(
         "\n{}",
-        style("MIGRATION: Bichon v0.3.7 Storage Architecture → v1.0.0")
+        style("MIGRATION: Bichon v0.3.7 Storage Architecture → v1.0.x")
             .bold()
             .yellow()
     );
@@ -20,7 +20,7 @@ pub fn handle_migration(theme: &ColorfulTheme) {
         "{}",
         style(
             "This tool migrates data from the legacy v0.3.7 Tantivy-based storage \
-            architecture to the new v1.0.0 \
+            architecture to the new v1.0.x \
             separated index and Fjall-backed storage format."
         )
         .dim()
@@ -32,7 +32,7 @@ pub fn handle_migration(theme: &ColorfulTheme) {
             "Legacy v0.3.7 architecture:\n\
             • envelope metadata stored in Tantivy\n\
             • message data stored in Tantivy\n\n\
-                New v1.0.0 architecture:\n\
+                New v1.0.x architecture:\n\
             • mail indexes stored in Tantivy\n\
             • attachment indexes stored in Tantivy\n\
             • raw message data stored in Fjall\n\
@@ -172,7 +172,7 @@ pub fn handle_migration(theme: &ColorfulTheme) {
             println!(
                 "{} {}",
                 style("✔").green(),
-                style("Legacy v0.x Tantivy-based storage detected. Migration to v1.0 is required.")
+                style("Legacy v0.3.7 Tantivy-based storage detected. Migration to v1.0 is required.")
                     .yellow()
             );
         }
@@ -180,7 +180,7 @@ pub fn handle_migration(theme: &ColorfulTheme) {
             println!(
                 "{} {}",
                 style("✔").green(),
-                style("No legacy v0.x storage layout was detected at the specified paths.").green()
+                style("No legacy v0.3.7 storage layout was detected at the specified paths.").green()
             );
 
             println!(

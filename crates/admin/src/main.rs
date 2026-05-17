@@ -43,7 +43,7 @@ async fn run_interactive() {
 
     let main_options = vec![
         "Reset Admin Password",
-        "Migrate Legacy v0.3.7 Storage to v1.0.0",
+        "Migrate Legacy v0.3.7 Storage to v1.0.x",
         "Exit",
     ];
 
