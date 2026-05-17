@@ -1317,6 +1317,10 @@
         "desc": "Cross-Origin-Zugriffsregeln",
         "title": "CORS"
       },
+      "integration": {
+        "desc": "Integration des KI-Assistenten-Protokolls.",
+        "title": "Externe Integration"
+      },
       "logging": {
         "desc": "Verhalten der Log-Ausgabe",
         "title": "Protokollierung"

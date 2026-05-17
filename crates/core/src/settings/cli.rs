@@ -253,6 +253,14 @@ pub struct Settings {
     #[clap(
         long,
         env,
+        default_value = "false",
+        help = "Enable the MCP (Model Context Protocol) server for AI assistant integration"
+    )]
+    pub bichon_enable_mcp: bool,
+
+    #[clap(
+        long,
+        env,
         help = "Path to the SMTP TLS private key file (e.g., key.pem)",
         value_parser = ValueParser::new(|s: &str| {
             let path = PathBuf::from(s);

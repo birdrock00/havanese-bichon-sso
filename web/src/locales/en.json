@@ -1318,6 +1318,10 @@
         "desc": "Cross-origin access rules",
         "title": "CORS"
       },
+      "integration": {
+        "desc": "AI assistant protocol integration.",
+        "title": "External Integration"
+      },
       "logging": {
         "desc": "Log output behavior",
         "title": "Logging"

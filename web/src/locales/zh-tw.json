@@ -1317,6 +1317,10 @@
         "desc": "跨來源資源共用規則",
         "title": "CORS"
       },
+      "integration": {
+        "desc": "AI 助手協定集成。",
+        "title": "外部集成"
+      },
       "logging": {
         "desc": "日誌輸出行為",
         "title": "日誌"

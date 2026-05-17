@@ -1317,6 +1317,10 @@
         "desc": "Tilgangsregler for cross-origin",
         "title": "CORS"
       },
+      "integration": {
+        "desc": "Integrasjon av AI-assistentprotokoll.",
+        "title": "Ekstern integrasjon"
+      },
       "logging": {
         "desc": "Loggutdata-oppførsel",
         "title": "Logging"

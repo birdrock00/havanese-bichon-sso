@@ -29,7 +29,8 @@ import {
   Activity,
   InfoIcon,
   Mail,
-  Zap
+  Zap,
+  Bot
 } from "lucide-react"
 import { get_system_configurations } from "@/api/system/api"
 import { useQuery } from "@tanstack/react-query"
@@ -178,6 +179,17 @@ export default function ServerConfigurationsPage() {
                 <SettingRow label="BICHON_SMTP_PORT" value={data!.bichon_smtp_port} />
                 <SettingRow label="BICHON_SMTP_ENCRYPTION" value={data!.bichon_smtp_encryption} />
                 <SettingRow label="BICHON_SMTP_AUTH_REQUIRED" value={<BooleanBadge value={data!.bichon_smtp_auth_required} />} />
+              </SettingsCard>
+
+              <SettingsCard
+                icon={Bot}
+                title={t("systemConfig.sections.integration.title")}
+                description={t("systemConfig.sections.integration.desc")}
+              >
+                <SettingRow
+                  label="BICHON_ENABLE_MCP"
+                  value={<BooleanBadge value={data!.bichon_enable_mcp} />}
+                />
               </SettingsCard>
 
               <SettingsCard

@@ -1317,6 +1317,10 @@
         "desc": "クロスオリジンアクセスのルール",
         "title": "CORS"
       },
+      "integration": {
+        "desc": "AIアシスタントプロトコルの統合。",
+        "title": "外部統合"
+      },
       "logging": {
         "desc": "ログ出力の動作",
         "title": "ロギング"

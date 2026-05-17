@@ -46,6 +46,7 @@ use crate::rest::start_http_server;
 
 pub mod common;
 pub mod error;
+pub mod mcp;
 pub mod rest;
 
 #[global_allocator]

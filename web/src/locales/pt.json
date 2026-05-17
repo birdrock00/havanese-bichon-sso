@@ -1317,6 +1317,10 @@
         "desc": "Regras de acesso cross-origin",
         "title": "CORS"
       },
+      "integration": {
+        "desc": "Integração do protocolo do assistente de IA.",
+        "title": "Integração externa"
+      },
       "logging": {
         "desc": "Comportamento de saída de logs",
         "title": "Logging"

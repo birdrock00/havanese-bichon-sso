@@ -1318,6 +1318,10 @@
         "desc": "跨域访问规则",
         "title": "CORS"
       },
+      "integration": {
+        "desc": "AI 助手协议集成。",
+        "title": "外部集成"
+      },
       "logging": {
         "desc": "日志输出行为",
         "title": "日志"

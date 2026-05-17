@@ -138,6 +138,8 @@ export type ServerConfigurations = {
     bichon_smtp_auth_required: boolean
     bichon_smtp_tls_key_path?: string | null
     bichon_smtp_tls_cert_path?: string | null
+
+    bichon_enable_mcp: boolean
 }
 
 export const get_dashboard_stats = async () => {

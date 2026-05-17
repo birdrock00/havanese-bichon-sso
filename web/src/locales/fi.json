@@ -1317,6 +1317,10 @@
         "desc": "Cross-origin-käyttösäännöt",
         "title": "CORS"
       },
+      "integration": {
+        "desc": "Tekoälyavustajan protokollaintegraatio.",
+        "title": "Ulkoinen integraatio"
+      },
       "logging": {
         "desc": "Lokien tulostuskäyttäytyminen",
         "title": "Lokitukset"

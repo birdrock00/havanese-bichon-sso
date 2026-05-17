@@ -30,6 +30,7 @@ use bichon_core::settings::cli::SETTINGS;
 use super::error::ApiErrorResponse;
 use crate::common::auth::ApiGuard;
 use crate::common::timeout::{Timeout, TIMEOUT_HEADER};
+use crate::mcp::mcp_endpoint;
 use api::create_openapi_service;
 use assets::FrontEndAssets;
 use bichon_core::raise_error;
@@ -123,7 +124,20 @@ pub async fn start_http_server() -> BichonResult<()> {
         .nest("/api-docs/spec.yaml", spec_yaml)
         .nest("/oauth2/callback", get(oauth2_callback))
         .nest("/api/status", get(get_status))
-        .nest("/api/login", post(login))
+        .nest("/api/login", post(login));
+
+    let app_logic = if SETTINGS.bichon_enable_mcp {
+        app_logic.nest_no_strip(
+            "/mcp",
+            mcp_endpoint()
+                .with(ApiGuard)
+                .with(Timeout),
+        )
+    } else {
+        app_logic
+    };
+
+    let app_logic = app_logic
         .nest_no_strip("/api/v1", open_api_route)
         .nest_no_strip(
             "/assets",
