@@ -20,6 +20,7 @@ import { get_dashboard_stats, INITIAL_DASHBOARD_STATS, TimeBucket } from '@/api/
 import { Main } from '@/components/layout/main';
 import { FixedHeader } from '@/components/layout/fixed-header';
 import { useTranslation } from 'react-i18next';
+import LongText from '@/components/long-text';
 import { getToken } from '@/stores/authStore';
 import { useNavigate } from '@tanstack/react-router';
 import useMinimalAccountList from '@/hooks/use-minimal-account-list';
@@ -346,18 +347,18 @@ export default function MailArchiveDashboard() {
               </CardContent>
             </Card>
           </div>
-          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
+          <div className="grid gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <Card className="overflow-hidden">
               <CardHeader className="!px-4 !pt-4 !pb-1">
                 <CardTitle className="text-xs font-bold uppercase tracking-wider">{t('dashboard.top10Senders')}</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 {hasTopSenders ? (
-                  <Table>
+                  <Table className="table-fixed">
                     <TableHeader>
                       <TableRow>
                         <TableHead className="text-xs">{t('dashboard.sender')}</TableHead>
-                        <TableHead className="text-right text-xs">{t('dashboard.count')}</TableHead>
+                        <TableHead className="w-[96px] text-right text-xs">{t('dashboard.count')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -368,16 +369,18 @@ export default function MailArchiveDashboard() {
                               <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                               <div className="text-xs flex flex-wrap gap-x-1 min-w-0 flex-1">
                                 <span className="flex items-center">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleQuickSearch({ from: s.key })
-                                    }}
-                                    className="hover:text-primary hover:underline transition-colors truncate max-w-[258px]"
-                                  >
-                                    {s.key}
-                                  </button>
+                                  <LongText className="max-w-[180px] md:max-w-[160px] lg:max-w-[200px] xl:max-w-[220px]">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleQuickSearch({ from: s.key })
+                                      }}
+                                      className="hover:text-primary hover:underline transition-colors"
+                                    >
+                                      {s.key}
+                                    </button>
+                                  </LongText>
                                 </span>
                               </div>
                             </div>
@@ -392,17 +395,17 @@ export default function MailArchiveDashboard() {
                 )}
               </CardContent>
             </Card>
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader className="!px-4 !pt-4 !pb-1">
                 <CardTitle className="text-xs font-bold uppercase tracking-wider">{t('dashboard.top10LargestEmails')}</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 {hasTopEmails ? (
-                  <Table>
+                  <Table className="table-fixed">
                     <TableHeader>
                       <TableRow>
                         <TableHead className="text-xs">{t('dashboard.subject')}</TableHead>
-                        <TableHead className="text-right text-xs">{t('dashboard.size')}</TableHead>
+                        <TableHead className="w-[96px] text-right text-xs">{t('dashboard.size')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -413,16 +416,18 @@ export default function MailArchiveDashboard() {
                               <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                               <div className="text-xs flex flex-wrap gap-x-1 min-w-0 flex-1">
                                 <span className="flex items-center">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleQuickSearch({ id: m.id })
-                                    }}
-                                    className="hover:text-primary hover:underline transition-colors truncate max-w-[258px]"
-                                  >
-                                    {m.subject || t('dashboard.noSubject')}
-                                  </button>
+                                  <LongText className="max-w-[180px] md:max-w-[160px] lg:max-w-[200px] xl:max-w-[220px]">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleQuickSearch({ id: m.id })
+                                      }}
+                                      className="hover:text-primary hover:underline transition-colors"
+                                    >
+                                      {m.subject || t('dashboard.noSubject')}
+                                    </button>
+                                  </LongText>
                                 </span>
                               </div>
                             </div>
@@ -437,7 +442,7 @@ export default function MailArchiveDashboard() {
                 )}
               </CardContent>
             </Card>
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader className="!px-4 !pt-4 !pb-1">
                 <CardTitle className="text-xs font-bold uppercase tracking-wider">
                   {t('dashboard.top10LargestAttachments')}
@@ -445,11 +450,11 @@ export default function MailArchiveDashboard() {
               </CardHeader>
               <CardContent className="p-0">
                 {stats?.top_largest_attachments?.length ? (
-                  <Table>
+                  <Table className="table-fixed">
                     <TableHeader>
                       <TableRow>
                         <TableHead className="text-xs">{t('attachment.name')}</TableHead>
-                        <TableHead className="text-right text-xs">{t('dashboard.size')}</TableHead>
+                        <TableHead className="w-[96px] text-right text-xs">{t('dashboard.size')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -463,16 +468,18 @@ export default function MailArchiveDashboard() {
                               <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                               <div className="text-xs flex flex-wrap gap-x-1 min-w-0 flex-1">
                                 <span className="flex items-center">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleQuickAttachmentSearch({ id: a.id })
-                                    }}
-                                    className="hover:text-primary hover:underline transition-colors truncate max-w-[238px]"
-                                  >
-                                    {a.name || 'Unnamed'}
-                                  </button>
+                                  <LongText className="max-w-[160px] md:max-w-[140px] lg:max-w-[180px] xl:max-w-[200px]">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleQuickAttachmentSearch({ id: a.id })
+                                      }}
+                                      className="hover:text-primary hover:underline transition-colors"
+                                    >
+                                      {a.name || 'Unnamed'}
+                                    </button>
+                                  </LongText>
                                 </span>
                               </div>
                             </div>
@@ -489,17 +496,17 @@ export default function MailArchiveDashboard() {
                 )}
               </CardContent>
             </Card>
-            <Card>
+            <Card className="overflow-hidden">
               <CardHeader className="!px-4 !pt-4 !pb-1">
                 <CardTitle className="text-xs font-bold uppercase tracking-wider">{t('dashboard.top10Accounts')}</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
                 {hasTopAccounts ? (
-                  <Table>
+                  <Table className="table-fixed">
                     <TableHeader>
                       <TableRow>
                         <TableHead className="text-xs">{t('dashboard.account')}</TableHead>
-                        <TableHead className="text-right text-xs">{t('dashboard.emails')}</TableHead>
+                        <TableHead className="w-[96px] text-right text-xs">{t('dashboard.emails')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -510,16 +517,18 @@ export default function MailArchiveDashboard() {
                               <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
                               <div className="text-xs flex flex-wrap gap-x-1 min-w-0 flex-1">
                                 <span className="flex items-center">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleQuickSearch({ account_ids: [getAccountIdByEmail(acc.key) || 0] })
-                                    }}
-                                    className="hover:text-primary hover:underline transition-colors truncate max-w-[258px]"
-                                  >
-                                    {acc.key}
-                                  </button>
+                                  <LongText className="max-w-[180px] md:max-w-[160px] lg:max-w-[200px] xl:max-w-[220px]">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleQuickSearch({ account_ids: [getAccountIdByEmail(acc.key) || 0] })
+                                      }}
+                                      className="hover:text-primary hover:underline transition-colors"
+                                    >
+                                      {acc.key}
+                                    </button>
+                                  </LongText>
                                 </span>
                               </div>
                             </div>
