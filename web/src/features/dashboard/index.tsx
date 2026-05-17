@@ -17,6 +17,7 @@ import { Mail, Users, Inbox, Zap, Paperclip } from 'lucide-react';
 import { formatBytes, formatNumber } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { get_dashboard_stats, INITIAL_DASHBOARD_STATS, TimeBucket } from '@/api/system/api';
+//import { MOCK_DASHBOARD_STATS } from '@/api/system/mock-dashboard';
 import { Main } from '@/components/layout/main';
 import { FixedHeader } from '@/components/layout/fixed-header';
 import { useTranslation } from 'react-i18next';

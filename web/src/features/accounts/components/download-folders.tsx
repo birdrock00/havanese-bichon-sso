@@ -31,13 +31,14 @@ import { Loader2, CheckSquare, Square } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from '@/hooks/use-toast'
 import { list_mailboxes, MailboxData } from '@/api/mailbox/api'
+//import { MOCK_MAILBOX_LIST } from '@/api/mailbox/mock-mailboxes'
 import { buildTree, ExtendedTreeItemProps } from '@/lib/build-tree'
 import { Skeleton } from '@/components/ui/skeleton'
 import { AccountModel, update_account } from '@/api/account/api'
 import { ToastAction } from '@/components/ui/toast'
 import axios, { AxiosError } from 'axios'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { useTranslation } from 'react-i18next'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { RichTreeView } from '@mui/x-tree-view/RichTreeView';
 import { useTheme } from '@/context/theme-context'
 import React from 'react'
@@ -108,7 +109,7 @@ function CustomLabel({
             </div>
             {exists !== undefined && (
                 <span
-                    className="text-sm opacity-60 min-w-[40px] text-right text-inherit"
+                    className="text-sm opacity-60 min-w-[40px] text-right text-inherit mr-4"
                 >
                     {exists}
                 </span>
@@ -181,7 +182,7 @@ export function DownloadFoldersDialog({ currentRow, open, onOpenChange }: Props)
             setItemsWithChildren(itemsWithChildren);
             setExpandedItems(itemsWithChildren);
             const download_folders = data
-                .filter(mailbox => currentRow.download_folders.includes(mailbox.name))
+                .filter(mailbox => currentRow.download_folders?.includes(mailbox.name))
                 .map(mailbox => mailbox.id.toString());
             setSelectedItems(download_folders);
         };
@@ -404,7 +405,7 @@ export function DownloadFoldersDialog({ currentRow, open, onOpenChange }: Props)
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+            <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
                 <DialogHeader className="flex-shrink-0">
                     <DialogTitle>{t('accounts.selectMailboxes')}</DialogTitle>
                     <DialogDescription>
@@ -412,8 +413,8 @@ export function DownloadFoldersDialog({ currentRow, open, onOpenChange }: Props)
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-4">
-                    <div className="flex flex-col pt-2 gap-2">
+                <div className="flex-1 min-h-0 grid gap-4" style={{ gridTemplateRows: 'auto 1fr' }}>
+                    <div className="flex flex-col gap-2">
                         <div className="flex gap-2 flex-wrap">
                             <Button
                                 variant="outline"
@@ -479,7 +480,7 @@ export function DownloadFoldersDialog({ currentRow, open, onOpenChange }: Props)
                         </div>
                     </div>
 
-                    <ScrollArea className="h-[32rem] flex-1 min-h-0 w-full pr-4 -mr-4 py-1">
+                    <ScrollArea className="min-h-0 w-full py-1">
                         {isLoading && (
                             <div className="p-8 space-y-8">
                                 <div className="flex flex-col items-center gap-3 text-muted-foreground">
