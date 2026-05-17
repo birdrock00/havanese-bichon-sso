@@ -27,19 +27,17 @@ use bichon_core::{
     users::{permissions::Permission, view::UserView},
 };
 
-use crate::BichonCliConfig as BichonCliConfig;
+use crate::BichonCliConfig;
 
-pub async fn verify_user_and_get_account(
-    config: &BichonCliConfig,
-    theme: &ColorfulTheme,
-    only_nosync: bool,
-) -> MinimalAccount {
-    let client = Client::new();
-    let url = format!("{}/api/v1/current-user", config.base_url);
-
+async fn fetch_json<T: serde::de::DeserializeOwned>(
+    client: &Client,
+    url: &str,
+    token: &str,
+    label: &str,
+) -> T {
     let response = match client
-        .get(&url)
-        .header("Authorization", format!("Bearer {}", config.api_token))
+        .get(url)
+        .header("Authorization", format!("Bearer {}", token))
         .send()
         .await
     {
@@ -59,19 +57,15 @@ pub async fn verify_user_and_get_account(
         }
     };
 
-    if !response.status().is_success() {
-        let status = response.status();
-        let error_body = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "No error detail provided".to_string());
+    let status = response.status();
+    let body = response.text().await.unwrap_or_else(|_| String::new());
 
+    if !status.is_success() {
         eprintln!(
             "\n{} Server returned an error (Status: {})",
             style("✘ API Error:").red().bold(),
             style(status).yellow()
         );
-
         if status == 401 {
             eprintln!(
                 "{} Your API Token seems to be invalid or expired.",
@@ -83,36 +77,66 @@ pub async fn verify_user_and_get_account(
                 style("Context:").dim()
             );
         }
-
-        eprintln!("{} {}", style("Response:").dim(), error_body);
+        eprintln!("{} {}", style("Response:").dim(), body);
         process::exit(1);
     }
 
-    let user: UserView = response.json().await.expect("Failed to parse user data");
-    println!("Welcome, {}!", style(&user.username).cyan());
-
-    let account_list_url = format!(
-        "{}/api/v1/minimal-account-list?only_nosync={only_nosync}",
-        config.base_url
-    );
-    let acc_response = client
-        .get(&account_list_url)
-        .header("Authorization", format!("Bearer {}", config.api_token))
-        .send()
-        .await
-        .expect("Failed to fetch account list");
-
-    if !acc_response.status().is_success() {
-        panic!(
-            "Failed to retrieve accounts. Status: {}",
-            acc_response.status()
+    if body.is_empty() {
+        eprintln!(
+            "\n{} Server returned an empty response for [{}] (Status: {})",
+            style("✘ Empty Response:").red().bold(),
+            label,
+            status
         );
+        eprintln!(
+            "{} This may be caused by a reverse proxy or middleware issue.",
+            style("Tip:").cyan()
+        );
+        process::exit(1);
     }
 
-    let accounts: Vec<MinimalAccount> = acc_response
-        .json()
-        .await
-        .expect("Failed to parse minimal account list");
+    match serde_json::from_str::<T>(&body) {
+        Ok(data) => data,
+        Err(e) => {
+            eprintln!(
+                "\n{} Failed to parse response for [{}]: {}",
+                style("✘ Parse Error:").red().bold(),
+                label,
+                e
+            );
+            eprintln!("{} Raw body: {}", style("Debug:").dim(), body);
+            process::exit(1);
+        }
+    }
+}
+
+pub async fn verify_user_and_get_account(
+    config: &BichonCliConfig,
+    theme: &ColorfulTheme,
+    only_nosync: bool,
+) -> MinimalAccount {
+    let client = Client::new();
+
+    let user: UserView = fetch_json(
+        &client,
+        &format!("{}/api/v1/current-user", config.base_url),
+        &config.api_token,
+        "current-user",
+    )
+    .await;
+
+    println!("Welcome, {}!", style(&user.username).cyan());
+
+    let accounts: Vec<MinimalAccount> = fetch_json(
+        &client,
+        &format!(
+            "{}/api/v1/minimal-account-list?only_nosync={only_nosync}",
+            config.base_url
+        ),
+        &config.api_token,
+        "minimal-account-list",
+    )
+    .await;
 
     if accounts.is_empty() {
         println!(
@@ -129,6 +153,7 @@ pub async fn verify_user_and_get_account(
         );
         process::exit(1);
     }
+
     let required_permission = Permission::DATA_IMPORT_BATCH;
     let mut selectable_accounts = Vec::new();
     let mut options = Vec::new();
