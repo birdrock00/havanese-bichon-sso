@@ -32,6 +32,9 @@ use crate::{
     raise_error,
 };
 
+/// Skip individual emails larger than this after decoding (100 MB).
+const MAX_SINGLE_EML_BYTES: usize = 100 * 1024 * 1024;
+
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct BatchEmlRequest {
@@ -66,7 +69,7 @@ pub struct BatchEmlResult {
 pub struct ImportEmls;
 
 impl ImportEmls {
-    pub async fn do_import(request: BatchEmlRequest) -> BichonResult<BatchEmlResult> {
+    pub async fn do_import(mut request: BatchEmlRequest) -> BichonResult<BatchEmlResult> {
         let account = AccountModel::check_account_exists(request.account_id)?;
         
         if !account.enabled {
@@ -115,7 +118,8 @@ impl ImportEmls {
         let mut failed_details: Vec<FailedEmlDetail> = Vec::new(); // Store failure details
 
         let total = request.emls.len();
-        for (index, eml_base64) in request.emls.into_iter().enumerate() {
+        let mut index: usize = 0;
+        while let Some(eml_base64) = request.emls.pop() {
             let decoded = match base64_decode_url_safe!(eml_base64.as_bytes()) {
                 Ok(bytes) => bytes,
                 Err(e) => {
@@ -126,9 +130,26 @@ impl ImportEmls {
                         index,
                         error_message: error_msg,
                     });
+                    index += 1;
                     continue;
                 }
             };
+            // eml_base64 string dropped here — frees base64 memory before parsing
+
+            if decoded.len() > MAX_SINGLE_EML_BYTES {
+                let size_mb = decoded.len() as f64 / 1024.0 / 1024.0;
+                let error_msg = format!(
+                    "Email at index {} is {:.1} MB (limit 50 MB). Skipping.",
+                    index, size_mb,
+                );
+                tracing::warn!("{}", error_msg);
+                failed_details.push(FailedEmlDetail {
+                    index,
+                    error_message: error_msg,
+                });
+                index += 1;
+                continue;
+            }
 
             match extract_envelope_from_eml(&decoded, account_id, mailbox_id).await {
                 Ok(_) => {
@@ -144,9 +165,11 @@ impl ImportEmls {
                         index,
                         error_message: error_msg,
                     });
+                    index += 1;
                     continue;
                 }
             };
+            index += 1;
         }
 
         let failed_count = failed_details.len();
