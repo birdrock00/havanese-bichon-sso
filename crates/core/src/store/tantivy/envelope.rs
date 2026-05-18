@@ -86,6 +86,16 @@ pub struct IndexManager {
 }
 
 impl IndexManager {
+    pub(crate) fn index_writer(&self) -> &Arc<Mutex<IndexWriter>> {
+        &self.index_writer
+    }
+
+    pub(crate) fn create_reader(&self) -> BichonResult<IndexReader> {
+        self.index
+            .reader()
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
+    }
+
     pub async fn shutdown(&self) {
         let mut guard = self.handle.lock().await;
         if let Some(handle) = guard.take() {

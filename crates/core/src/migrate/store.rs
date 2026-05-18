@@ -13,10 +13,7 @@ use fjall::{
     CompressionType, Database, Keyspace, KeyspaceCreateOptions, KvSeparationOptions,
 };
 use mail_parser::MessageParser;
-use tantivy::{
-    indexer::{LogMergePolicy, NoMergePolicy},
-    Index, IndexWriter, TantivyDocument,
-};
+use tantivy::{indexer::NoMergePolicy, Index, IndexWriter, TantivyDocument};
 use uuid::Uuid;
 
 use crate::{
