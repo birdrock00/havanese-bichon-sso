@@ -78,6 +78,10 @@ pub struct IndexManager {
 }
 
 impl IndexManager {
+    pub(crate) fn index_writer(&self) -> &Arc<Mutex<IndexWriter>> {
+        &self.index_writer
+    }
+
     pub async fn shutdown(&self) {
         let mut guard = self.handle.lock().await;
         if let Some(handle) = guard.take() {

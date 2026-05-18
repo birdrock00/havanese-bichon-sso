@@ -24,6 +24,7 @@ use crate::{
 };
 
 pub mod attachment;
+pub mod dedup;
 pub mod envelope;
 pub mod fields;
 pub mod filter;
