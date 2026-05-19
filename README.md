@@ -271,6 +271,10 @@ All settings accept both CLI flags (`--bichon-http-port`) and environment variab
 > [!TIP]
 > Place `BICHON_INDEX_DIR` on fast SSD storage for responsive search, and `BICHON_DATA_DIR` on high-capacity HDD for cost-effective blob storage.
 
+
+> [!IMPORTANT]
+> Bichon does NOT support writing data directly to a network file system (NFS, CIFS/SMB, etc.). All directories — `BICHON_ROOT_DIR`, `BICHON_DATA_DIR`, and `BICHON_INDEX_DIR` — must reside on a **local file system**; otherwise, data corruption may occur.
+
 ### Performance Tuning
 
 | Variable | Default | Description |
