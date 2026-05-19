@@ -83,16 +83,11 @@ impl DashboardStats {
 
         stat.email_count = ENVELOPE_MANAGER.total_emails(&authorized_ids)?;
         stat.attachment_count = ATTACHMENT_MANAGER.total_attachments(&authorized_ids)?;
-        if has_all_accounts {
-            stat.storage_usage_bytes = get_total_size(&DATA_DIR_MANAGER.storage_dir)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        stat.storage_usage_bytes = get_total_size(&DATA_DIR_MANAGER.storage_dir)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
-            stat.index_usage_bytes = get_total_size(&&DATA_DIR_MANAGER.envelope_dir)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        } else {
-            stat.storage_usage_bytes = 0;
-            stat.index_usage_bytes = 0;
-        }
+        stat.index_usage_bytes = get_total_size(&&DATA_DIR_MANAGER.envelope_dir)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         stat.system_version = bichon_version!().to_string();
 
