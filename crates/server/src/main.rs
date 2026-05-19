@@ -202,7 +202,10 @@ mod api_tests {
             .map(|v| v.object().get("name").string())
             .collect();
 
-        assert!(tag_names.contains(&"AccessToken"), "missing AccessToken tag");
+        assert!(
+            tag_names.contains(&"AccessToken"),
+            "missing AccessToken tag"
+        );
         assert!(tag_names.contains(&"Attachment"), "missing Attachment tag");
         assert!(tag_names.contains(&"AutoConfig"), "missing AutoConfig tag");
         assert!(tag_names.contains(&"Account"), "missing Account tag");

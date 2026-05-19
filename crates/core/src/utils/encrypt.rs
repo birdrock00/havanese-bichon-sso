@@ -26,10 +26,10 @@ use std::sync::LazyLock;
 
 use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
-use crate::settings::cli::SETTINGS;
 use crate::raise_error;
+use crate::settings::cli::SETTINGS;
 
-static ENCRYPT_PASSWORD: LazyLock<String> = LazyLock::new(|| {
+pub static ENCRYPT_PASSWORD: LazyLock<String> = LazyLock::new(|| {
     if let Some(file_path) = &SETTINGS.bichon_encrypt_password_file {
         return fs::read_to_string(file_path)
             .expect("failed to read the file with the encrypt password")
@@ -102,7 +102,10 @@ pub fn internal_encrypt_string(
     Ok(general_purpose::URL_SAFE.encode(&result))
 }
 
-pub fn internal_decrypt_string(password: &str, data: &str) -> Result<String, ring::error::Unspecified> {
+pub fn internal_decrypt_string(
+    password: &str,
+    data: &str,
+) -> Result<String, ring::error::Unspecified> {
     let data = general_purpose::URL_SAFE
         .decode(data)
         .map_err(|_| ring::error::Unspecified)?;
@@ -146,8 +149,7 @@ mod tests {
 
     #[test]
     fn test_wrong_password_fails() {
-        let encrypted =
-            internal_encrypt_string("correct_password", "secret").unwrap();
+        let encrypted = internal_encrypt_string("correct_password", "secret").unwrap();
         assert!(internal_decrypt_string("wrong_password", &encrypted).is_err());
     }
 
