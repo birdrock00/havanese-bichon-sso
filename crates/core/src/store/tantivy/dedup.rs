@@ -158,10 +158,10 @@ fn dedup_account(
 ) -> BichonResult<u64> {
     let searcher = email_reader.searcher();
     let fields = SchemaTools::email_fields();
-    eprintln!(
-        "DEBUG dedup_account: entry account={account_id} f_id_field={:?} f_content_hash_field={:?}",
-        fields.f_id, fields.f_content_hash
-    );
+    // eprintln!(
+    //     "DEBUG dedup_account: entry account={account_id} f_id_field={:?} f_content_hash_field={:?}",
+    //     fields.f_id, fields.f_content_hash
+    // );
     let mut map: DedupMap = HashMap::new();
 
     // ── Phase 1: build the dedup map via FAST column scans ──────────────────
@@ -204,7 +204,11 @@ fn dedup_account(
             let ingest_at = ingest_col.values.get_val(doc_id);
 
             // Read content_hash from the dictionary-encoded string column
-            let hash_ord = hash_col.ords().values_for_doc(doc_id as u32).next().unwrap_or(0);
+            let hash_ord = hash_col
+                .ords()
+                .values_for_doc(doc_id as u32)
+                .next()
+                .unwrap_or(0);
             let mut hash_buf = String::new();
             hash_col
                 .ord_to_str(hash_ord, &mut hash_buf)
@@ -212,16 +216,20 @@ fn dedup_account(
             let content_hash = hash_buf;
 
             // Read f_id from the dictionary-encoded string column
-            let id_ord = id_col.ords().values_for_doc(doc_id as u32).next().unwrap_or(0);
+            let id_ord = id_col
+                .ords()
+                .values_for_doc(doc_id as u32)
+                .next()
+                .unwrap_or(0);
             let mut id_buf = String::new();
             id_col
                 .ord_to_str(id_ord, &mut id_buf)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
             let email_id = id_buf;
 
-            eprintln!(
-                "DEBUG dedup_account: account={account_id} doc_id={doc_id} mailbox={mailbox_id} hash={content_hash:?} id={email_id:?} ingest_at={ingest_at}"
-            );
+            // eprintln!(
+            //     "DEBUG dedup_account: account={account_id} doc_id={doc_id} mailbox={mailbox_id} hash={content_hash:?} id={email_id:?} ingest_at={ingest_at}"
+            // );
 
             map.entry((mailbox_id, content_hash))
                 .or_default()
@@ -247,7 +255,11 @@ fn dedup_account(
         // uidvalidity, which is required for correct incremental sync.
         entries.sort_by_key(|e| std::cmp::Reverse(e.ingest_at));
 
-        eprintln!("DEBUG Phase2: key={_key:?} kept={} deleting={}", entries[0].email_id, entries.len() - 1);
+        eprintln!(
+            "DEBUG Phase2: key={_key:?} kept={} deleting={}",
+            entries[0].email_id,
+            entries.len() - 1
+        );
         // Keep entries[0], soft-delete everything else via term query on f_id
         for entry in &entries[1..] {
             eprintln!(
@@ -315,13 +327,14 @@ mod tests {
 
     /// Collect non-deleted f_id values from the email index.
     fn surviving_email_ids(reader: &IndexReader) -> HashSet<String> {
-        reader
-            .reload()
-            .expect("reader reload failed");
+        reader.reload().expect("reader reload failed");
         let searcher = reader.searcher();
         let mut ids = HashSet::new();
         let segments = searcher.segment_readers();
-        eprintln!("DEBUG surviving_email_ids: segment_count={}", segments.len());
+        eprintln!(
+            "DEBUG surviving_email_ids: segment_count={}",
+            segments.len()
+        );
         for (seg_idx, seg) in segments.iter().enumerate() {
             let id_col = seg
                 .fast_fields()
@@ -332,7 +345,11 @@ mod tests {
             eprintln!("DEBUG surviving_email_ids: seg={seg_idx} max_doc={max_doc}");
             for doc_id in 0..max_doc {
                 let is_del = seg.is_deleted(doc_id);
-                let ord = id_col.ords().values_for_doc(doc_id as u32).next().unwrap_or(0);
+                let ord = id_col
+                    .ords()
+                    .values_for_doc(doc_id as u32)
+                    .next()
+                    .unwrap_or(0);
                 let mut buf = String::new();
                 id_col.ord_to_str(ord, &mut buf).unwrap();
                 eprintln!("DEBUG surviving_email_ids: seg={seg_idx} doc_id={doc_id} is_deleted={is_del} ord={ord} buf={buf:?}");
@@ -359,7 +376,11 @@ mod tests {
                 if seg.is_deleted(doc_id) {
                     continue;
                 }
-                let ord = id_col.ords().values_for_doc(doc_id as u32).next().unwrap_or(0);
+                let ord = id_col
+                    .ords()
+                    .values_for_doc(doc_id as u32)
+                    .next()
+                    .unwrap_or(0);
                 let mut buf = String::new();
                 id_col.ord_to_str(ord, &mut buf).unwrap();
                 ids.insert(buf);
@@ -454,15 +475,17 @@ mod tests {
 
             let email_r = email_idx.reader().unwrap();
             let survivors = surviving_email_ids(&email_r);
-            let expected: HashSet<String> =
-                expected_emails.iter().map(|s| s.to_string()).collect();
+            let expected: HashSet<String> = expected_emails.iter().map(|s| s.to_string()).collect();
             assert_eq!(survivors, expected, "[{case}] email survivors mismatch");
 
             let attach_r = attach_idx.reader().unwrap();
             let att_survivors = surviving_attachment_ids(&attach_r);
             let att_expected: HashSet<String> =
                 expected_attachments.iter().map(|s| s.to_string()).collect();
-            assert_eq!(att_survivors, att_expected, "[{case}] attachment survivors mismatch");
+            assert_eq!(
+                att_survivors, att_expected,
+                "[{case}] attachment survivors mismatch"
+            );
         }
     }
 
@@ -494,7 +517,7 @@ mod tests {
                     add_attachment(af, aw, &format!("att-{i}"), &id, 1, 1);
                 }
             },
-            &["dup-2"],      // ingest_at=400, the latest
+            &["dup-2"], // ingest_at=400, the latest
             &["att-2"],
         )
         .await;
@@ -591,7 +614,7 @@ mod tests {
     /// This test is read-only — it does not modify the index.
     #[test]
     fn inspect_production_duplicates() {
-        let index_path = r"E:\db\data\bichon-indices\mail_metadata";
+        let index_path = r"E:\bichon-data\bichon-indices\mail_metadata";
         let report_path = std::path::PathBuf::from(r"E:\bichon\dedup_report.txt");
 
         let mut report = String::new();
@@ -622,26 +645,21 @@ mod tests {
         let searcher = reader.searcher();
 
         let mut total_docs = 0u64;
-        let mut groups: std::collections::HashMap<u64, std::collections::HashMap<(u64, String), u64>> =
-            std::collections::HashMap::new();
+        let mut groups: std::collections::HashMap<
+            u64,
+            std::collections::HashMap<(u64, String), u64>,
+        > = std::collections::HashMap::new();
 
         for segment_reader in searcher.segment_readers() {
-            let account_col = segment_reader
-                .fast_fields()
-                .u64(F_ACCOUNT_ID)
-                .unwrap();
-            let mailbox_col = segment_reader
-                .fast_fields()
-                .u64(F_MAILBOX_ID)
-                .unwrap();
-            let hash_col = match segment_reader
-                .fast_fields()
-                .str(F_CONTENT_HASH)
-                .unwrap()
-            {
+            let account_col = segment_reader.fast_fields().u64(F_ACCOUNT_ID).unwrap();
+            let mailbox_col = segment_reader.fast_fields().u64(F_MAILBOX_ID).unwrap();
+            let hash_col = match segment_reader.fast_fields().str(F_CONTENT_HASH).unwrap() {
                 Some(c) => c,
                 None => {
-                    let _ = writeln!(report, "Segment has no FAST str column for content_hash, skipping");
+                    let _ = writeln!(
+                        report,
+                        "Segment has no FAST str column for content_hash, skipping"
+                    );
                     continue;
                 }
             };
@@ -655,7 +673,11 @@ mod tests {
                 let account_id = account_col.values.get_val(doc_id);
                 let mailbox_id = mailbox_col.values.get_val(doc_id);
 
-                let hash_ord = hash_col.ords().values_for_doc(doc_id as u32).next().unwrap_or(0);
+                let hash_ord = hash_col
+                    .ords()
+                    .values_for_doc(doc_id as u32)
+                    .next()
+                    .unwrap_or(0);
                 let mut hash_buf = String::new();
                 hash_col.ord_to_str(hash_ord, &mut hash_buf).unwrap();
                 let content_hash = hash_buf;
