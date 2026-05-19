@@ -442,7 +442,7 @@ impl NewIndexWriter {
                 .commit()
                 .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
         }
-        println!("tantivy commit elasped: {:#?}", start.elapsed());
+        println!("tantivy commit elapsed: {:#?}", start.elapsed());
         tracing::info!(count = self.pending, "committed tantivy batch");
         self.pending = 0;
         Ok(())
