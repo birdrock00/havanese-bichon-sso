@@ -259,6 +259,12 @@ impl NewIndexWriter {
             .parse(eml_bytes)
             .ok_or_else(|| raise_error!("failed to parse eml".into(), ErrorCode::InternalError))?;
 
+        if message.parts.is_empty() {
+            return Err(raise_error!(
+                "Malformed or completely empty EML (no parts found)".into(),
+                ErrorCode::InternalError
+            ));
+        }
         // ── text / preview ────────────────────────────────────────────────
         let text = message
             .body_text(0)
