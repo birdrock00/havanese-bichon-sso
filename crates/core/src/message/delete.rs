@@ -26,6 +26,6 @@ pub async fn delete_messages_impl(request: HashMap<u64, Vec<String>>) -> BichonR
         .delete_envelopes_multi_account(request.clone())
         .await?;
     ATTACHMENT_MANAGER
-        .delete_envelopes_multi_account(request)
+        .delete_attachments_multi_account(request)
         .await
 }

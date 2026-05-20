@@ -260,7 +260,7 @@ impl IndexManager {
             IndexRecordOption::Basic,
         );
         let envelope_id_query = TermQuery::new(
-            Term::from_field_text(SchemaTools::attachment_fields().f_id, aid),
+            Term::from_field_text(SchemaTools::attachment_fields().f_envelope_id, aid),
             IndexRecordOption::Basic,
         );
         let boolean_query = BooleanQuery::new(vec![
@@ -633,7 +633,7 @@ impl IndexManager {
         Ok(())
     }
 
-    pub async fn delete_envelopes_multi_account(
+    pub async fn delete_attachments_multi_account(
         &self,
         deletes: HashMap<u64, Vec<String>>,
     ) -> BichonResult<()> {
