@@ -73,8 +73,9 @@ async fn main() -> BichonResult<()> {
         Ok(false) => {
             error!("Incompatible data format detected.");
             error!("Your data was created by an older version of Bichon and must be migrated before use.");
+            error!("Please stop the Bichon v0.3.7 service before migration.");
             error!("Please run: bichon-admin");
-            error!("Documentation: https://github.com/rustmailer/bichon/wiki/migration");
+            error!("Documentation: https://github.com/rustmailer/bichon/wiki/Bichon-Data-Migration:-v0.3.7-%E2%86%92-v1.0");
             return Err(raise_error!(
                 "Legacy data layout detected".into(),
                 ErrorCode::InternalError
