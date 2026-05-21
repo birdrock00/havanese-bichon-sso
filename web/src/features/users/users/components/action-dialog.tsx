@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import { z } from 'zod'
 import { useState, useMemo } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -56,75 +55,9 @@ import { useRoles } from '@/hooks/use-roles'
 import { PasswordInput } from '@/components/password-input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useTranslation } from 'react-i18next'
+import { getCreateUserSchema, getUpdateUserSchema, type UserFormValues } from './schema'
 
-const isValidIP = (ip: string) => {
-  const ipv4 = /^(?:(?:\d{1,3}\.){3}\d{1,3})$/
-  const ipv6 = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/
-  return ipv4.test(ip) || ipv6.test(ip)
-}
-
-const accountAccessEntry = (t: any) => z.object({
-  accountId: z.number().min(1, t('users.actions.schema.account_required')),
-  roleId: z.number().min(1, t('users.actions.schema.role_required'))
-});
-
-const baseUserSchema = (t: any) => ({
-  username: z.string()
-    .min(1, t('users.actions.schema.username_required'))
-    .min(3, t('users.actions.schema.username_min'))
-    .max(32, t('users.actions.schema.username_max')),
-  email: z.string()
-    .min(1, t('users.actions.schema.email_required'))
-    .email(t('users.actions.schema.email_invalid')),
-  global_roles: z.array(z.number()).min(1, t('users.actions.schema.global_role_required')),
-  account_access_entries: z.array(accountAccessEntry(t)).optional().default([]),
-  description: z.string().max(256, t('users.actions.schema.description_max')).optional().or(z.literal('')),
-  acl: z.object({
-    ip_whitelist: z.string().optional(),
-    rate_limit: z.object({
-      quota: z.number().positive().optional(),
-      interval: z.number().positive().optional(),
-    }).optional()
-  }).optional().transform((data) => {
-    if (!data) return undefined;
-    const ips = data.ip_whitelist?.split('\n').map(v => v.trim()).filter(Boolean) || [];
-    const finalRateLimit = (data.rate_limit?.quota && data.rate_limit?.interval)
-      ? data.rate_limit
-      : undefined;
-    if (ips.length === 0 && !finalRateLimit) return undefined;
-    return {
-      ip_whitelist: ips.length > 0 ? ips.join('\n') : undefined,
-      rate_limit: finalRateLimit
-    };
-  })
-    .refine((data) => {
-      if (!data?.ip_whitelist) return true;
-      return data.ip_whitelist.split('\n').every(isValidIP);
-    }, {
-      message: t('users.actions.schema.ip_invalid'),
-      path: ["ip_whitelist"]
-    })
-});
-
-const createUserSchema = (t: any) => z.object({
-  ...baseUserSchema(t),
-  password: z.string()
-    .min(1, t('users.actions.schema.password_required'))
-    .min(8, t('users.actions.schema.password_min'))
-    .max(256, t('users.actions.schema.password_max')),
-});
-
-const updateUserSchema = (t: any) => z.object({
-  ...baseUserSchema(t),
-  password: z.string()
-    .min(8, t('users.actions.schema.password_min'))
-    .max(256, t('users.actions.schema.password_max'))
-    .or(z.literal(''))
-    .optional()
-    .transform(v => v || undefined),
-});
-
-export type UserForm = z.infer<ReturnType<typeof createUserSchema>> | z.infer<ReturnType<typeof updateUserSchema>>
+export type UserForm = UserFormValues
 
 interface Props {
   currentRow?: User
@@ -142,7 +75,7 @@ export function UserActionDialog({ currentRow, open, onOpenChange }: Props) {
   const { minimalList: allAccounts } = useMinimalAccountList()
 
   const form = useForm<UserForm>({
-    resolver: zodResolver(isEdit ? updateUserSchema(t) : createUserSchema(t)),
+    resolver: zodResolver(isEdit ? getUpdateUserSchema(t) : getCreateUserSchema(t)),
     defaultValues: useMemo(() => {
       if (isEdit && currentRow) {
         const accessEntries = currentRow.account_access_map

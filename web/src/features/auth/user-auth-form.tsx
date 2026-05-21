@@ -18,10 +18,10 @@
 
 
 import { HTMLAttributes, useState } from 'react'
-import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { cn, toSearchParams } from '@/lib/utils'
+import { getFormSchema, type LoginFormValues } from './schema'
 import {
   Form,
   FormControl,
@@ -47,17 +47,6 @@ import { useTheme } from '@/context/theme-context'
 
 type UserAuthFormProps = HTMLAttributes<HTMLDivElement>
 
-const getFormSchema = (t: (key: string, options?: Record<string, any>) => string) =>
-  z.object({
-    username: z
-      .string()
-      .min(1, { message: t('validation.pleaseEnterUsernameOrEmail') }),
-    password: z
-      .string()
-      .min(1, { message: t('validation.pleaseEnterPassword') })
-      .min(4, { message: t('validation.passwordMinLength', { min: 4 }) }),
-  });
-
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const { setTheme } = useTheme();
@@ -68,7 +57,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const redirect = toSearchParams(search).get('redirect') || '/';
 
   const formSchema = getFormSchema(t)
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<LoginFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       username: '',
@@ -81,7 +70,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     retry: 0,
   });
 
-  async function onSubmit(data: z.infer<typeof formSchema>) {
+  async function onSubmit(data: LoginFormValues) {
     setIsLoading(true)
 
     mutation.mutate(data, {

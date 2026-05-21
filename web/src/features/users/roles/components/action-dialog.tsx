@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from '@/hooks/use-toast'
@@ -49,6 +48,7 @@ import {
 } from '@/components/ui/radio-group'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
+import { getRoleFormSchema, type RoleFormValues } from './schema'
 
 interface Props {
   currentRow?: UserRole
@@ -97,16 +97,9 @@ export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
   const queryClient = useQueryClient()
   const { t } = useTranslation()
 
-  const roleFormSchema = z.object({
-    name: z.string().min(1, t('roles.validation.name_required')),
-    role_type: z.enum(['Global', 'Account']),
-    permissions: z.array(z.string()).min(1, t('roles.validation.perm_required')),
-    description: z.string().optional(),
-  })
+  const roleFormSchema = getRoleFormSchema(t)
 
-  type RoleForm = z.infer<typeof roleFormSchema>
-
-  const form = useForm<RoleForm>({
+  const form = useForm<RoleFormValues>({
     resolver: zodResolver(roleFormSchema),
     defaultValues: {
       name: isEdit ? currentRow.name : '',
@@ -117,7 +110,7 @@ export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
   })
 
   const mutation = useMutation({
-    mutationFn: (values: RoleForm) =>
+    mutationFn: (values: RoleFormValues) =>
       isEdit ? update_role(currentRow!.id, values) : create_role(values),
     onSuccess: () => {
       toast({ title: t(isEdit ? 'roles.actions.success_update' : 'roles.actions.success_create') })

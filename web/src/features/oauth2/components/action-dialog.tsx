@@ -17,7 +17,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import { z } from 'zod'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from '@/hooks/use-toast'
@@ -53,114 +52,21 @@ import { AxiosError } from 'axios'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import useProxyList from '@/hooks/use-proxy'
 import { useTranslation } from 'react-i18next'
-
-const getParamSchema = (t: (key: string) => string) => z.object({
-  key: z.string({ required_error: t('oauth2.keyIsRequired') }).min(1, t('oauth2.keyCannotBeEmpty')),
-  value: z.string({ required_error: t('oauth2.valueIsRequired') }).min(1, t('oauth2.valueCannotBeEmpty')),
-});
-
-const paramSchema = z.object({
-  key: z.string({ required_error: 'Key is required' }).min(1, "Key cannot be empty"),
-  value: z.string({ required_error: 'Value is required' }).min(1, "Value cannot be empty"),
-});
-
-const getScopeSchema = (t: (key: string) => string) => z.object({
-  value: z.string({ required_error: t('oauth2.valueIsRequired') }).min(1, t('oauth2.valueCannotBeEmpty')),
-});
-
-const scopeSchema = z.object({
-  value: z.string({ required_error: 'Value is required' }).min(1, "Value cannot be empty"),
-});
-
-const extraparamSchema = z.record(z.string()).optional();
-const authorizescopeSchema = z.array(z.string()).optional();
-
+import { getOAuth2Schema, type OAuth2FormValues } from './schema'
 
 function convertToExtraParamsSchema(
-  record: z.infer<typeof extraparamSchema>
-): z.infer<typeof paramSchema>[] {
-  if (!record) {
-    return [];
-  }
-  return Object.entries(record).map(([key, value]) => ({
-    key,
-    value,
-  }));
+  record: Record<string, string> | undefined
+): { key: string; value: string }[] {
+  if (!record) return []
+  return Object.entries(record).map(([key, value]) => ({ key, value }))
 }
 
-
-function convertToScopeSchema(authorizeScopes: z.infer<typeof authorizescopeSchema>): z.infer<typeof scopeSchema>[] {
-  if (!authorizeScopes || authorizeScopes.length === 0) {
-    return [];
-  }
-
-  return authorizeScopes.map((scope) => ({
-    value: scope,
-  }));
+function convertToScopeSchema(
+  scopes: string[] | undefined
+): { value: string }[] {
+  if (!scopes || scopes.length === 0) return []
+  return scopes.map((scope) => ({ value: scope }))
 }
-
-const getOAuth2Schema = (t: (key: string) => string) => z.object({
-  description: z.string().max(255, { message: t('oauth2.descriptionMustNotExceed255Characters') }).optional(),
-  client_id: z.string({
-    required_error: t('oauth2.clientIdIsRequired'),
-  }).min(1, { message: t('oauth2.clientIdCannotBeEmpty') }),
-  client_secret: z.string().optional(),
-  auth_url: z.string({
-    required_error: t('oauth2.authorizationUrlIsRequired'),
-  })
-    .min(1, { message: t('oauth2.authorizationUrlCannotBeEmpty') })
-    .url({ message: t('oauth2.invalidAuthorizationUrlFormat') }),
-
-  token_url: z.string({
-    required_error: t('oauth2.tokenUrlIsRequired'),
-  })
-    .min(1, { message: t('oauth2.tokenUrlCannotBeEmpty') })
-    .url({ message: t('oauth2.invalidTokenUrlFormat') }),
-
-  redirect_uri: z.string({
-    required_error: t('oauth2.redirectUriIsRequired'),
-  })
-    .min(1, { message: t('oauth2.redirectUriCannotBeEmpty') })
-    .url({ message: t('oauth2.invalidRedirectUriFormat') }),
-
-  scopes: z.array(getScopeSchema(t)).optional(),
-  extra_params: z.array(getParamSchema(t)).optional(),
-  enabled: z.boolean(),
-  use_proxy: z.number().optional(),
-});
-
-const oauth2Schema = z.object({
-  description: z.string().max(255, { message: "Description must not exceed 255 characters." }).optional(),
-  client_id: z.string({
-    required_error: "Client ID is required",
-  }).min(1, { message: "Client ID cannot be empty" }),
-  client_secret: z.string().optional(),
-  auth_url: z.string({
-    required_error: "Authorization URL is required",
-  })
-    .min(1, { message: "Authorization URL cannot be empty" })
-    .url({ message: "Invalid Authorization URL format" }),
-
-  token_url: z.string({
-    required_error: "Token URL is required",
-  })
-    .min(1, { message: "Token URL cannot be empty" })
-    .url({ message: "Invalid Token URL format" }),
-
-  redirect_uri: z.string({
-    required_error: "Redirect URI is required",
-  })
-    .min(1, { message: "Redirect URI cannot be empty" })
-    .url({ message: "Invalid Redirect URI format" }),
-
-  scopes: z.array(scopeSchema).optional(),
-  extra_params: z.array(paramSchema).optional(),
-  enabled: z.boolean(),
-  use_proxy: z.number().optional(),
-});
-
-export type OAuth2Form = z.infer<typeof oauth2Schema>;
-
 
 interface Props {
   currentRow?: OAuth2Entity
@@ -185,7 +91,7 @@ const defaultValues = {
 export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
   const { t } = useTranslation()
   const isEdit = !!currentRow
-  const form = useForm<OAuth2Form>({
+  const form = useForm<OAuth2FormValues>({
     resolver: zodResolver(getOAuth2Schema(t)),
     defaultValues: isEdit
       ? {
@@ -255,7 +161,7 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
     console.error(error);
   }
 
-  const onSubmit = (values: OAuth2Form) => {
+  const onSubmit = (values: OAuth2FormValues) => {
     if (!isEdit) {
       if (!values.client_secret) {
         form.setError('client_secret', {

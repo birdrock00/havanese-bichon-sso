@@ -17,7 +17,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from '@/hooks/use-toast'
@@ -47,75 +46,7 @@ import { Loader2 } from 'lucide-react'
 import { add_proxy, update_proxy } from '@/api/system/api'
 import { useTranslation } from 'react-i18next'
 import { Proxy } from '@/api/system/api'
-
-const proxyFormSchema = z.object({
-  url: z.string()
-    .min(1, "Proxy address cannot be empty")
-    .superRefine((value, ctx) => {
-
-      if (value.length === 0) {
-        return;
-      }
-
-      let url: URL;
-      try {
-        url = new URL(value);
-      } catch (e) {
-
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Invalid URL format",
-          path: [],
-        });
-        return;
-      }
-
-
-      if (url.protocol !== 'socks5:' && url.protocol !== 'http:') {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "URL must start with http:// or socks5://",
-          path: [],
-        });
-      }
-
-
-      if (!/^[a-zA-Z0-9\-\.]+$/.test(url.hostname)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Hostname contains invalid characters",
-          path: [],
-        });
-      }
-
-
-      const port = parseInt(url.port || '1080');
-      if (port <= 0 || port > 65535) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Port must be between 1-65535",
-          path: [],
-        });
-      }
-
-
-      if (url.username && !url.password) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Password cannot be empty when username is provided",
-          path: [],
-        });
-      } else if (url.password && url.password.length < 8) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: "Password must be at least 8 characters",
-          path: [],
-        });
-      }
-    })
-});
-
-export type ProxyForm = z.infer<typeof proxyFormSchema>;
+import { proxyFormSchema, type ProxyFormValues } from './schema'
 
 
 interface Props {
@@ -140,7 +71,7 @@ export function ProxyActionDialog({ currentRow, open, onOpenChange }: Props) {
   const { t } = useTranslation()
   const isEdit = !!currentRow
   const queryClient = useQueryClient();
-  const form = useForm<ProxyForm>({
+  const form = useForm<ProxyFormValues>({
     resolver: zodResolver(proxyFormSchema),
     defaultValues: isEdit
       ? mapCurrentRowToFormValues(currentRow)
@@ -186,7 +117,7 @@ export function ProxyActionDialog({ currentRow, open, onOpenChange }: Props) {
   }
 
 
-  const onSubmit = (values: ProxyForm) => {
+  const onSubmit = (values: ProxyFormValues) => {
     const url = values.url;
     if (isEdit) {
       updateMutation.mutate(url);

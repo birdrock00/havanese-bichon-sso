@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -42,41 +41,7 @@ import { Badge } from '@/components/ui/badge'
 import { FileWithPreview } from '@/hooks/use-file-upload'
 import AvatarUpload from './avatar-upload'
 import { PermissionsDialog } from '../access/permissions-dialog'
-
-const profileSchema = (t: (key: string) => string) => z.object({
-  username: z
-    .string({
-      required_error: t('settings.profile.validation.username.required'),
-    })
-    .min(3, {
-      message: t('settings.profile.validation.username.min'),
-    })
-    .max(32, {
-      message: t('settings.profile.validation.username.max'),
-    }),
-
-  email: z
-    .string({
-      required_error: t('settings.profile.validation.email.required'),
-    })
-    .email({
-      message: t('settings.profile.validation.email.invalid'),
-    }),
-
-  password: z
-    .string()
-    .min(8, {
-      message: t('settings.profile.validation.password.min'),
-    })
-    .max(256, {
-      message: t('settings.profile.validation.password.max'),
-    })
-    .or(z.literal(''))
-    .optional()
-    .transform((v) => (v ? v : undefined)),
-})
-
-export type ProfileFormValues = z.infer<ReturnType<typeof profileSchema>>
+import { profileSchema, type ProfileFormValues } from './schema'
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

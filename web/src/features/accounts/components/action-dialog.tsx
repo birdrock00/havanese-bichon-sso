@@ -19,7 +19,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
-import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -35,112 +34,9 @@ import { ToastAction } from '@/components/ui/toast';
 import { AxiosError } from 'axios';
 import { useTranslation } from 'react-i18next';
 import { cn } from "@/lib/utils";
+import { getAccountSchema, type AccountFormValues } from './schema';
 
-const encryptionSchema = z.union([
-  z.literal('Ssl'),
-  z.literal('StartTls'),
-  z.literal('None'),
-]);
-
-const authTypeSchema = z.union([
-  z.literal('Password'),
-  z.literal('OAuth2'),
-]);
-
-const getAuthConfigSchema = (isEdit: boolean, t: (key: string) => string) =>
-  z.object({
-    auth_type: authTypeSchema,
-    password: z.string().optional(),
-  }).refine(
-    (data) => {
-      if (data.auth_type === 'Password' && !isEdit) {
-        return !!data.password?.trim();
-      }
-      return true;
-    },
-    {
-      message: t('validation.passwordRequired'),
-      path: ['password'],
-    }
-  );
-
-const getImapConfigSchema = (isEdit: boolean, t: (key: string) => string) =>
-  z.object({
-    host: z.string({ required_error: t('validation.imapHostRequired') }).min(1, { message: t('validation.imapHostCannotBeEmpty') }),
-    port: z.number().int().min(0, { message: t('validation.imapPortMustBePositive') }).max(65535, { message: t('validation.imapPortMustBeLessThan65536') }),
-    encryption: encryptionSchema,
-    auth: getAuthConfigSchema(isEdit, t),
-    use_proxy: z.number().optional(),
-  });
-
-const getRelativeDateSchema = (t: (key: string) => string) => z.object({
-  unit: z.enum(["Days", "Months", "Years"], { message: t('accounts.selectUnit') }),
-  value: z.number({ message: t('accounts.enterValue') }).int().min(1, t('accounts.mustBeAtLeast1')),
-});
-
-const getDateSelectionSchema = (t: (key: string) => string) => z.union([
-  z.object({ fixed: z.string({ message: t('accounts.selectDate') }) }),
-  z.object({ relative: getRelativeDateSchema(t) }),
-  z.undefined(),
-]);
-
-export type Account = {
-  login_name?: string;
-  account_name?: string;
-  email: string;
-  imap: {
-    host: string;
-    port: number;
-    encryption: 'Ssl' | 'StartTls' | 'None';
-    auth: {
-      auth_type: 'Password' | 'OAuth2';
-      password?: string;
-    };
-    use_proxy?: number;
-  };
-  enabled: boolean;
-  use_dangerous: boolean;
-  date_since?: {
-    fixed?: string;
-    relative?: {
-      unit?: 'Days' | 'Months' | 'Years';
-      value?: number;
-    };
-  };
-  date_before?: {
-    unit?: 'Days' | 'Months' | 'Years';
-    value?: number;
-  };
-  folder_limit?: number;
-  download_interval_min: number;
-  download_batch_size: number;
-  auto_download_new_mailboxes: boolean;
-};
-
-const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
-  z.object({
-    account_name: z.string().optional(),
-    login_name: z.string().optional(),
-    email: z.string({ required_error: t('validation.emailRequired') }).email({ message: t('validation.invalidEmail') }),
-    imap: getImapConfigSchema(isEdit, t),
-    enabled: z.boolean(),
-    use_dangerous: z.boolean(),
-    date_since: getDateSelectionSchema(t).optional(),
-    date_before: getRelativeDateSchema(t).optional(),
-    folder_limit: z
-      .number({ invalid_type_error: t('validation.folderLimitMustBeNumber') })
-      .int()
-      .min(100, { message: t('validation.folderLimitMustBeAtLeast100') })
-      .nullable()
-      .optional(),
-    download_interval_min: z.number({ invalid_type_error: t('validation.incrementalSyncMustBeNumber') }).int().min(10, { message: t('validation.incrementalSyncMustBeAtLeast10') }),
-    download_batch_size: z
-      .number({ invalid_type_error: t('validation.singleRequestBatchSizeMustBeNumber') })
-      .int()
-      .min(10, { message: t('validation.singleRequestBatchSizeTooSmall') })
-      .max(200, { message: t('validation.singleRequestBatchSizeTooLarge') }),
-    auto_download_new_mailboxes: z.boolean(),
-  });
+export type Account = AccountFormValues;
 
 type Step = {
   id: `step-${number}`;
@@ -205,6 +101,7 @@ const mapCurrentRowToFormValues = (currentRow: AccountModel): Account => {
   }
 
   return {
+    account_name: currentRow.account_name ?? undefined,
     login_name: currentRow.login_name ?? undefined,
     email: currentRow.email,
     imap,

@@ -369,6 +369,10 @@ impl Account {
             new.folder_limit = Some(folder_limit);
         }
 
+        if let Some(account_name) = request.account_name {
+            new.account_name = Some(account_name);
+        }
+
         if let Some(clear_folder_limit) = request.clear_folder_limit {
             if clear_folder_limit {
                 new.folder_limit = None;
