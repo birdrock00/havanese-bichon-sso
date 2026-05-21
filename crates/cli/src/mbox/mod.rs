@@ -28,7 +28,6 @@ use bichon_core::envelope::meta::{parse_bichon_metadata, BichonMetadata};
 use console::style;
 use dialoguer::{theme::ColorfulTheme, Input};
 use dialoguer::{Confirm, Select};
-use mail_parser::parsers::MessageStream;
 use mail_parser::MessageParser;
 use reqwest::Client;
 
@@ -161,7 +160,11 @@ pub async fn run_import(
             continue;
         }
 
-        let message = match MessageParser::new().parse(body) {
+        let message = match MessageParser::new()
+            .with_minimal_headers()
+            .default_header_text()
+            .parse(body)
+        {
             Some(msg) => msg,
             None => {
                 eprintln!(
@@ -181,15 +184,12 @@ pub async fn run_import(
         }
 
         let get_default_folder = || {
-            let gmail_labels = message.header_raw("X-Gmail-Labels").unwrap_or("INBOX");
-            let text_cow = MessageStream::new(gmail_labels.as_bytes())
-                .parse_unstructured()
-                .into_text();
-            let data: &str = match &text_cow {
-                Some(c) => c.as_ref(),
-                None => "INBOX",
-            };
-            determine_folder(data)
+            let labels = message
+                .header("X-Gmail-Labels")
+                .and_then(|h| h.as_text())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "INBOX".to_string());
+            determine_folder(&labels)
         };
 
         let folder_name = if let Some(ref folder) = target_folder {
