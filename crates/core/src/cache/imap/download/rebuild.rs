@@ -17,24 +17,20 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
-    raise_error,
-    {
-        account::{
-            migration::AccountModel,
-            state::{DownloadState, DownloadStatus, FolderStatus},
-        },
-        cache::{
-            imap::{
-                download::flow::{
-                    fetch_and_save_by_date, fetch_and_save_full_mailbox, FetchDirection,
-                },
-                mailbox::MailBox,
-            },
-            SEMAPHORE,
-        },
-        error::{code::ErrorCode, BichonResult},
-        store::tantivy::envelope::ENVELOPE_MANAGER,
+    account::{
+        migration::AccountModel,
+        state::{DownloadState, DownloadStatus, FolderStatus},
     },
+    cache::{
+        imap::{
+            download::flow::{fetch_and_save_by_date, fetch_and_save_full_mailbox, FetchDirection},
+            mailbox::MailBox,
+        },
+        SEMAPHORE,
+    },
+    error::{code::ErrorCode, BichonResult},
+    raise_error,
+    store::tantivy::{attachment::ATTACHMENT_MANAGER, envelope::ENVELOPE_MANAGER},
 };
 
 use tokio_util::sync::CancellationToken;
@@ -91,7 +87,7 @@ pub async fn rebuild_cache(
                 continue;
             }
         };
-        
+
         match fetch_and_save_full_mailbox(&account, &mailbox, token.clone()).await {
             Ok(_) => {}
             Err(err) => {
@@ -204,7 +200,9 @@ pub async fn rebuild_mailbox_cache(
     ENVELOPE_MANAGER
         .delete_mailbox_envelopes(account.id, vec![local_mailbox.id])
         .await?;
-
+    ATTACHMENT_MANAGER
+        .delete_mailbox_attachments(account.id, vec![local_mailbox.id])
+        .await?;
     if remote_mailbox.exists == 0 {
         info!(
             "Account {}: Mailbox '{}' has no emails on the remote server. The mailbox is empty, no envelopes to fetch.",
@@ -236,6 +234,9 @@ pub async fn rebuild_mailbox_cache_by_date(
 ) -> BichonResult<()> {
     ENVELOPE_MANAGER
         .delete_mailbox_envelopes(account.id, vec![local_mailbox_id])
+        .await?;
+    ATTACHMENT_MANAGER
+        .delete_mailbox_attachments(account.id, vec![local_mailbox_id])
         .await?;
     if remote.exists == 0 {
         info!(

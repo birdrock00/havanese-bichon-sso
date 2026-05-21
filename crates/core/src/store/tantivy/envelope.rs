@@ -39,6 +39,7 @@ use crate::{
         blob::BLOB_MANAGER,
         envelope::Envelope,
         tantivy::{
+            attachment::ATTACHMENT_MANAGER,
             fatal_commit,
             fields::{
                 F_ACCOUNT_ID, F_DATE, F_FROM, F_ID, F_REGULAR_ATTACHMENT_COUNT, F_SIZE, F_TAGS,
@@ -726,6 +727,10 @@ impl IndexManager {
         writer
             .commit()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        ATTACHMENT_MANAGER
+            .delete_account_attachments(account_id)
+            .await?;
 
         if !eml_content_hashes.is_empty() || !attachments_content_hashes.is_empty() {
             self.cleanup_unused_content(eml_content_hashes, attachments_content_hashes)?;
