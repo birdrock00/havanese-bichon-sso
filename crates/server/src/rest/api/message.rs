@@ -121,6 +121,8 @@ impl MessageApi {
     }
 
     /// Fetches the content of a specific email.
+    /// Set `block_remote_content=true` to strip external images, scripts,
+    /// and other content loaded from http/https URLs.
     #[oai(
         path = "/message-content/:account_id/:envelope_id",
         method = "get",
@@ -132,11 +134,18 @@ impl MessageApi {
         account_id: Path<u64>,
         /// The ID of the message to fetch.
         envelope_id: Path<String>,
+        /// Block remote content (http/https URLs) from email body.
+        block_remote_content: Query<Option<bool>>,
         context: WrappedContext,
     ) -> ApiResult<Json<FullMessageContent>> {
         let account_id = account_id.0;
+        let block_remote = block_remote_content.0.unwrap_or(false);
         context.require_permission(Some(account_id), Permission::DATA_READ)?;
-        Ok(Json(retrieve_email_content(account_id, envelope_id.0)?))
+        Ok(Json(retrieve_email_content(
+            account_id,
+            envelope_id.0,
+            block_remote,
+        )?))
     }
 
     /// Retrieves the content of an email embedded as an attachment.
@@ -152,15 +161,18 @@ impl MessageApi {
         /// The ID of the message to fetch.
         envelope_id: Path<String>,
         content_hash: Query<String>,
+        block_remote_content: Query<Option<bool>>,
         context: WrappedContext,
     ) -> ApiResult<Json<FullNestedMessageContent>> {
         let account_id = account_id.0;
+        let block_remote = block_remote_content.0.unwrap_or(false);
         context.require_permission(Some(account_id), Permission::DATA_READ)?;
         let content_hash = content_hash.0.trim();
         Ok(Json(retrieve_nested_eml_content(
             account_id,
             envelope_id.0,
             content_hash,
+            block_remote,
         )?))
     }
 

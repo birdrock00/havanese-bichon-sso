@@ -22,6 +22,7 @@ use crate::envelope::extractor::{extract_envelope_from_nested_message, reattach_
 use crate::error::code::ErrorCode;
 use crate::store::envelope::Envelope;
 use crate::utils::compute_content_hash;
+use crate::utils::html::block_remote_content;
 use crate::{error::BichonResult, raise_error};
 use mail_parser::{MessageParser, MimeHeaders};
 //use poem_openapi::Object;
@@ -142,6 +143,9 @@ pub struct FullMessageContent {
     pub html: Option<String>,
     // all Attachments include inline attachments
     pub attachments: Option<Vec<AttachmentInfo>>,
+    /// True when remote content (http/https URLs) was detected and stripped from html.
+    #[serde(default)]
+    pub has_remote_content: bool,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
@@ -155,11 +159,15 @@ pub struct FullNestedMessageContent {
     pub attachments: Option<Vec<AttachmentInfo>>,
     /// Metadata for the email envelope.
     pub envelope: Envelope,
+    /// True when remote content (http/https URLs) was detected and stripped from html.
+    #[serde(default)]
+    pub has_remote_content: bool,
 }
 
 pub fn retrieve_email_content(
     account_id: u64,
     envelope_id: String,
+    block_remote: bool,
 ) -> BichonResult<FullMessageContent> {
     AccountModel::check_account_exists(account_id)?;
     let (envelope, eml) = reattach_eml_content(account_id, envelope_id)?;
@@ -223,10 +231,19 @@ pub fn retrieve_email_content(
             content_id: attachment.content_id().map(Into::into),
         });
     }
+    let mut has_remote_content = false;
+    if let Some(ref html_body) = html {
+        let filtered = block_remote_content(html_body);
+        has_remote_content = *html_body != filtered;
+        if block_remote {
+            html = Some(filtered);
+        }
+    }
     Ok(FullMessageContent {
         text,
         html,
         attachments: Some(attachments),
+        has_remote_content,
     })
 }
 
@@ -234,6 +251,7 @@ pub fn retrieve_nested_eml_content(
     account_id: u64,
     envelope_id: String,
     content_hash: &str,
+    block_remote: bool,
 ) -> BichonResult<FullNestedMessageContent> {
     let (_, eml) = reattach_eml_content(account_id, envelope_id)?;
     let parent_message = MessageParser::default().parse(&eml).ok_or_else(|| {
@@ -314,10 +332,19 @@ pub fn retrieve_nested_eml_content(
 
     let envelope = extract_envelope_from_nested_message(nested_message, account_id)?;
 
+    let mut has_remote_content = false;
+    if let Some(ref html_body) = html {
+        let filtered = block_remote_content(html_body);
+        has_remote_content = *html_body != filtered;
+        if block_remote {
+            html = Some(filtered);
+        }
+    }
     Ok(FullNestedMessageContent {
         text,
         html,
         attachments: Some(attachments),
         envelope,
+        has_remote_content,
     })
 }

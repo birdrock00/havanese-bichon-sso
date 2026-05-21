@@ -31,7 +31,7 @@ const EmailIframe: React.FC<EmailIframeProps> = ({ emailHtml, height }) => {
   return (
     <iframe
       src={iframeSrc}
-      sandbox="allow-scripts"
+      sandbox=""
       className="w-full border-none"
       title="Email Content"
       style={{ height: height ?? '4000px' }}

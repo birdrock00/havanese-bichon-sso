@@ -64,7 +64,8 @@ export interface AttachmentInfo {
 export interface MessageContentResponse {
     text?: string;
     html?: string;
-    attachments?: AttachmentInfo[]
+    attachments?: AttachmentInfo[];
+    has_remote_content?: boolean;
 }
 
 export interface NestedMessageContentResponse {
@@ -72,6 +73,7 @@ export interface NestedMessageContentResponse {
     html?: string;
     attachments?: AttachmentInfo[];
     envelope: EmailEnvelope;
+    has_remote_content?: boolean;
 }
 
 export const getContent = (messageContent: MessageContentResponse): string | null => {
@@ -83,13 +85,25 @@ export const getContent = (messageContent: MessageContentResponse): string | nul
     return null;
 };
 
-export const load_message = async (accountId: number, id: string) => {
-    const response = await axiosInstance.get<MessageContentResponse>(`api/v1/message-content/${accountId}/${id}`);
+export const load_message = async (accountId: number, id: string, blockRemoteContent = false) => {
+    const params = new URLSearchParams();
+    if (blockRemoteContent) {
+        params.set('block_remote_content', 'true');
+    }
+    const qs = params.toString();
+    const url = `api/v1/message-content/${accountId}/${id}${qs ? '?' + qs : ''}`;
+    const response = await axiosInstance.get<MessageContentResponse>(url);
     return response.data;
 };
 
-export const load_nested_message = async (accountId: number, id: string, content_hash: string) => {
-    const response = await axiosInstance.get<NestedMessageContentResponse>(`api/v1/nested-message-content/${accountId}/${id}?content_hash=${content_hash}`);
+export const load_nested_message = async (accountId: number, id: string, content_hash: string, blockRemoteContent = false) => {
+    const params = new URLSearchParams({ content_hash });
+    if (blockRemoteContent) {
+        params.set('block_remote_content', 'true');
+    }
+    const response = await axiosInstance.get<NestedMessageContentResponse>(
+        `api/v1/nested-message-content/${accountId}/${id}?${params.toString()}`
+    );
     return response.data;
 };
 

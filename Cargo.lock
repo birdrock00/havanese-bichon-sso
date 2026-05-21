@@ -1006,9 +1006,9 @@ dependencies = [
 
 [[package]]
 name = "dashmap"
-version = "6.1.0"
+version = "6.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5041cc499144891f3790297212f32a74fb938e5136a14943f338ef9e0ae276cf"
+checksum = "e6361d5c062261c78a176addb82d4c821ae42bed6089de0e12603cd25de2059c"
 dependencies = [
  "cfg-if",
  "crossbeam-utils",
@@ -2254,9 +2254,9 @@ checksum = "52ff2c0fe9bc6cb6b14a0592c2ff4fa9ceb83eea9db979b0487cd054946a2b8f"
 
 [[package]]
 name = "libmimalloc-sys"
-version = "0.1.47"
+version = "0.1.48"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d1eacfa31c33ec25e873c136ba5669f00f9866d0688bea7be4d3f7e43067df6"
+checksum = "2892ae4ea6fa2cb7acb0e236a6880d39523239cd9089de71d220910ccc806790"
 dependencies = [
  "cc",
 ]
@@ -2467,9 +2467,9 @@ dependencies = [
 
 [[package]]
 name = "mimalloc"
-version = "0.1.50"
+version = "0.1.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b3627c4272df786b9260cabaa46aec1d59c93ede723d4c3ef646c503816b0640"
+checksum = "ebca48a43116bc25f18a61360f1be98412f50cc218f5e52c823086b999a4a21a"
 dependencies = [
  "libmimalloc-sys",
 ]
@@ -4286,9 +4286,9 @@ dependencies = [
 
 [[package]]
 name = "sysinfo"
-version = "0.39.1"
+version = "0.39.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4deba334e1190ba7cb498327affa11e5ece10d26a30ab2f27fcf09504b8d8b6"
+checksum = "14311e7e9a03114cd4b65eedd54e8fed2945e17f08586ae97ef53bc0669f9581"
 dependencies = [
  "libc",
  "memchr",

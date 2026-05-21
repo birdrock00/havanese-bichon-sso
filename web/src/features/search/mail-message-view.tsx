@@ -19,7 +19,7 @@
 
 import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Loader, Download, Trash2, MessageSquareMore, FileText, FileImage, FileVideo, FileArchive, FileSpreadsheet, FileCode, FileIcon, FileAudio, Upload } from 'lucide-react';
+import { Loader, Download, Trash2, MessageSquareMore, FileText, FileImage, FileVideo, FileArchive, FileSpreadsheet, FileCode, FileIcon, FileAudio, Upload, ShieldCheck } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -129,6 +129,12 @@ export function MailMessageView({
   const [nestedEmlFile, setNestedEmlFile] = useState<AttachmentInfo | null>(null);
   const { getEmailById } = useMinimalAccountList();
   const [threadOpen, setThreadOpen] = useState(false);
+  const [blockRemote, setBlockRemote] = useState(true);
+  const [hasRemoteContent, setHasRemoteContent] = useState(false);
+
+  const toggleBlockRemote = () => {
+    setBlockRemote((prev) => !prev);
+  };
 
   const downloadAttachmentMutation = useMutation({
     mutationFn: ({ content_hash }: { content_hash: string }) =>
@@ -145,12 +151,13 @@ export function MailMessageView({
   });
 
   const loadMessageMutation = useMutation({
-    mutationFn: () => load_message(envelope.account_id, envelope.id),
+    mutationFn: () => load_message(envelope.account_id, envelope.id, blockRemote),
     onSuccess: (data) => {
       setLoading(false);
       setContent(getContent(data));
       if (data.attachments) setAttachments(data.attachments);
       setContentType(data.html ? 'Html' : 'Plain');
+      setHasRemoteContent(!!data.has_remote_content);
     },
     onError: (error: any) => {
       setLoading(false);
@@ -163,9 +170,13 @@ export function MailMessageView({
   });
 
   useEffect(() => {
+    setBlockRemote(true);
+  }, [envelope.id]);
+
+  useEffect(() => {
     setLoading(true);
     loadMessageMutation.mutate();
-  }, [envelope.id]);
+  }, [envelope.id, blockRemote]);
 
 
   const handleViewNestedEml = (attachment: AttachmentInfo) => {
@@ -384,6 +395,30 @@ export function MailMessageView({
         </div>
       )}
       {showAttachments && <Separator className="mb-2" />}
+      {hasRemoteContent && (
+        <div className="flex items-center justify-between bg-muted border px-3 py-1.5 mb-3 text-xs">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            {blockRemote ? (
+              <span className="text-muted-foreground truncate">
+                {t('mail.remoteBlocked', 'To protect your privacy, Bichon has blocked remote content in this message.')}
+              </span>
+            ) : (
+              <span className="text-muted-foreground truncate">
+                {t('mail.remoteShown', 'Remote content is now shown.')}
+              </span>
+            )}
+          </div>
+          <span
+            className="underline cursor-pointer hover:no-underline text-muted-foreground text-[11px] font-medium shrink-0 ml-2 select-none"
+            onClick={toggleBlockRemote}
+          >
+            {blockRemote
+              ? t('mail.showRemoteContent', 'Show remote content')
+              : t('mail.blockRemoteAgain', 'Block again')}
+          </span>
+        </div>
+      )}
       <div className="flex-1 overflow-auto">
         {loading ? (
           <div className="flex justify-center items-center py-8">

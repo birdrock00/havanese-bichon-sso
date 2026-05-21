@@ -148,7 +148,7 @@ export function NestedEmailDialog({ open, onOpenChange, accountId, envelopeId, f
 
     const { data, isLoading } = useQuery({
         queryKey: ['nested-message', accountId, envelopeId, content_hash],
-        queryFn: () => load_nested_message(accountId, envelopeId, content_hash),
+        queryFn: () => load_nested_message(accountId, envelopeId, content_hash, true),
         enabled: open && !!content_hash,
     });
 
