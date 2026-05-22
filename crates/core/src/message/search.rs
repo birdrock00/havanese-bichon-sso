@@ -74,9 +74,11 @@ pub enum SortBy {
     SIZE,
     /// Sort by the IMAP server INTERNALDATE timestamp.
     #[serde(rename = "INTERNAL_DATE")]
+    #[cfg_attr(feature = "web-api", oai(rename = "INTERNAL_DATE"))]
     InternalDate,
     /// Sort by Bichon's archival (ingest) timestamp.
     #[serde(rename = "INGEST_AT")]
+    #[cfg_attr(feature = "web-api", oai(rename = "INGEST_AT"))]
     IngestAt,
 }
 
