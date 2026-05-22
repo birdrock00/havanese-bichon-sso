@@ -18,7 +18,7 @@
 
 use crate::{
     common::signal::SIGNAL_MANAGER,
-    envelope::extractor::reattach_eml_content,
+    envelope::extractor::reattach_eml_content_self_healing,
     error::{code::ErrorCode, BichonResult},
     settings::dir::DATA_DIR_MANAGER,
 };
@@ -226,7 +226,13 @@ impl BlobManager {
     }
 }
 
-pub fn get_reader(account_id: u64, eid: String) -> BichonResult<Cursor<Bytes>> {
-    let (_, data) = reattach_eml_content(account_id, eid)?;
+/// Returns a reader over the raw EML for an indexed message.
+///
+/// If the message's content blob is missing from the blob store, it is fetched
+/// on demand from the IMAP server, persisted, and returned (self-healing). The
+/// underlying "content not found" error is only surfaced if that on-demand
+/// fetch itself fails.
+pub async fn get_reader(account_id: u64, eid: String) -> BichonResult<Cursor<Bytes>> {
+    let (_, data) = reattach_eml_content_self_healing(account_id, eid).await?;
     Ok(Cursor::new(data))
 }

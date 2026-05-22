@@ -289,6 +289,58 @@ impl ImapExecutor {
         Ok(())
     }
 
+    /// Fetches the raw RFC822 body of a single message by UID.
+    ///
+    /// Selects (read-only) the given mailbox and issues `UID FETCH <uid> (BODY.PEEK[])`.
+    /// Used for on-demand self-healing when an indexed message's content blob is missing.
+    /// Returns the raw bytes, or an error if the message cannot be retrieved.
+    pub async fn fetch_single_message_body(
+        session: &mut Session<Box<dyn SessionStream>>,
+        encoded_mailbox_name: &str,
+        uid: u32,
+    ) -> BichonResult<Vec<u8>> {
+        session
+            .examine(encoded_mailbox_name)
+            .await
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
+
+        let mut stream = session
+            .uid_fetch(uid.to_string(), BODY_FETCH_COMMAND)
+            .await
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
+
+        let fetch = stream
+            .try_next()
+            .await
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
+            .ok_or_else(|| {
+                raise_error!(
+                    format!("UID {uid} not found on IMAP server"),
+                    ErrorCode::ResourceNotFound
+                )
+            })?;
+
+        let body = fetch
+            .body()
+            .ok_or_else(|| {
+                raise_error!(
+                    format!("No body returned for UID {uid}"),
+                    ErrorCode::ImapUnexpectedResult
+                )
+            })?
+            .to_vec();
+
+        // Drain any remaining items so the stream is fully consumed before reuse.
+        while stream
+            .try_next()
+            .await
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
+            .is_some()
+        {}
+
+        Ok(body)
+    }
+
     pub async fn create_connection(
         account_id: u64,
     ) -> BichonResult<Session<Box<dyn SessionStream>>> {
