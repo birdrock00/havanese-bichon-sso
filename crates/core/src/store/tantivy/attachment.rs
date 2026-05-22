@@ -38,8 +38,8 @@ use crate::{
     store::tantivy::{
         fatal_commit,
         fields::{
-            F_ATTACHMENT_CATEGORY, F_ATTACHMENT_CONTENT_TYPE, F_ATTACHMENT_EXT, F_DATE, F_SIZE,
-            F_TAGS,
+            F_ATTACHMENT_CATEGORY, F_ATTACHMENT_CONTENT_TYPE, F_ATTACHMENT_EXT, F_DATE,
+            F_INGEST_AT, F_SIZE, F_TAGS,
         },
         model::{extract_senders, AttachmentModel},
         schema::SchemaTools,
@@ -863,6 +863,30 @@ impl IndexManager {
                     )
                     .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
                 attachment_docs = size_docs.into_iter().map(|(_, addr)| addr).collect();
+            }
+            // Attachments carry no IMAP INTERNALDATE; fall back to the
+            // attachment's own date field so the sort remains well defined.
+            SortBy::InternalDate => {
+                let date_docs: Vec<(Option<i64>, DocAddress)> = searcher
+                    .search(
+                        &query,
+                        &TopDocs::with_limit(page_size as usize)
+                            .and_offset(offset as usize)
+                            .order_by_fast_field(F_DATE, order),
+                    )
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                attachment_docs = date_docs.into_iter().map(|(_, addr)| addr).collect();
+            }
+            SortBy::IngestAt => {
+                let ingest_at_docs: Vec<(Option<i64>, DocAddress)> = searcher
+                    .search(
+                        &query,
+                        &TopDocs::with_limit(page_size as usize)
+                            .and_offset(offset as usize)
+                            .order_by_fast_field(F_INGEST_AT, order),
+                    )
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                attachment_docs = ingest_at_docs.into_iter().map(|(_, addr)| addr).collect();
             }
         }
 
