@@ -11,7 +11,7 @@ use indicatif::{ProgressBar, ProgressStyle};
 pub fn handle_migration(theme: &ColorfulTheme) {
     println!(
         "\n{}",
-        style("MIGRATION: Bichon v0.3.7 Storage Architecture → v1.0.x")
+        style("MIGRATION: Bichon v0.3.7 Storage Architecture → v1.x")
             .bold()
             .yellow()
     );
@@ -20,7 +20,7 @@ pub fn handle_migration(theme: &ColorfulTheme) {
         "{}",
         style(
             "This tool migrates data from the legacy v0.3.7 Tantivy-based storage \
-            architecture to the new v1.0.x \
+            architecture to the new v1.x \
             separated index and Fjall-backed storage format."
         )
         .dim()
@@ -32,7 +32,7 @@ pub fn handle_migration(theme: &ColorfulTheme) {
             "Legacy v0.3.7 architecture:\n\
             • envelope metadata stored in Tantivy\n\
             • message data stored in Tantivy\n\n\
-                New v1.0.x architecture:\n\
+                New v1.x architecture:\n\
             • mail indexes stored in Tantivy\n\
             • attachment indexes stored in Tantivy\n\
             • raw message data stored in Fjall\n\
@@ -163,7 +163,7 @@ pub fn handle_migration(theme: &ColorfulTheme) {
     println!("----------------------------------------");
 
     println!(
-        "\n{} Checking legacy v0.x storage layout...",
+        "\n{} Checking legacy v0.3.7 storage layout...",
         style("⌛").yellow()
     );
 
@@ -172,7 +172,7 @@ pub fn handle_migration(theme: &ColorfulTheme) {
             println!(
                 "{} {}",
                 style("✔").green(),
-                style("Legacy v0.3.7 Tantivy-based storage detected. Migration to v1.0 is required.")
+                style("Legacy v0.3.7 Tantivy-based storage detected. Migration to v1.x is required.")
                     .yellow()
             );
         }
@@ -186,7 +186,7 @@ pub fn handle_migration(theme: &ColorfulTheme) {
             println!(
                 "{}",
                 style(
-                    "The selected directories may already be using the v1.0 storage architecture."
+                    "The selected directories may already be using the v1.x storage architecture."
                 )
                 .dim()
             );
@@ -281,12 +281,6 @@ pub fn handle_migration(theme: &ColorfulTheme) {
             .unwrap_or("3000".to_string());
         input.trim().parse::<u32>().unwrap_or(3000)
     };
-
-    println!(
-        "{} Using batch size: {}\n",
-        style("✓").green(),
-        style(batch_size).cyan().bold()
-    );
 
     println!(
         "{} Using batch size: {}\n",

@@ -68,7 +68,9 @@ impl BlobManager {
                 }
             }
             Err(e) => tracing::error!("Fjall email_ks error: {:?}", e),
-            _ => {}
+            Ok(true) => {
+                tracing::debug!("Email blob already exists (dedup): {}", &email_hash);
+            }
         }
 
         if let Some(attachments) = eml.attachments {
@@ -80,7 +82,9 @@ impl BlobManager {
                         }
                     }
                     Err(e) => tracing::error!("Fjall attach_ks error: {:?}", e),
-                    _ => {}
+                    Ok(true) => {
+                        tracing::debug!("Attachment blob already exists (dedup): {}", &a_hash);
+                    }
                 }
             }
         }
@@ -185,7 +189,9 @@ impl BlobManager {
     }
 
     pub async fn queue(&self, email: DetachedEmail) {
-        let _ = self.sender.send(email).await;
+        if let Err(e) = self.sender.send(email).await {
+          tracing::error!("BlobManager channel closed, email lost: {:#?}", e);
+        }
     }
 
     pub fn get_email(&self, content_hash: &str) -> BichonResult<Option<Bytes>> {
