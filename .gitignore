@@ -2,3 +2,4 @@
 .vscode
 .idea
 config.toml
+node_modules
