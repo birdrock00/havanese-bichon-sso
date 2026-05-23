@@ -330,13 +330,13 @@ impl ImapExecutor {
             })?
             .to_vec();
 
-        // Drain any remaining items so the stream is fully consumed before reuse.
-        while stream
-            .try_next()
-            .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
-            .is_some()
-        {}
+        // // Drain any remaining items so the stream is fully consumed before reuse.
+        // while stream
+        //     .try_next()
+        //     .await
+        //     .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
+        //     .is_some()
+        // {}
 
         Ok(body)
     }

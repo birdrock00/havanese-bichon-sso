@@ -569,8 +569,7 @@ pub async fn reattach_eml_content_self_healing(
                 error = %e,
                 "On-demand IMAP fetch for missing content blob failed; returning not-found"
             );
-            // Surface the canonical "content not found" error to the caller.
-            reattach_eml_content(account_id, envelope_id)
+            Err(e)
         }
     }
 }
