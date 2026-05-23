@@ -106,6 +106,10 @@
 - **Admin Tooling**: Password reset for locked-out admins. Non-destructive v0.3.7 to v1.0 data migration.
 - **API Token Management**: Create, list, and revoke long-lived API tokens for programmatic access.
 - **SOCKS5 Proxy Management**: Configure and manage proxy profiles for routing IMAP traffic per account.
+- **Scheduled Download**: Configure per-account download schedules using cron expressions. Run syncs at specific times or intervals — for example, nightly-only or business-hours-only archiving.
+- **Remote Content Blocking**: External images and tracking pixels embedded in emails are blocked by default. Users can selectively allow remote content to load on a per-message basis from the WebUI.
+- **Async Index Deduplication**: Duplicate detection in the search index is performed asynchronously, reducing write latency during high-throughput ingestion.
+
 
 ## Quick Start
 
