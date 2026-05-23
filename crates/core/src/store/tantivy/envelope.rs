@@ -733,7 +733,11 @@ impl IndexManager {
             .await?;
 
         if !eml_content_hashes.is_empty() || !attachments_content_hashes.is_empty() {
-            self.cleanup_unused_content(eml_content_hashes, attachments_content_hashes)?;
+            self.cleanup_unused_content(
+                &mut writer,
+                eml_content_hashes,
+                attachments_content_hashes,
+            )?;
         }
         Ok(())
     }
@@ -772,7 +776,11 @@ impl IndexManager {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         if !eml_content_hashes.is_empty() || !attachments_content_hashes.is_empty() {
-            self.cleanup_unused_content(eml_content_hashes, attachments_content_hashes)?;
+            self.cleanup_unused_content(
+                &mut writer,
+                eml_content_hashes,
+                attachments_content_hashes,
+            )?;
         }
         Ok(())
     }
@@ -817,9 +825,18 @@ impl IndexManager {
 
     fn cleanup_unused_content(
         &self,
+        writer: &mut IndexWriter,
         eml_content_hashes: HashSet<String>,
         attachments_content_hashes: HashSet<String>,
     ) -> BichonResult<()> {
+        // Reference-count barrier: commit the writer and reload the reader so the
+        // `Count` below is evaluated against a fully committed, freshly-reloaded
+        // index state. Without this, an envelope that shares a content hash but
+        // is still sitting uncommitted in the writer buffer (e.g. added by the
+        // background ingest task before this delete acquired the writer lock)
+        // would be invisible to the searcher, the count would read 0, and a
+        // still-referenced blob would be deleted.
+        fatal_commit(writer);
         let searcher = self.create_searcher()?;
         let fields = SchemaTools::email_fields();
         let mut eml: HashSet<String> = HashSet::new();
@@ -900,7 +917,11 @@ impl IndexManager {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         if !eml_content_hashes.is_empty() || !attachments_content_hashes.is_empty() {
-            self.cleanup_unused_content(eml_content_hashes, attachments_content_hashes)?;
+            self.cleanup_unused_content(
+                &mut writer,
+                eml_content_hashes,
+                attachments_content_hashes,
+            )?;
         }
 
         Ok(())
