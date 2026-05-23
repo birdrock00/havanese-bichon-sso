@@ -457,16 +457,10 @@ impl NewIndexWriter {
             ("attachment", &mut self.attachment_writer),
         ] {
             if let Some(writer) = writer_opt.as_mut() {
-                let reader = writer
+                let seg_ids = writer
                     .index()
-                    .reader()
+                    .searchable_segment_ids()
                     .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-                let seg_ids: Vec<_> = reader
-                    .searcher()
-                    .segment_readers()
-                    .iter()
-                    .map(|r| r.segment_id())
-                    .collect();
                 println!("merging {} {} segments...", seg_ids.len(), name);
                 if seg_ids.len() > 1 {
                     let _ = writer.merge(&seg_ids);
