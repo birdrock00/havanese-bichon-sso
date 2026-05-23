@@ -214,7 +214,9 @@ impl IndexManager {
     }
 
     pub async fn queue(&self, doc: TantivyDocument) {
-        let _ = self.sender.send(doc).await;
+        if let Err(e) = self.sender.send(doc).await {
+            tracing::warn!(error = %e, "Failed to queue document into Tantivy writer channel");
+        }
     }
 
     fn open_or_create_index(index_dir: &PathBuf) -> Index {
@@ -887,11 +889,10 @@ impl IndexManager {
                 eml.insert(content_hash);
             }
         }
-
         let mut attachments: HashSet<String> = HashSet::new();
         for content_hash in attachments_content_hashes {
             // Check if any other emails still reference this content hash
-            let hash_term = Term::from_field_text(fields.f_content_hash, &content_hash);
+            let hash_term = Term::from_field_text(fields.f_attachment_content_hash, &content_hash);
             let hash_query = TermQuery::new(hash_term, IndexRecordOption::Basic);
             let count = searcher
                 .search(&hash_query, &Count)

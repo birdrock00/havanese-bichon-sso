@@ -89,6 +89,7 @@ async fn extract_envelope_core(
     account_id: u64,
     mailbox_id: u64,
 ) -> BichonResult<()> {
+    //The content hash of the original raw EML
     let email_content_hash = compute_content_hash(body);
     let message: Message<'_> = MessageParser::new().parse(body).ok_or_else(|| {
         raise_error!(
@@ -391,8 +392,10 @@ pub async fn detach_and_store_attachments(
     for (raw_start, raw_end, att) in ranges {
         // Step 2: Extract raw bytes and store them as standalone documents
         let raw_bytes = &original_body[raw_start..raw_end];
+        //This is the content hash of the decoded attachment, not the undecoded one.
         let content_hash = compute_content_hash(att.contents());
 
+        //"The actual content stored in the blob is the raw undecoded data, to avoid the reconstructed EML differing from the original due to decoding and re-encoding.
         attachments.push((content_hash.clone(), Bytes::copy_from_slice(raw_bytes)));//
 
         // Step 3: Replace raw attachment content with a hash-based placeholder
