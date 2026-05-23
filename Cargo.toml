@@ -6,6 +6,7 @@ members = [
     "crates/server",
     "crates/cli",
     "crates/admin",
+    "crates/smtp",
 ]
 
 resolver = "2"
@@ -17,12 +18,12 @@ edition = "2021"
 [workspace.dependencies]
 chrono = "0.4.44"
 clap = { version = "4.6.1", features = ["derive", "env"] }
-mimalloc = "0.1.51"
+mimalloc = "0.1.52"
 memdb = { path = "crates/memdb" }
 itertools = "0.14.0"
 ring = { version = "0.17.14", features = ["std"] }
 serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
+serde_json = "1.0.150"
 tokio = { version = "1.52.3", features = ["full"] }
 tracing = "0.1.44"
 tracing-appender = "0.2.3"

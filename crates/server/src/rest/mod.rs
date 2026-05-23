@@ -19,26 +19,25 @@
 use crate::common::error::ErrorCapture;
 use crate::common::log::Tracing;
 use crate::common::tls::rustls_config;
+use crate::common::timeout::{Timeout, TIMEOUT_HEADER};
 use crate::error::handler::error_handler;
 use crate::rest::public::login::login;
 use crate::rest::public::status::get_status;
 use bichon_core::common::signal::SIGNAL_MANAGER;
 use bichon_core::error::code::ErrorCode;
 use bichon_core::error::BichonResult;
+use bichon_core::raise_error;
 use bichon_core::settings::cli::SETTINGS;
 
 use super::error::ApiErrorResponse;
 use crate::common::auth::ApiGuard;
-use crate::common::timeout::{Timeout, TIMEOUT_HEADER};
 use api::create_openapi_service;
 use assets::FrontEndAssets;
-use bichon_core::raise_error;
 use http::{HeaderValue, Method};
 use poem::endpoint::EmbeddedFilesEndpoint;
 use poem::listener::{Listener, TcpListener};
-use poem::middleware::{CatchPanic, Compression, SetHeader};
-use poem::{get, handler, post, IntoResponse};
-use poem::{middleware::Cors, EndpointExt, Route, Server};
+use poem::middleware::{CatchPanic, Compression, Cors, SetHeader};
+use poem::{get, handler, post, Endpoint, EndpointExt, IntoResponse, Route, Server};
 use public::oauth2::oauth2_callback;
 use std::collections::HashSet;
 use std::time::Duration;
@@ -49,18 +48,9 @@ pub mod public;
 
 pub type ApiResult<T, E = ApiErrorResponse> = std::result::Result<T, E>;
 
-pub async fn start_http_server() -> BichonResult<()> {
-    let listener = TcpListener::bind((
-        SETTINGS.bichon_bind_ip.clone().unwrap_or("0.0.0.0".into()),
-        SETTINGS.bichon_http_port as u16,
-    ));
-
-    let listener = if SETTINGS.bichon_enable_rest_https {
-        listener.rustls(rustls_config()?).boxed()
-    } else {
-        listener.boxed()
-    };
-
+/// Build the community route tree. Pro/Enterprise servers can call this
+/// and then add their own routes before passing the tree to the server.
+pub fn build_routes() -> impl Endpoint {
     let api_service = create_openapi_service()
         .summary("A lightweight, high-performance Rust email archiver with WebUI");
 
@@ -79,7 +69,6 @@ pub async fn start_http_server() -> BichonResult<()> {
         .with(Tracing);
 
     let cors_origins: Option<HashSet<String>> = SETTINGS.bichon_cors_origins.clone();
-
     let cors_origins: Vec<String> = cors_origins.unwrap_or_default().into_iter().collect();
 
     let cors = Cors::new()
@@ -92,7 +81,6 @@ pub async fn start_http_server() -> BichonResult<()> {
             }
             cors_origins.iter().any(|o| o == origin)
         })
-        //.allow_origins(cors_origins)
         .allow_credentials(true)
         .allow_methods(&[
             Method::GET,
@@ -131,11 +119,26 @@ pub async fn start_http_server() -> BichonResult<()> {
         )
         .at("/*", serve_index_with_base);
 
-    let route = Route::new()
+    Route::new()
         .nest(&SETTINGS.bichon_base_url, app_logic)
         .with(cors)
         .with_if(SETTINGS.bichon_http_compression_enabled, Compression::new())
-        .with(CatchPanic::new());
+        .with(CatchPanic::new())
+}
+
+pub async fn start_http_server() -> BichonResult<()> {
+    let listener = TcpListener::bind((
+        SETTINGS.bichon_bind_ip.clone().unwrap_or("0.0.0.0".into()),
+        SETTINGS.bichon_http_port as u16,
+    ));
+
+    let listener = if SETTINGS.bichon_enable_rest_https {
+        listener.rustls(rustls_config()?).boxed()
+    } else {
+        listener.boxed()
+    };
+
+    let route = build_routes();
 
     let mut rx = SIGNAL_MANAGER.subscribe();
     let shutdown_fut = async move {
