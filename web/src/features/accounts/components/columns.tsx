@@ -106,9 +106,12 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         if (account_type === "NoSync") {
           return <LongText className="text-center">n/a</LongText>
         }
+        if (row.original.download_schedule) {
+          return <LongText className="text-center">{row.original.download_schedule}</LongText>
+        }
         return <LongText className="text-center">{row.original.download_interval_min} min</LongText>
       },
-      meta: { className: 'text-center max-w-[120px]' },
+      meta: { className: 'text-center max-w-[160px]' },
       enableHiding: false,
     },
     {

@@ -98,26 +98,6 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end' className='w-[220px]'>
-
-          {showDownload && (
-            <DropdownMenuItem onClick={handleStartDownload}>
-              {t('accounts.startDownload')}
-              <DropdownMenuShortcut>
-                <IconPlayerPlay size={16} />
-              </DropdownMenuShortcut>
-            </DropdownMenuItem>
-          )}
-
-
-          {showDownload && (
-            <DropdownMenuItem onClick={handleCancelDownload}>
-              {t('accounts.cancelDownload')}
-              <DropdownMenuShortcut>
-                <IconPlayerStop size={16} />
-              </DropdownMenuShortcut>
-            </DropdownMenuItem>
-          )}
-          {showDownload && <DropdownMenuSeparator />}
           {hasPermission && <DropdownMenuItem
             onClick={() => {
               setCurrentRow(row.original)
@@ -169,6 +149,27 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             </DropdownMenuShortcut>
           </DropdownMenuItem>}
           {hasPermission && <DropdownMenuSeparator />}
+
+          {showDownload && (
+            <DropdownMenuItem onClick={handleStartDownload}>
+              {t('accounts.startDownload')}
+              <DropdownMenuShortcut>
+                <IconPlayerPlay size={16} />
+              </DropdownMenuShortcut>
+            </DropdownMenuItem>
+          )}
+
+
+          {showDownload && (
+            <DropdownMenuItem onClick={handleCancelDownload}>
+              {t('accounts.cancelDownload')}
+              <DropdownMenuShortcut>
+                <IconPlayerStop size={16} />
+              </DropdownMenuShortcut>
+            </DropdownMenuItem>
+          )}
+          {showDownload && <DropdownMenuSeparator />}
+
           {hasPermission && <DropdownMenuItem
             onClick={() => {
               setCurrentRow(row.original)

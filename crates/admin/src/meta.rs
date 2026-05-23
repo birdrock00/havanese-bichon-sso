@@ -261,6 +261,7 @@ impl From<AccountV3> for AccountModel {
             imap_quota_window: None,
             imap_quota_bytes: None,
             auto_download_new_mailboxes: None,
+            download_schedule: None,
         }
     }
 }

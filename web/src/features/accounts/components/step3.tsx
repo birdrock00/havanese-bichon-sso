@@ -48,6 +48,72 @@ import i18n from "@/i18n";
 
 
 type SyncMode = 'all' | 'since_fixed' | 'since_relative' | 'before_relative';
+type ScheduleMode = 'interval' | 'cron';
+type CronMode = 'simple' | 'advanced';
+type CronFrequency = 'daily' | 'weekly' | 'monthly';
+
+interface CronSimpleState {
+    frequency: CronFrequency;
+    hour: number;
+    minute: number;
+    dayOfWeek: number;
+    dayOfMonth: number;
+}
+
+const DEFAULT_CRON_SIMPLE: CronSimpleState = {
+    frequency: 'daily',
+    hour: 0,
+    minute: 0,
+    dayOfWeek: 1,
+    dayOfMonth: 1,
+};
+
+function buildCronFromSimple(s: CronSimpleState): string {
+    switch (s.frequency) {
+        case 'daily':
+            return `0 ${s.minute} ${s.hour} * * *`;
+        case 'weekly':
+            return `0 ${s.minute} ${s.hour} * * ${s.dayOfWeek}`;
+        case 'monthly':
+            return `0 ${s.minute} ${s.hour} ${s.dayOfMonth} * *`;
+    }
+}
+
+function tryParseCronToSimple(cron: string): CronSimpleState | null {
+    const fields = cron.trim().split(/\s+/);
+    if (fields.length < 6) return null;
+
+    const sec = fields[0];
+    const min = fields[1];
+    const hour = fields[2];
+    const dom = fields[3];
+    const month = fields[4];
+    const dow = fields[5];
+
+    if (sec !== '0') return null;
+    if (month !== '*') return null;
+
+    const minuteVal = parseInt(min, 10);
+    const hourVal = parseInt(hour, 10);
+    if (isNaN(minuteVal) || isNaN(hourVal)) return null;
+
+    if (dom === '*' && dow === '*') {
+        return { frequency: 'daily', hour: hourVal, minute: minuteVal, dayOfWeek: 1, dayOfMonth: 1 };
+    }
+    if (dom === '*') {
+        const dowVal = parseInt(dow, 10);
+        if (!isNaN(dowVal)) {
+            return { frequency: 'weekly', hour: hourVal, minute: minuteVal, dayOfWeek: dowVal, dayOfMonth: 1 };
+        }
+    }
+    if (dow === '*') {
+        const domVal = parseInt(dom, 10);
+        if (!isNaN(domVal)) {
+            return { frequency: 'monthly', hour: hourVal, minute: minuteVal, dayOfWeek: 1, dayOfMonth: domVal };
+        }
+    }
+    return null;
+}
 
 export default function Step3() {
     const { t } = useTranslation();
@@ -61,6 +127,31 @@ export default function Step3() {
         return 'all';
     });
 
+    const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(() => {
+        if (current.download_schedule) return 'cron';
+        return 'interval';
+    });
+
+    const [cronMode, setCronMode] = useState<CronMode>(() => {
+        if (current.download_schedule && tryParseCronToSimple(current.download_schedule)) {
+            return 'simple';
+        }
+        if (current.download_schedule) return 'advanced';
+        return 'simple';
+    });
+
+    const [cronSimple, setCronSimple] = useState<CronSimpleState>(() => {
+        if (current.download_schedule) {
+            return tryParseCronToSimple(current.download_schedule) ?? DEFAULT_CRON_SIMPLE;
+        }
+        return DEFAULT_CRON_SIMPLE;
+    });
+
+    const updateCronFromSimple = (partial: Partial<CronSimpleState>) => {
+        const next = { ...cronSimple, ...partial };
+        setCronSimple(next);
+        setValue('download_schedule', buildCronFromSimple(next));
+    };
 
     const handleModeChange = (mode: SyncMode) => {
         setSyncMode(mode);
@@ -77,41 +168,231 @@ export default function Step3() {
         }
     };
 
+    const handleScheduleModeChange = (mode: ScheduleMode) => {
+        setScheduleMode(mode);
+        if (mode === 'interval') {
+            setValue("download_schedule", undefined);
+        } else {
+            setValue("download_interval_min", 60);
+            if (cronMode === 'simple') {
+                updateCronFromSimple(cronSimple);
+            }
+        }
+    };
+
     return (
         <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                    control={control}
-                    name="download_interval_min"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>{t('accounts.downloadInterval')}</FormLabel>
-                            <FormControl>
-                                <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10))} />
-                            </FormControl>
-                            <FormMessage />
-                            <FormDescription>
-                                {t('accounts.downloadIntervalPlaceholder')}
-                            </FormDescription>
-                        </FormItem>
+            <div className="space-y-4">
+                <FormItem>
+                    <FormLabel className="text-base font-semibold">{t('accounts.scheduleMode')}</FormLabel>
+                    <FormDescription>
+                        {t('accounts.scheduleModeDescription')}
+                    </FormDescription>
+                    <Select value={scheduleMode} onValueChange={(v) => handleScheduleModeChange(v as ScheduleMode)}>
+                        <SelectTrigger className="w-full">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="interval">{t('accounts.scheduleModeInterval')}</SelectItem>
+                            <SelectItem value="cron">{t('accounts.scheduleModeCron')}</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </FormItem>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {scheduleMode === 'interval' ? (
+                        <FormField
+                            control={control}
+                            name="download_interval_min"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>{t('accounts.downloadInterval')}</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10))} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    <FormDescription>
+                                        {t('accounts.downloadIntervalPlaceholder')}
+                                    </FormDescription>
+                                </FormItem>
+                            )}
+                        />
+                    ) : (
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                                {/* <FormLabel className="text-sm font-medium">{t('accounts.downloadSchedule')}</FormLabel> */}
+                                <div className="flex items-center rounded-md border text-xs">
+                                    <button
+                                        type="button"
+                                        className={`px-2 py-1 rounded-l-md ${cronMode === 'simple' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                                        onClick={() => setCronMode('simple')}
+                                    >
+                                        {t('accounts.cronSimple')}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`px-2 py-1 rounded-r-md ${cronMode === 'advanced' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                                        onClick={() => setCronMode('advanced')}
+                                    >
+                                        {t('accounts.cronAdvanced')}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {cronMode === 'simple' ? (
+                                <div className="flex flex-wrap items-end gap-3">
+                                    <FormItem className="w-[140px]">
+                                        <FormLabel className="text-xs">{t('accounts.cronFrequency')}</FormLabel>
+                                        <Select
+                                            value={cronSimple.frequency}
+                                            onValueChange={(v) => updateCronFromSimple({ frequency: v as CronFrequency })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="daily">{t('accounts.cronDaily')}</SelectItem>
+                                                <SelectItem value="weekly">{t('accounts.cronWeekly')}</SelectItem>
+                                                <SelectItem value="monthly">{t('accounts.cronMonthly')}</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </FormItem>
+
+                                    <FormItem className="w-[80px]">
+                                        <FormLabel className="text-xs">{t('accounts.cronHour')}</FormLabel>
+                                        <Select
+                                            value={String(cronSimple.hour)}
+                                            onValueChange={(v) => updateCronFromSimple({ hour: parseInt(v, 10) })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {Array.from({ length: 24 }, (_, i) => (
+                                                    <SelectItem key={i} value={String(i)}>
+                                                        {String(i).padStart(2, '0')}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </FormItem>
+
+                                    <span className="text-muted-foreground pb-2">:</span>
+
+                                    <FormItem className="w-[80px]">
+                                        <FormLabel className="text-xs">{t('accounts.cronMinute')}</FormLabel>
+                                        <Select
+                                            value={String(cronSimple.minute)}
+                                            onValueChange={(v) => updateCronFromSimple({ minute: parseInt(v, 10) })}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((m) => (
+                                                    <SelectItem key={m} value={String(m)}>
+                                                        {String(m).padStart(2, '0')}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </FormItem>
+
+                                    {cronSimple.frequency === 'weekly' && (
+                                        <FormItem className="w-[140px]">
+                                            <FormLabel className="text-xs">{t('accounts.cronDayOfWeek')}</FormLabel>
+                                            <Select
+                                                value={String(cronSimple.dayOfWeek)}
+                                                onValueChange={(v) => updateCronFromSimple({ dayOfWeek: parseInt(v, 10) })}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="1">{t('accounts.cronMonday')}</SelectItem>
+                                                    <SelectItem value="2">{t('accounts.cronTuesday')}</SelectItem>
+                                                    <SelectItem value="3">{t('accounts.cronWednesday')}</SelectItem>
+                                                    <SelectItem value="4">{t('accounts.cronThursday')}</SelectItem>
+                                                    <SelectItem value="5">{t('accounts.cronFriday')}</SelectItem>
+                                                    <SelectItem value="6">{t('accounts.cronSaturday')}</SelectItem>
+                                                    <SelectItem value="0">{t('accounts.cronSunday')}</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </FormItem>
+                                    )}
+
+                                    {cronSimple.frequency === 'monthly' && (
+                                        <FormItem className="w-[90px]">
+                                            <FormLabel className="text-xs">{t('accounts.cronDayOfMonth')}</FormLabel>
+                                            <Select
+                                                value={String(cronSimple.dayOfMonth)}
+                                                onValueChange={(v) => updateCronFromSimple({ dayOfMonth: parseInt(v, 10) })}
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="max-h-[200px]">
+                                                    {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                                                        <SelectItem key={d} value={String(d)}>
+                                                            {d}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </FormItem>
+                                    )}
+
+                                    <div className="text-xs text-muted-foreground pb-2 font-mono">
+                                        = {buildCronFromSimple(cronSimple)}
+                                    </div>
+                                </div>
+                            ) : (
+                                <FormField
+                                    control={control}
+                                    name="download_schedule"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <Input
+                                                    {...field}
+                                                    value={field.value ?? ''}
+                                                    placeholder={t('accounts.downloadSchedulePlaceholder')}
+                                                />
+                                            </FormControl>
+                                            <FormDescription>
+                                                {t('accounts.downloadScheduleDescription')}
+                                            </FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
+
+                            {cronMode === 'simple' && (
+                                <FormDescription>{t('accounts.downloadScheduleDescription')}</FormDescription>
+                            )}
+
+                            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                                <span>{t('accounts.cronTimezoneNote')}</span>
+                            </div>
+                        </div>
                     )}
-                />
-                <FormField
-                    control={control}
-                    name="download_batch_size"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>{t('accounts.downloadBatchSize')}</FormLabel>
-                            <FormControl>
-                                <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10))} />
-                            </FormControl>
-                            <FormMessage />
-                            <FormDescription>
-                                {t('accounts.downloadBatchSizeDescription')}
-                            </FormDescription>
-                        </FormItem>
-                    )}
-                />
+                    <FormField
+                        control={control}
+                        name="download_batch_size"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>{t('accounts.downloadBatchSize')}</FormLabel>
+                                <FormControl>
+                                    <Input type="number" {...field} onChange={(e) => field.onChange(parseInt(e.target.value, 10))} />
+                                </FormControl>
+                                <FormMessage />
+                                <FormDescription>
+                                    {t('accounts.downloadBatchSizeDescription')}
+                                </FormDescription>
+                            </FormItem>
+                        )}
+                    />
+                </div>
             </div>
 
             <FormField
@@ -249,29 +530,6 @@ export default function Step3() {
             />
 
             <hr className="my-4" />
-
-            <FormField
-                control={control}
-                name="folder_limit"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>{t('accounts.folderLimit')}</FormLabel>
-                        <FormDescription>{t('accounts.folderLimitDescription')}</FormDescription>
-                        <FormControl>
-                            <Input
-                                type="number"
-                                placeholder={t('accounts.folderLimitPlaceholder')}
-                                value={field.value ?? ''}
-                                onChange={(e) => {
-                                    const value = e.target.value;
-                                    field.onChange(value === '' ? null : Number(value));
-                                }}
-                            />
-                        </FormControl>
-                        <FormMessage />
-                    </FormItem>
-                )}
-            />
         </div>
     );
 }

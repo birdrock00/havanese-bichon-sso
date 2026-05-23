@@ -95,6 +95,7 @@ pub struct Account {
     pub imap_quota_bytes: Option<u64>,
     pub imap_quota_window: Option<QuotaWindow>,
     pub auto_download_new_mailboxes: Option<bool>,
+    pub download_schedule: Option<String>,
 }
 
 impl MemDbModel for Account {
@@ -133,6 +134,7 @@ impl Account {
             auto_download_new_mailboxes: request.auto_download_new_mailboxes,
             imap_quota_bytes: request.imap_quota_bytes,
             imap_quota_window: request.imap_quota_window,
+            download_schedule: request.download_schedule,
         })
     }
 
@@ -438,6 +440,12 @@ impl Account {
 
         if let Some(auto_download_new_mailboxes) = request.auto_download_new_mailboxes {
             new.auto_download_new_mailboxes = Some(auto_download_new_mailboxes);
+        }
+        if let Some(download_schedule) = request.download_schedule {
+            new.download_schedule = Some(download_schedule);
+        }
+        if request.clear_download_schedule == Some(true) {
+            new.download_schedule = None;
         }
         new.updated_at = utc_now!();
         Ok(new)

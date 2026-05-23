@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use std::str::FromStr;
+
 use crate::account::entity::ImapConfig;
 use crate::account::migration::{AccountModel, AccountType, QuotaWindow};
 use crate::account::since::{DateSince, RelativeDate};
@@ -54,6 +56,7 @@ pub struct AccountCreateRequest {
     pub imap_quota_bytes: Option<u64>,
     pub imap_quota_window: Option<QuotaWindow>,
     pub auto_download_new_mailboxes: Option<bool>,
+    pub download_schedule: Option<String>,
 }
 
 impl AccountCreateRequest {
@@ -92,11 +95,14 @@ impl AccountCreateRequest {
                         ))
                     }
                 }
-                if self.download_interval_min.is_none() {
+                if self.download_interval_min.is_none() && self.download_schedule.is_none() {
                     return Err(raise_error!(
-                        "`sync_interval_min` is required for IMAP account type".into(),
+                        "`sync_interval_min` or `download_schedule` is required for IMAP account type".into(),
                         ErrorCode::InvalidParameter
                     ));
+                }
+                if let Some(ref schedule) = self.download_schedule {
+                    validate_cron_expression(schedule)?;
                 }
             }
             AccountType::NoSync => {}
@@ -178,6 +184,8 @@ pub struct AccountUpdateRequest {
     pub imap_quota_bytes: Option<u64>,
     pub imap_quota_window: Option<QuotaWindow>,
     pub auto_download_new_mailboxes: Option<bool>,
+    pub download_schedule: Option<String>,
+    pub clear_download_schedule: Option<bool>,
 }
 
 impl AccountUpdateRequest {
@@ -230,9 +238,34 @@ impl AccountUpdateRequest {
                 ));
                 }
             }
+            if self.clear_download_schedule == Some(true) && self.download_schedule.is_some() {
+                return Err(raise_error!(
+                    "clear_download_schedule cannot be combined with download_schedule".into(),
+                    ErrorCode::InvalidParameter
+                ));
+            }
+            if let Some(ref schedule) = self.download_schedule {
+                validate_cron_expression(schedule)?;
+            }
         }
         Ok(())
     }
+}
+
+fn validate_cron_expression(expr: &str) -> BichonResult<()> {
+    if expr.trim().is_empty() {
+        return Err(raise_error!(
+            "download_schedule must not be empty".into(),
+            ErrorCode::InvalidParameter
+        ));
+    }
+    cron::Schedule::from_str(expr).map_err(|e| {
+        raise_error!(
+            format!("Invalid cron expression '{}': {}", expr, e),
+            ErrorCode::InvalidParameter
+        )
+    })?;
+    Ok(())
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
@@ -252,4 +285,35 @@ pub fn filter_accessible_accounts<'a>(
         .filter(|acct| allowed.contains(&acct.id))
         .cloned()
         .collect()
+}
+
+#[cfg(test)]
+mod test {
+    use super::validate_cron_expression;
+
+    #[test]
+    fn valid_cron_expressions() {
+        assert!(validate_cron_expression("0 0 0 * * *").is_ok()); // daily at midnight
+        assert!(validate_cron_expression("0 */5 * * * *").is_ok()); // every 5 minutes
+        assert!(validate_cron_expression("0 0 12 * * 1-5").is_ok()); // weekdays at noon
+        assert!(validate_cron_expression("0 30 4 1 * *").is_ok()); // 1st of month at 04:30
+        assert!(validate_cron_expression("0 0 * * * *").is_ok()); // every hour
+    }
+
+    #[test]
+    fn invalid_cron_expression_too_few_fields() {
+        assert!(validate_cron_expression("0 0 * *").is_err());
+        assert!(validate_cron_expression("* * * * *").is_err()); // 5 fields, needs seconds
+    }
+
+    #[test]
+    fn invalid_cron_expression_empty() {
+        assert!(validate_cron_expression("").is_err());
+        assert!(validate_cron_expression("   ").is_err());
+    }
+
+    #[test]
+    fn invalid_cron_expression_garbage() {
+        assert!(validate_cron_expression("not a cron").is_err());
+    }
 }

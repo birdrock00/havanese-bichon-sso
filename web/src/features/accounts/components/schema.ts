@@ -79,12 +79,6 @@ export const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
     use_dangerous: z.boolean(),
     date_since: dateSelectionSchema(t).optional(),
     date_before: relativeDateSchema(t).optional(),
-    folder_limit: z
-      .number({ invalid_type_error: t('validation.folderLimitMustBeNumber') })
-      .int()
-      .min(100, { message: t('validation.folderLimitMustBeAtLeast100') })
-      .nullable()
-      .optional(),
     download_interval_min: z
       .number({
         invalid_type_error: t('validation.incrementalSyncMustBeNumber'),
@@ -107,6 +101,18 @@ export const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
         message: t('validation.singleRequestBatchSizeTooLarge'),
       }),
     auto_download_new_mailboxes: z.boolean(),
+    download_schedule: z
+      .string()
+      .optional()
+      .refine(
+        (val) => {
+          if (!val || val.trim() === '') return true;
+          const fields = val.trim().split(/\s+/);
+          if (fields.length < 6) return false;
+          return true;
+        },
+        { message: t('validation.invalidCronExpression') }
+      ),
   })
 
 export type AccountFormValues = z.infer<

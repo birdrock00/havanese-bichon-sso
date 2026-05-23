@@ -49,7 +49,7 @@ export type Steps = [...Step[]];
 const getSteps = (t: (key: string) => string): Steps => [
   { id: "step-1", name: t('accounts.steps.emailAddress'), fields: ["email", "account_name"] },
   { id: "step-2", name: t('accounts.steps.imap'), fields: ["imap", "use_dangerous", "login_name"] },
-  { id: "step-3", name: t('accounts.steps.syncPreferences'), fields: ["enabled", "date_since", "date_before", "folder_limit", "download_interval_min", "download_batch_size", "auto_download_new_mailboxes"] },
+  { id: "step-3", name: t('accounts.steps.syncPreferences'), fields: ["enabled", "date_since", "date_before", "download_interval_min", "download_batch_size", "auto_download_new_mailboxes", "download_schedule"] },
   { id: "step-4", name: t('accounts.steps.summary'), fields: [] },
 ];
 
@@ -79,10 +79,10 @@ const defaultValues: Account = {
   use_dangerous: false,
   date_since: undefined,
   date_before: undefined,
-  folder_limit: undefined,
   download_interval_min: 60,
   download_batch_size: 30,
   auto_download_new_mailboxes: true,
+  download_schedule: undefined,
 };
 
 const emptyImap: ImapConfig = {
@@ -109,10 +109,10 @@ const mapCurrentRowToFormValues = (currentRow: AccountModel): Account => {
     use_dangerous: currentRow.use_dangerous,
     date_since: currentRow.date_since ?? undefined,
     date_before: currentRow.date_before ?? undefined,
-    folder_limit: currentRow.folder_limit ?? undefined,
     download_interval_min: currentRow.download_interval_min ?? 60,
     download_batch_size: currentRow.download_batch_size ?? 30,
     auto_download_new_mailboxes: currentRow.auto_download_new_mailboxes ?? true,
+    download_schedule: currentRow.download_schedule ?? undefined,
   };
 };
 
@@ -191,18 +191,18 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
         use_dangerous: data.use_dangerous,
         date_since: data.date_since,
         date_before: data.date_before,
-        folder_limit: data.folder_limit,
         download_interval_min: data.download_interval_min,
         download_batch_size: data.download_batch_size,
         auto_download_new_mailboxes: data.auto_download_new_mailboxes,
+        download_schedule: data.download_schedule || null,
       };
       if (isEdit) {
         const isAllMode = !data.date_since && !data.date_before;
-        const clear_folder_limit = !data.folder_limit;
+        const clear_download_schedule = !data.download_schedule && currentRow?.download_schedule;
         updateMutation.mutate({
           ...commonData,
           ...(isAllMode ? { clear_date_range: true } : {}),
-          ...(clear_folder_limit ? { clear_folder_limit: true } : {})
+          ...(clear_download_schedule ? { clear_download_schedule: true } : {})
         });
       } else {
         createMutation.mutate({ ...commonData, account_type: "IMAP" });

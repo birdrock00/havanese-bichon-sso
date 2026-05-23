@@ -57,6 +57,7 @@ pub struct AccountResp {
     pub imap_quota_bytes: Option<u64>,
     pub imap_quota_window: Option<QuotaWindow>,
     pub auto_download_new_mailboxes: Option<bool>,
+    pub download_schedule: Option<String>,
 }
 
 impl AccountResp {
@@ -93,6 +94,7 @@ impl AccountResp {
             imap_quota_bytes: account.imap_quota_bytes,
             imap_quota_window: account.imap_quota_window,
             auto_download_new_mailboxes: account.auto_download_new_mailboxes,
+            download_schedule: account.download_schedule,
         }
     }
 }

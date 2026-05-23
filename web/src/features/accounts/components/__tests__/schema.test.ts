@@ -213,37 +213,6 @@ describe('Account Form Schema', () => {
     })
   })
 
-  describe('folder_limit field', () => {
-    it('accepts undefined folder_limit', () => {
-      const result = getAccountSchema(false, t).safeParse(validAccountData)
-      expect(result.success).toBe(true)
-    })
-
-    it('accepts null folder_limit', () => {
-      const result = getAccountSchema(false, t).safeParse({
-        ...validAccountData,
-        folder_limit: null,
-      })
-      expect(result.success).toBe(true)
-    })
-
-    it('rejects folder_limit less than 100', () => {
-      const result = getAccountSchema(false, t).safeParse({
-        ...validAccountData,
-        folder_limit: 50,
-      })
-      expect(result.success).toBe(false)
-    })
-
-    it('accepts folder_limit of exactly 100', () => {
-      const result = getAccountSchema(false, t).safeParse({
-        ...validAccountData,
-        folder_limit: 100,
-      })
-      expect(result.success).toBe(true)
-    })
-  })
-
   describe('account_name and login_name fields', () => {
     it('accepts undefined account_name and login_name', () => {
       const result = getAccountSchema(false, t).safeParse(validAccountData)
@@ -262,6 +231,45 @@ describe('Account Form Schema', () => {
       const result = getAccountSchema(false, t).safeParse({
         ...validAccountData,
         login_name: 'username',
+      })
+      expect(result.success).toBe(true)
+    })
+  })
+
+  describe('download_schedule field', () => {
+    it('accepts undefined download_schedule', () => {
+      const result = getAccountSchema(false, t).safeParse(validAccountData)
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts valid 6-field cron expression', () => {
+      const result = getAccountSchema(false, t).safeParse({
+        ...validAccountData,
+        download_schedule: '0 0 0 * * *',
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts cron with */step syntax', () => {
+      const result = getAccountSchema(false, t).safeParse({
+        ...validAccountData,
+        download_schedule: '0 */30 8-17 * * 1-5',
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects cron with too few fields', () => {
+      const result = getAccountSchema(false, t).safeParse({
+        ...validAccountData,
+        download_schedule: '0 0 *',
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('accepts empty string cron (treated as not set)', () => {
+      const result = getAccountSchema(false, t).safeParse({
+        ...validAccountData,
+        download_schedule: '',
       })
       expect(result.success).toBe(true)
     })

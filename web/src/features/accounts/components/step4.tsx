@@ -50,7 +50,7 @@ export default function Step4() {
 
     return (
         <div className="rounded-xl">
-            <Accordion type="multiple" defaultValue={['email', 'account_name', 'login_name', 'imap', 'date_since', 'folder_limit', 'sync_interval', 'sync_scope', 'sync_batch_size']}>
+            <Accordion type="multiple" defaultValue={['email', 'account_name', 'login_name', 'imap', 'date_since', 'sync_interval', 'sync_scope', 'sync_batch_size', 'download_schedule']}>
                 <AccordionItem key="email" value="email">
                     <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.email')}:</AccordionTrigger>
                     <AccordionContent>{summaryData.email}</AccordionContent>
@@ -154,11 +154,6 @@ export default function Step4() {
                 </AccordionItem>
 
 
-                <AccordionItem key="folder_limit" value="folder_limit">
-                    <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.folderLimit')}:</AccordionTrigger>
-                    <AccordionContent>{summaryData.folder_limit ?? t('accounts.notAvailable')}</AccordionContent>
-                </AccordionItem>
-
                 <AccordionItem key="sync_interval" value="sync_interval">
                     <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.downloadInterval')}:</AccordionTrigger>
                     <AccordionContent>{summaryData.download_interval_min} {t('accounts.minutes')}</AccordionContent>
@@ -167,6 +162,11 @@ export default function Step4() {
                 <AccordionItem key="sync_batch_size" value="sync_batch_size">
                     <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.downloadBatchSize')}:</AccordionTrigger>
                     <AccordionContent>{summaryData.download_batch_size}</AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem key="download_schedule" value="download_schedule">
+                    <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.downloadSchedule')}:</AccordionTrigger>
+                    <AccordionContent>{summaryData.download_schedule || t('accounts.notAvailable')}</AccordionContent>
                 </AccordionItem>
 
                 <AccordionItem key="auto_download_new_mailboxes" value="auto_download_new_mailboxes">

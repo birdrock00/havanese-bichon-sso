@@ -133,8 +133,8 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-muted-foreground">{t('accounts.folderLimit')}:</span>
-                        <span>{currentRow.folder_limit ? currentRow.folder_limit : t('accounts.notAvailable')}</span>
+                        <span className="text-muted-foreground">{t('accounts.downloadSchedule')}:</span>
+                        <span>{currentRow.download_schedule || t('accounts.notAvailable')}</span>
                       </div>
                     </div>
                   </CardContent>
