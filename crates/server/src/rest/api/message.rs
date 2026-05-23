@@ -225,7 +225,7 @@ impl MessageApi {
         AccountModel::check_account_exists(account_id)?;
         context.require_permission(Some(account_id), Permission::DATA_RAW_DOWNLOAD)?;
         let envelope_id = envelope_id.0;
-        let reader = get_reader(account_id, envelope_id.clone())?;
+        let reader = get_reader(account_id, envelope_id.clone()).await?;
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
             .attachment_type(AttachmentType::Attachment)

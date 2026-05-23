@@ -16,11 +16,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::cache::imap::mailbox::MailBox;
 use crate::common::AddrVec;
 use crate::envelope::meta::parse_bichon_metadata;
 use crate::envelope::utils::normalize_subject;
 use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
+use crate::imap::executor::ImapExecutor;
 use crate::message::content::AttachmentInfo;
 use crate::store::blob::{DetachedEmail, BLOB_MANAGER};
 use crate::store::tantivy::attachment::ATTACHMENT_MANAGER;
@@ -513,6 +515,115 @@ pub fn reattach_eml_content(
     }
 
     Ok((e.envelope, Bytes::from(restored_eml)))
+}
+
+/// Returns the raw EML for an indexed message, self-healing a missing content blob.
+///
+/// Behaves like [`reattach_eml_content`], but when the message's content blob is
+/// absent from the blob store it fetches that single message on demand from the
+/// IMAP server (`UID FETCH <uid> (BODY.PEEK[])`), persists it for future requests,
+/// and returns it. If the on-demand fetch itself fails, the original "content not
+/// found" error from [`reattach_eml_content`] is surfaced unchanged so the caller
+/// still produces its 404.
+pub async fn reattach_eml_content_self_healing(
+    account_id: u64,
+    envelope_id: String,
+) -> BichonResult<(Envelope, Bytes)> {
+    let envelope = ENVELOPE_MANAGER
+        .get_envelope_by_id(account_id, &envelope_id)?
+        .ok_or_else(|| {
+            raise_error!(
+                format!(
+                    "Envelope not found: account_id={} envelope_id={}",
+                    account_id, &envelope_id
+                ),
+                ErrorCode::ResourceNotFound
+            )
+        })?
+        .envelope;
+
+    // Fast path: the content blob is present, reuse the regular reattach logic.
+    if BLOB_MANAGER.get_email(&envelope.content_hash)?.is_some() {
+        return reattach_eml_content(account_id, envelope_id);
+    }
+
+    // The blob is missing. Try to recover it directly from the IMAP server.
+    match recover_message_blob(&envelope).await {
+        Ok(raw_body) => {
+            tracing::info!(
+                account_id,
+                envelope_id = %envelope_id,
+                uid = envelope.uid,
+                "Self-healed missing email content blob via on-demand IMAP fetch"
+            );
+            Ok((envelope, raw_body))
+        }
+        Err(e) => {
+            tracing::warn!(
+                account_id,
+                envelope_id = %envelope_id,
+                uid = envelope.uid,
+                error = %e,
+                "On-demand IMAP fetch for missing content blob failed; returning not-found"
+            );
+            // Surface the canonical "content not found" error to the caller.
+            reattach_eml_content(account_id, envelope_id)
+        }
+    }
+}
+
+/// Fetches one message from IMAP and re-stores its detached blob.
+///
+/// On success the freshly fetched raw RFC822 body is returned; it is also queued
+/// (in detached form) into the blob store so subsequent requests hit the cache.
+/// Fails if the message cannot be fetched, or if the fetched bytes do not match
+/// the archived `content_hash` (the server-side message no longer matches what
+/// Bichon archived, so it cannot be treated as a recovery of that blob).
+async fn recover_message_blob(envelope: &Envelope) -> BichonResult<Bytes> {
+    let mailbox = MailBox::find_mailbox(envelope.account_id, envelope.mailbox_id)?
+        .ok_or_else(|| {
+            raise_error!(
+                format!(
+                    "Mailbox not found: account_id={} mailbox_id={}",
+                    envelope.account_id, envelope.mailbox_id
+                ),
+                ErrorCode::ResourceNotFound
+            )
+        })?;
+
+    let mut session = ImapExecutor::create_connection(envelope.account_id).await?;
+    let result = ImapExecutor::fetch_single_message_body(
+        &mut session,
+        &mailbox.encoded_name(),
+        envelope.uid,
+    )
+    .await;
+    session.logout().await.ok();
+    let raw_body = result?;
+
+    let fetched_hash = compute_content_hash(&raw_body);
+    if fetched_hash != envelope.content_hash {
+        return Err(raise_error!(
+            format!(
+                "Fetched message does not match archived content: expected content_hash={} got={}",
+                envelope.content_hash, fetched_hash
+            ),
+            ErrorCode::ImapUnexpectedResult
+        ));
+    }
+
+    // Re-create the detached blob (stripped EML + attachments) so the missing
+    // blob is repopulated for future requests. The detached EML is queued under
+    // `fetched_hash`, which equals `envelope.content_hash`.
+    let message = MessageParser::new().parse(raw_body.as_slice()).ok_or_else(|| {
+        raise_error!(
+            "Failed to parse fetched email content".into(),
+            ErrorCode::InternalError
+        )
+    })?;
+    detach_and_store_attachments(&raw_body, &message, &fetched_hash).await;
+
+    Ok(Bytes::from(raw_body))
 }
 
 #[cfg(test)]
