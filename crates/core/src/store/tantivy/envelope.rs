@@ -42,8 +42,8 @@ use crate::{
             attachment::ATTACHMENT_MANAGER,
             fatal_commit,
             fields::{
-                F_ACCOUNT_ID, F_DATE, F_FROM, F_ID, F_REGULAR_ATTACHMENT_COUNT, F_SIZE, F_TAGS,
-                F_THREAD_ID, F_UID,
+                F_ACCOUNT_ID, F_DATE, F_FROM, F_ID, F_INGEST_AT, F_INTERNAL_DATE,
+                F_REGULAR_ATTACHMENT_COUNT, F_SIZE, F_TAGS, F_THREAD_ID, F_UID,
             },
             model::{extract_contacts, EnvelopeWithAttachments},
             schema::SchemaTools,
@@ -448,6 +448,40 @@ impl IndexManager {
 
         let end_bound = if let Some(to) = filter.before {
             Bound::Included(Term::from_field_i64(f.f_date, to))
+        } else {
+            Bound::Unbounded
+        };
+
+        if start_bound != Bound::Unbounded || end_bound != Bound::Unbounded {
+            let q = RangeQuery::new(start_bound, end_bound);
+            subqueries.push((Occur::Must, Box::new(q)));
+        }
+
+        let start_bound = if let Some(from) = filter.internal_date_since {
+            Bound::Included(Term::from_field_i64(f.f_internal_date, from))
+        } else {
+            Bound::Unbounded
+        };
+
+        let end_bound = if let Some(to) = filter.internal_date_before {
+            Bound::Included(Term::from_field_i64(f.f_internal_date, to))
+        } else {
+            Bound::Unbounded
+        };
+
+        if start_bound != Bound::Unbounded || end_bound != Bound::Unbounded {
+            let q = RangeQuery::new(start_bound, end_bound);
+            subqueries.push((Occur::Must, Box::new(q)));
+        }
+
+        let start_bound = if let Some(from) = filter.ingest_since {
+            Bound::Included(Term::from_field_i64(f.f_ingest_at, from))
+        } else {
+            Bound::Unbounded
+        };
+
+        let end_bound = if let Some(to) = filter.ingest_before {
+            Bound::Included(Term::from_field_i64(f.f_ingest_at, to))
         } else {
             Bound::Unbounded
         };
@@ -1161,6 +1195,31 @@ impl IndexManager {
                     )
                     .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
                 mailbox_docs = size_docs.into_iter().map(|(_, addr)| addr).collect();
+            }
+            SortBy::InternalDate => {
+                let internal_date_docs: Vec<(Option<i64>, DocAddress)> = searcher
+                    .search(
+                        &query,
+                        &TopDocs::with_limit(page_size as usize)
+                            .and_offset(offset as usize)
+                            .order_by_fast_field(F_INTERNAL_DATE, order),
+                    )
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                mailbox_docs = internal_date_docs
+                    .into_iter()
+                    .map(|(_, addr)| addr)
+                    .collect();
+            }
+            SortBy::IngestAt => {
+                let ingest_at_docs: Vec<(Option<i64>, DocAddress)> = searcher
+                    .search(
+                        &query,
+                        &TopDocs::with_limit(page_size as usize)
+                            .and_offset(offset as usize)
+                            .order_by_fast_field(F_INGEST_AT, order),
+                    )
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                mailbox_docs = ingest_at_docs.into_iter().map(|(_, addr)| addr).collect();
             }
         }
 

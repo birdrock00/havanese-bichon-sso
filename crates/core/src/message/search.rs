@@ -45,6 +45,14 @@ pub struct EmailSearchFilter {
     pub bcc: Option<String>,
     pub since: Option<i64>,
     pub before: Option<i64>,
+    /// Lower bound (inclusive) on the IMAP server INTERNALDATE timestamp.
+    pub internal_date_since: Option<i64>,
+    /// Upper bound (inclusive) on the IMAP server INTERNALDATE timestamp.
+    pub internal_date_before: Option<i64>,
+    /// Lower bound (inclusive) on Bichon's archival (ingest) timestamp.
+    pub ingest_since: Option<i64>,
+    /// Upper bound (inclusive) on Bichon's archival (ingest) timestamp.
+    pub ingest_before: Option<i64>,
     pub account_ids: Option<HashSet<u64>>,
     pub mailbox_ids: Option<HashSet<u64>>,
     pub min_size: Option<u64>,
@@ -64,6 +72,14 @@ pub enum SortBy {
     #[default]
     DATE,
     SIZE,
+    /// Sort by the IMAP server INTERNALDATE timestamp.
+    #[serde(rename = "INTERNAL_DATE")]
+    #[cfg_attr(feature = "web-api", oai(rename = "INTERNAL_DATE"))]
+    InternalDate,
+    /// Sort by Bichon's archival (ingest) timestamp.
+    #[serde(rename = "INGEST_AT")]
+    #[cfg_attr(feature = "web-api", oai(rename = "INGEST_AT"))]
+    IngestAt,
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
