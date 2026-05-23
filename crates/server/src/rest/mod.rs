@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::common::auth::ApiGuard;
 use crate::common::error::ErrorCapture;
 use crate::common::log::Tracing;
 use crate::common::tls::rustls_config;
@@ -29,24 +30,30 @@ use bichon_core::error::BichonResult;
 use bichon_core::raise_error;
 use bichon_core::settings::cli::SETTINGS;
 
-use super::error::ApiErrorResponse;
-use crate::common::auth::ApiGuard;
 use api::create_openapi_service;
-use assets::FrontEndAssets;
-use http::{HeaderValue, Method};
-use poem::endpoint::EmbeddedFilesEndpoint;
+use http::Method;
 use poem::listener::{Listener, TcpListener};
-use poem::middleware::{CatchPanic, Compression, Cors, SetHeader};
-use poem::{get, handler, post, Endpoint, EndpointExt, IntoResponse, Route, Server};
+use poem::middleware::{CatchPanic, Compression, Cors};
+use poem::{get, post, Endpoint, EndpointExt, Route, Server};
 use public::oauth2::oauth2_callback;
 use std::collections::HashSet;
 use std::time::Duration;
+
+#[cfg(feature = "embed-web")]
+use {
+    assets::FrontEndAssets,
+    http::HeaderValue,
+    poem::{handler, endpoint::EmbeddedFilesEndpoint, IntoResponse},
+    poem::middleware::SetHeader,
+};
 
 pub mod api;
 pub mod assets;
 pub mod public;
 
 pub type ApiResult<T, E = ApiErrorResponse> = std::result::Result<T, E>;
+
+use super::error::ApiErrorResponse;
 
 /// Build the community route tree. Pro/Enterprise servers can call this
 /// and then add their own routes before passing the tree to the server.
@@ -95,13 +102,6 @@ pub fn build_routes() -> impl Endpoint {
         .expose_headers(vec!["Accept"])
         .max_age(SETTINGS.bichon_cors_max_age);
 
-    let cache_static = || {
-        SetHeader::new().overriding(
-            http::header::CACHE_CONTROL,
-            HeaderValue::from_static("max-age=86400"),
-        )
-    };
-
     let app_logic = Route::new()
         .nest("/api-docs/swagger", swagger)
         .nest("/api-docs/redoc", redoc)
@@ -112,18 +112,61 @@ pub fn build_routes() -> impl Endpoint {
         .nest("/oauth2/callback", get(oauth2_callback))
         .nest("/api/status", get(get_status))
         .nest("/api/login", post(login))
-        .nest_no_strip("/api/v1", open_api_route)
-        .nest_no_strip(
-            "/assets",
-            EmbeddedFilesEndpoint::<FrontEndAssets>::new().with(cache_static()),
-        )
-        .at("/*", serve_index_with_base);
+        .nest_no_strip("/api/v1", open_api_route);
+
+    let app_logic = add_web_assets(app_logic);
 
     Route::new()
         .nest(&SETTINGS.bichon_base_url, app_logic)
         .with(cors)
         .with_if(SETTINGS.bichon_http_compression_enabled, Compression::new())
         .with(CatchPanic::new())
+}
+
+#[cfg(feature = "embed-web")]
+fn add_web_assets(route: Route) -> impl Endpoint {
+    let cache_static = || {
+        SetHeader::new().overriding(
+            http::header::CACHE_CONTROL,
+            HeaderValue::from_static("max-age=86400"),
+        )
+    };
+
+    route
+        .nest_no_strip(
+            "/assets",
+            EmbeddedFilesEndpoint::<FrontEndAssets>::new().with(cache_static()),
+        )
+        .at("/*", serve_index_with_base)
+}
+
+#[cfg(not(feature = "embed-web"))]
+fn add_web_assets(route: Route) -> Route {
+    route
+}
+
+#[cfg(feature = "embed-web")]
+#[handler]
+async fn serve_index_with_base() -> impl IntoResponse {
+    let mut html =
+        String::from_utf8_lossy(&FrontEndAssets::get("index.html").unwrap().data).to_string();
+
+    let raw_base = &SETTINGS.bichon_base_url;
+    let base_href = if raw_base.ends_with('/') {
+        raw_base.clone()
+    } else {
+        format!("{}/", raw_base)
+    };
+
+    let inject_content = format!(
+        r#"<base href="{}"><script>window.__BICHON_BASE__ = '{}';</script>"#,
+        base_href, raw_base
+    );
+
+    html = html.replace("<head>", &format!("<head>{}", inject_content));
+    poem::Response::builder()
+        .content_type("text/html; charset=utf-8")
+        .body(html)
 }
 
 pub async fn start_http_server() -> BichonResult<()> {
@@ -159,27 +202,4 @@ pub async fn start_http_server() -> BichonResult<()> {
     server
         .await
         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
-}
-
-#[handler]
-async fn serve_index_with_base() -> impl IntoResponse {
-    let mut html =
-        String::from_utf8_lossy(&FrontEndAssets::get("index.html").unwrap().data).to_string();
-
-    let raw_base = &SETTINGS.bichon_base_url;
-    let base_href = if raw_base.ends_with('/') {
-        raw_base.clone()
-    } else {
-        format!("{}/", raw_base)
-    };
-
-    let inject_content = format!(
-        r#"<base href="{}"><script>window.__BICHON_BASE__ = '{}';</script>"#,
-        base_href, raw_base
-    );
-
-    html = html.replace("<head>", &format!("<head>{}", inject_content));
-    poem::Response::builder()
-        .content_type("text/html; charset=utf-8")
-        .body(html)
 }
