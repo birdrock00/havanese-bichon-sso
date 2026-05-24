@@ -32,11 +32,15 @@ impl DatabaseManager {
         let db_path = &DATA_DIR_MANAGER.memdb_dir;
         std::fs::create_dir_all(db_path).expect("Failed to create memdb data directory");
 
-        let db = MemDb::open_with(db_path, Durability::Full)
+        let db = MemDb::open_with(db_path, Durability::Batch { max_ops: 100 })
             .expect("Failed to open memdb database");
 
         // Start periodic snapshot worker (every 5 minutes)
         db.start_snapshot_worker(Duration::from_secs(300));
+
+        // Start periodic flush worker (every 10 seconds) so buffered writes
+        // are flushed regularly and not only at the batch threshold.
+        db.start_flush_worker(Duration::from_secs(10));
 
         DatabaseManager { db }
     }
@@ -44,5 +48,13 @@ impl DatabaseManager {
     /// Get a reference to the MemDb instance.
     pub fn db(&self) -> &MemDb {
         &self.db
+    }
+
+    /// Flush any buffered WAL entries to disk. Must be called before shutdown
+    /// to avoid losing writes that haven't hit the batch threshold yet.
+    pub fn flush(&self) {
+        if let Err(e) = self.db.flush() {
+            eprintln!("[memdb] flush error on shutdown: {e}");
+        }
     }
 }

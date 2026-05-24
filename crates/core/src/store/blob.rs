@@ -149,9 +149,18 @@ impl BlobManager {
                     res = receiver.recv() => {
                         match res {
                             Some(eml) => {
-                                Self::process_detached_email(eml, &email_ks, &attach_ks);
+                                let mut batch = vec![eml];
                                 while let Ok(next_eml) = receiver.try_recv() {
-                                    Self::process_detached_email(next_eml, &email_ks, &attach_ks);
+                                    batch.push(next_eml);
+                                }
+                                let email_ks = email_ks.clone();
+                                let attach_ks = attach_ks.clone();
+                                if let Err(e) = tokio::task::spawn_blocking(move || {
+                                    for eml in batch {
+                                        Self::process_detached_email(eml, &email_ks, &attach_ks);
+                                    }
+                                }).await {
+                                    tracing::error!("BlobManager: spawn_blocking join error: {:#?}", e);
                                 }
                             }
                             None => {
@@ -162,16 +171,25 @@ impl BlobManager {
                     }
                     _ = shutdown.recv() => {
                         receiver.close();
-                        let remaining = receiver.len();
+                        let mut remaining = Vec::new();
+                        while let Some(eml) = receiver.recv().await {
+                            remaining.push(eml);
+                        }
                         tracing::info!(
                             "BlobManager: Shutdown signal received. Processing {} remaining tasks...",
-                            remaining
+                            remaining.len()
                         );
-
-                        while let Some(eml) = receiver.recv().await {
-                            Self::process_detached_email(eml, &email_ks, &attach_ks);
+                        if !remaining.is_empty() {
+                            let email_ks = email_ks.clone();
+                            let attach_ks = attach_ks.clone();
+                            if let Err(e) = tokio::task::spawn_blocking(move || {
+                                for eml in remaining {
+                                    Self::process_detached_email(eml, &email_ks, &attach_ks);
+                                }
+                            }).await {
+                                tracing::error!("BlobManager: shutdown spawn_blocking join error: {:#?}", e);
+                            }
                         }
-
                         tracing::info!("BlobManager: All remaining tasks processed. Closing Fjall.");
                         break;
                     }

@@ -169,7 +169,7 @@ impl IndexManager {
                                         "Tantivy: Reached threshold ({} docs), committing...",
                                         pending_count
                                     );
-                                    fatal_commit(&mut writer);
+                                    tokio::task::block_in_place(|| fatal_commit(&mut writer));
                                     pending_count = 0;
                                     commit_interval.reset();
                                 }
@@ -178,7 +178,7 @@ impl IndexManager {
                                 tracing::info!("Tantivy: Receiver closed. Finalizing...");
                                 if pending_count > 0 {
                                     let mut writer = writer.lock().await;
-                                    fatal_commit(&mut writer);
+                                    tokio::task::block_in_place(|| fatal_commit(&mut writer));
                                 }
                                 break;
                             },
@@ -187,7 +187,7 @@ impl IndexManager {
                     _ = commit_interval.tick() => {
                         if pending_count > 0 {
                             let mut writer = writer.lock().await;
-                            fatal_commit(&mut writer);
+                            tokio::task::block_in_place(|| fatal_commit(&mut writer));
                             pending_count = 0;
                             tracing::debug!("Tantivy: Periodic commit finished.");
                         }
@@ -196,7 +196,7 @@ impl IndexManager {
                         tracing::info!("Tantivy: Shutdown signal received. Performing final commit...");
                         if pending_count > 0 {
                             let mut writer = writer.lock().await;
-                            fatal_commit(&mut writer);
+                            tokio::task::block_in_place(|| fatal_commit(&mut writer));
                         }
                         tracing::info!("Tantivy: Shutdown cleanup complete.");
                         break;

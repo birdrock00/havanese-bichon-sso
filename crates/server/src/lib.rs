@@ -28,6 +28,7 @@ use bichon_core::{
     cache::imap::task::SYNC_TASKS,
     common::{rustls::BichonTls, signal::SignalManager},
     context::{executors::BichonContext, Initialize},
+    database::manager::DB_MANAGER,
     error::{code::ErrorCode, BichonResult},
     logger,
     migrate::check_data_status,
@@ -116,6 +117,7 @@ pub async fn run() -> BichonResult<()> {
     ENVELOPE_MANAGER.shutdown().await;
     ATTACHMENT_MANAGER.shutdown().await;
     BLOB_MANAGER.shutdown().await;
+    DB_MANAGER.flush();
     info!("Bichon server stopped.");
     Ok(())
 }
