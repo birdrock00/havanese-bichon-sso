@@ -197,33 +197,37 @@ async fn extract_envelope_core(
     let attachment_docs: Vec<TantivyDocument> = attachments
         .iter()
         .filter(|a| !a.inline || a.content_id.is_none())
-        .map(|a| AttachmentModel {
-            id: Uuid::new_v4().to_string(),
-            envelope_id: envelope_id.clone(),
-            account_id,
-            account_email: None,
-            mailbox_id,
-            mailbox_name: None,
-            subject: subject.clone(),
-            content_hash: a.content_hash.clone(),
-            from: from.clone(),
-            date,
-            ingest_at: now,
-            size: a.size as u64,
-            ext: a.get_extension(),
-            category: a.get_category().to_string(),
-            content_type: a.file_type.clone(),
-            shard_id: 0,
-            text: None,
-            has_text: false,
-            is_ocr: false,
-            page_count: None,
-            is_indexed: false,
-            is_message: a.is_message,
-            name: a.filename.clone(),
-            tags: None,
-            auto_tags: None,
-        }).map(|a|a.into_document())
+        .map(|a| {
+            let has_text = a.extracted_text.is_some();
+            AttachmentModel {
+                id: Uuid::new_v4().to_string(),
+                envelope_id: envelope_id.clone(),
+                account_id,
+                account_email: None,
+                mailbox_id,
+                mailbox_name: None,
+                subject: subject.clone(),
+                content_hash: a.content_hash.clone(),
+                from: from.clone(),
+                date,
+                ingest_at: now,
+                size: a.size as u64,
+                ext: a.get_extension(),
+                category: a.get_category().to_string(),
+                content_type: a.file_type.clone(),
+                shard_id: 0,
+                text: a.extracted_text.clone(),
+                has_text,
+                is_ocr: a.extracted_is_ocr,
+                page_count: a.extracted_page_count.map(|n| n as u64),
+                is_indexed: has_text,
+                is_message: a.is_message,
+                name: a.filename.clone(),
+                tags: None,
+                auto_tags: None,
+            }
+        })
+        .map(|a| a.into_document())
         .collect();
 
     let envelope = Envelope {
@@ -397,6 +401,16 @@ pub async fn detach_and_store_attachments(
 
     ranges.sort_by(|a, b| b.0.cmp(&a.0));
     let mut attachments = Vec::with_capacity(ranges.len());
+
+    // Collect candidates for text extraction (non-inline, known document types).
+    struct TextCandidate {
+        content_hash: String,
+        file_type: String,
+        ext: String,
+        bytes: Vec<u8>,
+    }
+    let mut text_candidates: Vec<TextCandidate> = Vec::new();
+
     for (raw_start, raw_end, att) in ranges {
         // Step 2: Extract raw bytes and store them as standalone documents
         let raw_bytes = &original_body[raw_start..raw_end];
@@ -411,29 +425,87 @@ pub async fn detach_and_store_attachments(
         let p_bytes = placeholder.as_bytes();
         stripped_eml.splice(raw_start..raw_end, p_bytes.iter().cloned());
 
+        let inline = att
+            .content_disposition()
+            .map(|d| d.is_inline())
+            .unwrap_or(false);
+        let file_type = att
+            .content_type()
+            .map(|ct| {
+                format!(
+                    "{}/{}",
+                    ct.c_type.as_ref(),
+                    ct.c_subtype.as_deref().unwrap_or("")
+                )
+            })
+            .unwrap_or_else(|| "application/octet-stream".to_string());
+        let has_cid = att.content_id().is_some();
+        let ext = att
+            .attachment_name()
+            .and_then(|n| {
+                std::path::Path::new(&n)
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .map(|s| s.to_ascii_lowercase())
+            })
+            .unwrap_or_default();
+
+        if !inline || !has_cid {
+            let decoded_len = att.contents().len();
+            if decoded_len <= crate::ext::text_extractor::MAX_EXTRACT_BYTES
+                && crate::ext::text_extractor::should_try_extract(&file_type, &ext)
+            {
+                text_candidates.push(TextCandidate {
+                    content_hash: content_hash.clone(),
+                    file_type: file_type.clone(),
+                    ext: ext.clone(),
+                    bytes: att.contents().to_vec(),
+                });
+            }
+        }
+
         let info = AttachmentInfo {
             filename: att.attachment_name().map(|n| n.to_string()),
             size: att.contents().len(),
-            inline: att
-                .content_disposition()
-                .map(|d| d.is_inline())
-                .unwrap_or(false),
-            file_type: att
-                .content_type()
-                .map(|ct| {
-                    format!(
-                        "{}/{}",
-                        ct.c_type.as_ref(),
-                        ct.c_subtype.as_deref().unwrap_or("")
-                    )
-                })
-                .unwrap_or_else(|| "application/octet-stream".to_string()),
+            inline,
+            file_type,
             content_id: att.content_id().map(|id| id.to_string()),
             content_hash: content_hash.clone(),
             is_message: att.is_message(),
+            extracted_text: None,
+            extracted_page_count: None,
+            extracted_is_ocr: false,
         };
 
         attachment_infos.push(info);
+    }
+
+    // Run text extraction in a single spawn_blocking batch.
+    if !text_candidates.is_empty() {
+        if let Ok(mut extracted_map) = tokio::task::spawn_blocking(move || {
+            let mut map: std::collections::HashMap<
+                String,
+                (String, Option<u32>, bool),
+            > = std::collections::HashMap::new();
+            for c in text_candidates {
+                if let Some(r) =
+                    crate::ext::text_extractor::extract_text(&c.file_type, &c.ext, &c.bytes)
+                {
+                    map.insert(c.content_hash, (r.text, r.page_count, r.is_ocr));
+                }
+            }
+            map
+        })
+        .await
+        {
+            for info in &mut attachment_infos {
+                if let Some((text, pages, is_ocr)) = extracted_map.remove(&info.content_hash) {
+                    info.extracted_text = Some(text);
+                    info.extracted_page_count = pages;
+                    info.extracted_is_ocr = is_ocr;
+                }
+            }
+        }
     }
     // Step 4: Store the final stripped EML content
     BLOB_MANAGER

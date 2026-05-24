@@ -53,6 +53,21 @@ pub fn set_extractor(extractor: Box<dyn AttachmentTextExtractor>) {
     *EXTRACTOR.write().unwrap() = extractor;
 }
 
+/// Attachments larger than this are skipped (10 MiB). Avoids excessive memory
+/// and CPU cost for huge files whose text is rarely useful for search.
+pub const MAX_EXTRACT_BYTES: usize = 10 * 1024 * 1024;
+
+/// Quick pre-filter: returns true for file types where text extraction may
+/// produce useful results. Avoids cloning attachment bytes for images, videos,
+/// archives, etc. when no registered extractor would handle them.
+pub fn should_try_extract(content_type: &str, ext: &str) -> bool {
+    matches!(
+        ext,
+        "pdf" | "doc" | "docx" | "xls" | "xlsx" | "ppt" | "pptx"
+            | "txt" | "rtf" | "odt" | "ods" | "odp"
+    ) || content_type.starts_with("text/")
+}
+
 /// Called by the attachment pipeline during IMAP sync.
 /// The caller should wrap this in spawn_blocking for CPU-bound extraction.
 pub fn extract_text(content_type: &str, ext: &str, bytes: &[u8]) -> Option<ExtractedText> {

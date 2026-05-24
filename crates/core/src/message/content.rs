@@ -47,6 +47,13 @@ pub struct AttachmentInfo {
     /// Hash of the content.
     pub content_hash: String,
     pub is_message: bool,
+    /// Text extracted from the attachment body (Pro/Enterprise feature).
+    /// Populated during IMAP sync; None for inline attachments and unsupported file types.
+    pub extracted_text: Option<String>,
+    /// Page count reported by the extractor, if any.
+    pub extracted_page_count: Option<u32>,
+    /// Whether the extracted text came from OCR.
+    pub extracted_is_ocr: bool,
 }
 
 impl AttachmentInfo {
@@ -222,13 +229,16 @@ pub fn retrieve_email_content(
         let is_message = attachment.is_message();
         let content_hash = compute_content_hash(attachment.contents());
         attachments.push(AttachmentInfo {
-            filename: filename.or(Some(content_hash.clone())), //  Fallback to content_hash as the default filename if it is not provided.
+            filename: filename.or(Some(content_hash.clone())),
             size: attachment.contents().len(),
             inline,
             file_type,
             is_message,
             content_hash,
             content_id: attachment.content_id().map(Into::into),
+            extracted_text: None,
+            extracted_page_count: None,
+            extracted_is_ocr: false,
         });
     }
     let mut has_remote_content = false;
@@ -320,13 +330,16 @@ pub fn retrieve_nested_eml_content(
             filename: attachment
                 .attachment_name()
                 .map(|n| n.to_string())
-                .or(Some(content_hash.clone())), // Fallback to content_hash as the default filename if it is not provided.
+                .or(Some(content_hash.clone())),
             size: attachment.contents().len(),
             inline: is_inline,
             file_type,
             content_hash,
             is_message: attachment.is_message(),
             content_id: cid.map(Into::into),
+            extracted_text: None,
+            extracted_page_count: None,
+            extracted_is_ocr: false,
         });
     }
 

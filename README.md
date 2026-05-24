@@ -584,8 +584,8 @@ No. Bichon is an **archiver**, not an email client. The optional SMTP server **r
 
 ### What hardware does Bichon need?
 
-- **Minimal:** 1 CPU core, 512 MB RAM
-- **Recommended (100+ accounts, 200+ GB):** 4+ cores, 2+ GB RAM
+- **Recommended:** 4+ CPU cores, 2+ GB RAM (sufficient for 10+ accounts and 200+ GB of archived data)
+- Filesystem: use a mainstream Linux filesystem such as **ext4** or **XFS**; avoid network / virtual filesystems (NFS, VirtIO-FS) for all data directories
 - Indices benefit from SSD storage; blob storage can use HDD
 
 ### How do I reset the admin password?

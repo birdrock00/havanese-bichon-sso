@@ -114,6 +114,9 @@ pub fn detach_attachments_standalone(
             content_id: att.content_id().map(|id| id.to_string()),
             content_hash,
             is_message: att.is_message(),
+            extracted_text: None,
+            extracted_page_count: None,
+            extracted_is_ocr: false,
         });
     }
 
