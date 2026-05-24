@@ -22,6 +22,7 @@ use crate::common::log::Tracing;
 use crate::common::tls::rustls_config;
 use crate::common::timeout::{Timeout, TIMEOUT_HEADER};
 use crate::error::handler::error_handler;
+use crate::rest::public::features::get_features;
 use crate::rest::public::login::login;
 use crate::rest::public::status::get_status;
 use bichon_core::common::signal::SIGNAL_MANAGER;
@@ -110,6 +111,7 @@ pub fn build_routes() -> impl Endpoint {
         .nest("/api-docs/spec.json", spec_json)
         .nest("/api-docs/spec.yaml", spec_yaml)
         .nest("/oauth2/callback", get(oauth2_callback))
+        .nest("/api/v1/features", get(get_features))
         .nest("/api/status", get(get_status))
         .nest("/api/login", post(login))
         .nest_no_strip("/api/v1", open_api_route);
