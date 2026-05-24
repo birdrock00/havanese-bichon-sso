@@ -129,8 +129,16 @@ impl ImapExecutor {
             return Ok(());
         }
         info!(
-            "[account {}][mailbox {}] {} envelopes need to be fetched",
-            account.id, mailbox.name, len
+            "[account {}][mailbox {}] {} envelopes need to be fetched (start_uid={})",
+            account.id, mailbox.name, len, start_uid
+        );
+        tracing::debug!(
+            "[account {}][mailbox {}] fetch_new_mail UID range: {}..{} ({} uids)",
+            account.id,
+            mailbox.name,
+            start_uid,
+            uid_list.iter().max().unwrap_or(&0),
+            len
         );
 
         let mut uid_vec: Vec<u32> = uid_list.into_iter().collect();

@@ -255,11 +255,22 @@ fn dedup_account(
         // uidvalidity, which is required for correct incremental sync.
         entries.sort_by_key(|e| std::cmp::Reverse(e.ingest_at));
 
-        eprintln!(
-            "DEBUG Phase2: key={_key:?} kept={} deleting={}",
-            entries[0].email_id,
+        tracing::debug!(
+            "dedup: account={} mailbox={} hash={}: {} copies, keeping eid={} ingest_at={}, deleting {}",
+            account_id,
+            _key.0,
+            &_key.1,
+            entries.len(),
+            &entries[0].email_id,
+            entries[0].ingest_at,
             entries.len() - 1
         );
+
+        // eprintln!(
+        //     "DEBUG Phase2: key={_key:?} kept={} deleting={}",
+        //     entries[0].email_id,
+        //     entries.len() - 1
+        // );
         // Keep entries[0], soft-delete everything else via term query on f_id
         for entry in &entries[1..] {
             eprintln!(

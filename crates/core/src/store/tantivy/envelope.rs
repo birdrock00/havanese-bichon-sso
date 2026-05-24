@@ -170,6 +170,10 @@ impl IndexManager {
                                         pending_count
                                     );
                                     tokio::task::block_in_place(|| fatal_commit(&mut writer));
+                                    tracing::debug!(
+                                        "Tantivy: committed {} docs, pending reset to 0",
+                                        pending_count
+                                    );
                                     pending_count = 0;
                                     commit_interval.reset();
                                 }
@@ -187,9 +191,12 @@ impl IndexManager {
                     _ = commit_interval.tick() => {
                         if pending_count > 0 {
                             let mut writer = writer.lock().await;
+                            tracing::debug!(
+                                "Tantivy: periodic commit ({} docs pending)",
+                                pending_count
+                            );
                             tokio::task::block_in_place(|| fatal_commit(&mut writer));
                             pending_count = 0;
-                            tracing::debug!("Tantivy: Periodic commit finished.");
                         }
                     }
                     _ = shutdown.recv() => {
@@ -690,7 +697,15 @@ impl IndexManager {
         let agg_res = searcher
             .search(query.as_ref(), &collector)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        Ok(Self::extract_max_uid(&agg_res))
+        let result = Self::extract_max_uid(&agg_res);
+        tracing::debug!(
+            "[account {}][mailbox {}] get_max_uid = {:?} (num_docs in searcher = {})",
+            account_id,
+            mailbox_id,
+            result,
+            searcher.num_docs()
+        );
+        Ok(result)
     }
 
     pub fn get_account_stats(&self, account_id: u64) -> BichonResult<AccountStats> {

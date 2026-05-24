@@ -630,6 +630,13 @@ async fn perform_incremental_sync(
 ) -> BichonResult<()> {
     if remote_mailbox.exists > 0 {
         let local_max_uid = ENVELOPE_MANAGER.get_max_uid(account.id, local_mailbox.id)?;
+        tracing::info!(
+            "[account {}][mailbox {}] perform_incremental_sync: local_max_uid={:?}, remote.exists={}",
+            account.id,
+            local_mailbox.name,
+            local_max_uid,
+            remote_mailbox.exists
+        );
         match local_max_uid {
             Some(max_uid) => {
                 let mut session = ImapExecutor::create_connection(account.id).await?;

@@ -256,6 +256,14 @@ async fn extract_envelope_core(
         attachments: Some(attachments),
     };
     let doc = ea.to_document(&body_text, 0)?;
+    tracing::debug!(
+        "[account {}][mailbox {}] extract: uid={} msg_id={} content_hash={}",
+        account_id,
+        mailbox_id,
+        uid,
+        &ea.envelope.message_id,
+        &ea.envelope.content_hash,
+    );
     ENVELOPE_MANAGER.queue(doc).await;
     for doc in attachment_docs {
         ATTACHMENT_MANAGER.queue(doc).await;

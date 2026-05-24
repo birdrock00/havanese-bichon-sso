@@ -155,6 +155,10 @@ impl IndexManager {
                                         pending_count
                                     );
                                     tokio::task::block_in_place(|| fatal_commit(&mut writer));
+                                    tracing::debug!(
+                                        "Tantivy attach: committed {} docs, pending reset to 0",
+                                        pending_count
+                                    );
                                     pending_count = 0;
                                     commit_interval.reset();
                                 }
@@ -172,9 +176,12 @@ impl IndexManager {
                     _ = commit_interval.tick() => {
                         if pending_count > 0 {
                             let mut writer = writer.lock().await;
+                            tracing::debug!(
+                                "Tantivy attach: periodic commit ({} docs pending)",
+                                pending_count
+                            );
                             tokio::task::block_in_place(|| fatal_commit(&mut writer));
                             pending_count = 0;
-                            tracing::debug!("Tantivy: Periodic commit finished.");
                         }
                     }
                     _ = shutdown.recv() => {
