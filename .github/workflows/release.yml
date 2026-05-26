@@ -3,7 +3,7 @@ name: Release Bichon
 on:
   push:
     tags:
-      - '[0-9]+.[0-9]+.[0-9]+'
+      - '*'
 env:
   BINARY_NAME: bichon-server
   BINARY_CLI: bichon-cli
