@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - '*'
+  workflow_dispatch:    
 env:
   BINARY_NAME: bichon-server
   BINARY_CLI: bichon-cli
