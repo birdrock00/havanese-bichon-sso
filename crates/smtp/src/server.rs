@@ -628,6 +628,7 @@ async fn parse_email(data: &[u8], session: &Session) -> BichonResult<()> {
         unseen: None,
         uid_next: None,
         uid_validity: None,
+        highest_uid: None,
     };
     let mailbox_id = mailbox.id;
 

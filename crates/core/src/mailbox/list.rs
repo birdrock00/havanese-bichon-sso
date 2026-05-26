@@ -157,8 +157,13 @@ async fn fetch_remote_with_progress(account_id: u64) -> BichonResult<Vec<MailBox
 
         mailbox.account_id = account_id;
         mailbox.id = create_hash(account_id, &mailbox.name);
+        // Use STATUS instead of EXAMINE: gets MESSAGES/UNSEEN/UIDNEXT/UIDVALIDITY
+        // without selecting the mailbox, avoiding context switches.
         let mx = session
-            .examine(mailbox_name.as_str())
+            .status(
+                mailbox_name.as_str(),
+                "(MESSAGES UNSEEN UIDNEXT UIDVALIDITY)",
+            )
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
         mailbox.exists = mx.exists;
@@ -205,8 +210,13 @@ pub async fn convert_names_to_mailboxes(
 
         mailbox.account_id = account_id;
         mailbox.id = create_hash(account_id, &mailbox.name);
+        // Use STATUS instead of EXAMINE: gets MESSAGES/UNSEEN/UIDNEXT/UIDVALIDITY
+        // without selecting the mailbox, avoiding context switches.
         let mx = session
-            .examine(mailbox_name.as_str())
+            .status(
+                mailbox_name.as_str(),
+                "(MESSAGES UNSEEN UIDNEXT UIDVALIDITY)",
+            )
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
         mailbox.exists = mx.exists;

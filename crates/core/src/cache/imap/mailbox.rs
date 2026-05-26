@@ -56,6 +56,10 @@ pub struct MailBox {
     /// The validity identifier for UIDs in this mailbox, used to ensure UID consistency across sessions.
     /// If `None`, the IMAP server has not provided this information.
     pub uid_validity: Option<u32>,
+    /// The highest UID that has been successfully downloaded and stored locally.
+    /// Used for incremental sync: next fetch starts from `highest_uid + 1`.
+    /// If `None`, a fallback query against the Tantivy index will be performed once.
+    pub highest_uid: Option<u32>,
 }
 
 impl MemDbModel for MailBox {

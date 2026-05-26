@@ -89,7 +89,11 @@ pub async fn rebuild_cache(
         };
 
         match fetch_and_save_full_mailbox(&account, &mailbox, token.clone()).await {
-            Ok(_) => {}
+            Ok(new_highest_uid) => {
+                let mut updated = mailbox.clone();
+                updated.highest_uid = new_highest_uid;
+                MailBox::batch_upsert(&[updated])?;
+            }
             Err(err) => {
                 has_error = true;
                 tracing::error!("Folder sync task failed: {:#?}", err);
@@ -169,7 +173,11 @@ pub async fn rebuild_cache_by_date(
         match fetch_and_save_by_date(&account, date.as_str(), &mailbox, direction, token.clone())
             .await
         {
-            Ok(_) => {}
+            Ok(new_highest_uid) => {
+                let mut updated = mailbox.clone();
+                updated.highest_uid = new_highest_uid;
+                MailBox::batch_upsert(&[updated])?;
+            }
             Err(err) => {
                 has_error = true;
                 tracing::error!("Folder sync task failed: {:#?}", err);
@@ -196,7 +204,7 @@ pub async fn rebuild_mailbox_cache(
     local_mailbox: &MailBox,
     remote_mailbox: &MailBox,
     token: CancellationToken,
-) -> BichonResult<()> {
+) -> BichonResult<Option<u32>> {
     ENVELOPE_MANAGER
         .delete_mailbox_envelopes(account.id, vec![local_mailbox.id])
         .await?;
@@ -217,11 +225,11 @@ pub async fn rebuild_mailbox_cache(
             FolderStatus::Success,
             None,
         )?;
-        return Ok(());
+        return Ok(None);
     }
 
-    fetch_and_save_full_mailbox(account, remote_mailbox, token).await?;
-    Ok(())
+    let result = fetch_and_save_full_mailbox(account, remote_mailbox, token).await?;
+    Ok(result)
 }
 
 pub async fn rebuild_mailbox_cache_by_date(
@@ -231,7 +239,7 @@ pub async fn rebuild_mailbox_cache_by_date(
     remote: &MailBox,
     direction: FetchDirection,
     token: CancellationToken,
-) -> BichonResult<()> {
+) -> BichonResult<Option<u32>> {
     ENVELOPE_MANAGER
         .delete_mailbox_envelopes(account.id, vec![local_mailbox_id])
         .await?;
@@ -252,9 +260,9 @@ pub async fn rebuild_mailbox_cache_by_date(
             FolderStatus::Success,
             None,
         )?;
-        return Ok(());
+        return Ok(None);
     }
 
-    fetch_and_save_by_date(account, date, remote, direction, token).await?;
-    Ok(())
+    let result = fetch_and_save_by_date(account, date, remote, direction, token).await?;
+    Ok(result)
 }

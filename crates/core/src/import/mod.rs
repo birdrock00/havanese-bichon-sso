@@ -105,6 +105,7 @@ impl ImportEmls {
                     unseen: None,
                     uid_next: None,
                     uid_validity: None,
+                    highest_uid: None,
                 };
                 let mailbox_id = mailbox.id;
                 // Upsert the mailbox, creating it if it doesn't exist
