@@ -177,9 +177,6 @@
     "everyMinutes": "每 {{minutes}} 分鐘",
     "field": "欄位",
     "fixed": "固定",
-    "folderLimit": "資料夾限制",
-    "folderLimitDescription": "限制每個資料夾要同步的郵件數量（最小 100）。若無限制請留空。",
-    "folderLimitPlaceholder": "例如：1000",
     "folderSync": {
       "autoSelectDescendants": "自動選取子項",
       "autoSelectParents": "自動選取父項",
@@ -1675,8 +1672,6 @@
   },
   "validation": {
     "emailRequired": "電子郵件地址為必填項",
-    "folderLimitMustBeAtLeast100": "資料夾限制必須至少為 100",
-    "folderLimitMustBeNumber": "資料夾限制必須是數字",
     "imapHostCannotBeEmpty": "IMAP 主機不可為空",
     "imapHostRequired": "IMAP 主機為必填項",
     "imapPortMustBeLessThan65536": "IMAP 連接埠必須小於 65536",

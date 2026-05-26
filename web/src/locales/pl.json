@@ -177,9 +177,6 @@
     "everyMinutes": "co {{minutes}} minut",
     "field": "Pole",
     "fixed": "Dokładnie",
-    "folderLimit": "Limit folderu",
-    "folderLimitDescription": "Ogranicz liczbę wiadomości email, które należy synchronizować w jednym folderze (minimum 100). Pozostaw puste, aby nie było limitu.",
-    "folderLimitPlaceholder": "np. 1000",
     "folderSync": {
       "autoSelectDescendants": "Automatyczny wybór dzieci (podrzędnych)",
       "autoSelectParents": "Automatyczny wybór rodziców (nadrzędnych)",
@@ -1675,8 +1672,6 @@
   },
   "validation": {
     "emailRequired": "Email jest wymagany",
-    "folderLimitMustBeAtLeast100": "Limit folderów musi być liczbą nie mniejszą niż 100",
-    "folderLimitMustBeNumber": "Limit folderów musi być liczbą",
     "imapHostCannotBeEmpty": "Host IMAP nie może być pusty",
     "imapHostRequired": "Host IMAP jest wymagany",
     "imapPortMustBeLessThan65536": "Port IMAP musi być liczbą w przedziale 0-65535",

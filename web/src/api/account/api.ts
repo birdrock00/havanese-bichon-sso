@@ -128,7 +128,6 @@ export interface AccountModel {
     capabilities?: string[];
     date_since?: DateSelection;
     date_before?: RelativeDate;
-    folder_limit?: number,
     download_folders: string[];
     download_interval_min?: number;
     download_batch_size?: number;

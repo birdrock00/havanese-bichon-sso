@@ -177,9 +177,6 @@
     "everyMinutes": "A cada {{minutes}} minutos",
     "field": "Campo",
     "fixed": "Fixo",
-    "folderLimit": "Limite de Pasta",
-    "folderLimitDescription": "Limita o número de emails a sincronizar por pasta (mínimo 100). Deixe vazio para nenhum limite.",
-    "folderLimitPlaceholder": "Ex: 1000",
     "folderSync": {
       "autoSelectDescendants": "Selecionar automaticamente os descendentes",
       "autoSelectParents": "Selecionar automaticamente os pais",
@@ -1675,8 +1672,6 @@
   },
   "validation": {
     "emailRequired": "O endereço de email é obrigatório",
-    "folderLimitMustBeAtLeast100": "O Limite de Pasta deve ser pelo menos 100",
-    "folderLimitMustBeNumber": "O Limite de Pasta deve ser um número",
     "imapHostCannotBeEmpty": "O Host IMAP não pode estar vazio",
     "imapHostRequired": "O Host IMAP é obrigatório",
     "imapPortMustBeLessThan65536": "A Porta IMAP deve ser menor que 65536",

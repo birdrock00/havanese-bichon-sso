@@ -80,7 +80,6 @@ pub struct Account {
     pub capabilities: Option<Vec<String>>,
     pub date_since: Option<DateSince>,
     pub date_before: Option<RelativeDate>,
-    pub folder_limit: Option<u32>,
     pub download_folders: Option<Vec<String>>,
     pub account_type: AccountType,
     pub download_interval_min: Option<i64>,
@@ -125,7 +124,6 @@ impl Account {
             created_at: utc_now!(),
             updated_at: utc_now!(),
             use_proxy: request.use_proxy,
-            folder_limit: request.folder_limit,
             use_dangerous: request.use_dangerous,
             pgp_key: request.pgp_key,
             created_by: user_id,
@@ -367,18 +365,8 @@ impl Account {
             }
         }
 
-        if let Some(folder_limit) = request.folder_limit {
-            new.folder_limit = Some(folder_limit);
-        }
-
         if let Some(account_name) = request.account_name {
             new.account_name = Some(account_name);
-        }
-
-        if let Some(clear_folder_limit) = request.clear_folder_limit {
-            if clear_folder_limit {
-                new.folder_limit = None;
-            }
         }
 
         if matches!(old.account_type, AccountType::IMAP) {

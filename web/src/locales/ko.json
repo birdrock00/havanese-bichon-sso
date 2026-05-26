@@ -177,9 +177,6 @@
     "everyMinutes": "매 {{minutes}}분",
     "field": "필드",
     "fixed": "고정",
-    "folderLimit": "폴더 제한",
-    "folderLimitDescription": "폴더당 동기화할 이메일 수를 제한합니다(최소 100). 제한이 없으면 비워 두십시오.",
-    "folderLimitPlaceholder": "예: 1000",
     "folderSync": {
       "autoSelectDescendants": "하위 항목 자동 선택",
       "autoSelectParents": "상위 항목 자동 선택",
@@ -1675,8 +1672,6 @@
   },
   "validation": {
     "emailRequired": "이메일 주소는 필수입니다",
-    "folderLimitMustBeAtLeast100": "폴더 제한은 최소 100 이상이어야 합니다",
-    "folderLimitMustBeNumber": "폴더 제한은 숫자여야 합니다",
     "imapHostCannotBeEmpty": "IMAP 호스트는 비워 둘 수 없습니다",
     "imapHostRequired": "IMAP 호스트는 필수입니다",
     "imapPortMustBeLessThan65536": "IMAP 포트는 65536보다 작아야 합니다",

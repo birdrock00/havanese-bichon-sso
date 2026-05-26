@@ -177,9 +177,6 @@
     "everyMinutes": "每 {{minutes}} 分钟",
     "field": "字段",
     "fixed": "固定",
-    "folderLimit": "文件夹限制",
-    "folderLimitDescription": "限制每个文件夹同步的邮件数量（最少 100）。留空表示不限制。",
-    "folderLimitPlaceholder": "例如 1000",
     "folderSync": {
       "autoSelectDescendants": "自动选择子项",
       "autoSelectParents": "自动选择父项",
@@ -1675,8 +1672,6 @@
   },
   "validation": {
     "emailRequired": "邮箱为必填项",
-    "folderLimitMustBeAtLeast100": "文件夹限制必须至少为 100",
-    "folderLimitMustBeNumber": "文件夹限制必须是数字",
     "imapHostCannotBeEmpty": "IMAP 主机不能为空",
     "imapHostRequired": "IMAP 主机为必填项",
     "imapPortMustBeLessThan65536": "IMAP 端口必须小于 65536",

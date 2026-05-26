@@ -177,9 +177,6 @@
     "everyMinutes": "joka {{minutes}} minuutti",
     "field": "Kenttä",
     "fixed": "Kiinteä",
-    "folderLimit": "Kansioraja",
-    "folderLimitDescription": "Rajoittaa synkronoitavien sähköpostien määrän kansiota kohden (vähintään 100). Jätä tyhjäksi ilman rajoitusta.",
-    "folderLimitPlaceholder": "esim. 1000",
     "folderSync": {
       "autoSelectDescendants": "Valitse alisolmut automaattisesti",
       "autoSelectParents": "Valitse yläsolmut automaattisesti",
@@ -1675,8 +1672,6 @@
   },
   "validation": {
     "emailRequired": "Sähköposti on pakollinen",
-    "folderLimitMustBeAtLeast100": "Kansiorajan on oltava vähintään 100",
-    "folderLimitMustBeNumber": "Kansiorajan on oltava numero",
     "imapHostCannotBeEmpty": "IMAP-isäntä ei voi olla tyhjä",
     "imapHostRequired": "IMAP-isäntä on pakollinen",
     "imapPortMustBeLessThan65536": "IMAP-portin on oltava pienempi kuin 65536",

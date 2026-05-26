@@ -177,9 +177,6 @@
     "everyMinutes": "cada {{minutes}} minutos",
     "field": "Campo",
     "fixed": "Fija",
-    "folderLimit": "Límite de carpetas",
-    "folderLimitDescription": "Limita el número de correos a sincronizar por carpeta (mínimo 100). Deja vacío para no tener límite.",
-    "folderLimitPlaceholder": "ej. 1000",
     "folderSync": {
       "autoSelectDescendants": "Seleccionar automáticamente los descendientes",
       "autoSelectParents": "Seleccionar automáticamente los padres",
@@ -1675,8 +1672,6 @@
   },
   "validation": {
     "emailRequired": "El correo electrónico es obligatorio",
-    "folderLimitMustBeAtLeast100": "El límite de carpetas debe ser de al menos 100",
-    "folderLimitMustBeNumber": "El límite de carpetas debe ser un número",
     "imapHostCannotBeEmpty": "El host IMAP no puede estar vacío",
     "imapHostRequired": "El host IMAP es obligatorio",
     "imapPortMustBeLessThan65536": "El puerto IMAP debe ser menor que 65536",

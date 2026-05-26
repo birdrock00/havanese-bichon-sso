@@ -177,9 +177,6 @@
     "everyMinutes": "каждые {{minutes}} мин.",
     "field": "Поле",
     "fixed": "Фиксированная",
-    "folderLimit": "Лимит папки",
-    "folderLimitDescription": "Ограничить количество писем для синхронизации в папке (минимум 100). Оставьте пустым для снятия ограничений.",
-    "folderLimitPlaceholder": "например, 1000",
     "folderSync": {
       "autoSelectDescendants": "Автоматически выбирать дочерние элементы",
       "autoSelectParents": "Автоматически выбирать родительские элементы",
@@ -1675,8 +1672,6 @@
   },
   "validation": {
     "emailRequired": "Email обязателен",
-    "folderLimitMustBeAtLeast100": "Лимит папки должен быть не менее 100",
-    "folderLimitMustBeNumber": "Лимит папки должен быть числом",
     "imapHostCannotBeEmpty": "IMAP хост не может быть пустым",
     "imapHostRequired": "IMAP хост обязателен",
     "imapPortMustBeLessThan65536": "IMAP порт должен быть меньше 65536",

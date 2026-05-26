@@ -177,9 +177,6 @@
     "everyMinutes": "{{minutes}}分ごと",
     "field": "フィールド",
     "fixed": "固定",
-    "folderLimit": "フォルダーの制限",
-    "folderLimitDescription": "フォルダーごとに同期するメールの数を制限します（最小100）。制限なしにする場合は空欄にしてください。",
-    "folderLimitPlaceholder": "例: 1000",
     "folderSync": {
       "autoSelectDescendants": "子項目を自動選択",
       "autoSelectParents": "親項目を自動選択",
@@ -1675,8 +1672,6 @@
   },
   "validation": {
     "emailRequired": "メールアドレスは必須です",
-    "folderLimitMustBeAtLeast100": "フォルダーの制限は100以上である必要があります",
-    "folderLimitMustBeNumber": "フォルダーの制限は数値である必要があります",
     "imapHostCannotBeEmpty": "IMAPホストは空にできません",
     "imapHostRequired": "IMAPホストは必須です",
     "imapPortMustBeLessThan65536": "IMAPポートは65536未満である必要があります",

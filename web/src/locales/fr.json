@@ -177,9 +177,6 @@
     "everyMinutes": "toutes les {{minutes}} minutes",
     "field": "Champ",
     "fixed": "Fixe",
-    "folderLimit": "Limite de Dossiers",
-    "folderLimitDescription": "Limite le nombre d'e-mails à synchroniser par dossier (minimum 100). Laissez vide pour aucune limite.",
-    "folderLimitPlaceholder": "ex. 1000",
     "folderSync": {
       "autoSelectDescendants": "Sélectionner automatiquement les descendants",
       "autoSelectParents": "Sélectionner automatiquement les parents",
@@ -1675,8 +1672,6 @@
   },
   "validation": {
     "emailRequired": "L'adresse e-mail est obligatoire",
-    "folderLimitMustBeAtLeast100": "La limite de dossiers doit être d'au moins 100",
-    "folderLimitMustBeNumber": "La limite de dossiers doit être un nombre",
     "imapHostCannotBeEmpty": "L'hôte IMAP ne peut pas être vide",
     "imapHostRequired": "L'hôte IMAP est obligatoire",
     "imapPortMustBeLessThan65536": "Le port IMAP doit être inférieur à 65536",

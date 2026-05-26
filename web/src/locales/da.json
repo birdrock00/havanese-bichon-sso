@@ -177,9 +177,6 @@
     "everyMinutes": "hvert {{minutes}} minut",
     "field": "Felt",
     "fixed": "Fast",
-    "folderLimit": "Mappegrænse",
-    "folderLimitDescription": "Begræns antallet af e-mails, der skal synkroniseres pr. mappe (minimum 100). Lad stå tomt for ingen grænse.",
-    "folderLimitPlaceholder": "f.eks. 1000",
     "folderSync": {
       "autoSelectDescendants": "Vælg efterkommere automatisk",
       "autoSelectParents": "Vælg forældre automatisk",
@@ -1675,8 +1672,6 @@
   },
   "validation": {
     "emailRequired": "E-mail er påkrævet",
-    "folderLimitMustBeAtLeast100": "Mappegrænse skal være mindst 100",
-    "folderLimitMustBeNumber": "Mappegrænse skal være et tal",
     "imapHostCannotBeEmpty": "IMAP-vært kan ikke være tom",
     "imapHostRequired": "IMAP-vært er påkrævet",
     "imapPortMustBeLessThan65536": "IMAP-port skal være mindre end 65536",

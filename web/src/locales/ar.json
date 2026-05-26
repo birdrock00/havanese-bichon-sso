@@ -177,9 +177,6 @@
     "everyMinutes": "كل {{minutes}} دقيقة",
     "field": "الحقل",
     "fixed": "ثابت",
-    "folderLimit": "حد المجلد",
-    "folderLimitDescription": "حدد عدد رسائل البريد الإلكتروني للمزامنة لكل مجلد (الحد الأدنى 100). اتركه فارغًا بلا حدود.",
-    "folderLimitPlaceholder": "مثال: 1000",
     "folderSync": {
       "autoSelectDescendants": "تحديد العناصر الفرعية تلقائيًا",
       "autoSelectParents": "تحديد العناصر الأصلية تلقائيًا",
@@ -1675,8 +1672,6 @@
   },
   "validation": {
     "emailRequired": "البريد الإلكتروني مطلوب",
-    "folderLimitMustBeAtLeast100": "يجب أن يكون حد المجلد 100 على الأقل",
-    "folderLimitMustBeNumber": "يجب أن يكون حد المجلد رقمًا",
     "imapHostCannotBeEmpty": "لا يمكن أن يكون مُضيف IMAP فارغًا",
     "imapHostRequired": "مُضيف IMAP مطلوب",
     "imapPortMustBeLessThan65536": "يجب أن يكون منفذ IMAP أقل من 65536",

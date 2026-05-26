@@ -117,7 +117,6 @@ pub struct AccountV3 {
     pub capabilities: Option<Vec<String>>,
     pub date_since: Option<DateSince>,
     pub date_before: Option<RelativeDate>,
-    pub folder_limit: Option<u32>,
     pub sync_folders: Option<Vec<String>>,
     pub account_type: AccountType,
     pub sync_interval_min: Option<i64>,
@@ -193,7 +192,7 @@ impl From<AccountV3> for AccountV2 {
             name: value.name,
             capabilities: value.capabilities,
             date_since: value.date_since,
-            folder_limit: value.folder_limit,
+            folder_limit: None,
             sync_folders: value.sync_folders,
             account_type: value.account_type,
             sync_interval_min: value.sync_interval_min,
@@ -217,7 +216,6 @@ impl From<AccountV2> for AccountV3 {
             name: value.name,
             capabilities: value.capabilities,
             date_since: value.date_since,
-            folder_limit: value.folder_limit,
             sync_folders: value.sync_folders,
             account_type: value.account_type,
             sync_interval_min: value.sync_interval_min,
@@ -246,7 +244,6 @@ impl From<AccountV3> for AccountModel {
             capabilities: value.capabilities,
             date_since: value.date_since,
             date_before: value.date_before,
-            folder_limit: value.folder_limit,
             download_folders: value.sync_folders,
             account_type: value.account_type,
             download_interval_min: value.sync_interval_min,
@@ -661,6 +658,7 @@ impl From<MailBox> for bichon_core::cache::imap::mailbox::MailBox {
             unseen: value.unseen,
             uid_next: value.uid_next,
             uid_validity: value.uid_validity,
+            highest_uid: None,
         }
     }
 }

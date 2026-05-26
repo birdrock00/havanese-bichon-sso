@@ -177,9 +177,6 @@
     "everyMinutes": "alle {{minutes}} Minuten",
     "field": "Feld",
     "fixed": "Fest",
-    "folderLimit": "Ordnerlimit",
-    "folderLimitDescription": "Begrenzen Sie die Anzahl der pro Ordner zu synchronisierenden E-Mails (mindestens 100). Lassen Sie das Feld leer für keine Begrenzung.",
-    "folderLimitPlaceholder": "z.B. 1000",
     "folderSync": {
       "autoSelectDescendants": "Unterelemente automatisch auswählen",
       "autoSelectParents": "Elternelemente automatisch auswählen",
@@ -1675,8 +1672,6 @@
   },
   "validation": {
     "emailRequired": "E-Mail ist erforderlich",
-    "folderLimitMustBeAtLeast100": "Das Ordnerlimit muss mindestens 100 betragen",
-    "folderLimitMustBeNumber": "Das Ordnerlimit muss eine Zahl sein",
     "imapHostCannotBeEmpty": "IMAP-Host darf nicht leer sein",
     "imapHostRequired": "IMAP-Host ist erforderlich",
     "imapPortMustBeLessThan65536": "Der IMAP-Port muss kleiner als 65536 sein",

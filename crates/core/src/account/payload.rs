@@ -41,8 +41,6 @@ pub struct AccountCreateRequest {
     pub date_since: Option<DateSince>,
     pub date_before: Option<RelativeDate>,
     pub account_type: AccountType,
-    #[cfg_attr(feature = "web-api", oai(validator(minimum(value = "100"))))]
-    pub folder_limit: Option<u32>,
     #[cfg_attr(feature = "web-api", oai(validator(minimum(value = "10"))))]
     pub download_interval_min: Option<i64>,
     #[cfg_attr(
@@ -145,12 +143,6 @@ pub struct AccountUpdateRequest {
     pub date_since: Option<DateSince>,
     pub date_before: Option<RelativeDate>,
     pub clear_date_range: Option<bool>,
-    /// Max emails to sync for this folder.  
-    /// If not set, sync all emails.  
-    /// otherwise sync up to `n` most recent emails (min 10).
-    #[cfg_attr(feature = "web-api", oai(validator(minimum(value = "100"))))]
-    pub folder_limit: Option<u32>,
-    pub clear_folder_limit: Option<bool>,
     /// Configuration for selective folder (mailbox/label) synchronization
     ///
     /// - For IMAP/SMTP accounts:
@@ -201,13 +193,6 @@ impl AccountUpdateRequest {
         if self.imap_quota_bytes.is_some() ^ self.imap_quota_window.is_some() {
             return Err(raise_error!(
                 "Quota bytes and quota window must be provided together or omitted together".into(),
-                ErrorCode::InvalidParameter
-            ));
-        }
-
-        if self.clear_folder_limit == Some(true) && self.folder_limit.is_some() {
-            return Err(raise_error!(
-                "clear_folder_limit cannot be combined with folder_limit".into(),
                 ErrorCode::InvalidParameter
             ));
         }
