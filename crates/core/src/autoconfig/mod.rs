@@ -24,7 +24,9 @@ use serde::{Deserialize, Serialize};
 
 pub mod client;
 pub mod entity;
+pub mod guess;
 pub mod load;
+mod oauth2_providers;
 #[cfg(test)]
 mod tests;
 

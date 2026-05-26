@@ -19,6 +19,7 @@
 use crate::account::entity::Encryption;
 use crate::autoconfig::client::{self, MailConfig};
 use crate::autoconfig::entity::{MailServerConfig, ServerConfig};
+use crate::autoconfig::oauth2_providers::lookup_oauth2;
 use crate::autoconfig::CachedMailSettings;
 use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
@@ -54,9 +55,17 @@ pub(crate) fn mail_config_to_server_config(config: &MailConfig) -> Option<MailSe
         }
     };
 
+    // Detect OAuth2 support: the XML <authentication> field and a known
+    // hostname → issuer mapping determine whether the provider supports OAuth2.
+    let oauth2 = if imap.authentication.eq_ignore_ascii_case("OAuth2") {
+        lookup_oauth2(&imap.hostname)
+    } else {
+        None
+    };
+
     Some(MailServerConfig {
         imap: ServerConfig::new(imap.hostname.clone(), port, encryption),
-        oauth2: None,
+        oauth2,
     })
 }
 

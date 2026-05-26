@@ -45,6 +45,10 @@ pub struct IncomingServer {
     #[serde(rename = "socketType")]
     pub socket_type: String,
     pub username: String,
+    /// Authentication method from the XML, e.g. "OAuth2", "password-cleartext",
+    /// "password-encrypted", "GSSAPI", "NTLM".  Absent in DNS SRV fallback.
+    #[serde(default)]
+    pub authentication: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Deserialize)]
@@ -137,6 +141,7 @@ async fn lookup_srv(domain: &str) -> Option<MailConfig> {
             port: imap_port,
             socket_type: "SSL".to_string(),
             username: "%EMAILADDRESS%".to_string(),
+            authentication: String::new(),
         }],
         outgoing: vec![OutgoingServer {
             protocol: "smtp".to_string(),
@@ -153,30 +158,37 @@ async fn lookup_srv(domain: &str) -> Option<MailConfig> {
 // ---------------------------------------------------------------------------
 
 /// Discover mail server configuration for a domain using the Thunderbird
-/// autoconfig protocol (ISPDB) and DNS SRV fallback.
+/// autoconfig protocol (ISPDB), DNS SRV, MX fallback, and finally guessing.
 ///
 /// Probe order:
 /// 1. `https://autoconfig.{domain}/mail/config-v1.1.xml`
-/// 2. `https://{domain}/.well-known/autoconfig/mail/config-v1.1.xml`
-/// 3. DNS SRV records (`_imaps._tcp` / `_submission._tcp`)
-/// 4. Thunderbird central ISPDB (`https://autoconfig.thunderbird.net/v1.1/{domain}`)
+/// 2. `http://autoconfig.{domain}/mail/config-v1.1.xml`
+/// 3. `https://{domain}/.well-known/autoconfig/mail/config-v1.1.xml`
+/// 4. `http://{domain}/.well-known/autoconfig/mail/config-v1.1.xml`
+/// 5. DNS SRV records (`_imaps._tcp` / `_submission._tcp`)
+/// 6. Thunderbird central ISPDB (`https://autoconfig.thunderbird.net/v1.1/{domain}`)
+/// 7. MX lookup → ISPDB for MX domain
+/// 8. MX lookup → ISP autoconfig for MX domain
+/// 9. GuessConfig — probe common hostnames + ports
 pub async fn fetch(domain: &str) -> BichonResult<MailConfig> {
     let client = Client::builder()
         .timeout(std::time::Duration::from_secs(10))
         .build()
         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
-    // 1. Try autoconfig subdomain
-    if let Some(config) = fetch_xml(
-        &client,
-        &format!("https://autoconfig.{domain}/mail/config-v1.1.xml"),
-    )
-    .await
+    // ── ISP autoconfig (HTTPS, then HTTP) ──────────────────────────
+    if let Some(config) =
+        fetch_xml(&client, &format!("https://autoconfig.{domain}/mail/config-v1.1.xml")).await
+    {
+        return Ok(config);
+    }
+    if let Some(config) =
+        fetch_xml(&client, &format!("http://autoconfig.{domain}/mail/config-v1.1.xml")).await
     {
         return Ok(config);
     }
 
-    // 2. Try well-known path
+    // ── Well-known path (HTTPS, then HTTP) ─────────────────────────
     if let Some(config) = fetch_xml(
         &client,
         &format!("https://{domain}/.well-known/autoconfig/mail/config-v1.1.xml"),
@@ -185,19 +197,34 @@ pub async fn fetch(domain: &str) -> BichonResult<MailConfig> {
     {
         return Ok(config);
     }
+    if let Some(config) = fetch_xml(
+        &client,
+        &format!("http://{domain}/.well-known/autoconfig/mail/config-v1.1.xml"),
+    )
+    .await
+    {
+        return Ok(config);
+    }
 
-    // 3. Try DNS SRV records
+    // ── DNS SRV records ────────────────────────────────────────────
     if let Some(config) = lookup_srv(domain).await {
         return Ok(config);
     }
 
-    // 4. Fall back to Thunderbird central database
-    if let Some(config) = fetch_xml(
-        &client,
-        &format!("https://autoconfig.thunderbird.net/v1.1/{domain}"),
-    )
-    .await
+    // ── Thunderbird central ISPDB ──────────────────────────────────
+    if let Some(config) =
+        fetch_xml(&client, &format!("https://autoconfig.thunderbird.net/v1.1/{domain}")).await
     {
+        return Ok(config);
+    }
+
+    // ── MX fallback ────────────────────────────────────────────────
+    if let Some(config) = fetch_for_mx(&client, domain).await {
+        return Ok(config);
+    }
+
+    // ── GuessConfig ────────────────────────────────────────────────
+    if let Some(config) = crate::autoconfig::guess::guess_config(domain).await {
         return Ok(config);
     }
 
@@ -205,6 +232,63 @@ pub async fn fetch(domain: &str) -> BichonResult<MailConfig> {
         format!("No autoconfig found for domain: {domain}"),
         ErrorCode::InternalError
     ))
+}
+
+/// DNS MX lookup → retry ISPDB and ISP autoconfig for the MX domain.
+///
+/// Many self-hosted domains have their MX pointed at Google, Microsoft, etc.
+/// The MX domain's ISPDB entry covers the original domain.
+async fn fetch_for_mx(client: &Client, domain: &str) -> Option<MailConfig> {
+    let mx_domain = lookup_mx_domain(domain).await?;
+    if mx_domain == domain.to_ascii_lowercase() {
+        return None; // same domain, already tried above
+    }
+
+    // Try ISPDB for the MX domain
+    if let Some(config) =
+        fetch_xml(client, &format!("https://autoconfig.thunderbird.net/v1.1/{mx_domain}")).await
+    {
+        return Some(config);
+    }
+
+    // Try ISP autoconfig for the MX domain (HTTPS then HTTP)
+    if let Some(config) =
+        fetch_xml(client, &format!("https://autoconfig.{mx_domain}/mail/config-v1.1.xml")).await
+    {
+        return Some(config);
+    }
+    if let Some(config) =
+        fetch_xml(client, &format!("http://autoconfig.{mx_domain}/mail/config-v1.1.xml")).await
+    {
+        return Some(config);
+    }
+
+    None
+}
+
+/// DNS MX lookup → extract the second-level domain of the first MX hostname.
+async fn lookup_mx_domain(domain: &str) -> Option<String> {
+    let resolver = TokioResolver::builder(TokioConnectionProvider::default())
+        .ok()?
+        .build();
+    let lookup = resolver.mx_lookup(domain).await.ok()?;
+    let record = lookup.iter().next()?;
+    let mx_host = record.to_string().trim_end_matches('.').to_string();
+
+    // Extract a reasonable base domain from the MX hostname.
+    // E.g., "aspmx.l.google.com" → "google.com"
+    //       "company.mail.protection.outlook.com" → "outlook.com"
+    extract_base_domain(&mx_host)
+}
+
+/// Extract the top two labels from a hostname as a rough base domain.
+fn extract_base_domain(host: &str) -> Option<String> {
+    let parts: Vec<&str> = host.split('.').collect();
+    if parts.len() >= 2 {
+        Some(parts[parts.len() - 2..].join("."))
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]

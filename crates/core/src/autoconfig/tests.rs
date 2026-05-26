@@ -195,6 +195,7 @@ fn make_imap_server(host: &str, port: u16, socket_type: &str) -> IncomingServer 
         port,
         socket_type: socket_type.to_string(),
         username: "%EMAILADDRESS%".to_string(),
+        authentication: String::new(),
     }
 }
 
@@ -241,6 +242,7 @@ fn convert_no_imap_only_pop3() {
             port: 995,
             socket_type: "SSL".to_string(),
             username: "%EMAILADDRESS%".to_string(),
+            authentication: String::new(),
         }],
         outgoing: vec![],
     };
@@ -266,6 +268,7 @@ fn convert_picks_imap_over_pop3() {
                 port: 995,
                 socket_type: "SSL".to_string(),
                 username: "%EMAILADDRESS%".to_string(),
+                authentication: String::new(),
             },
             make_imap_server("imap.example.com", 993, "SSL"),
         ],
@@ -284,6 +287,7 @@ fn convert_imaps_protocol_variant() {
             port: 993,
             socket_type: "SSL".to_string(),
             username: "%EMAILADDRESS%".to_string(),
+            authentication: String::new(),
         }],
         outgoing: vec![],
     };
@@ -300,9 +304,65 @@ fn convert_case_insensitive_protocol() {
             port: 143,
             socket_type: "STARTTLS".to_string(),
             username: "%EMAILADDRESS%".to_string(),
+            authentication: String::new(),
         }],
         outgoing: vec![],
     };
     let result = mail_config_to_server_config(&config).expect("should recognize 'IMAP'");
     assert_eq!(result.imap.host, "imap.example.com");
+}
+
+#[test]
+fn convert_gmail_oauth2() {
+    let config = MailConfig {
+        incoming: vec![IncomingServer {
+            protocol: "imap".to_string(),
+            hostname: "imap.gmail.com".to_string(),
+            port: 993,
+            socket_type: "SSL".to_string(),
+            username: "%EMAILADDRESS%".to_string(),
+            authentication: "OAuth2".to_string(),
+        }],
+        outgoing: vec![],
+    };
+    let result = mail_config_to_server_config(&config).expect("should convert");
+    let oauth2 = result.oauth2.expect("Gmail should have OAuth2");
+    assert_eq!(oauth2.issuer, "https://accounts.google.com");
+    assert!(oauth2.scope.contains(&"https://mail.google.com/".to_string()));
+}
+
+#[test]
+fn convert_outlook_oauth2() {
+    let config = MailConfig {
+        incoming: vec![IncomingServer {
+            protocol: "imap".to_string(),
+            hostname: "outlook.office365.com".to_string(),
+            port: 993,
+            socket_type: "SSL".to_string(),
+            username: "%EMAILADDRESS%".to_string(),
+            authentication: "OAuth2".to_string(),
+        }],
+        outgoing: vec![],
+    };
+    let result = mail_config_to_server_config(&config).expect("should convert");
+    let oauth2 = result.oauth2.expect("Outlook should have OAuth2");
+    assert!(oauth2.issuer.contains("microsoftonline"));
+}
+
+#[test]
+fn convert_unknown_host_no_oauth2() {
+    // OAuth2 auth flag on an unknown hostname → no OAuth2 returned
+    let config = MailConfig {
+        incoming: vec![IncomingServer {
+            protocol: "imap".to_string(),
+            hostname: "mail.random-isp.example".to_string(),
+            port: 993,
+            socket_type: "SSL".to_string(),
+            username: "%EMAILADDRESS%".to_string(),
+            authentication: "OAuth2".to_string(),
+        }],
+        outgoing: vec![],
+    };
+    let result = mail_config_to_server_config(&config).expect("should convert");
+    assert!(result.oauth2.is_none(), "unknown hostname → no OAuth2 mapping");
 }
