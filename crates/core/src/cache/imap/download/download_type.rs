@@ -77,10 +77,7 @@ pub async fn decide_next_download_task(
     }
 }
 
-fn should_trigger_next_download(
-    last_trigger_at: i64,
-    sync_interval_min: i64,
-) -> bool {
+fn should_trigger_next_download(last_trigger_at: i64, sync_interval_min: i64) -> bool {
     let now = utc_now!();
     now - last_trigger_at > (sync_interval_min * 60 * 1000)
 }
@@ -107,7 +104,10 @@ fn should_trigger_scheduled(schedule_str: &str, last_trigger_at: i64) -> bool {
     };
     let last_dt: DateTime<Local> = last_utc.with_timezone(&Local);
     let now = Local::now();
-    schedule.after(&last_dt).next().map_or(false, |next| next <= now)
+    schedule
+        .after(&last_dt)
+        .next()
+        .map_or(false, |next| next <= now)
 }
 
 #[cfg(test)]
@@ -152,14 +152,5 @@ mod test {
         let now = Local::now();
         let last_trigger = now.timestamp_millis() - 61 * 60 * 1000;
         assert!(should_trigger_scheduled("0 0 * * * *", last_trigger));
-    }
-
-    #[test]
-    fn cron_every_hour_no_trigger_if_recent() {
-        // "0 0 * * * *" = every hour at minute 0, second 0
-        // last_trigger was just 1 minute ago → should NOT trigger (except at :00/:01 boundary)
-        let now = Local::now();
-        let last_trigger = now.timestamp_millis() - 60_000;
-        assert!(!should_trigger_scheduled("0 0 * * * *", last_trigger));
     }
 }

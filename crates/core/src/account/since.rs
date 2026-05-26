@@ -364,4 +364,43 @@ mod test {
         };
         assert!(e.validate().is_err());
     }
+
+    // ── Sliding window tests ──────────────────────────────────────
+
+    #[test]
+    fn relative_date_calculate_returns_valid_format() {
+        let r = RelativeDate {
+            unit: Unit::Years,
+            value: 1,
+        };
+        let date_str = r.calculate_date().unwrap();
+        // Expect format like "26-May-2025"
+        assert!(date_str.len() > 5);
+        assert!(date_str.contains('-'));
+    }
+
+    #[test]
+    fn relative_date_one_year_ago_is_before_now() {
+        let r = RelativeDate {
+            unit: Unit::Years,
+            value: 1,
+        };
+        let date_str = r.calculate_date().unwrap();
+        let parsed = chrono::NaiveDate::parse_from_str(&date_str, "%d-%b-%Y").unwrap();
+        let today = chrono::Local::now().date_naive();
+        assert!(parsed < today, "1 year ago ({parsed}) should be before today ({today})");
+    }
+
+    #[test]
+    fn relative_date_one_day_ago_is_yesterday() {
+        let r = RelativeDate {
+            unit: Unit::Days,
+            value: 1,
+        };
+        let date_str = r.calculate_date().unwrap();
+        let parsed = chrono::NaiveDate::parse_from_str(&date_str, "%d-%b-%Y").unwrap();
+        let today = chrono::Local::now().date_naive();
+        let yesterday = today - chrono::Duration::days(1);
+        assert_eq!(parsed, yesterday, "1 day ago should be yesterday");
+    }
 }

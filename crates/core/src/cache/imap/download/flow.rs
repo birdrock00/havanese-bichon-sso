@@ -32,7 +32,9 @@ use crate::{
             SEMAPHORE,
         },
         error::{code::ErrorCode, BichonResult},
-        imap::executor::ImapExecutor,
+        imap::executor::{
+            generate_uid_sequence_hashset, ImapExecutor, DEFAULT_BATCH_SIZE,
+        },
         store::tantivy::envelope::ENVELOPE_MANAGER,
     },
 };
@@ -40,7 +42,6 @@ use std::time::Instant;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
-pub const DEFAULT_BATCH_SIZE: u32 = 30;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FetchDirection {
@@ -336,59 +337,6 @@ pub async fn fetch_and_save_full_mailbox(
     Ok(max_uid)
 }
 
-pub fn generate_uid_sequence_hashset(
-    unique_nums: Vec<u32>,
-    chunk_size: usize,
-) -> Vec<(String, u64)> {
-    assert!(!unique_nums.is_empty());
-
-    let mut result = Vec::new();
-    let nums = unique_nums;
-
-    for chunk in nums.chunks(chunk_size) {
-        let size = chunk.len() as u64;
-        let compressed = compress_uid_list(chunk.to_vec());
-        result.push((compressed, size));
-    }
-
-    result
-}
-
-pub fn compress_uid_list(nums: Vec<u32>) -> String {
-    if nums.is_empty() {
-        return String::new();
-    }
-
-    let mut sorted_nums = nums;
-    sorted_nums.sort();
-
-    let mut result = Vec::new();
-    let mut current_range_start = sorted_nums[0];
-    let mut current_range_end = sorted_nums[0];
-
-    for &n in sorted_nums.iter().skip(1) {
-        if n == current_range_end + 1 {
-            current_range_end = n;
-        } else {
-            if current_range_start == current_range_end {
-                result.push(current_range_start.to_string());
-            } else {
-                result.push(format!("{}:{}", current_range_start, current_range_end));
-            }
-            current_range_start = n;
-            current_range_end = n;
-        }
-    }
-
-    if current_range_start == current_range_end {
-        result.push(current_range_start.to_string());
-    } else {
-        result.push(format!("{}:{}", current_range_start, current_range_end));
-    }
-
-    result.join(",")
-}
-
 pub async fn reconcile_mailboxes(
     account: &AccountModel,
     remote_mailboxes: &[MailBox],
@@ -632,7 +580,7 @@ async fn perform_incremental_sync(
                     Some(uid) => uid + 1,
                     None => {
                         info!(
-                            "No maximum UID found in index for mailbox, assuming local cache is missing."
+                            "No maximum UID found in index for mailbox, assuming local storage is missing."
                         );
 
                         let result = match &account.date_since {
@@ -646,10 +594,24 @@ async fn perform_incremental_sync(
                                 )
                                 .await?
                             }
-                            None => {
-                                fetch_and_save_full_mailbox(account, remote_mailbox, token)
+                            None => match &account.date_before {
+                                Some(r) => {
+                                    fetch_and_save_by_date(
+                                        account,
+                                        &r.calculate_date()?,
+                                        remote_mailbox,
+                                        FetchDirection::Before,
+                                        token,
+                                    )
                                     .await?
-                            }
+                                }
+                                None => {
+                                    fetch_and_save_full_mailbox(
+                                        account, remote_mailbox, token,
+                                    )
+                                    .await?
+                                }
+                            },
                         };
                         return Ok(result);
                     }

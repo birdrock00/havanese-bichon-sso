@@ -79,11 +79,12 @@ impl ImapExecutor {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))
     }
 
-    /// Fetches new mail for a mailbox by directly issuing a ranged UID FETCH.
+    /// Fetches new mail for a mailbox.
     ///
-    /// Unlike the old two-step approach (UID SEARCH → batch UID FETCH),
-    /// this sends a single `UID FETCH {start}:*` and streams the results,
-    /// eliminating one IMAP round-trip.
+    /// When `before` is `Some(date)`, a two-step approach is used:
+    /// `UID SEARCH` to find matching UIDs (standard IMAP), then batch `UID FETCH`
+    /// for the specific UIDs. When `before` is `None`, a direct ranged
+    /// `UID FETCH {start}:*` is issued and results are streamed.
     ///
     /// Returns `Ok(Some(max_uid))` with the highest UID fetched, or `Ok(None)`
     /// if no new mail was found.
@@ -97,19 +98,132 @@ impl ImapExecutor {
     ) -> BichonResult<Option<u32>> {
         assert!(start_uid > 0, "start_uid must be greater than 0");
 
-        // Select the mailbox (read-only) so UID FETCH works.
         session
             .examine(&mailbox.encoded_name())
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
 
-        // Build the UID range.  IMAP UID FETCH accepts the same range syntax
-        // as UID SEARCH, so we can skip the separate SEARCH round-trip.
-        let uid_range = match before {
-            Some(date) => format!("{start_uid}:* BEFORE {date}"),
-            None => format!("{start_uid}:*"),
-        };
+        match before {
+            Some(date) => {
+                Self::fetch_new_mail_with_before(session, account, mailbox, start_uid, date, token)
+                    .await
+            }
+            None => Self::fetch_new_mail_range(session, account, mailbox, start_uid, token).await,
+        }
+    }
 
+    /// Two-step approach for date-filtered incremental fetch: UID SEARCH first,
+    /// then batch UID FETCH for matching UIDs. Uses standard IMAP syntax that
+    /// works across all compliant servers.
+    async fn fetch_new_mail_with_before(
+        session: &mut Session<Box<dyn SessionStream>>,
+        account: &AccountModel,
+        mailbox: &MailBox,
+        start_uid: u64,
+        date: &str,
+        token: CancellationToken,
+    ) -> BichonResult<Option<u32>> {
+        let query = format!("UID {start_uid}:* BEFORE {date}");
+        info!(
+            "[account {}][mailbox {}] fetch_new_mail: UID SEARCH {}",
+            account.id, mailbox.name, query
+        );
+        let results = session.uid_search(&query).await.map_err(|e| {
+            let err_msg = format!("UID SEARCH failed in [{}]: {:#?}", mailbox.name, e);
+            let _ = DownloadState::append_session_error(account.id, err_msg);
+            raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed)
+        })?;
+
+        if results.is_empty() {
+            DownloadState::update_folder_progress(
+                account.id,
+                mailbox.name.clone(),
+                0,
+                0,
+                FolderStatus::Success,
+                Some("No new emails found.".into()),
+            )?;
+            return Ok(None);
+        }
+
+        let mut uid_vec: Vec<u32> = results.into_iter().collect();
+        uid_vec.sort();
+        let max_uid = uid_vec.last().copied();
+        let planned = uid_vec.len() as u64;
+        let batch_size = account.download_batch_size.unwrap_or(DEFAULT_BATCH_SIZE) as usize;
+        let uid_batches = generate_uid_sequence_hashset(uid_vec, batch_size);
+
+        DownloadState::update_folder_progress(
+            account.id,
+            mailbox.name.clone(),
+            planned,
+            0,
+            FolderStatus::Pending,
+            None,
+        )?;
+
+        let mut count = 0u64;
+        for batch in uid_batches {
+            if token.is_cancelled() {
+                DownloadState::update_session_status(
+                    account.id,
+                    DownloadStatus::Cancelled,
+                    Some("User stopped or system shutdown".to_string()),
+                )?;
+                DownloadState::update_folder_progress(
+                    account.id,
+                    mailbox.name.clone(),
+                    planned,
+                    count,
+                    FolderStatus::Cancelled,
+                    None,
+                )?;
+                return Err(raise_error!(
+                    "Stream cancelled".into(),
+                    ErrorCode::InternalError
+                ));
+            }
+            Self::uid_batch_retrieve_emails(
+                session,
+                account.id,
+                mailbox.id,
+                &batch.0,
+                token.clone(),
+            )
+            .await?;
+            count += batch.1;
+            DownloadState::update_folder_progress(
+                account.id,
+                mailbox.name.clone(),
+                planned,
+                count,
+                FolderStatus::Downloading,
+                None,
+            )?;
+        }
+
+        DownloadState::update_folder_progress(
+            account.id,
+            mailbox.name.clone(),
+            count,
+            count,
+            FolderStatus::Success,
+            None,
+        )?;
+
+        Ok(max_uid)
+    }
+
+    /// Direct ranged UID FETCH without date filtering. Streams results from
+    /// the server in a single IMAP round-trip.
+    async fn fetch_new_mail_range(
+        session: &mut Session<Box<dyn SessionStream>>,
+        account: &AccountModel,
+        mailbox: &MailBox,
+        start_uid: u64,
+        token: CancellationToken,
+    ) -> BichonResult<Option<u32>> {
+        let uid_range = format!("{start_uid}:*");
         info!(
             "[account {}][mailbox {}] fetch_new_mail: direct UID FETCH {}",
             account.id, mailbox.name, uid_range
@@ -119,10 +233,7 @@ impl ImapExecutor {
             .uid_fetch(&uid_range, BODY_FETCH_COMMAND)
             .await
             .map_err(|e| {
-                let err_msg = format!(
-                    "UID FETCH failed in [{}]: {:#?}",
-                    mailbox.name, e
-                );
+                let err_msg = format!("UID FETCH failed in [{}]: {:#?}", mailbox.name, e);
                 let _ = DownloadState::append_session_error(account.id, err_msg);
                 raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed)
             })?;
@@ -135,10 +246,7 @@ impl ImapExecutor {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
         {
             if token.is_cancelled() {
-                tracing::info!(
-                    "Account {}: fetch_new_mail stream interrupted.",
-                    account.id
-                );
+                tracing::info!("Account {}: fetch_new_mail stream interrupted.", account.id);
                 DownloadState::update_session_status(
                     account.id,
                     DownloadStatus::Cancelled,
@@ -318,5 +426,122 @@ impl ImapExecutor {
         account_id: u64,
     ) -> BichonResult<Session<Box<dyn SessionStream>>> {
         ImapConnectionManager::build(account_id).await
+    }
+}
+
+pub const DEFAULT_BATCH_SIZE: u32 = 30;
+
+/// Compresses a sorted list of UIDs into an IMAP sequence-set string.
+/// Consecutive UIDs become ranges (e.g. `1:5`), non-consecutive are
+/// comma-separated (e.g. `1:5,10,12:15`).
+pub fn compress_uid_list(nums: Vec<u32>) -> String {
+    if nums.is_empty() {
+        return String::new();
+    }
+
+    let mut sorted_nums = nums;
+    sorted_nums.sort();
+
+    let mut result = Vec::new();
+    let mut current_range_start = sorted_nums[0];
+    let mut current_range_end = sorted_nums[0];
+
+    for &n in sorted_nums.iter().skip(1) {
+        if n == current_range_end + 1 {
+            current_range_end = n;
+        } else {
+            if current_range_start == current_range_end {
+                result.push(current_range_start.to_string());
+            } else {
+                result.push(format!("{}:{}", current_range_start, current_range_end));
+            }
+            current_range_start = n;
+            current_range_end = n;
+        }
+    }
+
+    if current_range_start == current_range_end {
+        result.push(current_range_start.to_string());
+    } else {
+        result.push(format!("{}:{}", current_range_start, current_range_end));
+    }
+
+    result.join(",")
+}
+
+/// Splits a sorted list of unique UIDs into compressed sequence-set batches.
+/// Returns `Vec<(sequence_set_string, batch_count)>`.
+pub fn generate_uid_sequence_hashset(
+    unique_nums: Vec<u32>,
+    chunk_size: usize,
+) -> Vec<(String, u64)> {
+    assert!(!unique_nums.is_empty());
+
+    let mut result = Vec::new();
+    let nums = unique_nums;
+
+    for chunk in nums.chunks(chunk_size) {
+        let size = chunk.len() as u64;
+        let compressed = compress_uid_list(chunk.to_vec());
+        result.push((compressed, size));
+    }
+
+    result
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    // ── compress_uid_list ──────────────────────────────────────────
+
+    #[test]
+    fn compress_empty() {
+        assert_eq!(compress_uid_list(vec![]), "");
+    }
+
+    #[test]
+    fn compress_single_uid() {
+        assert_eq!(compress_uid_list(vec![42]), "42");
+    }
+
+    #[test]
+    fn compress_consecutive_range() {
+        assert_eq!(compress_uid_list(vec![1, 2, 3, 4, 5]), "1:5");
+    }
+
+    #[test]
+    fn compress_mixed_ranges() {
+        assert_eq!(
+            compress_uid_list(vec![1, 2, 3, 5, 7, 8, 9, 10]),
+            "1:3,5,7:10"
+        );
+    }
+
+    #[test]
+    fn compress_gap_at_boundary() {
+        assert_eq!(compress_uid_list(vec![1, 2, 4, 5]), "1:2,4:5");
+    }
+
+    // ── generate_uid_sequence_hashset ──────────────────────────────
+
+    #[test]
+    fn batch_single_chunk() {
+        let batches = generate_uid_sequence_hashset(vec![1, 2, 3], 10);
+        assert_eq!(batches.len(), 1);
+        assert_eq!(batches[0].0, "1:3");
+        assert_eq!(batches[0].1, 3);
+    }
+
+    #[test]
+    fn batch_multiple_chunks() {
+        let batches = generate_uid_sequence_hashset(vec![1, 2, 3, 4, 5], 2);
+        assert_eq!(batches.len(), 3);
+        assert_eq!(batches[0].0, "1:2");
+        assert_eq!(batches[0].1, 2);
+        assert_eq!(batches[1].0, "3:4");
+        assert_eq!(batches[1].1, 2);
+        assert_eq!(batches[2].0, "5");
+        assert_eq!(batches[2].1, 1);
     }
 }
