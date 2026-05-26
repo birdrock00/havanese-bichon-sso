@@ -656,7 +656,6 @@ Feel free to open an [Issue](https://github.com/rustmailer/bichon/issues) or joi
 | **Frontend** | React 18, TypeScript, Vite 6, ShadCN UI, TanStack Router/Query/Table |
 | **Charts** | Recharts |
 | **i18n** | i18next (18 languages) |
-| **Allocator** | mimalloc |
 | **Container** | Ubuntu 24.04, Docker |
 
 ## License

@@ -18,7 +18,6 @@
 
 use console::style;
 use dialoguer::{theme::ColorfulTheme, Select};
-use mimalloc::MiMalloc;
 
 use crate::{migrate::handle_migration, reset::handle_reset_password};
 
@@ -26,8 +25,6 @@ pub mod meta;
 pub mod migrate;
 pub mod reset;
 
-#[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
 
 fn main() {
     run_interactive();

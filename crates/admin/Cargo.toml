@@ -18,4 +18,3 @@ serde_json.workspace = true
 itertools.workspace = true
 snafu.workspace = true
 memdb.workspace = true
-mimalloc = "0.1.50"

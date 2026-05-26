@@ -18,7 +18,6 @@ edition = "2021"
 [workspace.dependencies]
 chrono = "0.4.44"
 clap = { version = "4.6.1", features = ["derive", "env"] }
-mimalloc = "0.1.52"
 memdb = { path = "crates/memdb" }
 itertools = "0.14.0"
 ring = { version = "0.17.14", features = ["std"] }
@@ -39,7 +38,7 @@ reqwest = { version = "0.12.24", default-features = false, features = [
     "socks",
 ] }
 tokio-socks = "0.5.2"
-http = "1.4.0"
+http = "1.4.1"
 regex = "1.12.3"
 email_address = "0.2.9"
 futures = "0.3.32"
