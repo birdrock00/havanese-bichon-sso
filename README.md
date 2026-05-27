@@ -449,7 +449,7 @@ Storage Layer         │
   └──────────────┘  └──────────────┘  └──────────────┘
 ```
 
-- **memdb**: Key-value metadata store. Houses accounts, users, roles, OAuth2 configs, proxy settings, and system configuration. All operations wrapped in `tokio::spawn_blocking`.
+- **memdb**: Key-value metadata store. Houses accounts, users, roles, OAuth2 configs, proxy settings, and system configuration. 
 - **Tantivy**: Full-text search indices with Zstd compression support. Two separate indices: envelope (email metadata + body text) and attachment (file metadata + extracted text). Batch-committed every 1,000 documents or 60 seconds.
 - **Fjall**: LZ4-compressed LSM tree key-value store. Two keyspaces — `email_keyspace` and `attachments_keyspace`. Content-hash addressed (BLAKE3) with insert-time deduplication. Values larger than 1 KB stored as separate files (KV separation).
 
@@ -484,6 +484,79 @@ Tantivy Fjall memdb
 - Concurrency controlled by semaphore (default: `num_cpus × 2`)
 - Manual sync via `POST /api/v1/accounts/:id/start-download`; cancel with `cancel-download`
 - Busy-check prevents overlapping manual and automatic syncs on the same account
+
+### Content Deduplication & Attachment Storage
+
+```
+                     ┌──────────────────────────────────────────┐
+                     │              Raw EML bytes               │
+                     └────────────────┬─────────────────────────┘
+                                      │
+                                      ▼
+                     ┌──────────────────────────────────────────┐
+                     │         BLAKE3 → email_content_hash      │
+                     └────────────────┬─────────────────────────┘
+                                      │
+                                      ▼
+                     ┌──────────────────────────────────────────┐
+                     │          MIME parse → Message            │
+                     └───────┬──────────────────┬──────────────┘
+                             │                  │
+                             │     ┌────────────┘
+                             │     │  detach attachments
+                             │     │
+                             ▼     ▼
+               ┌─────────────────┐   ┌──────────────────────────────┐
+               │  EMAIL BODY     │   │  EACH ATTACHMENT             │
+               │                 │   │                              │
+               │  Replace raw    │   │  BLAKE3(decoded content)     │
+               │  attachment     │   │  → attachment_content_hash   │
+               │  bytes with     │   │                              │
+               │  placeholder:   │   │  Store raw undecoded bytes   │
+               │                 │   │  in Fjall attachments_ks     │
+               │  <<BICHON_      │   │  (skip if hash exists)       │
+               │   DETACH_HASH:  │   │                              │
+               │   xxx>>         │   │  Extract text for indexing   │
+               │                 │   │  (PDF, DOCX, etc.)           │
+               └───────┬─────────┘   └──────────────┬───────────────┘
+                       │                            │
+                       ▼                            │
+               ┌──────────────────────────────┐     │
+               │  Stripped EML stored in      │     │
+               │  Fjall email_keyspace        │     │
+               │  keyed by email_content_hash │     │
+               │  (skip if hash exists)       │     │
+               └──────────────┬───────────────┘     │
+                              │                     │
+                              ▼                     ▼
+               ┌─────────────────────────────────────────────────┐
+               │           Tantivy full-text index               │
+               │  envelope index · attachment index              │
+               └─────────────────────────────────────────────────┘
+
+   ═══════════════════════════════════════════════════════════════
+
+   Dedup layers
+   ┌─────────────────────────────────────────────────────────────────┐
+   │ Fjall (insert-time)                                             │
+   │   contains_key(hash)? → skip : store with LZ4 compression       │
+   │                                                                 │
+   │ Tantivy (periodic, every 12 h)                                  │
+   │   Group by (account, mailbox, content_hash)                     │
+   │   Keep latest ingest_at → soft-delete older copies              │
+   │   Cascade-delete orphaned attachment index entries              │
+   └─────────────────────────────────────────────────────────────────┘
+
+   Reconstruction
+   ┌─────────────────────────────────────────────────────────────────┐
+   │ Fetch stripped EML by content_hash from Fjall                  │
+   │ Find <<BICHON_DETACH_HASH:xxx>> placeholders                    │
+   │ Replace each with raw attachment blob from Fjall                │
+   │ Result → byte-identical original EML                            │
+   └─────────────────────────────────────────────────────────────────┘
+```
+
+Every ingested email is hashed with BLAKE3. Attachments are detached from the MIME tree, hashed independently (decoded content), and stored as raw undecoded bytes in Fjall's `attachments_keyspace`. The email body is patched with hash-based placeholders and stored in `email_keyspace`. Both keyspaces check for existing hashes before writing — identical content is never stored twice, regardless of which account or folder it arrives in. A periodic index dedup task (every 12 hours) scans Tantivy for duplicate `(account, mailbox, content_hash)` tuples, keeps the most recently ingested copy, and cascade-deletes orphaned attachment entries so UID-based incremental sync remains accurate. The original EML reconstructs byte-for-byte by swapping placeholders back with their attachment blobs.
 
 ## Storage & Backup
 
@@ -532,21 +605,21 @@ The WebUI is available in **18 languages**:
 
 Language preference and UI theme are saved to your user profile and can be changed anytime from the WebUI settings.
 
-## Data Migration (v0.3.7 → v1.0)
+## Data Migration (v0.3.7 → v1.x)
 
-Bichon v1.0 introduced a redesigned storage architecture:
+Bichon v1.x introduced a redesigned storage architecture:
 
-| Layer | v0.3.7 (Legacy) | v1.0 |
-|-------|---------------|------|
-| **Index** | Tantivy (shared) | Tantivy (separate envelope + attachment indices) |
-| **Raw data** | Tantivy (inline) | Fjall (LZ4-compressed key-value store) |
-| **Metadata** | Tantivy (shared) | memdb (dedicated embedded DB) |
+| Layer | v0.3.7 (Legacy) | v1.x |
+| :--- | :--- | :--- |
+| **Index** | Tantivy (shared instance, no full attachments) | Tantivy (separate envelope + attachment indices) |
+| **Raw data** | Tantivy (inline, stored in another Tantivy instance) | Fjall (LZ4-compressed LSM-tree key-value store) |
+| **Metadata** | Native_DB (shared, disk-based DB powered by redb) | memdb (dedicated, in-house in-memory DB) |
 
-If you ran Bichon prior to v1.0, migrate your data:
+If you ran Bichon prior to v1.x, migrate your data:
 
 ```bash
 ./bichon-admin
-# Select "Migrate Legacy v0.3.7 Storage to v1.0"
+# Select "Migrate Legacy v0.3.7 Storage to v1.x"
 ```
 
 > [!NOTE]
