@@ -362,3 +362,102 @@ pub fn retrieve_nested_eml_content(
         has_remote_content,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Simulates JSON written by a version before `extracted_text`, `extracted_page_count`,
+    /// and `extracted_is_ocr` were added to [`AttachmentInfo`]. Deserialization must
+    /// succeed and fill the missing fields with their defaults.
+    #[test]
+    fn attachment_info_backward_compat_no_extracted_fields() {
+        let old_json = r#"[
+            {
+                "file_type": "application/pdf",
+                "inline": false,
+                "filename": "report.pdf",
+                "size": 12345,
+                "content_id": null,
+                "content_hash": "abc123",
+                "is_message": false
+            },
+            {
+                "file_type": "image/png",
+                "inline": true,
+                "filename": "logo.png",
+                "size": 6789,
+                "content_id": "cid:logo@example.com",
+                "content_hash": "def456",
+                "is_message": false
+            }
+        ]"#;
+
+        let attachments: Vec<AttachmentInfo> =
+            serde_json::from_str(old_json).expect("should deserialize legacy JSON");
+
+        assert_eq!(attachments.len(), 2);
+
+        // First attachment (regular file)
+        assert_eq!(attachments[0].file_type, "application/pdf");
+        assert!(!attachments[0].inline);
+        assert_eq!(attachments[0].filename.as_deref(), Some("report.pdf"));
+        assert_eq!(attachments[0].size, 12345);
+        assert_eq!(attachments[0].content_id, None);
+        assert_eq!(attachments[0].content_hash, "abc123");
+        assert!(!attachments[0].is_message);
+        // Fields added after the legacy format — must default correctly
+        assert_eq!(attachments[0].extracted_text, None);
+        assert_eq!(attachments[0].extracted_page_count, None);
+        assert!(!attachments[0].extracted_is_ocr);
+
+        // Second attachment (inline image with content-id)
+        assert_eq!(attachments[1].file_type, "image/png");
+        assert!(attachments[1].inline);
+        assert_eq!(attachments[1].filename.as_deref(), Some("logo.png"));
+        assert_eq!(attachments[1].size, 6789);
+        assert_eq!(attachments[1].content_id.as_deref(), Some("cid:logo@example.com"));
+        assert_eq!(attachments[1].content_hash, "def456");
+        assert!(!attachments[1].is_message);
+        assert_eq!(attachments[1].extracted_text, None);
+        assert_eq!(attachments[1].extracted_page_count, None);
+        assert!(!attachments[1].extracted_is_ocr);
+    }
+
+    /// Current struct must round-trip through serde_json without data loss.
+    #[test]
+    fn attachment_info_round_trip() {
+        let attachments = vec![
+            AttachmentInfo {
+                file_type: "text/html".into(),
+                inline: false,
+                filename: Some("page.html".into()),
+                size: 42,
+                content_id: None,
+                content_hash: "hash1".into(),
+                is_message: true,
+                extracted_text: Some("hello world".into()),
+                extracted_page_count: Some(1),
+                extracted_is_ocr: false,
+            },
+            AttachmentInfo {
+                file_type: "application/zip".into(),
+                inline: false,
+                filename: Some("archive.zip".into()),
+                size: 99999,
+                content_id: None,
+                content_hash: "hash2".into(),
+                is_message: false,
+                extracted_text: None,
+                extracted_page_count: None,
+                extracted_is_ocr: true,
+            },
+        ];
+
+        let json = serde_json::to_string(&attachments).expect("serialize");
+        let round_tripped: Vec<AttachmentInfo> =
+            serde_json::from_str(&json).expect("deserialize");
+
+        assert_eq!(attachments, round_tripped);
+    }
+}
