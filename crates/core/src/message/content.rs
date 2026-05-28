@@ -53,6 +53,7 @@ pub struct AttachmentInfo {
     /// Page count reported by the extractor, if any.
     pub extracted_page_count: Option<u32>,
     /// Whether the extracted text came from OCR.
+    #[serde(default)]
     pub extracted_is_ocr: bool,
 }
 
