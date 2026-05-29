@@ -50,9 +50,17 @@ pub async fn extract_envelope_and_store_it(
         .map(|d| d.timestamp_millis())
         .unwrap_or(0);
     let uid = fetch.uid.unwrap_or(0);
-    let body = fetch
-        .body()
-        .ok_or_else(|| raise_error!("No body available".into(), ErrorCode::InternalError))?;
+    let body = match fetch.body() {
+        Some(b) => b,
+        None => {
+            tracing::warn!(
+                account_id,
+                uid = fetch.uid,
+                "FETCH response has no body, skipping message"
+            );
+            return Ok(());
+        }
+    };
     let size = fetch.size.unwrap_or(body.len() as u32);
     extract_envelope_core(body, uid, size, internal_date, account_id, mailbox_id).await
 }
