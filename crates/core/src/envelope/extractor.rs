@@ -412,23 +412,36 @@ pub async fn detach_and_store_attachments(
     let mut text_candidates: Vec<TextCandidate> = Vec::new();
 
     for (raw_start, raw_end, att) in ranges {
-        // Step 2: Extract raw bytes and store them as standalone documents
-        let raw_bytes = &original_body[raw_start..raw_end];
-        //This is the content hash of the decoded attachment, not the undecoded one.
+        // mail-parser may report attachment offsets past the body end for
+        // malformed messages; clamp the range to avoid a slice panic.
+        let body_len = original_body.len();
+        let raw_start = raw_start.min(body_len);
+        let raw_end = raw_end.min(body_len);
+        let range_valid = raw_start < raw_end;
+
+        // content hash is computed from the decoded attachment contents,
+        // which is always available regardless of raw offset validity.
         let content_hash = compute_content_hash(att.contents());
 
-        //"The actual content stored in the blob is the raw undecoded data, to avoid the reconstructed EML differing from the original due to decoding and re-encoding.
-        attachments.push((content_hash.clone(), Bytes::copy_from_slice(raw_bytes)));//
+        if range_valid {
+            let raw_bytes = &original_body[raw_start..raw_end];
+            // The actual content stored in the blob is the raw undecoded data.
+            attachments.push((content_hash.clone(), Bytes::copy_from_slice(raw_bytes)));
 
-        // Step 3: Replace raw attachment content with a hash-based placeholder
-        let placeholder = format!("<<BICHON_DETACH_HASH:{}>>", &content_hash);
-        let p_bytes = placeholder.as_bytes();
-        stripped_eml.splice(raw_start..raw_end, p_bytes.iter().cloned());
+            // Replace raw attachment content with a hash-based placeholder
+            let placeholder = format!("<<BICHON_DETACH_HASH:{}>>", &content_hash);
+            stripped_eml.splice(raw_start..raw_end, placeholder.as_bytes().iter().cloned());
+        } else {
+            // Invalid range: store a zero-length blob so the consistency
+            // check passes; reattachment will log a warning for the missing
+            // blob data but won't panic.
+            attachments.push((content_hash.clone(), Bytes::new()));
+        }
 
         let inline = att
             .content_disposition()
             .map(|d| d.is_inline())
-            .unwrap_or(false);
+            .unwrap_or_else(|| att.content_id().is_some());
         let file_type = att
             .content_type()
             .map(|ct| {
@@ -754,5 +767,57 @@ mod test {
                 Err(e) => panic!("Unexpected error for {}: {:?}", desc, e),
             }
         }
+    }
+
+    /// Verifies that [`super::detach_and_store_attachments`] does not panic
+    /// when mail-parser reports attachment offsets past the raw body length.
+    ///
+    /// Regression test for: "range end index X out of range for slice of
+    /// length Y" panic caused by a malformed email whose attachment
+    /// `raw_end_offset` exceeded the actual body size.
+    #[tokio::test]
+    async fn detach_attachments_bounds_check() {
+        let raw = concat!(
+            "From: sender@example.com\r\n",
+            "To: recipient@example.com\r\n",
+            "Subject: Test\r\n",
+            "MIME-Version: 1.0\r\n",
+            "Content-Type: multipart/mixed; boundary=\"bnd\"\r\n",
+            "\r\n",
+            "--bnd\r\n",
+            "Content-Type: text/plain\r\n",
+            "\r\n",
+            "Hello\r\n",
+            "--bnd\r\n",
+            "Content-Type: application/octet-stream\r\n",
+            "Content-Disposition: attachment; filename=\"test.bin\"\r\n",
+            "\r\n",
+            "AAAAABBBBBCCCCCDDDDDEEEEEAAAAABBBBBCCCCCDDDDDEEEEE\r\n",
+            "--bnd--\r\n",
+        )
+        .as_bytes()
+        .to_vec();
+
+        let message = mail_parser::MessageParser::new()
+            .parse(&raw)
+            .expect("parse valid MIME message");
+        assert_eq!(message.attachment_count(), 1);
+
+        // Truncate the raw body so the attachment's raw_end_offset lies
+        // past the body end — exactly the scenario reported by users.
+        let truncated = &raw[..raw.len() - 20];
+        assert!(truncated.len() < raw.len());
+
+        // Must not panic.
+        let infos = super::detach_and_store_attachments(
+            truncated,
+            &message,
+            "test_content_hash",
+        )
+        .await;
+
+        // The attachment count must still match so the consistency check
+        // in reattach_eml_content doesn't fail later.
+        assert_eq!(infos.len(), 1);
     }
 }

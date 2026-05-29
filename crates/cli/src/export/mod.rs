@@ -146,20 +146,23 @@ pub async fn handle_account_export(
         let mut total_pages;
 
         loop {
-            if let Some(batch) = search_messages(&client, config, current_page, page_size).await {
+            let account_ids = Some(std::collections::HashSet::from([account.id]));
+            if let Some(batch) = search_messages(&client, config, account_ids, current_page, page_size).await {
                 total_pages = batch.total_pages.unwrap();
 
                 pb.set_message(format!("Page {}/{}", current_page, total_pages));
 
                 for envelope in batch.items {
                     let success =
-                        download_and_export_with_json_header(&client, config, envelope, &mut file)
+                        download_and_export_with_json_header(&client, config, envelope.clone(), &mut file)
                             .await;
 
                     if !success {
-                        pb.finish_with_message("Failed");
-                        eprintln!(" ✘ Failed to export an email. Aborting process...");
-                        return;
+                        eprintln!(
+                            " ✘ Failed to export email {}, skipping...",
+                            envelope.id
+                        );
+                        continue;
                     }
                     pb.inc(1);
                 }

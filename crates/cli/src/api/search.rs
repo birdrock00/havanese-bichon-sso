@@ -10,13 +10,17 @@ use crate::BichonCliConfig;
 pub async fn search_messages(
     client: &Client,
     config: &BichonCliConfig,
+    account_ids: Option<std::collections::HashSet<u64>>,
     page: u64,
     page_size: u64,
 ) -> Option<DataPage<Envelope>> {
     let url = format!("{}/api/v1/search-messages", config.base_url);
 
     let payload = EmailSearchRequest {
-        filter: EmailSearchFilter::default(),
+        filter: EmailSearchFilter {
+            account_ids,
+            ..Default::default()
+        },
         page,
         page_size,
         sort_by: Some(SortBy::DATE),

@@ -86,13 +86,22 @@ pub fn detach_attachments_standalone(
 
     for (raw_start, raw_end, att) in ranges {
         let content_hash = compute_content_hash(att.contents());
-        blobs.push((
-            content_hash.clone(),
-            Bytes::copy_from_slice(&original_body[raw_start..raw_end]),
-        ));
+        let body_len = original_body.len();
+        let raw_start = raw_start.min(body_len);
+        let raw_end = raw_end.min(body_len);
+        let range_valid = raw_start < raw_end;
 
-        let placeholder = format!("<<BICHON_DETACH_HASH:{}>>", &content_hash);
-        stripped_eml.splice(raw_start..raw_end, placeholder.as_bytes().iter().cloned());
+        if range_valid {
+            blobs.push((
+                content_hash.clone(),
+                Bytes::copy_from_slice(&original_body[raw_start..raw_end]),
+            ));
+        }
+
+        if range_valid {
+            let placeholder = format!("<<BICHON_DETACH_HASH:{}>>", &content_hash);
+            stripped_eml.splice(raw_start..raw_end, placeholder.as_bytes().iter().cloned());
+        }
 
         infos.push(AttachmentInfo {
             filename: att.attachment_name().map(|n| n.to_string()),
@@ -100,7 +109,7 @@ pub fn detach_attachments_standalone(
             inline: att
                 .content_disposition()
                 .map(|d| d.is_inline())
-                .unwrap_or(false),
+                .unwrap_or_else(|| att.content_id().is_some()),
             file_type: att
                 .content_type()
                 .map(|ct| {

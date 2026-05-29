@@ -206,7 +206,9 @@ pub fn retrieve_email_content(
             content_type.c_subtype.as_deref().unwrap_or("")
         );
 
-        let inline = disposition.map(|d| d.is_inline()).unwrap_or(false);
+        let inline = disposition
+            .map(|d| d.is_inline())
+            .unwrap_or_else(|| attachment.content_id().is_some());
 
         if inline {
             if let Some(html1) = html.as_deref() {
@@ -302,7 +304,9 @@ pub fn retrieve_nested_eml_content(
     for attachment in nested_message.attachments() {
         let cid = attachment.content_id();
         let disposition = attachment.content_disposition();
-        let is_inline = disposition.map(|d| d.is_inline()).unwrap_or(false);
+        let is_inline = disposition
+            .map(|d| d.is_inline())
+            .unwrap_or_else(|| cid.is_some());
 
         if has_html && is_inline && cid.is_some() {
             let content_id = cid.unwrap();
