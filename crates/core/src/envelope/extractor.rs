@@ -26,6 +26,7 @@ use crate::imap::executor::ImapExecutor;
 use crate::message::content::AttachmentInfo;
 use crate::store::blob::{DetachedEmail, BLOB_MANAGER};
 use crate::store::tantivy::attachment::ATTACHMENT_MANAGER;
+use crate::store::tantivy::dedup_cache::DEDUP_CACHE;
 use crate::store::tantivy::envelope::ENVELOPE_MANAGER;
 use crate::store::tantivy::model::{AttachmentModel, EnvelopeWithAttachments};
 use crate::utils::html::extract_text;
@@ -99,6 +100,11 @@ async fn extract_envelope_core(
 ) -> BichonResult<()> {
     //The content hash of the original raw EML
     let email_content_hash = compute_content_hash(body);
+    if DEDUP_CACHE.contains(account_id, mailbox_id, &email_content_hash) {
+        tracing::debug!("Duplicate email detected");
+        //println!("Duplicate email detected");
+        return Ok(());
+    }
     let message: Message<'_> = MessageParser::new().parse(body).ok_or_else(|| {
         raise_error!(
             "Email header parse result is not available".into(),
@@ -260,7 +266,7 @@ async fn extract_envelope_core(
         tags: (!final_tags.is_empty()).then_some(final_tags),
         account_email: None,
         mailbox_name: None,
-        content_hash: email_content_hash,
+        content_hash: email_content_hash.clone(),
     };
     // 'attachments' contains both regular and inline attachments
     let ea = EnvelopeWithAttachments {
@@ -277,6 +283,7 @@ async fn extract_envelope_core(
         &ea.envelope.content_hash,
     );
     ENVELOPE_MANAGER.queue(doc).await;
+    DEDUP_CACHE.insert(account_id, mailbox_id, &email_content_hash);
     for doc in attachment_docs {
         ATTACHMENT_MANAGER.queue(doc).await;
     }
