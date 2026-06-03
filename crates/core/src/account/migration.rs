@@ -84,6 +84,8 @@ pub struct Account {
     pub account_type: AccountType,
     pub download_interval_min: Option<i64>,
     pub download_batch_size: Option<u32>,
+    #[serde(default)]
+    pub max_email_size_bytes: Option<u64>,
     pub known_folders: Option<BTreeSet<String>>,
     pub created_at: i64,
     pub updated_at: i64,
@@ -128,6 +130,7 @@ impl Account {
             pgp_key: request.pgp_key,
             created_by: user_id,
             download_batch_size: request.download_batch_size,
+            max_email_size_bytes: request.max_email_size_bytes,
             date_before: request.date_before,
             auto_download_new_mailboxes: request.auto_download_new_mailboxes,
             imap_quota_bytes: request.imap_quota_bytes,
@@ -393,6 +396,10 @@ impl Account {
 
             if let Some(download_batch_size) = &request.download_batch_size {
                 new.download_batch_size = Some(*download_batch_size);
+            }
+
+            if let Some(max_email_size_bytes) = request.max_email_size_bytes {
+                new.max_email_size_bytes = Some(max_email_size_bytes);
             }
 
             if let Some(use_proxy) = request.use_proxy {

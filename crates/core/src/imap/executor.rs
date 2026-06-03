@@ -32,6 +32,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::info;
 
 const BODY_FETCH_COMMAND: &str = "(UID INTERNALDATE RFC822.SIZE BODY.PEEK[])";
+const SIZE_ONLY_FETCH: &str = "(UID RFC822.SIZE)";
 
 pub struct ImapExecutor;
 
@@ -183,15 +184,16 @@ impl ImapExecutor {
                     ErrorCode::InternalError
                 ));
             }
-            Self::uid_batch_retrieve_emails(
+            let processed = Self::uid_batch_retrieve_emails(
                 session,
                 account.id,
                 mailbox.id,
                 &batch.0,
+                account.max_email_size_bytes,
                 token.clone(),
             )
             .await?;
-            count += batch.1;
+            count += processed;
             DownloadState::update_folder_progress(
                 account.id,
                 mailbox.name.clone(),
@@ -239,7 +241,9 @@ impl ImapExecutor {
             })?;
 
         let mut count = 0u64;
+        let mut skipped = 0u64;
         let mut max_uid: Option<u32> = None;
+        let size_limit = account.max_email_size_bytes.unwrap_or(DEFAULT_MAX_EMAIL_SIZE);
         while let Some(fetch) = stream
             .try_next()
             .await
@@ -258,6 +262,20 @@ impl ImapExecutor {
                 ));
             }
 
+            let msg_size = fetch.size.unwrap_or(0) as u64;
+            if msg_size > 0 && msg_size > size_limit {
+                tracing::warn!(
+                    account_id = account.id,
+                    mailbox_id = mailbox.id,
+                    uid = fetch.uid,
+                    size = msg_size,
+                    limit = size_limit,
+                    "Skipping oversized email (streaming mode)"
+                );
+                skipped += 1;
+                continue;
+            }
+
             if let Some(uid) = fetch.uid {
                 max_uid = Some(max_uid.unwrap_or(0).max(uid));
             }
@@ -265,7 +283,8 @@ impl ImapExecutor {
             count += 1;
         }
 
-        if count == 0 {
+        let total = count + skipped;
+        if total == 0 {
             DownloadState::update_folder_progress(
                 account.id,
                 mailbox.name.clone(),
@@ -278,10 +297,14 @@ impl ImapExecutor {
             DownloadState::update_folder_progress(
                 account.id,
                 mailbox.name.clone(),
-                count,
+                total,
                 count,
                 FolderStatus::Success,
-                None,
+                if skipped > 0 {
+                    Some(format!("{skipped} email(s) skipped due to size limit"))
+                } else {
+                    None
+                },
             )?;
         }
 
@@ -296,6 +319,7 @@ impl ImapExecutor {
         page: u64,
         page_size: u64,
         encoded_mailbox_name: &str,
+        max_email_size_bytes: Option<u64>,
         token: CancellationToken,
         max_uid: &mut Option<u32>,
     ) -> BichonResult<usize> {
@@ -315,13 +339,52 @@ impl ImapExecutor {
             encoded_mailbox_name, sequence_set, page, page_size
         );
 
-        let mut stream = session
-            .fetch(sequence_set.as_str(), BODY_FETCH_COMMAND)
+        let limit = max_email_size_bytes.unwrap_or(DEFAULT_MAX_EMAIL_SIZE);
+
+        // PASS 1: fetch only SIZE to identify oversized messages
+        let acceptable_uids = {
+            let mut size_stream = session
+                .fetch(sequence_set.as_str(), SIZE_ONLY_FETCH)
+                .await
+                .map_err(|e| {
+                    raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed)
+                })?;
+
+            let mut uids: Vec<u32> = Vec::new();
+            while let Some(fetch) = size_stream.try_next().await.map_err(|e| {
+                raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed)
+            })? {
+                let uid = fetch.uid.unwrap_or(0);
+                let msg_size = fetch.size.unwrap_or(0) as u64;
+                if msg_size == 0 || msg_size <= limit {
+                    uids.push(uid);
+                } else {
+                    tracing::warn!(
+                        account_id,
+                        mailbox_id,
+                        uid,
+                        size = msg_size,
+                        limit,
+                        "Skipping oversized email"
+                    );
+                }
+            }
+            uids
+        };
+
+        if acceptable_uids.is_empty() {
+            return Ok(0);
+        }
+
+        // PASS 2: fetch bodies only for acceptable UIDs
+        let filtered = compress_uid_list(acceptable_uids);
+        let mut body_stream = session
+            .uid_fetch(&filtered, BODY_FETCH_COMMAND)
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
 
         let mut count = 0;
-        while let Some(fetch) = stream
+        while let Some(fetch) = body_stream
             .try_next()
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
@@ -347,13 +410,55 @@ impl ImapExecutor {
         account_id: u64,
         mailbox_id: u64,
         uid_set: &str,
+        max_email_size_bytes: Option<u64>,
         token: CancellationToken,
-    ) -> BichonResult<()> {
-        let mut stream = session
-            .uid_fetch(uid_set, BODY_FETCH_COMMAND)
+    ) -> BichonResult<u64> {
+        let limit = max_email_size_bytes.unwrap_or(DEFAULT_MAX_EMAIL_SIZE);
+
+        // PASS 1: fetch only SIZE to identify oversized messages
+        let acceptable_uids = {
+            let mut size_stream = session
+                .uid_fetch(uid_set, SIZE_ONLY_FETCH)
+                .await
+                .map_err(|e| {
+                    raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed)
+                })?;
+
+            let mut uids: Vec<u32> = Vec::new();
+            while let Some(fetch) = size_stream.try_next().await.map_err(|e| {
+                raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed)
+            })? {
+                let uid = fetch.uid.unwrap_or(0);
+                let msg_size = fetch.size.unwrap_or(0) as u64;
+                if msg_size == 0 || msg_size <= limit {
+                    uids.push(uid);
+                } else {
+                    tracing::warn!(
+                        account_id,
+                        mailbox_id,
+                        uid,
+                        size = msg_size,
+                        limit,
+                        "Skipping oversized email"
+                    );
+                }
+            }
+            uids
+        };
+
+        if acceptable_uids.is_empty() {
+            return Ok(0);
+        }
+
+        // PASS 2: fetch bodies only for acceptable UIDs
+        let filtered = compress_uid_list(acceptable_uids);
+        let mut body_stream = session
+            .uid_fetch(&filtered, BODY_FETCH_COMMAND)
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
-        while let Some(fetch) = stream
+
+        let mut count = 0u64;
+        while let Some(fetch) = body_stream
             .try_next()
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
@@ -366,8 +471,9 @@ impl ImapExecutor {
                 ));
             }
             extract_envelope_and_store_it(fetch, account_id, mailbox_id).await?;
+            count += 1;
         }
-        Ok(())
+        Ok(count)
     }
 
     /// Fetches the raw RFC822 body of a single message by UID.
@@ -430,6 +536,7 @@ impl ImapExecutor {
 }
 
 pub const DEFAULT_BATCH_SIZE: u32 = 30;
+pub const DEFAULT_MAX_EMAIL_SIZE: u64 = 100 * 1024 * 1024;
 
 /// Compresses a sorted list of UIDs into an IMAP sequence-set string.
 /// Consecutive UIDs become ranges (e.g. `1:5`), non-consecutive are

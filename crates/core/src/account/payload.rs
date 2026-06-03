@@ -48,6 +48,7 @@ pub struct AccountCreateRequest {
         oai(validator(minimum(value = "10"), maximum(value = "200")))
     )]
     pub download_batch_size: Option<u32>,
+    pub max_email_size_bytes: Option<u64>,
     pub use_proxy: Option<u64>,
     pub use_dangerous: bool,
     pub pgp_key: Option<String>,
@@ -165,6 +166,7 @@ pub struct AccountUpdateRequest {
         oai(validator(minimum(value = "10"), maximum(value = "200")))
     )]
     pub download_batch_size: Option<u32>,
+    pub max_email_size_bytes: Option<u64>,
     /// Optional proxy ID for establishing the connection to external APIs (e.g., Gmail, Outlook).
     /// - If `None` or not provided, the client will connect directly to the API server.
     /// - If `Some(proxy_id)`, the client will use the pre-configured proxy with the given ID for API requests.

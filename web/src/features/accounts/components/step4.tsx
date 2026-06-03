@@ -50,7 +50,11 @@ export default function Step4() {
 
     return (
         <div className="rounded-xl">
-            <Accordion type="multiple" defaultValue={['email', 'account_name', 'login_name', 'imap', 'date_since', 'sync_interval', 'sync_scope', 'sync_batch_size', 'download_schedule']}>
+            <Accordion type="multiple" defaultValue={[
+                'email', 'account_name', 'login_name', 'imap', 'date_since',
+                'max_email_size_bytes', 'sync_interval', 'sync_scope',
+                'sync_batch_size', 'download_schedule'
+            ]}>
                 <AccordionItem key="email" value="email">
                     <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.email')}:</AccordionTrigger>
                     <AccordionContent>{summaryData.email}</AccordionContent>
@@ -162,6 +166,11 @@ export default function Step4() {
                 <AccordionItem key="sync_batch_size" value="sync_batch_size">
                     <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.downloadBatchSize')}:</AccordionTrigger>
                     <AccordionContent>{summaryData.download_batch_size}</AccordionContent>
+                </AccordionItem>
+
+                <AccordionItem key="max_email_size_bytes" value="max_email_size_bytes">
+                    <AccordionTrigger className="font-medium capitalize text-gray-600">{t('accounts.maxEmailSizeBytes')}:</AccordionTrigger>
+                    <AccordionContent>{summaryData.max_email_size_bytes ? `${(summaryData.max_email_size_bytes / 1024 / 1024).toFixed(0)} MB` : t('accounts.maxEmailSizeBytesUnlimited')}</AccordionContent>
                 </AccordionItem>
 
                 <AccordionItem key="download_schedule" value="download_schedule">

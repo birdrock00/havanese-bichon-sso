@@ -157,12 +157,13 @@ pub async fn fetch_and_save_by_date(
             account_id,
             mailbox.id,
             &batch.0,
+            account.max_email_size_bytes,
             token.clone(),
         )
         .await
         {
-            Ok(_) => {
-                current_processed += batch.1;
+            Ok(processed) => {
+                current_processed += processed;
                 DownloadState::update_folder_progress(
                     account_id,
                     mailbox.name.clone(),
@@ -290,6 +291,7 @@ pub async fn fetch_and_save_full_mailbox(
             page as u64,
             page_size as u64,
             &mailbox.encoded_name(),
+            account.max_email_size_bytes,
             token.clone(),
             &mut max_uid,
         )

@@ -28,18 +28,54 @@ interface GithubLinkButtonProps {
   title?: string;
 }
 
+const CACHE_KEY = "github_stars_cache";
+const CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+
+interface StarsCache {
+  stars: number;
+  fetchedAt: number;
+}
+
+function getCachedStars(repo: string): number | null {
+  try {
+    const raw = localStorage.getItem(`${CACHE_KEY}_${repo}`);
+    if (!raw) return null;
+    const cache: StarsCache = JSON.parse(raw);
+    if (Date.now() - cache.fetchedAt > CACHE_TTL) return null;
+    return cache.stars;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedStars(repo: string, stars: number) {
+  try {
+    localStorage.setItem(
+      `${CACHE_KEY}_${repo}`,
+      JSON.stringify({ stars, fetchedAt: Date.now() })
+    );
+  } catch { }
+}
+
 export const GithubLinkButton: React.FC<GithubLinkButtonProps> = ({
   href = "https://github.com/rustmailer/bichon",
   repo = "rustmailer/bichon",
   size = 18,
   title = "View on GitHub",
 }) => {
-  const [stars, setStars] = useState<number | null>(null);
+  const [stars, setStars] = useState<number | null>(() => getCachedStars(repo));
 
   useEffect(() => {
+    if (stars !== null) return; // already have cached value, skip fetch
     fetch(`https://api.github.com/repos/${repo}`)
       .then(res => res.json())
-      .then(data => setStars(data.stargazers_count))
+      .then(data => {
+        const count = data.stargazers_count;
+        if (typeof count === "number") {
+          setStars(count);
+          setCachedStars(repo, count);
+        }
+      })
       .catch(() => { });
   }, [repo]);
 

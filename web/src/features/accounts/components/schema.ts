@@ -100,6 +100,13 @@ export const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
       .max(200, {
         message: t('validation.singleRequestBatchSizeTooLarge'),
       }),
+    max_email_size_bytes: z
+      .number({
+        invalid_type_error: t('validation.maxEmailSizeMustBeNumber'),
+      })
+      .int()
+      .min(1 * 1024 * 1024, { message: t('validation.maxEmailSizeTooSmall') })
+      .max(100 * 1024 * 1024, { message: t('validation.maxEmailSizeTooLarge') }),
     auto_download_new_mailboxes: z.boolean(),
     download_schedule: z
       .string()

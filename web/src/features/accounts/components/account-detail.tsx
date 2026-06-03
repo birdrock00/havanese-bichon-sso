@@ -97,6 +97,10 @@ export function AccountDetailDrawer({ open, onOpenChange, currentRow }: Props) {
                         <span className="text-muted-foreground">{t('accounts.downloadBatchSize')}:</span>
                         <span>{currentRow.download_batch_size}</span>
                       </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-muted-foreground">{t('accounts.maxEmailSizeBytes')}:</span>
+                        <span>{currentRow.max_email_size_bytes ? `${(currentRow.max_email_size_bytes / 1024 / 1024).toFixed(0)} MB` : t('accounts.maxEmailSizeBytesUnlimited')}</span>
+                      </div>
                       <div className="flex flex-col gap-2">
                         <span className="text-muted-foreground">{t('accounts.capabilities')}:</span>
                         <code className="rounded-md bg-muted/50 px-2 py-1 text-sm border overflow-x-auto inline-block">

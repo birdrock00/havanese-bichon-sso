@@ -392,6 +392,38 @@ export default function Step3() {
                             </FormItem>
                         )}
                     />
+                    <FormField
+                        control={control}
+                        name="max_email_size_bytes"
+                        render={({ field }) => {
+                            const BYTES_PER_MB = 1024 * 1024;
+
+                            return (
+                                <FormItem>
+                                    <FormLabel>{t('accounts.maxEmailSizeBytes')}</FormLabel>
+                                    <FormControl>
+                                        <div className="flex items-center gap-2">
+                                            <Input
+                                                type="number"
+                                                placeholder={t('accounts.maxEmailSizeBytesPlaceholder')}
+                                                className="flex-1"
+                                                value={field.value ? field.value / BYTES_PER_MB : ''}
+                                                onChange={(e) => {
+                                                    const parsed = parseInt(e.target.value, 10);
+                                                    field.onChange(isNaN(parsed) ? parsed : parsed * BYTES_PER_MB);
+                                                }}
+                                            />
+                                            <span className="text-sm text-muted-foreground whitespace-nowrap">MB</span>
+                                        </div>
+                                    </FormControl>
+                                    <FormMessage />
+                                    <FormDescription>
+                                        {t('accounts.maxEmailSizeBytesDescription')}
+                                    </FormDescription>
+                                </FormItem>
+                            );
+                        }}
+                    />
                 </div>
             </div>
 

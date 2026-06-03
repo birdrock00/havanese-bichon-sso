@@ -49,7 +49,7 @@ export type Steps = [...Step[]];
 const getSteps = (t: (key: string) => string): Steps => [
   { id: "step-1", name: t('accounts.steps.emailAddress'), fields: ["email", "account_name"] },
   { id: "step-2", name: t('accounts.steps.imap'), fields: ["imap", "use_dangerous", "login_name"] },
-  { id: "step-3", name: t('accounts.steps.syncPreferences'), fields: ["enabled", "date_since", "date_before", "download_interval_min", "download_batch_size", "auto_download_new_mailboxes", "download_schedule"] },
+  { id: "step-3", name: t('accounts.steps.syncPreferences'), fields: ["enabled", "date_since", "date_before", "download_interval_min", "download_batch_size", "max_email_size_bytes", "auto_download_new_mailboxes", "download_schedule"] },
   { id: "step-4", name: t('accounts.steps.summary'), fields: [] },
 ];
 
@@ -81,6 +81,7 @@ const defaultValues: Account = {
   date_before: undefined,
   download_interval_min: 60,
   download_batch_size: 30,
+  max_email_size_bytes: 100 * 1024 * 1024,
   auto_download_new_mailboxes: true,
   download_schedule: undefined,
 };
@@ -111,6 +112,7 @@ const mapCurrentRowToFormValues = (currentRow: AccountModel): Account => {
     date_before: currentRow.date_before ?? undefined,
     download_interval_min: currentRow.download_interval_min ?? 60,
     download_batch_size: currentRow.download_batch_size ?? 30,
+    max_email_size_bytes: currentRow.max_email_size_bytes ?? 100 * 1024 * 1024,
     auto_download_new_mailboxes: currentRow.auto_download_new_mailboxes ?? true,
     download_schedule: currentRow.download_schedule ?? undefined,
   };
@@ -193,6 +195,7 @@ export function AccountActionDialog({ currentRow, open, onOpenChange }: Props) {
         date_before: data.date_before,
         download_interval_min: data.download_interval_min,
         download_batch_size: data.download_batch_size,
+        max_email_size_bytes: data.max_email_size_bytes,
         auto_download_new_mailboxes: data.auto_download_new_mailboxes,
         download_schedule: data.download_schedule || null,
       };

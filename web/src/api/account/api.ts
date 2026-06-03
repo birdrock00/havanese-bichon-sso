@@ -131,6 +131,7 @@ export interface AccountModel {
     download_folders: string[];
     download_interval_min?: number;
     download_batch_size?: number;
+    max_email_size_bytes?: number;
     created_by: number;
     created_user_name: string;
     created_user_email: string;
