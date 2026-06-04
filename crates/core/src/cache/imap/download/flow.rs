@@ -339,6 +339,17 @@ pub async fn fetch_and_save_full_mailbox(
     Ok(max_uid)
 }
 
+/// Generates a synthetic UIDVALIDITY for IMAP servers that don't provide it.
+/// Uses a stable hash of the mailbox name to ensure consistent IDs across sessions.
+fn generate_synthetic_uidvalidity(mailbox_name: &str) -> u32 {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    
+    let mut hasher = DefaultHasher::new();
+    mailbox_name.hash(&mut hasher);
+    (hasher.finish() as u32).wrapping_add(1) // Avoid 0, which might be reserved
+}
+
 pub async fn reconcile_mailboxes(
     account: &AccountModel,
     remote_mailboxes: &[MailBox],
@@ -366,30 +377,30 @@ pub async fn reconcile_mailboxes(
                 break;
             }
 
-            let new_highest_uid = if local_mailbox.uid_validity != remote_mailbox.uid_validity {
-                if remote_mailbox.uid_validity.is_none() {
-                    let err_msg = format!(
-                        "Mailbox '{}' logic error: Server did not provide UIDVALIDITY.",
-                        local_mailbox.name
+            // Handle missing UIDVALIDITY from non-compliant IMAP servers
+            // (e.g., Tencent Enterprise Mail, etc.)
+            let remote_uid_validity = match remote_mailbox.uid_validity {
+                Some(uid) => uid,
+                None => {
+                    // Generate a synthetic UIDVALIDITY based on mailbox name
+                    let synthetic_uid = generate_synthetic_uidvalidity(&remote_mailbox.name);
+                    
+                    warn!(
+                        "Account {}: Mailbox '{}' - Server did not provide UIDVALIDITY. \
+                        Using synthetic UIDVALIDITY {} based on mailbox name. \
+                        This mailbox will be synced but may require periodic rebuilds if the server's mailbox structure changes.",
+                        account_id, remote_mailbox.name, synthetic_uid
                     );
-
-                    warn!("Account {}: {}", account_id, err_msg);
-
-                    DownloadState::update_folder_progress(
-                        account_id,
-                        remote_mailbox.name.clone(),
-                        0,
-                        0,
-                        FolderStatus::Failed,
-                        Some(err_msg.clone()),
-                    )?;
-                    DownloadState::append_session_error(account_id, err_msg)?;
-                    continue;
+                    
+                    synthetic_uid
                 }
+            };
+
+            let new_highest_uid = if local_mailbox.uid_validity != Some(remote_uid_validity) {
                 info!(
                     "Account {}: Mailbox '{}' detected with changed uid_validity (local: {:#?}, remote: {:#?}). \
                     The mailbox data may be invalid, resetting its envelopes and rebuilding the cache.",
-                    account_id, local_mailbox.name, &local_mailbox.uid_validity, &remote_mailbox.uid_validity
+                    account_id, local_mailbox.name, &local_mailbox.uid_validity, &remote_uid_validity
                 );
 
                 DownloadState::update_folder_progress(
@@ -443,6 +454,10 @@ pub async fn reconcile_mailboxes(
 
             let mut updated = remote_mailbox.clone();
             updated.highest_uid = new_highest_uid;
+            // Update uid_validity with the resolved value (either from server or synthetic)
+            if updated.uid_validity.is_none() {
+                updated.uid_validity = Some(remote_uid_validity);
+            }
             mailboxes_to_update.push(updated);
         }
         //The metadata of this mailbox must only be updated after a successful synchronization;
