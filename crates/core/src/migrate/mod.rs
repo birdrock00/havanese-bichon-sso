@@ -121,7 +121,7 @@ fn is_dir_not_empty(path: &PathBuf) -> std::io::Result<bool> {
 pub fn do_migrate_segment<F>(
     batch_size: u32,
     legacy: LegacyDirs,
-    new_dirs: NewDirs,
+    writer: &mut NewIndexWriter,
     segment_index: usize,
     mut on_progress: F,
 ) -> BichonResult<()>
@@ -226,8 +226,6 @@ where
     drop(envelope_index);
 
     // ── Phase 2: process EML docs, streaming one at a time ─────────────
-    let mut writer = NewIndexWriter::open(new_dirs)?;
-
     let mut total_migrated = 0usize;
     let mut total_skipped = 0usize;
 
@@ -308,7 +306,6 @@ where
         chunk_start = chunk_end;
     }
 
-    writer.finish_writers()?;
     on_progress(&format!("DONE:{}:{}", total_migrated, total_skipped));
     Ok(())
 }

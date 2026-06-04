@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use bichon_core::migrate::{
     count_eml_segments, do_migrate_segment, is_tantivy_index_dir,
-    store::{LegacyDirs, NewDirs},
+    store::{LegacyDirs, NewDirs, NewIndexWriter},
 };
 use console::style;
 use dialoguer::{theme::ColorfulTheme, Confirm, Input};
@@ -326,6 +326,18 @@ pub fn handle_migration(theme: &ColorfulTheme) {
             .progress_chars("#>-"),
     );
 
+    let mut writer = match NewIndexWriter::open(NewDirs::new(
+        new_index_path.clone(),
+        new_data_path.clone(),
+    )) {
+        Ok(w) => w,
+        Err(e) => {
+            pb.finish_with_message(format!("{}", style("Migration failed.").red()));
+            eprintln!("\n{} {:?}", style("✘").red().bold(), e);
+            return;
+        }
+    };
+
     let mut grand_total_migrated: usize = 0;
     let mut grand_total_skipped: usize = 0;
 
@@ -337,7 +349,7 @@ pub fn handle_migration(theme: &ColorfulTheme) {
         match do_migrate_segment(
             batch_size,
             legacy,
-            NewDirs::new(new_index_path.clone(), new_data_path.clone()),
+            &mut writer,
             seg_idx,
             |msg| {
                 if let Some(data) = msg.strip_prefix("TOTAL:") {
@@ -405,6 +417,13 @@ pub fn handle_migration(theme: &ColorfulTheme) {
         }
 
         pb.set_position((seg_idx + 1) as u64);
+    }
+
+    pb.set_message(style("Finalizing indexes...").dim().to_string());
+    if let Err(e) = writer.finish_writers() {
+        pb.finish_with_message(format!("{}", style("Migration failed.").red()));
+        eprintln!("\n{} {:?}", style("✘").red().bold(), e);
+        return;
     }
 
     pb.finish_with_message(format!(
