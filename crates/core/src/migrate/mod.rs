@@ -4,7 +4,7 @@ use crate::{
     error::{code::ErrorCode, BichonResult},
     migrate::{
         legacy::schema::SchemaTools,
-        store::{LegacyDirs, NewDirs, NewIndexWriter},
+        store::{LegacyDirs, NewIndexWriter},
     },
     raise_error,
     settings::cli::SETTINGS,
