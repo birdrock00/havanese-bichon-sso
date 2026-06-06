@@ -1,0 +1,58 @@
+{
+    "$schema": "https://fundingjson.org/schema/v1.1.0.json",
+    "version": "v1.0.0",
+    "entity": {
+        "type": "individual",
+        "role": "maintainer",
+        "name": "rustmailer",
+        "email": "rustmailer.git@gmail.com",
+        "phone": "",
+        "description": "I'm an indie developer and the sole maintainer of Bichon, a lightweight open-source email archiver built in Rust. I believe in privacy, data ownership, and the right to self-host your own digital life.",
+        "webpageUrl": {
+            "url": "https://github.com/rustmailer"
+        }
+    },
+    "projects": [
+        {
+            "guid": "bichon",
+            "name": "Bichon",
+            "description": "Bichon is a lightweight, high-performance, self-hosted email archiver built in Rust. It synchronizes emails from IMAP servers, indexes them for full-text search, and provides a clean WebUI and REST API for access.\n\nBichon requires no external database and runs as a single binary — making it easy to deploy and maintain. It supports multiple accounts, OAuth2, SOCKS5 proxy, scheduled sync, bulk import (EML/MBOX/PST), and multi-user RBAC.\n\nAs the sole maintainer, I develop and support Bichon in my personal time. With 1.8k GitHub stars and 327k+ Docker pulls, the project has grown well beyond a personal tool and is actively used by individuals and teams worldwide — including a real-world deployment archiving 1.15 million emails across 28 accounts (800 GB original data, compressed to 421 GB on disk).",
+            "webpageUrl": {
+                "url": "https://github.com/rustmailer/bichon"
+            },
+            "repositoryUrl": {
+                "url": "https://github.com/rustmailer/bichon"
+            },
+            "licenses": ["spdx:AGPL-3.0"],
+            "tags": ["email", "rust", "self-hosted", "archiver", "imap", "full-text-search", "privacy", "webui"]
+        }
+    ],
+    "funding": {
+        "channels": [
+            {
+                "guid": "buymeacoffee",
+                "type": "payment-provider",
+                "address": "https://buymeacoffee.com/rustmailer",
+                "description": "Support via Buy Me a Coffee."
+            },
+            {
+                "guid": "bank",
+                "type": "bank",
+                "address": "",
+                "description": "Direct bank transfer also accepted. Please email rustmailer.git@gmail.com for details."
+            }
+        ],
+        "plans": [
+            {
+                "guid": "maintainer-time",
+                "status": "active",
+                "name": "Maintainer Time",
+                "description": "Cover the cost of dedicated development and maintenance time for Bichon — including bug fixes, feature development, security updates, issue triage, and community support.",
+                "amount": 10000,
+                "currency": "USD",
+                "frequency": "yearly",
+                "channels": ["bank"]
+            }
+        ]
+    }
+}
