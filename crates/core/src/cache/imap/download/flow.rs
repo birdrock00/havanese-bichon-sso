@@ -38,9 +38,11 @@ use crate::{
         store::tantivy::envelope::ENVELOPE_MANAGER,
     },
 };
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
+
+const MAX_NETWORK_RETRIES: u32 = 3;
 
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -152,16 +154,63 @@ pub async fn fetch_and_save_by_date(
             break;
         }
         // Fetch metadata for the current batch of UIDs
-        match ImapExecutor::uid_batch_retrieve_emails(
-            &mut session,
-            account_id,
-            mailbox.id,
-            &batch.0,
-            account.max_email_size_bytes,
-            token.clone(),
-        )
-        .await
-        {
+        let mut retries = 0u32;
+        let batch_result = loop {
+            match ImapExecutor::uid_batch_retrieve_emails(
+                &mut session,
+                account_id,
+                mailbox.id,
+                &batch.0,
+                account.max_email_size_bytes,
+                token.clone(),
+            )
+            .await
+            {
+                Ok(processed) => break Ok(processed),
+                Err(e)
+                    if retries < MAX_NETWORK_RETRIES && e.code() == ErrorCode::NetworkError =>
+                {
+                    retries += 1;
+                    warn!(
+                        account_id,
+                        mailbox = mailbox.name,
+                        index,
+                        retries,
+                        "Network error on batch, reconnecting ({}/{})",
+                        retries,
+                        MAX_NETWORK_RETRIES
+                    );
+                    match ImapExecutor::create_connection(account_id).await {
+                        Ok(new_session) => {
+                            session = new_session;
+                            if let Err(e2) = session.examine(&mailbox.encoded_name()).await
+                            {
+                                let err_msg = format!(
+                                    "Re-examine failed after reconnect: {:#?}",
+                                    e2
+                                );
+                                DownloadState::append_session_error(
+                                    account_id,
+                                    err_msg,
+                                )?;
+                                break Err(e);
+                            }
+                            tokio::time::sleep(Duration::from_secs(
+                                1 << (retries - 1),
+                            ))
+                            .await;
+                            continue;
+                        }
+                        Err(e2) => {
+                            error!(account_id, "Reconnection failed: {:#?}", e2);
+                            break Err(e);
+                        }
+                    }
+                }
+                Err(e) => break Err(e),
+            }
+        };
+        match batch_result {
             Ok(processed) => {
                 current_processed += processed;
                 DownloadState::update_folder_progress(
@@ -283,20 +332,60 @@ pub async fn fetch_and_save_full_mailbox(
             break;
         }
 
-        match ImapExecutor::batch_retrieve_emails(
-            &mut session,
-            account_id,
-            mailbox_id,
-            total,
-            page as u64,
-            page_size as u64,
-            &mailbox.encoded_name(),
-            account.max_email_size_bytes,
-            token.clone(),
-            &mut max_uid,
-        )
-        .await
-        {
+        let mut retries = 0u32;
+        let batch_result = loop {
+            match ImapExecutor::batch_retrieve_emails(
+                &mut session,
+                account_id,
+                mailbox_id,
+                total,
+                page as u64,
+                page_size as u64,
+                &mailbox.encoded_name(),
+                account.max_email_size_bytes,
+                token.clone(),
+                &mut max_uid,
+            )
+            .await
+            {
+                Ok(count) => break Ok(count),
+                Err(e)
+                    if retries < MAX_NETWORK_RETRIES && e.code() == ErrorCode::NetworkError =>
+                {
+                    retries += 1;
+                    warn!(
+                        account_id,
+                        mailbox = mailbox.name,
+                        page,
+                        retries,
+                        "Network error on batch, reconnecting ({}/{})",
+                        retries,
+                        MAX_NETWORK_RETRIES
+                    );
+                    match ImapExecutor::create_connection(account_id).await {
+                        Ok(new_session) => {
+                            session = new_session;
+                            if let Err(e2) = session.examine(&mailbox.encoded_name()).await {
+                                let err_msg = format!(
+                                    "Re-examine failed after reconnect: {:#?}",
+                                    e2
+                                );
+                                DownloadState::append_session_error(account_id, err_msg)?;
+                                break Err(e);
+                            }
+                            tokio::time::sleep(Duration::from_secs(1 << (retries - 1))).await;
+                            continue;
+                        }
+                        Err(e2) => {
+                            error!(account_id, "Reconnection failed: {:#?}", e2);
+                            break Err(e);
+                        }
+                    }
+                }
+                Err(e) => break Err(e),
+            }
+        };
+        match batch_result {
             Ok(count) => {
                 current_processed += count as u64;
                 DownloadState::update_folder_progress(

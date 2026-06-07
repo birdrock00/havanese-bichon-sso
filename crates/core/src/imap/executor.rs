@@ -34,6 +34,23 @@ use tracing::info;
 const BODY_FETCH_COMMAND: &str = "(UID INTERNALDATE RFC822.SIZE BODY.PEEK[])";
 const SIZE_ONLY_FETCH: &str = "(UID RFC822.SIZE)";
 
+fn classify_imap_error(e: &async_imap::error::Error) -> ErrorCode {
+    match e {
+        async_imap::error::Error::Io(io) => matches!(
+            io.kind(),
+            std::io::ErrorKind::BrokenPipe
+                | std::io::ErrorKind::ConnectionReset
+                | std::io::ErrorKind::ConnectionAborted
+                | std::io::ErrorKind::TimedOut
+                | std::io::ErrorKind::UnexpectedEof
+        )
+        .then_some(ErrorCode::NetworkError)
+        .unwrap_or(ErrorCode::ImapCommandFailed),
+        async_imap::error::Error::ConnectionLost => ErrorCode::NetworkError,
+        _ => ErrorCode::ImapCommandFailed,
+    }
+}
+
 pub struct ImapExecutor;
 
 impl ImapExecutor {
@@ -43,11 +60,11 @@ impl ImapExecutor {
         let list = session
             .list(Some(""), Some("*"))
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
         let result = list
             .try_collect::<Vec<Name>>()
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
         Ok(result)
     }
 
@@ -59,11 +76,11 @@ impl ImapExecutor {
         session
             .examine(mailbox_name)
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
         let result = session
             .uid_search(query)
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
         Ok(result)
     }
 
@@ -77,7 +94,7 @@ impl ImapExecutor {
         session
             .append(mailbox_name, flags, internaldate, content)
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))
     }
 
     /// Fetches new mail for a mailbox.
@@ -102,7 +119,7 @@ impl ImapExecutor {
         session
             .examine(&mailbox.encoded_name())
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
 
         match before {
             Some(date) => {
@@ -132,7 +149,7 @@ impl ImapExecutor {
         let results = session.uid_search(&query).await.map_err(|e| {
             let err_msg = format!("UID SEARCH failed in [{}]: {:#?}", mailbox.name, e);
             let _ = DownloadState::append_session_error(account.id, err_msg);
-            raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed)
+            raise_error!(format!("{:#?}", e), classify_imap_error(&e))
         })?;
 
         if results.is_empty() {
@@ -237,7 +254,7 @@ impl ImapExecutor {
             .map_err(|e| {
                 let err_msg = format!("UID FETCH failed in [{}]: {:#?}", mailbox.name, e);
                 let _ = DownloadState::append_session_error(account.id, err_msg);
-                raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed)
+                raise_error!(format!("{:#?}", e), classify_imap_error(&e))
             })?;
 
         let mut count = 0u64;
@@ -247,7 +264,7 @@ impl ImapExecutor {
         while let Some(fetch) = stream
             .try_next()
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?
         {
             if token.is_cancelled() {
                 tracing::info!("Account {}: fetch_new_mail stream interrupted.", account.id);
@@ -347,12 +364,12 @@ impl ImapExecutor {
                 .fetch(sequence_set.as_str(), SIZE_ONLY_FETCH)
                 .await
                 .map_err(|e| {
-                    raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed)
+                    raise_error!(format!("{:#?}", e), classify_imap_error(&e))
                 })?;
 
             let mut uids: Vec<u32> = Vec::new();
             while let Some(fetch) = size_stream.try_next().await.map_err(|e| {
-                raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed)
+                raise_error!(format!("{:#?}", e), classify_imap_error(&e))
             })? {
                 let uid = fetch.uid.unwrap_or(0);
                 let msg_size = fetch.size.unwrap_or(0) as u64;
@@ -381,13 +398,13 @@ impl ImapExecutor {
         let mut body_stream = session
             .uid_fetch(&filtered, BODY_FETCH_COMMAND)
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
 
         let mut count = 0;
         while let Some(fetch) = body_stream
             .try_next()
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?
         {
             if token.is_cancelled() {
                 tracing::info!("Account {}: UID fetch stream interrupted.", account_id);
@@ -421,12 +438,12 @@ impl ImapExecutor {
                 .uid_fetch(uid_set, SIZE_ONLY_FETCH)
                 .await
                 .map_err(|e| {
-                    raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed)
+                    raise_error!(format!("{:#?}", e), classify_imap_error(&e))
                 })?;
 
             let mut uids: Vec<u32> = Vec::new();
             while let Some(fetch) = size_stream.try_next().await.map_err(|e| {
-                raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed)
+                raise_error!(format!("{:#?}", e), classify_imap_error(&e))
             })? {
                 let uid = fetch.uid.unwrap_or(0);
                 let msg_size = fetch.size.unwrap_or(0) as u64;
@@ -455,13 +472,13 @@ impl ImapExecutor {
         let mut body_stream = session
             .uid_fetch(&filtered, BODY_FETCH_COMMAND)
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
 
         let mut count = 0u64;
         while let Some(fetch) = body_stream
             .try_next()
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?
         {
             if token.is_cancelled() {
                 tracing::info!("Account {}: UID fetch stream interrupted.", account_id);
@@ -489,17 +506,17 @@ impl ImapExecutor {
         session
             .examine(encoded_mailbox_name)
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
 
         let mut stream = session
             .uid_fetch(uid.to_string(), BODY_FETCH_COMMAND)
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?;
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
 
         let fetch = stream
             .try_next()
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?
             .ok_or_else(|| {
                 raise_error!(
                     format!("UID {uid} not found on IMAP server"),
@@ -521,7 +538,7 @@ impl ImapExecutor {
         // while stream
         //     .try_next()
         //     .await
-        //     .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
+        //     .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?
         //     .is_some()
         // {}
 

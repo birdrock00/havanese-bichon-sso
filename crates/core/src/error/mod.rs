@@ -16,4 +16,12 @@ pub enum BichonError {
     },
 }
 
+impl BichonError {
+    pub fn code(&self) -> ErrorCode {
+        match self {
+            BichonError::Generic { code, .. } => *code,
+        }
+    }
+}
+
 pub type BichonResult<T, E = BichonError> = std::result::Result<T, E>;
