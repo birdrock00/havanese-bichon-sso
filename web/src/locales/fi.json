@@ -536,6 +536,8 @@
     "accountDeleteFailed": "Tilin poistaminen epäonnistui",
     "accountDeleted": "Tili poistettu",
     "accountDeletedDesc": "Tilisi on poistettu onnistuneesti.",
+    "accountDeletionStarted": "Tilin poistaminen aloitettu",
+    "accountDeletionStartedDesc": "Tiliä poistetaan taustalla. Se katoaa, kun puhdistus on valmis.",
     "allResourcesErased": "Kaikki liittyvät resurssit poistetaan pysyvästi.",
     "cannotBeUndone": "Tätä toimenpidettä ei voi kumota!",
     "confirmDelete": "Vahvista poisto",

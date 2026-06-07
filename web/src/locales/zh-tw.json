@@ -536,6 +536,8 @@
     "accountDeleteFailed": "帳號刪除失敗",
     "accountDeleted": "帳號已刪除",
     "accountDeletedDesc": "帳號已成功刪除。",
+    "accountDeletionStarted": "帳戶刪除已開始",
+    "accountDeletionStartedDesc": "帳戶正在背景刪除，清理完成後將從列表中消失。",
     "allResourcesErased": "所有相關資源將被永久清除。",
     "cannotBeUndone": "此操作無法復原！",
     "confirmDelete": "確認刪除",

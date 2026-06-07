@@ -536,6 +536,8 @@
     "accountDeleteFailed": "Löschen des Kontos fehlgeschlagen",
     "accountDeleted": "Konto gelöscht",
     "accountDeletedDesc": "Ihr Konto wurde erfolgreich gelöscht.",
+    "accountDeletionStarted": "Kontolöschung gestartet",
+    "accountDeletionStartedDesc": "Konto wird im Hintergrund gelöscht und verschwindet nach der Bereinigung.",
     "allResourcesErased": "Alle zugehörigen Ressourcen werden dauerhaft gelöscht.",
     "cannotBeUndone": "Diese Aktion kann nicht rückgängig gemacht werden!",
     "confirmDelete": "Löschung bestätigen",

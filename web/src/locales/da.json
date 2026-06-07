@@ -536,6 +536,8 @@
     "accountDeleteFailed": "Sletning af konto mislykkedes",
     "accountDeleted": "Konto slettet",
     "accountDeletedDesc": "Din konto er blevet slettet.",
+    "accountDeletionStarted": "Kontoen slettes nu",
+    "accountDeletionStartedDesc": "Kontoen slettes i baggrunden og forsvinder, når oprydningen er færdig.",
     "allResourcesErased": "Alle relaterede ressourcer vil blive slettet permanent.",
     "cannotBeUndone": "Denne handling kan ikke fortrydes!",
     "confirmDelete": "Bekræft Sletning",

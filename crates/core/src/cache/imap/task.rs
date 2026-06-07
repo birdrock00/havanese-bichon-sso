@@ -113,6 +113,9 @@ impl AccountDownTask {
                 let account = AccountModel::get(account_id).ok();
                 match account {
                     Some(account) => {
+                        if account.deleting {
+                            return Ok(());
+                        }
                         if !account.enabled {
                             let last = LAST_WARN_TIME.load(Ordering::Relaxed);
                             let now = utc_now!();
@@ -245,6 +248,10 @@ impl AccountDownTask {
                     return;
                 }
             };
+
+            if account.deleting {
+                return;
+            }
 
             if let Err(e) = process_imap_download(&account, token_clone, TriggerType::Manual).await
             {

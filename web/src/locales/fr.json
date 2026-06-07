@@ -536,6 +536,8 @@
     "accountDeleteFailed": "Échec de la suppression du compte",
     "accountDeleted": "Compte Supprimé",
     "accountDeletedDesc": "Votre compte a été supprimé avec succès.",
+    "accountDeletionStarted": "Suppression du compte lancée",
+    "accountDeletionStartedDesc": "Compte en cours de suppression en arrière-plan, disparaîtra après nettoyage.",
     "allResourcesErased": "Toutes les ressources associées seront effacées définitivement.",
     "cannotBeUndone": "Cette action ne peut pas être annulée !",
     "confirmDelete": "Confirmer la Suppression",

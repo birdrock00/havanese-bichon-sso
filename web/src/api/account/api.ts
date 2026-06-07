@@ -144,6 +144,7 @@ export interface AccountModel {
     imap_quota_bytes?: number;
     auto_download_new_mailboxes?: boolean;
     download_schedule?: string;
+    deleting?: boolean;
 }
 
 export const download_state = async (account_id: number) => {

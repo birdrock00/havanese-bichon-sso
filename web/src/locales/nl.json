@@ -536,6 +536,8 @@
     "accountDeleteFailed": "Account verwijderen Mislukt",
     "accountDeleted": "Account Verwijderd",
     "accountDeletedDesc": "Uw account is succesvol verwijderd.",
+    "accountDeletionStarted": "Verwijdering account gestart",
+    "accountDeletionStartedDesc": "Account wordt op de achtergrond verwijderd en verdwijnt na opschonen.",
     "allResourcesErased": "Alle gerelateerde bronnen worden permanent gewist.",
     "cannotBeUndone": "Deze actie kan niet ongedaan worden gemaakt!",
     "confirmDelete": "Verwijdering Bevestigen",

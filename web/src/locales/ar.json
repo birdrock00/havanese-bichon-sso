@@ -536,6 +536,8 @@
     "accountDeleteFailed": "فشل حذف الحساب",
     "accountDeleted": "تم حذف الحساب",
     "accountDeletedDesc": "تم حذف حسابك بنجاح.",
+    "accountDeletionStarted": "بدء حذف الحساب",
+    "accountDeletionStartedDesc": "جاري حذف الحساب في الخلفية، وسيختفي بعد اكتمال التنظيف.",
     "allResourcesErased": "سيتم مسح جميع الموارد ذات الصلة نهائيًا.",
     "cannotBeUndone": "لا يمكن التراجع عن هذا الإجراء!",
     "confirmDelete": "تأكيد الحذف",

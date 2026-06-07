@@ -127,7 +127,7 @@ export function AccountTable({ columns, data }: DataTableProps) {
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
-                  className='group/row'
+                  className={row.original.deleting ? 'opacity-50' : 'group/row'}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell

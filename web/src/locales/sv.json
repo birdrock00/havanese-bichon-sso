@@ -536,6 +536,8 @@
     "accountDeleteFailed": "Borttagning av konto misslyckades",
     "accountDeleted": "Konto raderat",
     "accountDeletedDesc": "Ditt konto har tagits bort.",
+    "accountDeletionStarted": "Kontoradering har startat",
+    "accountDeletionStartedDesc": "Kontot raderas i bakgrunden och försvinner när rensningen är klar.",
     "allResourcesErased": "Alla relaterade resurser kommer att raderas permanent.",
     "cannotBeUndone": "Denna åtgärd kan inte ångras!",
     "confirmDelete": "Bekräfta borttagning",

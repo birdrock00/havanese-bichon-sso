@@ -536,6 +536,8 @@
     "accountDeleteFailed": "Ошибка удаления аккаунта",
     "accountDeleted": "Аккаунт удален",
     "accountDeletedDesc": "Ваш аккаунт был успешно удален.",
+    "accountDeletionStarted": "Удаление аккаунта запущено",
+    "accountDeletionStartedDesc": "Аккаунт удаляется в фоновом режиме и исчезнет после очистки.",
     "allResourcesErased": "Все связанные ресурсы будут безвозвратно стерты.",
     "cannotBeUndone": "Это действие нельзя отменить!",
     "confirmDelete": "Подтвердить удаление",

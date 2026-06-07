@@ -536,6 +536,8 @@
     "accountDeleteFailed": "账户删除失败",
     "accountDeleted": "账户已删除",
     "accountDeletedDesc": "您的账户已成功删除。",
+    "accountDeletionStarted": "账户删除已开始",
+    "accountDeletionStartedDesc": "账户正在后台删除，清理完成后将从列表中消失。",
     "allResourcesErased": "所有相关资源将被永久删除。",
     "cannotBeUndone": "此操作无法撤销！",
     "confirmDelete": "确认删除",

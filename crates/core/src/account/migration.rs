@@ -97,6 +97,8 @@ pub struct Account {
     pub imap_quota_window: Option<QuotaWindow>,
     pub auto_download_new_mailboxes: Option<bool>,
     pub download_schedule: Option<String>,
+    #[serde(default)]
+    pub deleting: bool,
 }
 
 impl MemDbModel for Account {
@@ -136,6 +138,7 @@ impl Account {
             imap_quota_bytes: request.imap_quota_bytes,
             imap_quota_window: request.imap_quota_window,
             download_schedule: request.download_schedule,
+            deleting: false,
         })
     }
 
@@ -223,14 +226,46 @@ impl Account {
 
     pub async fn delete(account_id: u64) -> BichonResult<()> {
         let account = Self::get(account_id)?;
-        if let Err(error) = Self::cleanup_account_resources_sequential(&account).await {
-            tracing::error!(
-                "[CLEANUP_ACCOUNT_ERROR] Account {}: failed to cleanup resources: {:#?}",
-                account_id,
-                error
-            );
-            return Err(error);
+
+        // Immediately stop scheduling to prevent new downloads
+        if matches!(account.account_type, AccountType::IMAP) {
+            SYNC_TASKS.stop(account.id).await?;
         }
+
+        // Mark as deleting and disabled so frontend shows status and download tasks skip it
+        update_impl(
+            DB_MANAGER.db(),
+            &account_id.to_string(),
+            move |current: Account| {
+                let mut updated = current.clone();
+                updated.deleting = true;
+                updated.enabled = false;
+                Ok(updated)
+            },
+        )?;
+
+        // Spawn background cleanup — heavy work (Tantivy, attachments) runs off the request path
+        tokio::spawn(async move {
+            if let Err(error) = Self::cleanup_account_resources_sequential(&account).await {
+                tracing::error!(
+                    "[CLEANUP_ACCOUNT_ERROR] Account {}: cleanup failed, reverting deleting flag: {:#?}",
+                    account_id,
+                    error
+                );
+                // Revert deleting flag so the user can retry (only if account record still exists)
+                let _ = update_impl(
+                    DB_MANAGER.db(),
+                    &account_id.to_string(),
+                    move |current: Account| {
+                        let mut updated = current.clone();
+                        updated.deleting = false;
+                        updated.enabled = true;
+                        Ok(updated)
+                    },
+                );
+            }
+        });
+
         Ok(())
     }
 
@@ -239,8 +274,8 @@ impl Account {
     }
 
     async fn cleanup_account_resources_sequential(account: &AccountModel) -> BichonResult<()> {
+        // Sync task already stopped in delete() before spawning this background task
         if matches!(account.account_type, AccountType::IMAP) {
-            SYNC_TASKS.stop(account.id).await?;
             DownloadState::delete(account.id)?;
         }
         OAuth2AccessToken::try_delete(account.id)?;

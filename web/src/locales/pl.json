@@ -536,6 +536,8 @@
     "accountDeleteFailed": "Bład podczas usuwania konta",
     "accountDeleted": "Konto usunięte",
     "accountDeletedDesc": "Konto zostało usunięte.",
+    "accountDeletionStarted": "Rozpoczęto usuwanie konta",
+    "accountDeletionStartedDesc": "Konto jest usuwane w tle i zniknie po zakończeniu czyszczenia.",
     "allResourcesErased": "Wszystkie powiązane zasoby zostaną trwale usunięte.",
     "cannotBeUndone": "Tej czynności nie można cofnąć!",
     "confirmDelete": "Potwierdź usunięcie",

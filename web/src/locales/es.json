@@ -536,6 +536,8 @@
     "accountDeleteFailed": "Error al eliminar la cuenta",
     "accountDeleted": "Cuenta eliminada",
     "accountDeletedDesc": "Tu cuenta ha sido eliminada con éxito.",
+    "accountDeletionStarted": "Eliminación de cuenta iniciada",
+    "accountDeletionStartedDesc": "La cuenta se está eliminando en segundo plano y desaparecerá tras la limpieza.",
     "allResourcesErased": "Todos los recursos asociados se borrarán permanentemente.",
     "cannotBeUndone": "¡Esta acción no se puede deshacer!",
     "confirmDelete": "Confirmar eliminación",

@@ -43,8 +43,8 @@ export function AccountDeleteDialog({ open, onOpenChange, currentRow }: Props) {
   const queryClient = useQueryClient();
   function handleSuccess() {
     toast({
-      title: t('dialogs.accountDeleted'),
-      description: t('dialogs.accountDeletedDesc'),
+      title: t('dialogs.accountDeletionStarted'),
+      description: t('dialogs.accountDeletionStartedDesc'),
       action: <ToastAction altText={t('common.close')}>{t('common.close')}</ToastAction>,
     });
 

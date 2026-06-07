@@ -55,6 +55,10 @@ export default function Accounts() {
   const { data: accountList, isLoading } = useQuery({
     queryKey: ['account-list'],
     queryFn: list_accounts,
+    refetchInterval: (query) => {
+      const items = (query.state.data as { items?: { deleting?: boolean }[] })?.items;
+      return items?.some((item) => item.deleting) ? 5000 : false;
+    },
   })
 
   const hasAccounts = accountList != null && accountList.items.length > 0;

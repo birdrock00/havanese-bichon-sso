@@ -536,6 +536,8 @@
     "accountDeleteFailed": "Account delete Failed",
     "accountDeleted": "Account Deleted",
     "accountDeletedDesc": "Your account has been successfully deleted.",
+    "accountDeletionStarted": "Account deletion started",
+    "accountDeletionStartedDesc": "Account is being deleted in the background and will disappear after cleanup.",
     "allResourcesErased": "All related resources will be permanently erased.",
     "cannotBeUndone": "This action cannot be undone!",
     "confirmDelete": "Confirm Delete",

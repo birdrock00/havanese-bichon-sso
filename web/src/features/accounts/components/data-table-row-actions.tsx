@@ -50,13 +50,16 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const hasPermission = require_any_permission(['system:root', 'account:manage'], row.original.id);
   const hasReadPermission = require_any_permission(['system:root', 'account:read_details'], row.original.id);
 
+  const isDeleting = row.original.deleting === true;
 
   const canShowAnyAction =
+    !isDeleting && (
     (hasPermission) ||
     (account_type === 'IMAP' && hasPermission) ||
-    (account_type === 'IMAP' && hasReadPermission);
+    (account_type === 'IMAP' && hasReadPermission)
+  );
 
-  const showDownload = account_type === 'IMAP' && hasPermission;
+  const showDownload = !isDeleting && account_type === 'IMAP' && hasPermission;
 
   const handleStartDownload = async () => {
     try {

@@ -77,7 +77,7 @@ export function EnableAction({ row }: DataTableRowActionsProps) {
       <Switch
         checked={row.original.enabled}
         onCheckedChange={() => setOpen(true)}
-        disabled={!hasPermission || updateMutation.isPending}
+        disabled={!hasPermission || updateMutation.isPending || row.original.deleting}
       />
       <ConfirmDialog
         open={open}

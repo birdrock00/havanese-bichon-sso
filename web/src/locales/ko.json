@@ -536,6 +536,8 @@
     "accountDeleteFailed": "계정 삭제 실패",
     "accountDeleted": "계정 삭제됨",
     "accountDeletedDesc": "계정이 성공적으로 삭제되었습니다.",
+    "accountDeletionStarted": "계정 삭제 시작됨",
+    "accountDeletionStartedDesc": "백그라운드에서 삭제 중이며, 정리가 끝나면 목록에서 사라집니다.",
     "allResourcesErased": "모든 관련 리소스가 영구적으로 지워집니다.",
     "cannotBeUndone": "이 작업은 되돌릴 수 없습니다!",
     "confirmDelete": "삭제 확인",

@@ -536,6 +536,8 @@
     "accountDeleteFailed": "Eliminazione account fallita",
     "accountDeleted": "Account Eliminato",
     "accountDeletedDesc": "Il tuo account è stato eliminato con successo.",
+    "accountDeletionStarted": "Eliminazione account avviata",
+    "accountDeletionStartedDesc": "L'account è in fase di eliminazione in background e scomparirà dopo la pulizia.",
     "allResourcesErased": "Tutte le risorse correlate verranno cancellate permanentemente.",
     "cannotBeUndone": "Questa azione non può essere annullata!",
     "confirmDelete": "Conferma Eliminazione",

@@ -536,6 +536,8 @@
     "accountDeleteFailed": "アカウントの削除に失敗しました",
     "accountDeleted": "アカウントが削除されました",
     "accountDeletedDesc": "アカウントが正常に削除されました。",
+    "accountDeletionStarted": "アカウントの削除を開始しました",
+    "accountDeletionStartedDesc": "バックグラウンドで削除中です。完了するとリストから消えます。",
     "allResourcesErased": "関連するすべてのリソースは完全に消去されます。",
     "cannotBeUndone": "この操作は元に戻せません！",
     "confirmDelete": "削除の確認",

@@ -536,6 +536,8 @@
     "accountDeleteFailed": "Falha ao Excluir Conta",
     "accountDeleted": "Conta Excluída",
     "accountDeletedDesc": "A conta foi excluída com sucesso.",
+    "accountDeletionStarted": "Exclusão da conta iniciada",
+    "accountDeletionStartedDesc": "A conta está sendo excluída em segundo plano e desaparecerá após a limpeza.",
     "allResourcesErased": "Todos os recursos relacionados serão permanentemente apagados.",
     "cannotBeUndone": "Esta ação não pode ser desfeita!",
     "confirmDelete": "Confirmar Exclusão",
