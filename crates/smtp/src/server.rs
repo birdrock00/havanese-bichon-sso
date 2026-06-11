@@ -628,26 +628,40 @@ async fn parse_email(data: &[u8], session: &Session) -> BichonResult<()> {
             return Ok(());
         }
     };
-    let mailbox = MailBox {
-        id: create_hash(rcpt.id, "INBOX"),
-        account_id: rcpt.id,
-        name: "INBOX".into(),
-        delimiter: Some("/".to_string()),
-        attributes: vec![Attribute {
-            attr: AttributeEnum::Extension,
-            extension: Some("CreatedByBichon".into()),
-        }],
-        exists: 0,
-        unseen: None,
-        uid_next: None,
-        uid_validity: None,
-        highest_uid: None,
-    };
-    let mailbox_id = mailbox.id;
+    let mailbox_id = create_hash(rcpt.id, "INBOX");
 
-    if let Err(e) = MailBox::batch_upsert(&[mailbox]) {
-        tracing::error!("SMTP: Failed to upsert mailbox for {}: {:?}", rcpt.email, e);
-        return Err(e.into());
+    // The INBOX row is owned by the IMAP sync, which maintains `uid_validity`,
+    // `highest_uid` and `uid_next` on it. `batch_upsert` replaces the *whole*
+    // row, so blindly upserting here (with those fields = None) clobbers the
+    // IMAP-maintained state back to None. The next reconcile then sees
+    // `uid_validity` change from Some -> None, treats the mailbox as invalid,
+    // and wipes + rebuilds it — silently losing the local copy of a large
+    // mailbox when that rebuild is interrupted (see #297).
+    //
+    // We only need the row to *exist* so the journaled envelope can attach to
+    // it, so create it only when it is missing and otherwise leave the
+    // IMAP-owned row untouched.
+    if MailBox::find_mailbox(rcpt.id, mailbox_id)?.is_none() {
+        let mailbox = MailBox {
+            id: mailbox_id,
+            account_id: rcpt.id,
+            name: "INBOX".into(),
+            delimiter: Some("/".to_string()),
+            attributes: vec![Attribute {
+                attr: AttributeEnum::Extension,
+                extension: Some("CreatedByBichon".into()),
+            }],
+            exists: 0,
+            unseen: None,
+            uid_next: None,
+            uid_validity: None,
+            highest_uid: None,
+        };
+
+        if let Err(e) = MailBox::batch_upsert(&[mailbox]) {
+            tracing::error!("SMTP: Failed to upsert mailbox for {}: {:?}", rcpt.email, e);
+            return Err(e.into());
+        }
     }
 
     extract_envelope_from_smtp(data, rcpt.id, mailbox_id)
