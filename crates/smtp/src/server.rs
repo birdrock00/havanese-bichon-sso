@@ -21,6 +21,7 @@ use std::net::SocketAddr;
 use std::time::Duration;
 
 use base64::{prelude::BASE64_STANDARD, Engine as _};
+use bichon_core::account::migration::AccountType;
 use bichon_core::cache::imap::mailbox::{Attribute, AttributeEnum};
 use bichon_core::common::signal::SIGNAL_MANAGER;
 use bichon_core::envelope::extractor::extract_envelope_from_smtp;
@@ -429,8 +430,20 @@ where
                     }
 
                     if is_allowed {
-                        session.rcpt_to.push(account);
-                        stream.write_all(b"250 OK\r\n").await?;
+                        if !matches!(account.account_type, AccountType::NoSync) {
+                            tracing::warn!(
+                                "SMTP: Rejected journaling attempt to IMAP account <{}>",
+                                addr
+                            );
+                            let err = format!(
+                                "550 5.7.1 <{}>: Not a Bichon local account, journaling is not supported\r\n",
+                                account.email
+                            );
+                            stream.write_all(err.as_bytes()).await?;
+                        } else {
+                            session.rcpt_to.push(account);
+                            stream.write_all(b"250 OK\r\n").await?;
+                        }
                     }
                 }
                 Ok(None) => {
