@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -64,7 +64,19 @@ export function AccountTable({ columns, data }: DataTableProps) {
   const [rowSelection, setRowSelection] = useState({})
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
-  const [sorting, setSorting] = useState<SortingState>([])
+  const [sorting, setSorting] = useState<SortingState>(() => {
+    const saved = localStorage.getItem('bichon_accounts_sorting');
+    return saved ? JSON.parse(saved) : [];
+  })
+
+  // Persist sorting state to localStorage
+  const prevSortingRef = useRef(sorting);
+  useEffect(() => {
+    if (prevSortingRef.current !== sorting) {
+      localStorage.setItem('bichon_accounts_sorting', JSON.stringify(sorting));
+      prevSortingRef.current = sorting;
+    }
+  }, [sorting]);
 
   const table = useReactTable({
     data,
