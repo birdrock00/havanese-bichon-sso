@@ -172,6 +172,52 @@ impl DedupCache {
             POPULATE_WINDOW_MS / (24 * 60 * 60 * 1000),
         );
     }
+
+    /// Remove all entries for a specific account.
+    pub fn remove_by_account(&self, account_id: u64) {
+        let mut entries = self.entries.lock().unwrap();
+        let before = entries.len();
+        entries.retain(|(aid, _, _), _| *aid != account_id);
+        let removed = before - entries.len();
+        if removed > 0 {
+            tracing::info!(
+                "DedupCache: removed {} entries for account {}",
+                removed,
+                account_id
+            );
+        }
+    }
+
+    /// Remove all entries for a specific mailbox (across all accounts).
+    pub fn remove_by_mailbox(&self, mailbox_id: u64) {
+        let mut entries = self.entries.lock().unwrap();
+        let before = entries.len();
+        entries.retain(|(_, mid, _), _| *mid != mailbox_id);
+        let removed = before - entries.len();
+        if removed > 0 {
+            tracing::info!(
+                "DedupCache: removed {} entries for mailbox {}",
+                removed,
+                mailbox_id
+            );
+        }
+    }
+
+    /// Remove a specific triple (most precise removal).
+    pub fn remove(&self, account_id: u64, mailbox_id: u64, hash: &str) {
+        let mut entries = self.entries.lock().unwrap();
+        if entries
+            .remove(&(account_id, mailbox_id, hash.to_string()))
+            .is_some()
+        {
+            tracing::debug!(
+                "DedupCache: removed specific entry ({}, {}, {})",
+                account_id,
+                mailbox_id,
+                hash
+            );
+        }
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -366,7 +412,11 @@ mod tests {
             for segment_reader in searcher.segment_readers() {
                 let account_col = segment_reader.fast_fields().u64(F_ACCOUNT_ID).unwrap();
                 let mailbox_col = segment_reader.fast_fields().u64(F_MAILBOX_ID).unwrap();
-                let hash_col = segment_reader.fast_fields().str(F_CONTENT_HASH).unwrap().unwrap();
+                let hash_col = segment_reader
+                    .fast_fields()
+                    .str(F_CONTENT_HASH)
+                    .unwrap()
+                    .unwrap();
                 let ingest_col = segment_reader.fast_fields().i64(F_INGEST_AT).unwrap();
 
                 let max_doc = segment_reader.max_doc();
@@ -381,7 +431,11 @@ mod tests {
                     let account_id = account_col.values.get_val(doc_id);
                     let mailbox_id = mailbox_col.values.get_val(doc_id);
 
-                    let hash_ord = hash_col.ords().values_for_doc(doc_id as u32).next().unwrap_or(0);
+                    let hash_ord = hash_col
+                        .ords()
+                        .values_for_doc(doc_id as u32)
+                        .next()
+                        .unwrap_or(0);
                     let mut hash_buf = String::new();
                     hash_col.ord_to_str(hash_ord, &mut hash_buf).unwrap();
 
@@ -419,7 +473,11 @@ mod tests {
             for segment_reader in searcher.segment_readers() {
                 let account_col = segment_reader.fast_fields().u64(F_ACCOUNT_ID).unwrap();
                 let mailbox_col = segment_reader.fast_fields().u64(F_MAILBOX_ID).unwrap();
-                let hash_col = segment_reader.fast_fields().str(F_CONTENT_HASH).unwrap().unwrap();
+                let hash_col = segment_reader
+                    .fast_fields()
+                    .str(F_CONTENT_HASH)
+                    .unwrap()
+                    .unwrap();
                 let ingest_col = segment_reader.fast_fields().i64(F_INGEST_AT).unwrap();
 
                 let max_doc = segment_reader.max_doc();
@@ -434,7 +492,11 @@ mod tests {
                     let account_id = account_col.values.get_val(doc_id);
                     let mailbox_id = mailbox_col.values.get_val(doc_id);
 
-                    let hash_ord = hash_col.ords().values_for_doc(doc_id as u32).next().unwrap_or(0);
+                    let hash_ord = hash_col
+                        .ords()
+                        .values_for_doc(doc_id as u32)
+                        .next()
+                        .unwrap_or(0);
                     let mut hash_buf = String::new();
                     hash_col.ord_to_str(hash_ord, &mut hash_buf).unwrap();
 
@@ -474,7 +536,11 @@ mod tests {
             for segment_reader in searcher.segment_readers() {
                 let account_col = segment_reader.fast_fields().u64(F_ACCOUNT_ID).unwrap();
                 let mailbox_col = segment_reader.fast_fields().u64(F_MAILBOX_ID).unwrap();
-                let hash_col = segment_reader.fast_fields().str(F_CONTENT_HASH).unwrap().unwrap();
+                let hash_col = segment_reader
+                    .fast_fields()
+                    .str(F_CONTENT_HASH)
+                    .unwrap()
+                    .unwrap();
                 let ingest_col = segment_reader.fast_fields().i64(F_INGEST_AT).unwrap();
 
                 let max_doc = segment_reader.max_doc();
@@ -489,7 +555,11 @@ mod tests {
                     let account_id = account_col.values.get_val(doc_id);
                     let mailbox_id = mailbox_col.values.get_val(doc_id);
 
-                    let hash_ord = hash_col.ords().values_for_doc(doc_id as u32).next().unwrap_or(0);
+                    let hash_ord = hash_col
+                        .ords()
+                        .values_for_doc(doc_id as u32)
+                        .next()
+                        .unwrap_or(0);
                     let mut hash_buf = String::new();
                     hash_col.ord_to_str(hash_ord, &mut hash_buf).unwrap();
 
@@ -500,5 +570,72 @@ mod tests {
 
         assert!(cache.contains(1, 10, "hash-keep"));
         assert!(!cache.contains(1, 10, "hash-delete"));
+    }
+
+    // ── removal methods ─────────────────────────────────────────────────────
+
+    #[test]
+    fn remove_by_account_works() {
+        let cache = DedupCache::new_for_test();
+
+        cache.insert(1, 10, "hash-a1");
+        cache.insert(1, 20, "hash-a2");
+        cache.insert(2, 10, "hash-b1");
+        cache.insert(2, 30, "hash-b2");
+        cache.insert(1, 10, "hash-a3");
+
+        assert_eq!(cache.entries.lock().unwrap().len(), 5);
+
+        cache.remove_by_account(1);
+
+        let entries = cache.entries.lock().unwrap();
+        assert_eq!(entries.len(), 2);
+        assert!(!entries.contains_key(&(1, 10, "hash-a1".to_string())));
+        assert!(!entries.contains_key(&(1, 20, "hash-a2".to_string())));
+        assert!(!entries.contains_key(&(1, 10, "hash-a3".to_string())));
+
+        assert!(entries.contains_key(&(2, 10, "hash-b1".to_string())));
+        assert!(entries.contains_key(&(2, 30, "hash-b2".to_string())));
+    }
+
+    #[test]
+    fn remove_by_mailbox_works() {
+        let cache = DedupCache::new_for_test();
+
+        cache.insert(1, 10, "hash-1");
+        cache.insert(1, 20, "hash-2");
+        cache.insert(2, 10, "hash-3");
+        cache.insert(3, 20, "hash-4");
+        cache.insert(1, 10, "hash-5");
+
+        cache.remove_by_mailbox(10);
+
+        let entries = cache.entries.lock().unwrap();
+        assert_eq!(entries.len(), 2);
+
+        assert!(entries.contains_key(&(1, 20, "hash-2".to_string())));
+        assert!(entries.contains_key(&(3, 20, "hash-4".to_string())));
+
+        assert!(!entries.contains_key(&(1, 10, "hash-1".to_string())));
+        assert!(!entries.contains_key(&(2, 10, "hash-3".to_string())));
+    }
+
+    #[test]
+    fn remove_specific_triple_works() {
+        let cache = DedupCache::new_for_test();
+
+        cache.insert(1, 10, "hash-aaa");
+        cache.insert(1, 10, "hash-bbb");
+        cache.insert(2, 20, "hash-aaa");
+
+        assert!(cache.contains(1, 10, "hash-aaa"));
+        assert!(cache.contains(1, 10, "hash-bbb"));
+        assert!(cache.contains(2, 20, "hash-aaa"));
+
+        cache.remove(1, 10, "hash-aaa");
+
+        assert!(!cache.contains(1, 10, "hash-aaa"));
+        assert!(cache.contains(1, 10, "hash-bbb"));
+        assert!(cache.contains(2, 20, "hash-aaa"));
     }
 }

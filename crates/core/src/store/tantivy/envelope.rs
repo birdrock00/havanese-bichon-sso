@@ -40,6 +40,7 @@ use crate::{
         envelope::Envelope,
         tantivy::{
             attachment::ATTACHMENT_MANAGER,
+            dedup_cache::DEDUP_CACHE,
             fatal_commit,
             fields::{
                 F_ACCOUNT_ID, F_DATE, F_FROM, F_ID, F_INGEST_AT, F_INTERNAL_DATE,
@@ -50,8 +51,8 @@ use crate::{
             tokenizers::EuroTokenizer,
         },
     },
-    utils::html::extract_text,
     utc_now,
+    utils::html::extract_text,
 };
 
 use chrono::Utc;
@@ -792,6 +793,8 @@ impl IndexManager {
                 attachments_content_hashes,
             )?;
         }
+
+        DEDUP_CACHE.remove_by_account(account_id);
         Ok(())
     }
 
@@ -815,8 +818,8 @@ impl IndexManager {
         }
 
         let mut queries: Vec<Box<dyn Query>> = Vec::with_capacity(mailbox_ids.len());
-        for mailbox_id in mailbox_ids {
-            queries.push(self.mailbox_query(account_id, mailbox_id));
+        for mailbox_id in &mailbox_ids {
+            queries.push(self.mailbox_query(account_id, *mailbox_id));
         }
         let mut writer = self.index_writer.lock().await;
         for query in queries {
@@ -835,6 +838,11 @@ impl IndexManager {
                 attachments_content_hashes,
             )?;
         }
+
+        for mailbox_id in mailbox_ids {
+            DEDUP_CACHE.remove_by_mailbox(mailbox_id);
+        }
+
         Ok(())
     }
 
@@ -842,6 +850,21 @@ impl IndexManager {
         &self,
         query: Box<dyn Query>,
     ) -> BichonResult<(HashSet<String>, HashSet<String>)> {
+        let (eml_with_mailbox, attachments_content_hashes) =
+            self.collect_content_hashes_with_mailbox(query)?;
+
+        let eml_content_hashes = eml_with_mailbox
+            .into_iter()
+            .map(|(hash, _mailbox_id)| hash)
+            .collect();
+
+        Ok((eml_content_hashes, attachments_content_hashes))
+    }
+
+    fn collect_content_hashes_with_mailbox(
+        &self,
+        query: Box<dyn Query>,
+    ) -> BichonResult<(HashSet<(String, u64)>, HashSet<String>)> {
         let mut eml_content_hashes = HashSet::new();
         let mut attachments_content_hashes = HashSet::new();
 
@@ -857,10 +880,14 @@ impl IndexManager {
                 .doc::<TantivyDocument>(doc_address)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
+            let mailbox_id = doc.get_first(fields.f_mailbox_id).and_then(|v| v.as_u64());
+
             // Extract content_hash
             if let Some(content_hash_value) = doc.get_first(fields.f_content_hash) {
-                if let Some(str) = content_hash_value.as_str() {
-                    eml_content_hashes.insert(str.to_string());
+                if let (Some(hash_str), Some(mailbox_id)) =
+                    (content_hash_value.as_str(), mailbox_id)
+                {
+                    eml_content_hashes.insert((hash_str.to_string(), mailbox_id));
                 }
             }
 
@@ -933,7 +960,7 @@ impl IndexManager {
             return Ok(());
         }
 
-        let mut eml_content_hashes: HashSet<String> = HashSet::new();
+        let mut eml_content_hash_triples: HashSet<(u64, u64, String)> = HashSet::new();
         let mut attachments_content_hashes: HashSet<String> = HashSet::new();
 
         for (account_id, envelope_ids) in &deletes {
@@ -944,8 +971,14 @@ impl IndexManager {
 
             for eid in unique_ids {
                 let query = self.envelope_query(*account_id, eid);
-                let (eml_hashes, attachment_hashes) = self.collect_content_hashes(query)?;
-                eml_content_hashes.extend(eml_hashes);
+                let (eml_hashes_with_mailbox, attachment_hashes) =
+                    self.collect_content_hashes_with_mailbox(query)?;
+
+                eml_content_hash_triples.extend(
+                    eml_hashes_with_mailbox
+                        .into_iter()
+                        .map(|(hash, mailbox_id)| (*account_id, mailbox_id, hash)),
+                );
                 attachments_content_hashes.extend(attachment_hashes);
             }
         }
@@ -968,12 +1001,21 @@ impl IndexManager {
             .commit()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
-        if !eml_content_hashes.is_empty() || !attachments_content_hashes.is_empty() {
+        if !eml_content_hash_triples.is_empty() || !attachments_content_hashes.is_empty() {
+            let eml_content_hashes: HashSet<String> = eml_content_hash_triples
+                .iter()
+                .map(|(_, _, hash)| hash.clone())
+                .collect();
+
             self.cleanup_unused_content(
                 &mut writer,
                 eml_content_hashes,
                 attachments_content_hashes,
             )?;
+        }
+
+        for (aid, mid, hash) in eml_content_hash_triples {
+            DEDUP_CACHE.remove(aid, mid, &hash);
         }
 
         Ok(())
@@ -1157,8 +1199,7 @@ impl IndexManager {
                     // f_attachments JSON blob.
                     if let Some(attrs_val) = old_doc.get_first(f.f_attachments) {
                         if let Some(json_str) = attrs_val.as_str() {
-                            if let Ok(parsed) =
-                                serde_json::from_str::<serde_json::Value>(json_str)
+                            if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(json_str)
                             {
                                 if let Some(arr) = parsed.as_array() {
                                     for att in arr {
@@ -1179,14 +1220,8 @@ impl IndexManager {
                                             .and_then(|v| v.as_str())
                                             .filter(|s| !s.is_empty())
                                         {
-                                            new_doc.add_text(
-                                                f.f_attachment_name_text,
-                                                filename,
-                                            );
-                                            new_doc.add_text(
-                                                f.f_attachment_name_exact,
-                                                filename,
-                                            );
+                                            new_doc.add_text(f.f_attachment_name_text, filename);
+                                            new_doc.add_text(f.f_attachment_name_exact, filename);
                                         }
                                     }
                                 }
@@ -1200,22 +1235,18 @@ impl IndexManager {
                         if let Some(content_hash) = hash_val.as_str() {
                             match BLOB_MANAGER.get_email(content_hash) {
                                 Ok(Some(eml_bytes)) => {
-                                    if let Some(message) =
-                                        MessageParser::new().parse(&eml_bytes)
-                                    {
+                                    if let Some(message) = MessageParser::new().parse(&eml_bytes) {
                                         let text = message
                                             .body_text(0)
                                             .map(|cow| cow.into_owned())
                                             .or_else(|| {
-                                                message.body_html(0).map(|cow| {
-                                                    extract_text(cow.into_owned())
-                                                })
+                                                message
+                                                    .body_html(0)
+                                                    .map(|cow| extract_text(cow.into_owned()))
                                             })
                                             .unwrap_or_default();
-                                        let body_text = text
-                                            .split_whitespace()
-                                            .collect::<Vec<_>>()
-                                            .join(" ");
+                                        let body_text =
+                                            text.split_whitespace().collect::<Vec<_>>().join(" ");
                                         if !body_text.is_empty() {
                                             new_doc.add_text(f.f_body, &body_text);
                                         }
@@ -1304,7 +1335,7 @@ impl IndexManager {
         let mailbox_docs: Vec<DocAddress>;
 
         match sort_by {
-            SortBy::DATE => { 
+            SortBy::DATE => {
                 let date_docs: Vec<(Option<i64>, DocAddress)> = searcher
                     .search(
                         &query,
@@ -1801,10 +1832,8 @@ mod tests {
                 if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(json_str) {
                     if let Some(arr) = parsed.as_array() {
                         for att in arr {
-                            let is_inline = att
-                                .get("inline")
-                                .and_then(|v| v.as_bool())
-                                .unwrap_or(false);
+                            let is_inline =
+                                att.get("inline").and_then(|v| v.as_bool()).unwrap_or(false);
                             let has_cid = att
                                 .get("content_id")
                                 .and_then(|v| v.as_str())
@@ -1841,8 +1870,7 @@ mod tests {
                                     .map(|cow| extract_text(cow.into_owned()))
                             })
                             .unwrap_or_default();
-                        let body_text =
-                            text.split_whitespace().collect::<Vec<_>>().join(" ");
+                        let body_text = text.split_whitespace().collect::<Vec<_>>().join(" ");
                         if !body_text.is_empty() {
                             new_doc.add_text(f.f_body, &body_text);
                         }
@@ -1911,8 +1939,7 @@ mod tests {
         let mut writer2 = index
             .writer_with_num_threads(1, 15_000_000)
             .expect("writer2");
-        writer2
-            .delete_term(Term::from_field_text(f.f_id, "test-eid-001"));
+        writer2.delete_term(Term::from_field_text(f.f_id, "test-eid-001"));
         writer2.add_document(new_doc).unwrap();
         writer2.commit().unwrap();
 
@@ -1922,16 +1949,14 @@ mod tests {
         let searcher = reader.searcher();
 
         // Body text (tokenized via "euro")
-        let body_parser =
-            QueryParser::for_index(&index, vec![f.f_body]);
+        let body_parser = QueryParser::for_index(&index, vec![f.f_body]);
         let body_hits = searcher
             .search(&body_parser.parse_query("quick brown fox").unwrap(), &Count)
             .unwrap();
         assert_eq!(body_hits, 1, "body text should survive tag update");
 
         // from_text (tokenized via "euro")
-        let from_parser =
-            QueryParser::for_index(&index, vec![f.f_from_text]);
+        let from_parser = QueryParser::for_index(&index, vec![f.f_from_text]);
         let from_hits = searcher
             .search(
                 &from_parser.parse_query("alice@example.com").unwrap(),
@@ -1943,10 +1968,7 @@ mod tests {
         // to_text
         let to_parser = QueryParser::for_index(&index, vec![f.f_to_text]);
         let to_hits = searcher
-            .search(
-                &to_parser.parse_query("bob@example.com").unwrap(),
-                &Count,
-            )
+            .search(&to_parser.parse_query("bob@example.com").unwrap(), &Count)
             .unwrap();
         assert_eq!(to_hits, 1, "to_text should survive tag update");
 
@@ -1969,10 +1991,7 @@ mod tests {
         let tags_hits = searcher
             .search(
                 &TermQuery::new(
-                    Term::from_facet(
-                        f.f_tags,
-                        &Facet::from_text("/important").unwrap(),
-                    ),
+                    Term::from_facet(f.f_tags, &Facet::from_text("/important").unwrap()),
                     IndexRecordOption::Basic,
                 ),
                 &Count,
@@ -1984,19 +2003,13 @@ mod tests {
         let old_tag_hits = searcher
             .search(
                 &TermQuery::new(
-                    Term::from_facet(
-                        f.f_tags,
-                        &Facet::from_text("/unread").unwrap(),
-                    ),
+                    Term::from_facet(f.f_tags, &Facet::from_text("/unread").unwrap()),
                     IndexRecordOption::Basic,
                 ),
                 &Count,
             )
             .unwrap();
-        assert_eq!(
-            old_tag_hits, 0,
-            "old tag /unread should have been removed"
-        );
+        assert_eq!(old_tag_hits, 0, "old tag /unread should have been removed");
     }
 
     #[test]
