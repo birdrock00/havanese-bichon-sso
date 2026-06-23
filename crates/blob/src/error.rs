@@ -50,4 +50,10 @@ pub enum Error {
         expected: u64,
         actual: u64,
     },
+
+    #[error("Corrupt metadata file: {0}")]
+    CorruptMeta(String),
+
+    #[error("Unsupported metadata version {version} in {path}")]
+    UnsupportedMetaVersion { path: PathBuf, version: u32 },
 }
