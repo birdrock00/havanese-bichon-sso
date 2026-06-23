@@ -3,6 +3,7 @@
 members = [
     "crates/memdb",
     "crates/core",
+    "crates/blob",
     "crates/server",
     "crates/cli",
     "crates/admin",
@@ -18,7 +19,8 @@ edition = "2021"
 [workspace.dependencies]
 chrono = "0.4.45"
 clap = { version = "4.6.1", features = ["derive", "env"] }
-memdb = { path = "crates/memdb" }
+bichon-memdb = { path = "crates/memdb" }
+bichon-blob = { path = "crates/blob" }
 itertools = "0.14.0"
 ring = { version = "0.17.14", features = ["std"] }
 serde = { version = "1.0.228", features = ["derive"] }

@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::settings::dir::DATA_DIR_MANAGER;
-use memdb::{Durability, MemDb};
+use bichon_memdb::{Durability, MemDb};
 use std::sync::LazyLock;
 use std::time::Duration;
 

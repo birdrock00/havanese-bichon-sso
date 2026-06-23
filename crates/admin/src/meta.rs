@@ -20,7 +20,7 @@ use bichon_core::{
 };
 use console::style;
 use itertools::Itertools;
-use memdb::{Durability, MemDb};
+use bichon_memdb::{Durability, MemDb};
 use native_db::*;
 use native_model::{native_model, Model};
 use serde::{Deserialize, Serialize};

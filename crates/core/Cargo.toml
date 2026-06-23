@@ -19,7 +19,7 @@ poem-openapi = { version = "5.1.16", features = [
 ], optional = true }
 chrono.workspace = true
 clap.workspace = true
-memdb.workspace = true
+bichon-memdb.workspace = true
 itertools.workspace = true
 ring.workspace = true
 serde.workspace = true

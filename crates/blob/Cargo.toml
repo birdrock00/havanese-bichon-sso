@@ -1,0 +1,23 @@
+[package]
+name = "bichon-blob"
+version = "0.1.0"
+edition = "2021"
+description = "Embedded KV storage engine for email"
+
+[dependencies]
+crc32fast = "1.4"
+zstd = "0.13"
+lz4_flex = "0.13.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"
+rand = "0.10.1"
+criterion = { version = "0.6", features = ["html_reports"] }
+
+[[bench]]
+name = "benchmark"
+harness = false

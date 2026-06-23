@@ -20,7 +20,7 @@ use crate::common::paginated::Paginated;
 use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
 use crate::raise_error;
-use memdb::{MemDb, Transaction};
+use bichon_memdb::{MemDb, Transaction};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 

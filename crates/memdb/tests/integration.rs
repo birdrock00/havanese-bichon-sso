@@ -1,4 +1,4 @@
-use memdb::{DbError, MemDb, Page};
+use bichon_memdb::{DbError, MemDb, Page};
 use serde::{Deserialize, Serialize};
 use tempfile::TempDir;
 
@@ -458,7 +458,7 @@ fn test_wal_seq_skips_already_snapshotted_entries() {
 
     // Verify WAL only contains seq=3.
     let wal_path = dir.path().join("wal.jsonl");
-    let entries = memdb::wal::read_after(&wal_path, 2).unwrap();
+    let entries = bichon_memdb::wal::read_after(&wal_path, 2).unwrap();
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].seq, 3);
 
@@ -696,7 +696,7 @@ async fn test_concurrent_writes_wal_seq_monotonic() {
 
     // Verify WAL seq is strictly monotonic.
     let wal_path = dir.path().join("wal.jsonl");
-    let entries = memdb::wal::read_after(&wal_path, 0).unwrap();
+    let entries = bichon_memdb::wal::read_after(&wal_path, 0).unwrap();
     assert_eq!(entries.len(), 50);
     let mut last = 0u64;
     for e in &entries {

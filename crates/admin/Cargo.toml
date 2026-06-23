@@ -17,4 +17,4 @@ serde_json.workspace = true
 
 itertools.workspace = true
 snafu.workspace = true
-memdb.workspace = true
+bichon-memdb.workspace = true

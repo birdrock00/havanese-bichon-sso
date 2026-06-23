@@ -18,7 +18,7 @@
 
 use std::path::Path;
 
-use memdb::{Durability, MemDb};
+use bichon_memdb::{Durability, MemDb};
 
 use crate::{
     database::MemDbModel,

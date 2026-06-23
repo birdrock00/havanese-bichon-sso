@@ -1,4 +1,4 @@
-use memdb::{Durability, MemDb, Page};
+use bichon_memdb::{Durability, MemDb, Page};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -548,7 +548,7 @@ fn stress_wal_seq_monotonic_under_load() {
     }
 
     let wal_path = dir.path().join("wal.jsonl");
-    let entries = memdb::wal::read_after(&wal_path, 0).unwrap();
+    let entries = bichon_memdb::wal::read_after(&wal_path, 0).unwrap();
     assert_eq!(entries.len(), n);
     let mut last = 0u64;
     for e in &entries {
@@ -842,7 +842,7 @@ async fn wal_concurrent_persistent_writes() {
 
     // Verify strict seq ordering in WAL under concurrent load.
     let wal_path = db_path.join("wal.jsonl");
-    let entries = memdb::wal::read_after(&wal_path, 0).unwrap();
+    let entries = bichon_memdb::wal::read_after(&wal_path, 0).unwrap();
     assert_eq!(entries.len(), total as usize);
     let mut last = 0u64;
     for e in &entries {
@@ -1153,7 +1153,7 @@ fn wal_large_transaction_batch() {
 
     // The entire transaction should be a single WAL entry.
     let wal_path = dir.path().join("wal.jsonl");
-    let entries = memdb::wal::read_after(&wal_path, 0).unwrap();
+    let entries = bichon_memdb::wal::read_after(&wal_path, 0).unwrap();
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].ops.len(), n as usize);
 
