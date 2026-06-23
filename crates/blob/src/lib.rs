@@ -6,6 +6,7 @@ pub mod compress;
 pub mod engine;
 pub mod error;
 pub mod file_pool;
+pub mod fs;
 pub mod gc;
 pub mod meta;
 pub mod recovery;

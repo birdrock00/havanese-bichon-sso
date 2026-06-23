@@ -1,4 +1,4 @@
-use std::fs::{File, OpenOptions};
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
@@ -218,17 +218,13 @@ impl BucketFile {
     }
 
     /// Rewrite the bucket file with a sorted, deduplicated set of records.
+    /// Uses atomic temp+rename to be safe on NFS.
     pub fn rewrite(&self, records: &[IndexRecord]) -> Result<()> {
-        let temp_path = self.path.with_extension("idx.tmp");
-        {
-            let mut file = File::create(&temp_path)?;
-            for r in records {
-                file.write_all(&r.encode())?;
-            }
-            file.sync_all()?;
+        let mut buf = Vec::with_capacity(records.len() * INDEX_RECORD_SIZE);
+        for r in records {
+            buf.extend_from_slice(&r.encode());
         }
-        std::fs::rename(&temp_path, &self.path)?;
-        Ok(())
+        crate::fs::create_atomic(&self.path, &buf)
     }
 
     /// Delete the bucket file.

@@ -1,10 +1,11 @@
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use crate::checksum;
 use crate::error::{Error, Result};
+use crate::fs as fs_util;
 use crate::types::{Codec, ENTRY_HEADER_SIZE, ENTRY_MAGIC, SEGMENT_MAX_SIZE};
 
 /// In-memory representation of a stored entry.
@@ -60,10 +61,8 @@ pub struct SegmentWriter {
 
 impl SegmentWriter {
     pub fn create(path: PathBuf, id: u32) -> Result<Self> {
-        let file = OpenOptions::new()
-            .create_new(true)
-            .write(true)
-            .open(&path)?;
+        // Use create+truncate instead of create_new to avoid NFS O_EXCL issues.
+        let file = File::create(&path)?;
         Ok(Self {
             file,
             path,
@@ -73,7 +72,7 @@ impl SegmentWriter {
     }
 
     pub fn open_append(path: PathBuf, id: u32) -> Result<Self> {
-        let mut file = OpenOptions::new().write(true).open(&path)?;
+        let mut file = fs_util::open_write(&path)?;
         file.seek(SeekFrom::End(0))?;
         let bytes_written = file.stream_position()?;
         Ok(Self {
@@ -188,7 +187,7 @@ impl SegmentReader {
 
     /// Read a single entry at the given offset. Returns the entry and the offset of the next entry.
     pub fn read_entry_at(&self, offset: u64) -> Result<(Entry, u64)> {
-        let mut file = File::open(&self.path)?;
+        let mut file = fs_util::open_read(&self.path)?;
         file.seek(SeekFrom::Start(offset))?;
 
         // Read magic
@@ -359,7 +358,7 @@ impl SegmentReader {
 
     /// Read data portion of an entry (for pread-style reads when you already know offset + data_size).
     pub fn read_data(&self, offset: u64, data_size: u32) -> Result<Vec<u8>> {
-        let mut file = File::open(&self.path)?;
+        let mut file = fs_util::open_read(&self.path)?;
         // Skip magic(4) + crc32(4) + flags(1) + codec(1) + key(32) + raw_size(4) + data_size(4) = 50 bytes
         let data_start = offset + ENTRY_HEADER_SIZE as u64;
         file.seek(SeekFrom::Start(data_start))?;
@@ -370,7 +369,7 @@ impl SegmentReader {
 
     /// Read the full entry header + data for verification (used by recovery and GC).
     pub fn read_full_entry(&self, offset: u64, data_size: u32) -> Result<Vec<u8>> {
-        let mut file = File::open(&self.path)?;
+        let mut file = fs_util::open_read(&self.path)?;
         file.seek(SeekFrom::Start(offset))?;
         let total = ENTRY_HEADER_SIZE + data_size as usize;
         let mut buf = vec![0u8; total];
@@ -416,9 +415,7 @@ impl SegmentReader {
 
 /// Truncate a segment file to the given size.
 pub fn truncate_segment(path: &Path, size: u64) -> Result<()> {
-    let file = OpenOptions::new().write(true).open(path)?;
-    file.set_len(size)?;
-    Ok(())
+    fs_util::truncate(path, size)
 }
 
 /// Map an Error, converting Io(StorageFull) to DiskFull with path context.

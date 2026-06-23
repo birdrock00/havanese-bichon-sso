@@ -19,14 +19,7 @@ fn write_bin<T: Serialize>(path: &Path, value: &T) -> Result<()> {
     buf.extend_from_slice(&META_VERSION.to_le_bytes());
     buf.extend_from_slice(&payload);
 
-    let tmp = path.with_extension("bin.tmp");
-    {
-        use std::io::Write;
-        let mut f = std::fs::File::create(&tmp)?;
-        f.write_all(&buf)?;
-        f.sync_all()?;
-    }
-    std::fs::rename(&tmp, path)?;
+    crate::fs::create_atomic(path, &buf)?;
     Ok(())
 }
 
