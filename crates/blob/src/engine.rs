@@ -299,6 +299,14 @@ impl Engine {
 
         let result = gc::gc_account(&account_dir, self.config.gc_deleted_ratio)?;
 
+        // Invalidate FilePool for GC'd segments (they were rewritten via rename)
+        if let Some(ref stats) = result {
+            let accounts = self.accounts.read().unwrap();
+            if let Some(handle) = accounts.get(account_id) {
+                handle.invalidate_file_cache(stats.segment_id);
+            }
+        }
+
         for bid in 0..crate::types::BUCKET_COUNT {
             self.cache.invalidate(account_id, bid);
         }

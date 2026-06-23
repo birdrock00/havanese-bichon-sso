@@ -273,7 +273,6 @@ impl SegmentReader {
     /// Read a single entry at the given offset using a pre-opened File (via Mutex).
     /// This avoids the per-read File::open cost for hot segments.
     pub fn read_entry_at_file(&self, offset: u64, file: &Mutex<File>) -> Result<(Entry, u64)> {
-        use std::io::{Read, Seek, SeekFrom};
 
         let mut file = file.lock().unwrap();
 
