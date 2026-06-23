@@ -9,8 +9,10 @@ use crate::segment::{self, SegmentReader};
 
 /// Recover an account after a crash: scan segments, repair indices, update stats.
 pub fn recover_account(account_dir: &Path) -> Result<AccountMeta> {
-    let meta_path = account_dir.join("meta.json");
-    let mut meta = if meta_path.exists() {
+    let meta_bin = account_dir.join("meta.bin");
+    let meta_json = account_dir.join("meta.json");
+    let meta_exists = meta_bin.exists() || meta_json.exists();
+    let mut meta = if meta_exists {
         AccountMeta::load(account_dir).unwrap_or_else(|_| {
             AccountMeta::new(
                 account_dir

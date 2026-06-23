@@ -319,6 +319,7 @@ dependencies = [
 name = "bichon-blob"
 version = "0.1.0"
 dependencies = [
+ "bincode",
  "crc32fast",
  "criterion",
  "lz4_flex",
