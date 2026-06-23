@@ -39,7 +39,7 @@ fn read_bin<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<T> {
         });
     }
     let computed = checksum::crc32(&data[8..]);
-    if stored_crc != 0 && stored_crc != computed {
+    if stored_crc != computed {
         return Err(crate::error::Error::CorruptMeta(path.display().to_string()));
     }
     bincode::deserialize(&data[8..]).map_err(|e| {
@@ -237,6 +237,37 @@ mod tests {
         std::fs::write(dir.path().join("meta.bin"), vec![0xFFu8; 100]).unwrap();
         let result = AccountMeta::load(dir.path());
         assert!(result.is_err());
+        // 0xFFFFFFFF version triggers UnsupportedMetaVersion
+        assert!(matches!(result.unwrap_err(), crate::error::Error::UnsupportedMetaVersion { .. }));
+    }
+
+    #[test]
+    fn test_crc_corruption_detected() {
+        let dir = TempDir::new().unwrap();
+        // Write a well-formed header (version=1) but with wrong CRC bytes
+        let mut buf = Vec::new();
+        buf.extend_from_slice(&0xDEADBEEFu32.to_le_bytes()); // wrong CRC
+        buf.extend_from_slice(&1u32.to_le_bytes());           // version = 1 (OK)
+        buf.extend_from_slice(b"some payload bytes");         // payload
+        std::fs::write(dir.path().join("meta.bin"), &buf).unwrap();
+        let result = AccountMeta::load(dir.path());
+        assert!(matches!(result.unwrap_err(), crate::error::Error::CorruptMeta(_)));
+    }
+
+    #[test]
+    fn test_account_json_migration() {
+        let dir = TempDir::new().unwrap();
+        // Write old JSON format for AccountMeta
+        let json = r#"{"account_id":"alice","active_segment_id":5,"segments":{}}"#;
+        std::fs::write(dir.path().join("meta.json"), json).unwrap();
+
+        let meta = AccountMeta::load(dir.path()).unwrap();
+        assert_eq!(meta.account_id, "alice");
+        assert_eq!(meta.active_segment_id, 5);
+        // JSON should be removed
+        assert!(!dir.path().join("meta.json").exists());
+        // BIN should exist
+        assert!(dir.path().join("meta.bin").exists());
     }
 
     #[test]
