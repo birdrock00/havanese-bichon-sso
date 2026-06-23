@@ -11,6 +11,7 @@ pub mod recovery;
 pub mod segment;
 pub mod types;
 
+pub use account::AccountHandle;
 pub use engine::{AccountStats, Engine};
 pub use error::{Error, Result};
 pub use types::{Codec, Config};

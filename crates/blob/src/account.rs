@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex, RwLock};
 
 use crate::bucket::{self, BucketFile, IndexRecord};
 use crate::error::{Error, Result};
@@ -9,26 +9,78 @@ use crate::meta::{AccountMeta, SegmentStats};
 use crate::segment::{self, SegmentReader, SegmentWriter};
 use crate::types::Codec;
 
-pub struct Account {
-    pub id: String,
+// ── AccountHandle ──────────────────────────────────────────────────────────
+
+pub struct AccountHandle {
+    id: String,
     dir: PathBuf,
-    meta: AccountMeta,
-    active_writer: SegmentWriter,
-    readers: HashMap<u32, SegmentReader>,
-    write_lock: Mutex<()>,
+    inner: RwLock<AccountInner>,
+    pub write_mutex: Mutex<()>,
 }
 
-impl Account {
+impl AccountHandle {
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn dir(&self) -> &Path {
+        &self.dir
+    }
+
     /// Open an existing account.
-    pub fn open(store_root: &Path, account_id: &str) -> Result<Self> {
+    pub fn open(store_root: &Path, account_id: &str) -> Result<Arc<Self>> {
         let dir = store_root.join("accounts").join(account_id);
         if !dir.exists() {
             return Err(Error::AccountNotFound(account_id.to_string()));
         }
+        let inner = AccountInner::open(&dir, account_id)?;
+        Ok(Arc::new(Self {
+            id: account_id.to_string(),
+            dir,
+            inner: RwLock::new(inner),
+            write_mutex: Mutex::new(()),
+        }))
+    }
 
-        let meta = AccountMeta::load(&dir)?;
+    /// Create a new account.
+    pub fn create(store_root: &Path, account_id: &str) -> Result<Arc<Self>> {
+        let dir = store_root.join("accounts").join(account_id);
+        if dir.exists() {
+            return Err(Error::AccountAlreadyExists(account_id.to_string()));
+        }
+        let inner = AccountInner::create(&dir, account_id)?;
+        Ok(Arc::new(Self {
+            id: account_id.to_string(),
+            dir,
+            inner: RwLock::new(inner),
+            write_mutex: Mutex::new(()),
+        }))
+    }
 
-        // Open active writer
+    /// Lock the inner state for reading.
+    pub fn read(&self) -> std::sync::RwLockReadGuard<'_, AccountInner> {
+        self.inner.read().unwrap()
+    }
+
+    /// Lock the inner state for writing.
+    pub fn write(&self) -> std::sync::RwLockWriteGuard<'_, AccountInner> {
+        self.inner.write().unwrap()
+    }
+}
+
+// ── AccountInner ───────────────────────────────────────────────────────────
+
+pub struct AccountInner {
+    dir: PathBuf,
+    pub meta: AccountMeta,
+    active_writer: SegmentWriter,
+    readers: HashMap<u32, SegmentReader>,
+}
+
+impl AccountInner {
+    fn open(dir: &Path, _account_id: &str) -> Result<Self> {
+        let meta = AccountMeta::load(dir)?;
+
         let seg_path = dir
             .join("segments")
             .join(segment::segment_filename(meta.active_segment_id));
@@ -39,7 +91,6 @@ impl Account {
             SegmentWriter::create(seg_path, meta.active_segment_id)?
         };
 
-        // Open readers for existing sealed segments
         let mut readers = HashMap::new();
         for (&seg_id, stats) in &meta.segments {
             if stats.sealed {
@@ -53,24 +104,16 @@ impl Account {
         }
 
         Ok(Self {
-            id: account_id.to_string(),
-            dir,
+            dir: dir.to_path_buf(),
             meta,
             active_writer,
             readers,
-            write_lock: Mutex::new(()),
         })
     }
 
-    /// Create a new account.
-    pub fn create(store_root: &Path, account_id: &str) -> Result<Self> {
-        let dir = store_root.join("accounts").join(account_id);
-        if dir.exists() {
-            return Err(Error::AccountAlreadyExists(account_id.to_string()));
-        }
-
+    fn create(dir: &Path, account_id: &str) -> Result<Self> {
         fs::create_dir_all(dir.join("segments"))?;
-        BucketFile::ensure_dir(&dir)?;
+        BucketFile::ensure_dir(dir)?;
 
         let meta = AccountMeta::new(account_id.to_string(), 1);
 
@@ -79,33 +122,21 @@ impl Account {
             .join(segment::segment_filename(1));
         let active_writer = SegmentWriter::create(seg_path, 1)?;
 
-        meta.save(&dir)?;
+        meta.save(dir)?;
 
         Ok(Self {
-            id: account_id.to_string(),
-            dir,
+            dir: dir.to_path_buf(),
             meta,
             active_writer,
             readers: HashMap::new(),
-            write_lock: Mutex::new(()),
         })
-    }
-
-    pub fn dir(&self) -> &Path {
-        &self.dir
     }
 
     pub fn meta(&self) -> &AccountMeta {
         &self.meta
     }
 
-    /// Lock for writing. Returns a guard.
-    pub fn lock_write(&self) -> std::sync::MutexGuard<'_, ()> {
-        self.write_lock.lock().unwrap()
-    }
-
     /// Mark the segment as indexed up to the given offset and persist meta.
-    /// Called after append_index to enable incremental recovery.
     pub fn mark_indexed(&mut self, segment_id: u32, indexed_up_to_offset: u64) -> Result<()> {
         if let Some(stats) = self.meta.segments.get_mut(&segment_id) {
             if indexed_up_to_offset > stats.indexed_up_to_offset {
@@ -115,8 +146,7 @@ impl Account {
         self.meta.save(&self.dir)
     }
 
-    /// Append an entry without fsync. Returns (segment_id, offset, data_size).
-    /// Caller must hold the write lock and should call `flush_active()` after.
+    /// Append an entry without fsync.
     pub fn append_entry(
         &mut self,
         key: [u8; 32],
@@ -159,7 +189,7 @@ impl Account {
         self.meta.save(&self.dir)
     }
 
-    /// Write an entry with fsync. Convenience wrapper for single writes.
+    /// Write an entry with fsync.
     pub fn write_entry(
         &mut self,
         key: [u8; 32],
@@ -181,7 +211,6 @@ impl Account {
             .or_insert_with(|| SegmentStats::new(old_id));
         old_stats.sealed = true;
 
-        // Open reader for the old segment
         let seg_path = self
             .dir
             .join("segments")
@@ -189,7 +218,6 @@ impl Account {
         self.readers
             .insert(old_id, SegmentReader::open(seg_path, old_id)?);
 
-        // Create new segment
         let new_id = old_id + 1;
         self.meta.active_segment_id = new_id;
         let new_path = self
@@ -213,14 +241,14 @@ impl Account {
         }
     }
 
-    /// Append index record to the appropriate bucket file. No fsync.
+    /// Append index record to the appropriate bucket file.
     pub fn append_index(&self, record: &IndexRecord) -> Result<()> {
         let bucket_id = bucket::bucket_id(&record.key);
         let bf = BucketFile::open(&self.dir, bucket_id);
         bf.append(record)
     }
 
-    /// Return list of sealed segment IDs for GC consideration.
+    /// Return list of sealed segment IDs.
     pub fn sealed_segments(&self) -> Vec<u32> {
         self.meta
             .segments
