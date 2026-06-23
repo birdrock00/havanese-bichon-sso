@@ -271,3 +271,109 @@ fn test_invalid_config_rejected() {
     config.gc_deleted_ratio = 1.5;
     assert!(Engine::open(dir.path(), config).is_err());
 }
+
+#[test]
+fn test_concurrent_reads() {
+    use std::sync::Arc;
+    use std::thread;
+
+    let dir = TempDir::new().unwrap();
+    let engine = Arc::new(Engine::open(dir.path(), Config::default()).unwrap());
+    engine.create_account("alice").unwrap();
+
+    // Write some data
+    for i in 0..50u32 {
+        let mut key = [0u8; 32];
+        key[0..4].copy_from_slice(&i.to_le_bytes());
+        engine.write("alice", key, &vec![i as u8; 1024], Codec::None).unwrap();
+    }
+
+    // Spawn 4 threads, each reading a different subset
+    let mut handles = vec![];
+    for t in 0..4 {
+        let engine = engine.clone();
+        handles.push(thread::spawn(move || {
+            for i in (t * 12)..((t + 1) * 12) {
+                let mut key = [0u8; 32];
+                key[0..4].copy_from_slice(&(i as u32).to_le_bytes());
+                let read = engine.read("alice", &key).unwrap();
+                assert!(read.is_some(), "key {} should exist", i);
+            }
+        }));
+    }
+    for h in handles {
+        h.join().unwrap();
+    }
+}
+
+#[test]
+fn test_concurrent_writes_different_accounts() {
+    use std::sync::Arc;
+    use std::thread;
+
+    let dir = TempDir::new().unwrap();
+    let engine = Arc::new(Engine::open(dir.path(), Config::default()).unwrap());
+
+    for name in &["alice", "bob", "carol"] {
+        engine.create_account(name).unwrap();
+    }
+
+    let mut handles = vec![];
+    for (t, name) in ["alice", "bob", "carol"].iter().enumerate() {
+        let engine = engine.clone();
+        let account_name = name.to_string();
+        handles.push(thread::spawn(move || {
+            for i in 0..20 {
+                let mut key = [0u8; 32];
+                key[0..4].copy_from_slice(&((t * 100 + i) as u32).to_le_bytes());
+                let value = vec![(t * 100 + i) as u8; 512];
+                engine.write(&account_name, key, &value, Codec::None).unwrap();
+            }
+        }));
+    }
+    for h in handles {
+        h.join().unwrap();
+    }
+
+    // Verify all writes persisted
+    for (t, name) in ["alice", "bob", "carol"].iter().enumerate() {
+        for i in 0..20 {
+            let mut key = [0u8; 32];
+            key[0..4].copy_from_slice(&((t * 100 + i) as u32).to_le_bytes());
+            let read = engine.read(name, &key).unwrap();
+            assert!(read.is_some(), "account {} key {} should exist", name, i);
+        }
+    }
+}
+
+#[test]
+fn test_crash_recovery() {
+    let dir = TempDir::new().unwrap();
+    let dir_path = dir.path().to_path_buf();
+
+    // Phase 1: write data, then drop without shutdown (simulates crash)
+    {
+        let engine = Engine::open(&dir_path, Config::default()).unwrap();
+        engine.create_account("alice").unwrap();
+
+        for i in 0..50u32 {
+            let mut key = [0u8; 32];
+            key[0..4].copy_from_slice(&i.to_le_bytes());
+            engine.write("alice", key, &vec![i as u8; 512], Codec::None).unwrap();
+        }
+        // Engine dropped here without calling shutdown()
+    }
+
+    // Phase 2: reopen — recovery should run, data should be intact
+    let engine = Engine::open(&dir_path, Config::default()).unwrap();
+    let stats = engine.stats("alice").unwrap();
+    assert!(stats.total_keys > 0, "recovery should preserve data");
+
+    // Verify reads work
+    for i in 0..50u32 {
+        let mut key = [0u8; 32];
+        key[0..4].copy_from_slice(&i.to_le_bytes());
+        let read = engine.read("alice", &key).unwrap();
+        assert!(read.is_some(), "key {} should survive crash recovery", i);
+    }
+}
