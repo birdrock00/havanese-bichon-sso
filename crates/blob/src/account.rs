@@ -15,7 +15,7 @@ pub struct AccountHandle {
     id: String,
     dir: PathBuf,
     inner: RwLock<AccountInner>,
-    pub write_mutex: Mutex<()>,
+    pub(crate) write_mutex: Mutex<()>,
 }
 
 impl AccountHandle {
@@ -33,7 +33,7 @@ impl AccountHandle {
         if !dir.exists() {
             return Err(Error::AccountNotFound(account_id.to_string()));
         }
-        let inner = AccountInner::open(&dir, account_id)?;
+        let inner = AccountInner::open(&dir)?;
         Ok(Arc::new(Self {
             id: account_id.to_string(),
             dir,
@@ -72,13 +72,13 @@ impl AccountHandle {
 
 pub struct AccountInner {
     dir: PathBuf,
-    pub meta: AccountMeta,
+    meta: AccountMeta,
     active_writer: SegmentWriter,
     readers: HashMap<u32, SegmentReader>,
 }
 
 impl AccountInner {
-    fn open(dir: &Path, _account_id: &str) -> Result<Self> {
+    fn open(dir: &Path) -> Result<Self> {
         let meta = AccountMeta::load(dir)?;
 
         let seg_path = dir
