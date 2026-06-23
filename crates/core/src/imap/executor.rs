@@ -27,7 +27,7 @@ use crate::{error::BichonResult, imap::manager::ImapConnectionManager};
 use async_imap::types::Name;
 use async_imap::Session;
 use futures::TryStreamExt;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use tokio_util::sync::CancellationToken;
 use tracing::info;
 
@@ -260,7 +260,9 @@ impl ImapExecutor {
         let mut count = 0u64;
         let mut skipped = 0u64;
         let mut max_uid: Option<u32> = None;
-        let size_limit = account.max_email_size_bytes.unwrap_or(DEFAULT_MAX_EMAIL_SIZE);
+        let size_limit = account
+            .max_email_size_bytes
+            .unwrap_or(DEFAULT_MAX_EMAIL_SIZE);
         while let Some(fetch) = stream
             .try_next()
             .await
@@ -363,14 +365,14 @@ impl ImapExecutor {
             let mut size_stream = session
                 .fetch(sequence_set.as_str(), SIZE_ONLY_FETCH)
                 .await
-                .map_err(|e| {
-                    raise_error!(format!("{:#?}", e), classify_imap_error(&e))
-                })?;
+                .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
 
             let mut uids: Vec<u32> = Vec::new();
-            while let Some(fetch) = size_stream.try_next().await.map_err(|e| {
-                raise_error!(format!("{:#?}", e), classify_imap_error(&e))
-            })? {
+            while let Some(fetch) = size_stream
+                .try_next()
+                .await
+                .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?
+            {
                 let uid = fetch.uid.unwrap_or(0);
                 let msg_size = fetch.size.unwrap_or(0) as u64;
                 if msg_size == 0 || msg_size <= limit {
@@ -437,14 +439,14 @@ impl ImapExecutor {
             let mut size_stream = session
                 .uid_fetch(uid_set, SIZE_ONLY_FETCH)
                 .await
-                .map_err(|e| {
-                    raise_error!(format!("{:#?}", e), classify_imap_error(&e))
-                })?;
+                .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
 
             let mut uids: Vec<u32> = Vec::new();
-            while let Some(fetch) = size_stream.try_next().await.map_err(|e| {
-                raise_error!(format!("{:#?}", e), classify_imap_error(&e))
-            })? {
+            while let Some(fetch) = size_stream
+                .try_next()
+                .await
+                .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?
+            {
                 let uid = fetch.uid.unwrap_or(0);
                 let msg_size = fetch.size.unwrap_or(0) as u64;
                 if msg_size == 0 || msg_size <= limit {
@@ -550,6 +552,37 @@ impl ImapExecutor {
     ) -> BichonResult<Session<Box<dyn SessionStream>>> {
         ImapConnectionManager::build(account_id).await
     }
+
+    /// Fetch UID → Message-ID mapping without downloading bodies.
+    /// `uid_set` is an IMAP sequence-set string (e.g. "1:100" or "1,3,5").
+    pub async fn fetch_uid_metadata(
+        session: &mut Session<Box<dyn SessionStream>>,
+        uid_set: &str,
+        token: CancellationToken,
+    ) -> BichonResult<HashMap<u32, Option<String>>> {
+        let mut stream = session
+            .uid_fetch(uid_set, "(UID BODY.PEEK[HEADER])")
+            .await
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
+
+        let mut result = HashMap::new();
+        while let Some(fetch) = stream
+            .try_next()
+            .await
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?
+        {
+            if token.is_cancelled() {
+                return Err(raise_error!(
+                    "Stream cancelled".into(),
+                    ErrorCode::InternalError
+                ));
+            }
+            let uid = fetch.uid.unwrap_or(0);
+            let msg_id = fetch.header().and_then(parse_message_id_header);
+            result.insert(uid, msg_id);
+        }
+        Ok(result)
+    }
 }
 
 pub const DEFAULT_BATCH_SIZE: u32 = 30;
@@ -613,6 +646,27 @@ pub fn generate_uid_sequence_hashset(
     result
 }
 
+fn parse_message_id_header(header_bytes: &[u8]) -> Option<String> {
+    let header = std::str::from_utf8(header_bytes).ok()?;
+    for line in header.lines() {
+        if let Some(value) = line
+            .strip_prefix("Message-ID:")
+            .or_else(|| line.strip_prefix("Message-Id:"))
+            .or_else(|| line.strip_prefix("Message-id:"))
+        {
+            // mail_parser strips angle brackets, so we must do the same
+            // to ensure comparisons against the Tantivy index match.
+            let trimmed = value.trim();
+            let stripped = trimmed.strip_prefix('<').unwrap_or(trimmed);
+            let stripped = stripped.strip_suffix('>').unwrap_or(stripped);
+            if !stripped.is_empty() {
+                return Some(stripped.to_string());
+            }
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -667,5 +721,81 @@ mod test {
         assert_eq!(batches[1].1, 2);
         assert_eq!(batches[2].0, "5");
         assert_eq!(batches[2].1, 1);
+    }
+
+    // ── parse_message_id_header ─────────────────────────────────────
+
+    #[test]
+    fn parse_standard_message_id() {
+        let header = b"Message-ID: <abc123@example.com>\r\n";
+        assert_eq!(
+            parse_message_id_header(header),
+            Some("abc123@example.com".into())
+        );
+    }
+
+    #[test]
+    fn parse_message_id_lowercase() {
+        let header = b"Message-Id: <foo@bar.com>\r\n";
+        assert_eq!(
+            parse_message_id_header(header),
+            Some("foo@bar.com".into())
+        );
+    }
+
+    #[test]
+    fn parse_message_id_extra_whitespace() {
+        let header = b"Message-ID:   <spaces@test.com>  \r\n";
+        assert_eq!(
+            parse_message_id_header(header),
+            Some("spaces@test.com".into())
+        );
+    }
+
+    #[test]
+    fn parse_empty_message_id_returns_none() {
+        let header = b"Message-ID: <>\r\n";
+        assert_eq!(parse_message_id_header(header), None);
+    }
+
+    #[test]
+    fn parse_missing_header_returns_none() {
+        let header = b"X-Custom: something\r\n";
+        assert_eq!(parse_message_id_header(header), None);
+    }
+
+    #[test]
+    fn parse_empty_body_returns_none() {
+        assert_eq!(parse_message_id_header(b""), None);
+    }
+
+    #[test]
+    fn parse_message_id_in_full_header() {
+        // The Message-ID line is in the middle, not at the start.
+        let header = b"From: sender@example.com\r\n\
+Date: Thu, 01 Jan 2025 00:00:00 +0000\r\n\
+Subject: test\r\n\
+Message-ID: <mid@example.com>\r\n\
+To: recipient@example.com\r\n\r\n";
+        assert_eq!(
+            parse_message_id_header(header),
+            Some("mid@example.com".into())
+        );
+    }
+
+    #[test]
+    fn parse_message_id_only_in_full_header() {
+        // Only a few headers, Message-ID is among them.
+        let header = b"From: a@b.com\r\nMessage-ID: <x@y.com>\r\n\r\n";
+        assert_eq!(parse_message_id_header(header), Some("x@y.com".into()));
+    }
+
+    #[test]
+    fn parse_message_id_no_brackets_still_works() {
+        let header = b"Message-ID: plain@example.com\r\n";
+        assert_eq!(
+            parse_message_id_header(header),
+            Some("plain@example.com".into())
+        );
     }
 }

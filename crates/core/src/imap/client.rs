@@ -34,6 +34,25 @@ use std::ops::DerefMut;
 use tokio::io::BufWriter;
 use tracing::debug;
 
+/// Classify an `io::Error` (from TLS stream I/O) for IMAP connection errors.
+/// `UnexpectedEof` is treated as a network error because many servers skip
+/// the TLS `close_notify` alert, causing rustls to emit this error when the
+/// TCP connection is dropped normally.
+fn classify_io_error(e: &std::io::Error) -> ErrorCode {
+    use std::io::ErrorKind;
+    matches!(
+        e.kind(),
+        ErrorKind::BrokenPipe
+            | ErrorKind::ConnectionReset
+            | ErrorKind::ConnectionAborted
+            | ErrorKind::TimedOut
+            | ErrorKind::UnexpectedEof
+            | ErrorKind::NotConnected
+    )
+    .then_some(ErrorCode::NetworkError)
+    .unwrap_or(ErrorCode::ImapCommandFailed)
+}
+
 #[derive(Debug)]
 pub(crate) struct Client {
     inner: ImapClient<Box<dyn SessionStream>>,
@@ -141,7 +160,7 @@ impl Client {
         let _greeting = client
             .read_response()
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_io_error(&e)))?
             .ok_or_else(|| {
                 raise_error!(
                     "Failed to read IMAP greeting — this usually indicates an incorrect encryption setting (SSL vs. STARTTLS). Your current setting is SSL.".into(),
@@ -171,7 +190,7 @@ impl Client {
         let _greeting = client
             .read_response()
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_io_error(&e)))?
             .ok_or_else(|| {
                 raise_error!(
                     "failed to read greeting".into(),
@@ -202,7 +221,7 @@ impl Client {
         let _greeting = client
             .read_response()
             .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapCommandFailed))?
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_io_error(&e)))?
             .ok_or_else(|| {
                 raise_error!(
                     "Failed to read IMAP greeting — this usually indicates an incorrect encryption setting (SSL vs. STARTTLS). Your current setting is STARTTLS.".into(),

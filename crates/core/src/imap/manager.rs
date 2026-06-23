@@ -95,16 +95,40 @@ impl ImapConnectionManager {
 
     pub async fn build(account_id: u64) -> BichonResult<Session<Box<dyn SessionStream>>> {
         let account = AccountModel::get(account_id)?;
-        let client = match Self::create_client(&account).await {
-            Ok(client) => client,
-            Err(error) => {
-                error!(
-                    "Failed to create IMAP {}'s client: {:#?}",
-                    &account.email, error
-                );
-                return Err(error);
+        let account_email = account.email.clone();
+
+        let mut client = None;
+        for attempt in 0..3u32 {
+            match Self::create_client(&account).await {
+                Ok(c) => {
+                    client = Some(c);
+                    break;
+                }
+                Err(error) if error.code() == ErrorCode::NetworkError && attempt < 2 => {
+                    warn!(
+                        "IMAP connection attempt {}/3 to {} failed (network error), retrying...",
+                        attempt + 1,
+                        account_email
+                    );
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    continue;
+                }
+                Err(error) => {
+                    error!(
+                        "Failed to create IMAP {}'s client: {:#?}",
+                        account_email, error
+                    );
+                    return Err(error);
+                }
             }
-        };
+        }
+
+        let client = client.ok_or_else(|| {
+            raise_error!(
+                format!("Failed to create IMAP {}'s client after 3 attempts", account_email),
+                ErrorCode::NetworkError
+            )
+        })?;
 
         let mut session = match Self::authenticate(client, &account).await {
             Ok(session) => session,

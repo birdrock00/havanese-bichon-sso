@@ -26,3 +26,5 @@ pub mod session;
 pub mod stats;
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+pub mod mock_server;
