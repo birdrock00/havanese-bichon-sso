@@ -5,6 +5,7 @@ pub mod checksum;
 pub mod compress;
 pub mod engine;
 pub mod error;
+pub mod file_pool;
 pub mod gc;
 pub mod meta;
 pub mod recovery;

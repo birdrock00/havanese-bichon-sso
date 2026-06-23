@@ -1,6 +1,7 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 use crate::checksum;
 use crate::error::{Error, Result};
@@ -239,6 +240,94 @@ impl SegmentReader {
         // Verify CRC32 (over everything after the crc32 field)
         let computed_crc = {
             let mut hasher = checksum::CrcWriter::new();
+            hasher.update(&[flags]);
+            hasher.update(&[codec as u8]);
+            hasher.update(&key);
+            hasher.update(&raw_size.to_le_bytes());
+            hasher.update(&data_size.to_le_bytes());
+            hasher.update(&data);
+            hasher.finalize()
+        };
+
+        if stored_crc != computed_crc {
+            return Err(Error::CrcMismatch {
+                path: self.path.clone(),
+                offset,
+            });
+        }
+
+        let next_offset = offset + ENTRY_HEADER_SIZE as u64 + data_size as u64;
+
+        Ok((
+            Entry {
+                flags,
+                codec,
+                key,
+                raw_size,
+                data,
+            },
+            next_offset,
+        ))
+    }
+
+    /// Read a single entry at the given offset using a pre-opened File (via Mutex).
+    /// This avoids the per-read File::open cost for hot segments.
+    pub fn read_entry_at_file(&self, offset: u64, file: &Mutex<File>) -> Result<(Entry, u64)> {
+        use std::io::{Read, Seek, SeekFrom};
+
+        let mut file = file.lock().unwrap();
+
+        file.seek(SeekFrom::Start(offset))?;
+
+        // Read magic
+        let mut magic_buf = [0u8; 4];
+        file.read_exact(&mut magic_buf)?;
+        let magic = u32::from_le_bytes(magic_buf);
+        if magic != ENTRY_MAGIC {
+            return Err(Error::CorruptEntry {
+                path: self.path.clone(),
+                offset,
+                reason: format!("bad magic: 0x{:08X}", magic),
+            });
+        }
+
+        // Read CRC32
+        let mut crc_buf = [0u8; 4];
+        file.read_exact(&mut crc_buf)?;
+        let stored_crc = u32::from_le_bytes(crc_buf);
+
+        // Read flags, codec
+        let mut flags_buf = [0u8; 1];
+        file.read_exact(&mut flags_buf)?;
+        let flags = flags_buf[0];
+
+        let mut codec_buf = [0u8; 1];
+        file.read_exact(&mut codec_buf)?;
+        let codec = Codec::from_u8(codec_buf[0]).ok_or_else(|| Error::CorruptEntry {
+            path: self.path.clone(),
+            offset,
+            reason: format!("unknown codec: {}", codec_buf[0]),
+        })?;
+
+        // Read key, raw_size, data_size
+        let mut key = [0u8; 32];
+        file.read_exact(&mut key)?;
+
+        let mut raw_size_buf = [0u8; 4];
+        file.read_exact(&mut raw_size_buf)?;
+        let raw_size = u32::from_le_bytes(raw_size_buf);
+
+        let mut data_size_buf = [0u8; 4];
+        file.read_exact(&mut data_size_buf)?;
+        let data_size = u32::from_le_bytes(data_size_buf);
+
+        // Read data
+        let mut data = vec![0u8; data_size as usize];
+        file.read_exact(&mut data)?;
+
+        // Verify CRC32
+        let computed_crc = {
+            let mut hasher = crate::checksum::CrcWriter::new();
             hasher.update(&[flags]);
             hasher.update(&[codec as u8]);
             hasher.update(&key);

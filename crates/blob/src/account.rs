@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use crate::bucket::{self, BucketFile, IndexRecord};
 use crate::error::{Error, Result};
+use crate::file_pool::FilePool;
 use crate::meta::{AccountMeta, SegmentStats};
 use crate::segment::{self, SegmentReader, SegmentWriter};
 use crate::types::Codec;
@@ -16,6 +17,7 @@ pub struct AccountHandle {
     dir: PathBuf,
     inner: RwLock<AccountInner>,
     pub(crate) write_mutex: Mutex<()>,
+    file_pool: FilePool,
 }
 
 impl AccountHandle {
@@ -39,6 +41,7 @@ impl AccountHandle {
             dir,
             inner: RwLock::new(inner),
             write_mutex: Mutex::new(()),
+            file_pool: FilePool::new(8),
         }))
     }
 
@@ -54,6 +57,7 @@ impl AccountHandle {
             dir,
             inner: RwLock::new(inner),
             write_mutex: Mutex::new(()),
+            file_pool: FilePool::new(8),
         }))
     }
 
@@ -65,6 +69,16 @@ impl AccountHandle {
     /// Lock the inner state for writing.
     pub fn write(&self) -> std::sync::RwLockWriteGuard<'_, AccountInner> {
         self.inner.write().unwrap()
+    }
+
+    /// Get a cached file handle for a segment.
+    pub fn get_segment_file(&self, seg_id: u32, path: &Path) -> Result<Arc<Mutex<std::fs::File>>> {
+        self.file_pool.get(seg_id, path)
+    }
+
+    /// Invalidate cached file handles for a segment (after GC).
+    pub fn invalidate_file_cache(&self, seg_id: u32) {
+        self.file_pool.invalidate(seg_id);
     }
 }
 

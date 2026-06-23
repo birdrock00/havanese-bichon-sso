@@ -203,8 +203,9 @@ impl Engine {
             return Err(Error::SegmentNotFound(record.segment_id));
         }
 
-        let reader = SegmentReader::open(seg_path, record.segment_id)?;
-        let (entry, _) = reader.read_entry_at(record.offset)?;
+        let reader = SegmentReader::open(seg_path.clone(), record.segment_id)?;
+        let file = handle.get_segment_file(record.segment_id, &seg_path)?;
+        let (entry, _) = reader.read_entry_at_file(record.offset, &file)?;
 
         let value = compress::decompress(&entry.data, entry.codec, entry.raw_size as usize)?;
 
