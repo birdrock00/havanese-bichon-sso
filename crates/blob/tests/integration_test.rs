@@ -377,3 +377,121 @@ fn test_crash_recovery() {
         assert!(read.is_some(), "key {} should survive crash recovery", i);
     }
 }
+
+#[test]
+fn test_meta_bin_durability() {
+    // Verify meta.bin has valid CRC and can be read after a write cycle.
+    let dir = TempDir::new().unwrap();
+    let dir_path = dir.path().to_path_buf();
+
+    {
+        let engine = Engine::open(&dir_path, Config::default()).unwrap();
+        engine.create_account("alice").unwrap();
+
+        let key = [0x42u8; 32];
+        engine.write("alice", key, b"durable", Codec::None).unwrap();
+    }
+    // Engine dropped → shutdown() called → meta saved via write_bin (with fsync)
+
+    // Verify meta.bin exists and has valid CRC
+    let meta_path = dir_path
+        .join("accounts")
+        .join("alice")
+        .join("meta.bin");
+    assert!(meta_path.exists(), "meta.bin should exist after clean shutdown");
+
+    let data = std::fs::read(&meta_path).unwrap();
+    assert!(data.len() >= 8, "meta.bin should have at least 8 bytes (crc + version)");
+
+    let stored_crc = u32::from_le_bytes(data[0..4].try_into().unwrap());
+    assert_ne!(stored_crc, 0, "stored CRC should be non-zero");
+
+    // Reopen and verify data is intact
+    let engine = Engine::open(&dir_path, Config::default()).unwrap();
+    let read = engine.read("alice", &[0x42u8; 32]).unwrap();
+    assert_eq!(read, Some(b"durable".to_vec()));
+}
+
+#[test]
+fn test_gc_concurrent_with_writes() {
+    // GC should not lose entries that are written concurrently.
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::thread;
+
+    let dir = TempDir::new().unwrap();
+    let engine = Arc::new(Engine::open(dir.path(), Config::default()).unwrap());
+    engine.create_account("alice").unwrap();
+
+    // Pre-fill: write enough to trigger eventual GC
+    let big_value = vec![b'X'; 8192];
+    for i in 0..500u32 {
+        let mut key = [0u8; 32];
+        key[0..4].copy_from_slice(&i.to_le_bytes());
+        engine.write("alice", key, &big_value, Codec::None).unwrap();
+    }
+
+    // Delete some to create GC candidates
+    for i in 0..250u32 {
+        let mut key = [0u8; 32];
+        key[0..4].copy_from_slice(&i.to_le_bytes());
+        engine.delete("alice", &key).unwrap();
+    }
+
+    let running = Arc::new(AtomicBool::new(true));
+    let engine_gc = engine.clone();
+    let running_gc = running.clone();
+
+    // Thread 1: run GC in a loop
+    let gc_handle = thread::spawn(move || {
+        while running_gc.load(Ordering::Relaxed) {
+            let _ = engine_gc.gc("alice");
+            thread::sleep(std::time::Duration::from_millis(10));
+        }
+    });
+
+    // Thread 2: keep writing new entries
+    let engine_write = engine.clone();
+    let running_write = running.clone();
+    let write_handle = thread::spawn(move || {
+        let mut counter = 10000u32;
+        while running_write.load(Ordering::Relaxed) {
+            let mut key = [0u8; 32];
+            key[0..4].copy_from_slice(&counter.to_le_bytes());
+            engine_write
+                .write("alice", key, &vec![counter as u8; 256], Codec::None)
+                .unwrap();
+            counter += 1;
+        }
+        counter
+    });
+
+    // Let them race for a bit
+    thread::sleep(std::time::Duration::from_millis(500));
+    running.store(false, Ordering::Relaxed);
+
+    gc_handle.join().unwrap();
+    let final_counter = write_handle.join().unwrap();
+
+    // All written entries must be readable
+    let mut missing = 0;
+    for i in 0..500u32 {
+        let mut key = [0u8; 32];
+        key[0..4].copy_from_slice(&i.to_le_bytes());
+        if engine.read("alice", &key).unwrap().is_none() {
+            // Entries 0..250 were deleted, they should be gone
+            if i >= 250 {
+                missing += 1;
+            }
+        }
+    }
+    assert_eq!(missing, 0, "pre-existing entries should survive concurrent GC");
+
+    // Entries written during the race should be readable
+    for i in 10000..final_counter {
+        let mut key = [0u8; 32];
+        key[0..4].copy_from_slice(&i.to_le_bytes());
+        let read = engine.read("alice", &key).unwrap();
+        assert!(read.is_some(), "concurrently written key {} should exist after GC", i);
+    }
+}

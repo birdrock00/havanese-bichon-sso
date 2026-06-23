@@ -289,22 +289,23 @@ impl Engine {
     // ── GC ──────────────────────────────────────────────────────────────
 
     pub fn gc(&self, account_id: &str) -> Result<Option<GcStats>> {
-        let account_dir = {
+        let handle = {
             let accounts = self.accounts.read().unwrap();
-            let handle = accounts
+            accounts
                 .get(account_id)
-                .ok_or_else(|| Error::AccountNotFound(account_id.to_string()))?;
-            handle.dir().to_path_buf()
+                .ok_or_else(|| Error::AccountNotFound(account_id.to_string()))?
+                .clone()
         };
 
-        let result = gc::gc_account(&account_dir, self.config.gc_deleted_ratio)?;
+        // Hold write_mutex to prevent concurrent writes from racing
+        // with GC's bucket rebuild phase.
+        let _write_lock = handle.write_mutex.lock().unwrap();
+
+        let result = gc::gc_account(handle.dir(), self.config.gc_deleted_ratio)?;
 
         // Invalidate FilePool for GC'd segments (they were rewritten via rename)
         if let Some(ref stats) = result {
-            let accounts = self.accounts.read().unwrap();
-            if let Some(handle) = accounts.get(account_id) {
-                handle.invalidate_file_cache(stats.segment_id);
-            }
+            handle.invalidate_file_cache(stats.segment_id);
         }
 
         for bid in 0..crate::types::BUCKET_COUNT {
@@ -315,15 +316,18 @@ impl Engine {
     }
 
     pub fn compact_buckets(&self, account_id: &str) -> Result<()> {
-        let account_dir = {
+        let handle = {
             let accounts = self.accounts.read().unwrap();
-            let handle = accounts
+            accounts
                 .get(account_id)
-                .ok_or_else(|| Error::AccountNotFound(account_id.to_string()))?;
-            handle.dir().to_path_buf()
+                .ok_or_else(|| Error::AccountNotFound(account_id.to_string()))?
+                .clone()
         };
 
-        gc::compact_buckets(&account_dir)?;
+        // Hold write_mutex — compact rewrites all bucket files.
+        let _write_lock = handle.write_mutex.lock().unwrap();
+
+        gc::compact_buckets(handle.dir())?;
 
         for bid in 0..crate::types::BUCKET_COUNT {
             self.cache.invalidate(account_id, bid);

@@ -20,7 +20,12 @@ fn write_bin<T: Serialize>(path: &Path, value: &T) -> Result<()> {
     buf.extend_from_slice(&payload);
 
     let tmp = path.with_extension("bin.tmp");
-    std::fs::write(&tmp, &buf)?;
+    {
+        use std::io::Write;
+        let mut f = std::fs::File::create(&tmp)?;
+        f.write_all(&buf)?;
+        f.sync_all()?;
+    }
     std::fs::rename(&tmp, path)?;
     Ok(())
 }
