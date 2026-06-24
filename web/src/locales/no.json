@@ -1001,6 +1001,8 @@
     "advanced": "Avansert",
     "advancedFilters": "Avanserte filtre",
     "any": "Alle",
+    "any_participant": "Enhver korrespondent",
+    "any_recipient": "Enhver mottaker",
     "attachmentName": "Vedleggsnavn",
     "attachmentsSize": "Vedlegg og størrelse",
     "bcc": "Blindkopi (BCC)",

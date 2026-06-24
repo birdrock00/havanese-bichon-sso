@@ -461,6 +461,34 @@ impl IndexManager {
             }
         }
 
+        // any_recipient: OR across to, cc, bcc
+        if let Some(ref v) = filter.any_recipient {
+            let mut recipient_queries: Vec<(Occur, Box<dyn Query>)> = Vec::new();
+            for field in [f.f_to_text, f.f_cc_text, f.f_bcc_text] {
+                let query_parser = QueryParser::for_index(&self.index, vec![field]);
+                if let Ok(q) = query_parser.parse_query(v) {
+                    recipient_queries.push((Occur::Should, q));
+                }
+            }
+            if !recipient_queries.is_empty() {
+                subqueries.push((Occur::Must, Box::new(BooleanQuery::new(recipient_queries))));
+            }
+        }
+
+        // any_participant: OR across from, to, cc, bcc
+        if let Some(ref v) = filter.any_participant {
+            let mut participant_queries: Vec<(Occur, Box<dyn Query>)> = Vec::new();
+            for field in [f.f_from_text, f.f_to_text, f.f_cc_text, f.f_bcc_text] {
+                let query_parser = QueryParser::for_index(&self.index, vec![field]);
+                if let Ok(q) = query_parser.parse_query(v) {
+                    participant_queries.push((Occur::Should, q));
+                }
+            }
+            if !participant_queries.is_empty() {
+                subqueries.push((Occur::Must, Box::new(BooleanQuery::new(participant_queries))));
+            }
+        }
+
         if let Some(has) = filter.has_attachment {
             let lower: Bound<Term>;
             let upper: Bound<Term>;

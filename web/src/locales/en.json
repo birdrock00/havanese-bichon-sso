@@ -1002,6 +1002,8 @@
     "advanced": "Advanced",
     "advancedFilters": "Advanced Filters",
     "any": "Any",
+    "any_participant": "Any correspondent",
+    "any_recipient": "Any recipient",
     "attachmentName": "Attachment Name",
     "attachmentsSize": "Attachments & Size",
     "bcc": "BCC",

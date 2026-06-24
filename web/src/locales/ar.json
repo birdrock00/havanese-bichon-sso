@@ -1001,6 +1001,8 @@
     "advanced": "متقدم",
     "advancedFilters": "فلاتر متقدمة",
     "any": "الكل",
+    "any_participant": "أي طرف في المراسلة",
+    "any_recipient": "أي مستلم",
     "attachmentName": "اسم المرفق",
     "attachmentsSize": "المرفقات والحجم",
     "bcc": "نسخة مخفية",

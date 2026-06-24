@@ -1001,6 +1001,8 @@
     "advanced": "Avançado",
     "advancedFilters": "Filtros Avançados",
     "any": "Qualquer",
+    "any_participant": "Qualquer correspondente",
+    "any_recipient": "Qualquer destinatario",
     "attachmentName": "Nome do Anexo",
     "attachmentsSize": "Anexos e Tamanho",
     "bcc": "BCC",

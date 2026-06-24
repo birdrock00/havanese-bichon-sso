@@ -1001,6 +1001,8 @@
     "advanced": "Erweitert",
     "advancedFilters": "Erweiterte Filter",
     "any": "Beliebig",
+    "any_participant": "Beliebiger Beteiligter",
+    "any_recipient": "Beliebiger Empfänger",
     "attachmentName": "Anhangsname",
     "attachmentsSize": "Anhänge & Größe",
     "bcc": "BCC",

@@ -1001,6 +1001,8 @@
     "advanced": "Avancé",
     "advancedFilters": "Filtres Avancés",
     "any": "Toutes",
+    "any_participant": "N'importe quel correspondant",
+    "any_recipient": "N'importe quel destinataire",
     "attachmentName": "Nom de la Pièce Jointe",
     "attachmentsSize": "Pièces Jointes et Taille",
     "bcc": "Cci",

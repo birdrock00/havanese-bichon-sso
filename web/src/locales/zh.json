@@ -1001,6 +1001,8 @@
     "advanced": "高级",
     "advancedFilters": "高级筛选",
     "any": "不限",
+    "any_participant": "任意关联人",
+    "any_recipient": "任意收件人",
     "attachmentName": "附件名称",
     "attachmentsSize": "附件和大小",
     "bcc": "密送",

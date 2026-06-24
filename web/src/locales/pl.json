@@ -1001,6 +1001,8 @@
     "advanced": "Zaawansowane",
     "advancedFilters": "Zaawansowane filtry",
     "any": "Dowolny",
+    "any_participant": "Dowolny uczestnik",
+    "any_recipient": "Dowolny odbiorca",
     "attachmentName": "Nazwa załącznika",
     "attachmentsSize": "Załączniki & Rozmiar",
     "bcc": "UDW",

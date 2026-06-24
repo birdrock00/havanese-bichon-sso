@@ -1001,6 +1001,8 @@
     "advanced": "고급",
     "advancedFilters": "고급 필터",
     "any": "전체",
+    "any_participant": "모든 관련자",
+    "any_recipient": "모든 수신자",
     "attachmentName": "첨부 파일 이름",
     "attachmentsSize": "첨부 파일 및 크기",
     "bcc": "숨은 참조",

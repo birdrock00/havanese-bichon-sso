@@ -1001,6 +1001,8 @@
     "advanced": "Avanzado",
     "advancedFilters": "Filtros avanzados",
     "any": "Cualquiera",
+    "any_participant": "Cualquier participante",
+    "any_recipient": "Cualquier destinatario",
     "attachmentName": "Nombre del adjunto",
     "attachmentsSize": "Adjuntos y tamaño",
     "bcc": "CCO",

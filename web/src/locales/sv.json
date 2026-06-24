@@ -1001,6 +1001,8 @@
     "advanced": "Avancerat",
     "advancedFilters": "Avancerade filter",
     "any": "Alla",
+    "any_participant": "Valfri korrespondent",
+    "any_recipient": "Valfri mottagare",
     "attachmentName": "Filnamn på bilaga",
     "attachmentsSize": "Bilagor & storlek",
     "bcc": "Hemlig kopia (BCC)",

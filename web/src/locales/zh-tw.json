@@ -1001,6 +1001,8 @@
     "advanced": "進階",
     "advancedFilters": "進階篩選",
     "any": "不限",
+    "any_participant": "任意關聯人",
+    "any_recipient": "任意收件人",
     "attachmentName": "附件名稱",
     "attachmentsSize": "附件與大小",
     "bcc": "密件副本 (BCC)",

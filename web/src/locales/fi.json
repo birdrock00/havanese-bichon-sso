@@ -1001,6 +1001,8 @@
     "advanced": "Tarkennettu",
     "advancedFilters": "Tarkennetut suodattimet",
     "any": "Kaikki",
+    "any_participant": "Kuka tahansa osallistuja",
+    "any_recipient": "Kuka tahansa vastaanottaja",
     "attachmentName": "Liitteen nimi",
     "attachmentsSize": "Liitteet ja koko",
     "bcc": "Piilokopio",

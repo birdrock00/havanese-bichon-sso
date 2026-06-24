@@ -30,13 +30,13 @@ import {
     CommandGroup,
     CommandInput,
     CommandItem,
-    CommandList,
 } from "@/components/ui/command"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export function MailFilterPopover() {
     const { t } = useTranslation()
     const { filter, setFilter } = useSearchContext()
-    const fields = ['from', 'to', 'cc', 'bcc'] as const
+    const fields = ['from', 'to', 'cc', 'bcc', 'any_recipient', 'any_participant'] as const
 
     const activeCount = fields.filter(k => !!filter[k]).length
 
@@ -196,7 +196,7 @@ function ContactSelectorField({
                         value={searchTerm}
                         onValueChange={setSearchTerm}
                     />
-                    <CommandList className="max-h-[360px]">
+                    <ScrollArea className="h-[360px]">
                         {isLoading && (
                             <div className="p-4 text-xs text-center opacity-50">{t('search_contacts.loading')}</div>
                         )}
@@ -227,7 +227,7 @@ function ContactSelectorField({
                                 </div>
                             )}
                         </CommandGroup>
-                    </CommandList>
+                    </ScrollArea>
                 </Command>
             </PopoverContent>
         </Popover>

@@ -1001,6 +1001,8 @@
     "advanced": "Geavanceerd",
     "advancedFilters": "Geavanceerde Filters",
     "any": "Alle",
+    "any_participant": "Elke correspondent",
+    "any_recipient": "Elke ontvanger",
     "attachmentName": "Naam Bijlage",
     "attachmentsSize": "Bijlagen & Grootte",
     "bcc": "BCC",

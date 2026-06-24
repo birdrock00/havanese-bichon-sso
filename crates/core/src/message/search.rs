@@ -43,6 +43,10 @@ pub struct EmailSearchFilter {
     pub to: Option<String>,
     pub cc: Option<String>,
     pub bcc: Option<String>,
+    /// Matches if the address appears in `to`, `cc`, or `bcc` (OR semantics).
+    pub any_recipient: Option<String>,
+    /// Matches if the address appears in `from`, `to`, `cc`, or `bcc` (OR semantics).
+    pub any_participant: Option<String>,
     pub since: Option<i64>,
     pub before: Option<i64>,
     /// Lower bound (inclusive) on the IMAP server INTERNALDATE timestamp.

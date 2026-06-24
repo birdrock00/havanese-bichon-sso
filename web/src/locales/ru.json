@@ -1001,6 +1001,8 @@
     "advanced": "Дополнительно",
     "advancedFilters": "Расширенные фильтры",
     "any": "Любой",
+    "any_participant": "Любой участник переписки",
+    "any_recipient": "Любой получатель",
     "attachmentName": "Имя вложения",
     "attachmentsSize": "Вложения и Размер",
     "bcc": "Скрытая копия",

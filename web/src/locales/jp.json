@@ -1001,6 +1001,8 @@
     "advanced": "高度な設定",
     "advancedFilters": "高度なフィルター",
     "any": "指定なし",
+    "any_participant": "すべての関係者",
+    "any_recipient": "すべての受信者",
     "attachmentName": "添付ファイル名",
     "attachmentsSize": "添付ファイルとサイズ",
     "bcc": "BCC（ブラインド写し）",
