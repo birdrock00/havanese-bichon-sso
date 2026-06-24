@@ -138,7 +138,7 @@ macro_rules! generate_token {
     }};
 }
 
-pub(crate) fn generate_token_impl(bit_strength: usize) -> String {
+pub fn generate_token_impl(bit_strength: usize) -> String {
     let byte_length = (bit_strength + 23) / 24 * 3;
     let random_bytes: Vec<u8> = (0..byte_length).map(|_| rand::random::<u8>()).collect();
     let mut encoded = general_purpose::URL_SAFE.encode(&random_bytes);

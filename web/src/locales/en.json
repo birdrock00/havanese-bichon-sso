@@ -423,6 +423,7 @@
     "sessionExpired": "Session expired!",
     "sessionExpiredDesc": "Your session has ended due to inactivity. Please log in again to continue.",
     "somethingWentWrong": "Something went wrong",
+    "ssoLogin": "Sign in with SSO",
     "username": "Username",
     "welcome": "Welcome to Bichon",
     "youWillNeedToLogInAgain": "You will need to log in again to access your account."

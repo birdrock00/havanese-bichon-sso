@@ -308,6 +308,26 @@ pub struct Settings {
         help = "Enable SMTP authentication requirement"
     )]
     pub bichon_smtp_auth_required: bool,
+
+    /// Enable OIDC-based Single Sign-On (Pro/Enterprise feature).
+    #[clap(long, default_value = "false", env, help = "Enable OpenID Connect SSO")]
+    pub bichon_oidc_enabled: bool,
+
+    /// OIDC issuer URL (e.g. https://keycloak.example.com/realms/myorg).
+    #[clap(long, env, help = "OpenID Connect issuer URL")]
+    pub bichon_oidc_issuer_url: Option<String>,
+
+    /// OIDC client ID registered with the IdP.
+    #[clap(long, env, help = "OpenID Connect client ID")]
+    pub bichon_oidc_client_id: Option<String>,
+
+    /// OIDC client secret registered with the IdP.
+    #[clap(long, env, help = "OpenID Connect client secret")]
+    pub bichon_oidc_client_secret: Option<String>,
+
+    /// OIDC redirect URI (must match what's registered with the IdP).
+    #[clap(long, env, help = "OpenID Connect redirect URI")]
+    pub bichon_oidc_redirect_uri: Option<String>,
 }
 
 impl Settings {
@@ -317,9 +337,8 @@ impl Settings {
         // rejects it, fall back to parsing with only the binary name so that
         // the settings come entirely from environment variables.
         let args: Vec<String> = std::env::args().collect();
-        let s = Self::try_parse_from(&args).unwrap_or_else(|_| {
-            Self::parse_from(std::iter::once(args[0].clone()))
-        });
+        let s = Self::try_parse_from(&args)
+            .unwrap_or_else(|_| Self::parse_from(std::iter::once(args[0].clone())));
         if s.bichon_encrypt_password.is_none() && s.bichon_encrypt_password_file.is_none() {
             panic!(
                 "One of --bichon_encrypt_password or --bichon_encrypt_password_file has to be set"

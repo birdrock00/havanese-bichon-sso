@@ -18,9 +18,9 @@ use bichon_core::{
     token::TokenType,
     users::{acl::AccessControl, role::RoleType},
 };
+use bichon_memdb::{Durability, MemDb};
 use console::style;
 use itertools::Itertools;
-use bichon_memdb::{Durability, MemDb};
 use native_db::*;
 use native_model::{native_model, Model};
 use serde::{Deserialize, Serialize};
@@ -574,6 +574,8 @@ impl From<BichonUserV2> for bichon_core::users::BichonUserV2 {
             acl: value.acl,
             theme: value.theme,
             language: value.language,
+            sso_id: None,
+            sso_provider: None,
         }
     }
 }

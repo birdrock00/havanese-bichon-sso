@@ -87,6 +87,11 @@ pub struct BichonUserV2 {
 
     pub theme: Option<String>,
     pub language: Option<String>,
+
+    /// SSO identity: unique subject ID from the external IdP (e.g. OIDC `sub` claim).
+    pub sso_id: Option<String>,
+    /// SSO provider identifier: `"oidc"` or future `"saml"` / `"ldap"`.
+    pub sso_provider: Option<String>,
 }
 
 impl MemDbModel for BichonUserV2 {
@@ -192,6 +197,8 @@ impl BichonUserV2 {
             global_permissions,
             theme: self.theme,
             language: self.language,
+            sso_id: self.sso_id,
+            sso_provider: self.sso_provider,
         }
     }
 
@@ -226,6 +233,8 @@ impl BichonUserV2 {
                 acl: None,
                 theme: None,
                 language: None,
+                sso_id: None,
+                sso_provider: None,
             };
 
             // 3. Generate and insert an initial access token for the first-time setup
@@ -382,6 +391,8 @@ impl BichonUserV2 {
             account_access_map: request.account_access_map,
             theme: request.theme,
             language: request.language,
+            sso_id: None,
+            sso_provider: None,
         };
 
         let user_clone = user.clone();

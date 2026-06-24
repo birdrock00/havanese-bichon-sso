@@ -52,4 +52,9 @@ pub struct UserView {
     pub acl: Option<AccessControl>,
     pub theme: Option<String>,
     pub language: Option<String>,
+
+    /// SSO identity: unique subject ID from the external IdP (e.g. OIDC `sub` claim).
+    pub sso_id: Option<String>,
+    /// SSO provider identifier: `"oidc"` or future `"saml"` / `"ldap"`.
+    pub sso_provider: Option<String>,
 }

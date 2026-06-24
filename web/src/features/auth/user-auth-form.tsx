@@ -41,9 +41,10 @@ import { useLocation, useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/button'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
-import { Loader2, LogIn } from 'lucide-react'
+import { Loader2, LogIn, Shield } from 'lucide-react'
 import { login } from '@/api/users/api'
 import { useTheme } from '@/context/theme-context'
+import { useEdition } from '@/hooks/use-edition'
 
 type UserAuthFormProps = HTMLAttributes<HTMLDivElement>
 
@@ -52,6 +53,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const { setTheme } = useTheme();
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const { isPro } = useEdition()
 
   const { search } = useLocation();
   const redirect = toSearchParams(search).get('redirect') || '/';
@@ -156,6 +158,20 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
               {isLoading ? <Loader2 className='animate-spin' /> : <LogIn size={16} className='mr-2' />}
               {t('auth.login')}
             </Button>
+
+            {isPro && (
+              <Button
+                variant='outline'
+                className='mt-2'
+                type='button'
+                onClick={() => {
+                  window.location.href = '/api/auth/oidc/login'
+                }}
+              >
+                <Shield size={16} className='mr-2' />
+                {t('auth.ssoLogin')}
+              </Button>
+            )}
           </div>
         </form>
       </Form>

@@ -63,8 +63,18 @@ pub const MAX_EXTRACT_BYTES: usize = 10 * 1024 * 1024;
 pub fn should_try_extract(content_type: &str, ext: &str) -> bool {
     matches!(
         ext,
-        "pdf" | "doc" | "docx" | "xls" | "xlsx" | "ppt" | "pptx"
-            | "txt" | "rtf" | "odt" | "ods" | "odp"
+        "pdf"
+            | "doc"
+            | "docx"
+            | "xls"
+            | "xlsx"
+            | "ppt"
+            | "pptx"
+            | "txt"
+            | "rtf"
+            | "odt"
+            | "ods"
+            | "odp"
     ) || content_type.starts_with("text/")
 }
 
