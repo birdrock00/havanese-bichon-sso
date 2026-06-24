@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::account::migration::AccountModel;
 use crate::cache::imap::mailbox::MailBox;
 use crate::common::AddrVec;
 use crate::envelope::meta::parse_bichon_metadata;
@@ -112,6 +113,34 @@ async fn extract_envelope_core(
         )
     })?;
 
+    if let Ok(account) = AccountModel::get(account_id) {
+        if let Some(ref rules) = account.archive_rules {
+            let sender = message.from().and_then(|addr| {
+                AddrVec::from(addr).0.into_iter().next().and_then(|a| a.address)
+            });
+            let subject = message.subject().map(|s| s.to_string());
+
+            let is_spam = !rules.spam_headers.is_empty()
+                && rules.spam_headers.iter().any(|h| {
+                    message
+                        .header_raw(h.clone())
+                        .map(|v| matches!(v.trim().to_lowercase().as_str(), "yes" | "true"))
+                        .unwrap_or(false)
+                });
+
+            if !rules.should_archive(sender.as_deref(), subject.as_deref(), size, is_spam) {
+                tracing::debug!(
+                    account_id,
+                    uid,
+                    sender = sender.as_deref().unwrap_or("?"),
+                    subject = subject.as_deref().unwrap_or("?"),
+                    "Email filtered out by archive rules"
+                );
+                return Ok(());
+            }
+        }
+    }
+
     let preview_limit = 100;
     let text = if let Some(text) = message.body_text(0).map(|cow| cow.into_owned()) {
         text
@@ -173,7 +202,7 @@ async fn extract_envelope_core(
         .and_then(|add| add.address)
         .unwrap_or_else(|| "unknown".to_string());
     let attachment_count = message.attachment_count();
-    let attachments = detach_and_store_attachments(body, &message, &email_content_hash).await;
+    let attachments = detach_and_store_attachments(body, &message, &email_content_hash, account_id, mailbox_id).await;
 
     let envelope_id = Uuid::new_v4().to_string();
     let now = utc_now!();
@@ -399,7 +428,27 @@ pub async fn detach_and_store_attachments(
     original_body: &[u8],
     message: &Message<'_>,
     eml_content_hash: &str,
+    account_id: u64,
+    mailbox_id: u64,
 ) -> Vec<AttachmentInfo> {
+    let rules = if account_id > 0 {
+        AccountModel::get(account_id)
+            .ok()
+            .and_then(|a| a.extraction_rules)
+    } else {
+        None
+    };
+
+    let mailbox_name = match rules.as_ref().map(|r| !r.folders.is_empty()) {
+        Some(true) => MailBox::get(mailbox_id).ok().map(|mb| mb.name),
+        _ => None,
+    };
+
+    let sender = message
+        .from()
+        .and_then(|addr| AddrVec::from(addr).0.into_iter().next())
+        .and_then(|add| add.address);
+
     let mut stripped_eml = original_body.to_vec();
     let mut attachment_infos = Vec::new();
     // Step 1: Collect and sort attachment ranges in reverse to maintain offset integrity
@@ -468,19 +517,30 @@ pub async fn detach_and_store_attachments(
             })
             .unwrap_or_else(|| "application/octet-stream".to_string());
         let has_cid = att.content_id().is_some();
-        let ext = att
-            .attachment_name()
+        let att_name = att.attachment_name().map(|n| n.to_string());
+        let ext = att_name
+            .as_deref()
             .and_then(|n| {
-                std::path::Path::new(&n)
+                std::path::Path::new(n)
                     .extension()
                     .and_then(|e| e.to_str())
                     .map(|s| s.to_ascii_lowercase())
             })
             .unwrap_or_default();
 
+        let should_extract = rules.as_ref().map_or(true, |r| {
+            r.should_extract(
+                &ext,
+                mailbox_name.as_deref(),
+                att_name.as_deref(),
+                sender.as_deref(),
+            )
+        });
+
         if !inline || !has_cid {
             let decoded_len = att.contents().len();
-            if decoded_len <= crate::ext::text_extractor::MAX_EXTRACT_BYTES
+            if should_extract
+                && decoded_len <= crate::ext::text_extractor::MAX_EXTRACT_BYTES
                 && crate::ext::text_extractor::should_try_extract(&file_type, &ext)
             {
                 text_candidates.push(TextCandidate {
@@ -731,7 +791,7 @@ async fn recover_message_blob(envelope: &Envelope) -> BichonResult<Bytes> {
             ErrorCode::InternalError
         )
     })?;
-    detach_and_store_attachments(&raw_body, &message, &fetched_hash).await;
+    detach_and_store_attachments(&raw_body, &message, &fetched_hash, envelope.account_id, envelope.mailbox_id).await;
 
     Ok(Bytes::from(raw_body))
 }
@@ -828,6 +888,8 @@ mod test {
             truncated,
             &message,
             "test_content_hash",
+            0,
+            0,
         )
         .await;
 

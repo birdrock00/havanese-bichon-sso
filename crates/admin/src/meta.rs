@@ -263,6 +263,8 @@ impl From<AccountV3> for AccountModel {
             auto_download_new_mailboxes: None,
             download_schedule: None,
             deleting: false,
+            archive_rules: None,
+            extraction_rules: None,
         }
     }
 }

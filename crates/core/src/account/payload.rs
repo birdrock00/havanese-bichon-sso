@@ -19,7 +19,7 @@
 use std::str::FromStr;
 
 use crate::account::entity::ImapConfig;
-use crate::account::migration::{AccountModel, AccountType, QuotaWindow};
+use crate::account::migration::{AccountModel, AccountType, ArchiveRules, ExtractionRules, QuotaWindow};
 use crate::account::since::{DateSince, RelativeDate};
 use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
@@ -56,6 +56,12 @@ pub struct AccountCreateRequest {
     pub imap_quota_window: Option<QuotaWindow>,
     pub auto_download_new_mailboxes: Option<bool>,
     pub download_schedule: Option<String>,
+    /// Email archive filtering rules (Pro feature).
+    /// `None` = archive everything (backward compatible).
+    pub archive_rules: Option<ArchiveRules>,
+    /// Attachment text extraction rules (Pro feature).
+    /// `None` = extract everything (backward compatible).
+    pub extraction_rules: Option<ExtractionRules>,
 }
 
 impl AccountCreateRequest {
@@ -105,6 +111,16 @@ impl AccountCreateRequest {
                 }
             }
             AccountType::NoSync => {}
+        }
+        if let Some(ref rules) = self.extraction_rules {
+            rules.validate().map_err(|e| {
+                raise_error!(format!("extraction_rules: {}", e), ErrorCode::InvalidParameter)
+            })?;
+        }
+        if let Some(ref rules) = self.archive_rules {
+            rules.validate().map_err(|e| {
+                raise_error!(format!("archive_rules: {}", e), ErrorCode::InvalidParameter)
+            })?;
         }
         Ok(AccountModel::new(user_id, self)?)
     }
@@ -180,6 +196,12 @@ pub struct AccountUpdateRequest {
     pub auto_download_new_mailboxes: Option<bool>,
     pub download_schedule: Option<String>,
     pub clear_download_schedule: Option<bool>,
+    /// Email archive filtering rules (Pro feature).
+    /// `None` = no change. Use `Some(ArchiveRules { .. })` to set.
+    pub archive_rules: Option<ArchiveRules>,
+    /// Attachment text extraction rules (Pro feature).
+    /// `None` = no change. Use `Some(ExtractionRules { .. })` to set.
+    pub extraction_rules: Option<ExtractionRules>,
 }
 
 impl AccountUpdateRequest {
@@ -234,6 +256,16 @@ impl AccountUpdateRequest {
             if let Some(ref schedule) = self.download_schedule {
                 validate_cron_expression(schedule)?;
             }
+        }
+        if let Some(ref rules) = self.extraction_rules {
+            rules.validate().map_err(|e| {
+                raise_error!(format!("extraction_rules: {}", e), ErrorCode::InvalidParameter)
+            })?;
+        }
+        if let Some(ref rules) = self.archive_rules {
+            rules.validate().map_err(|e| {
+                raise_error!(format!("archive_rules: {}", e), ErrorCode::InvalidParameter)
+            })?;
         }
         Ok(())
     }

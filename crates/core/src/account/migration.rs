@@ -64,6 +64,218 @@ pub enum QuotaWindow {
     Monthly,
 }
 
+/// Include/exclude filter rule.
+///
+/// - `include` non-empty: only values matching these patterns pass.
+/// - `exclude` non-empty: values matching these patterns are rejected.
+/// - Both empty: all values pass.
+/// - Both set: include checked first, then exclude.
+///
+/// Extension patterns use case-insensitive exact match; all others use regex.
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
+pub struct FilterRule {
+    #[serde(default)]
+    pub include: Vec<String>,
+    #[serde(default)]
+    pub exclude: Vec<String>,
+}
+
+impl FilterRule {
+    pub fn is_empty(&self) -> bool {
+        self.include.is_empty() && self.exclude.is_empty()
+    }
+
+    fn matches_exact(&self, value: &str) -> bool {
+        if !self.include.is_empty()
+            && !self.include.iter().any(|e| e.eq_ignore_ascii_case(value))
+        {
+            return false;
+        }
+        if !self.exclude.is_empty()
+            && self.exclude.iter().any(|e| e.eq_ignore_ascii_case(value))
+        {
+            return false;
+        }
+        true
+    }
+
+    fn matches_regex(&self, value: &str) -> bool {
+        if !self.include.is_empty() && !matches_any_regex(&self.include, value) {
+            return false;
+        }
+        if !self.exclude.is_empty() && matches_any_regex(&self.exclude, value) {
+            return false;
+        }
+        true
+    }
+
+    fn validate_regex(&self, field: &str) -> Result<(), String> {
+        validate_patterns(&self.include, &format!("{field}.include"))?;
+        validate_patterns(&self.exclude, &format!("{field}.exclude"))?;
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
+pub struct ExtractionRules {
+    /// Type 0: Master switch.
+    #[serde(default)]
+    pub enabled: bool,
+    /// Type 1: File extensions (exact match, e.g. `{"include": ["pdf","docx"]}`).
+    #[serde(default)]
+    pub extensions: FilterRule,
+    /// Type 2: Folder patterns (regex, e.g. `{"include": ["^INBOX/Invoices"]}`).
+    #[serde(default)]
+    pub folders: FilterRule,
+    /// Type 3: Attachment filename patterns (regex).
+    #[serde(default)]
+    pub attachment_names: FilterRule,
+    /// Type 4: Sender patterns (regex).
+    #[serde(default)]
+    pub senders: FilterRule,
+}
+
+impl ExtractionRules {
+    /// Returns `true` if the attachment should be extracted under these rules.
+    pub fn should_extract(
+        &self,
+        ext: &str,
+        folder: Option<&str>,
+        attachment_name: Option<&str>,
+        sender: Option<&str>,
+    ) -> bool {
+        if !self.enabled {
+            return false;
+        }
+        if !self.extensions.matches_exact(ext) {
+            return false;
+        }
+        if !self.folders.is_empty() {
+            if let Some(folder) = folder {
+                if !self.folders.matches_regex(folder) {
+                    return false;
+                }
+            }
+        }
+        if !self.attachment_names.is_empty() {
+            if let Some(name) = attachment_name {
+                if !self.attachment_names.matches_regex(name) {
+                    return false;
+                }
+            }
+        }
+        if !self.senders.is_empty() {
+            if let Some(sender) = sender {
+                if !self.senders.matches_regex(sender) {
+                    return false;
+                }
+            }
+        }
+        true
+    }
+
+    pub fn validate(&self) -> Result<(), String> {
+        self.folders.validate_regex("folders")?;
+        self.attachment_names.validate_regex("attachment_names")?;
+        self.senders.validate_regex("senders")?;
+        Ok(())
+    }
+}
+
+/// Archive filtering rules — skip unwanted emails before storage.
+///
+/// Rule types:
+///   0 — Master switch
+///   1 — Sender filter (regex)
+///   2 — Subject filter (regex)
+///   3 — Skip emails larger than this (bytes)
+///   4 — Skip emails with spam headers (X-Spam-Flag, X-Spam)
+///
+/// `None` = archive everything (backward compatible).
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
+pub struct ArchiveRules {
+    /// Type 0: Master switch. `false` = archive everything.
+    #[serde(default)]
+    pub enabled: bool,
+    /// Type 1: Sender filter (regex, include/exclude).
+    #[serde(default)]
+    pub senders: FilterRule,
+    /// Type 2: Subject filter (regex, include/exclude).
+    #[serde(default)]
+    pub subjects: FilterRule,
+    /// Type 3: Skip emails larger than this (bytes). `None` = no size limit.
+    #[serde(default)]
+    pub skip_larger_than: Option<u64>,
+    /// Type 4: Spam header names to check (e.g. `["X-Spam-Flag", "X-Spam"]`).
+    /// When the value is `yes` or `true` (case-insensitive), the email is skipped.
+    /// Empty = don't check. Common headers: `X-Spam-Flag` (SpamAssassin),
+    /// `X-Spam` (rspamd), `X-MS-Exchange-Organization-SCL` (Exchange).
+    #[serde(default)]
+    pub spam_headers: Vec<String>,
+}
+
+impl ArchiveRules {
+    /// Returns `true` if the email should be archived under these rules.
+    pub fn should_archive(
+        &self,
+        sender: Option<&str>,
+        subject: Option<&str>,
+        size: u32,
+        is_spam: bool,
+    ) -> bool {
+        if !self.enabled {
+            return true;
+        }
+        if !self.senders.is_empty() {
+            if let Some(sender) = sender {
+                if !self.senders.matches_regex(sender) {
+                    return false;
+                }
+            }
+        }
+        if !self.subjects.is_empty() {
+            if let Some(subject) = subject {
+                if !self.subjects.matches_regex(subject) {
+                    return false;
+                }
+            }
+        }
+        if let Some(limit) = self.skip_larger_than {
+            if size as u64 > limit {
+                return false;
+            }
+        }
+        if !self.spam_headers.is_empty() && is_spam {
+            return false;
+        }
+        true
+    }
+
+    /// Validate all regex patterns are well-formed.
+    pub fn validate(&self) -> Result<(), String> {
+        self.senders.validate_regex("senders")?;
+        self.subjects.validate_regex("subjects")?;
+        Ok(())
+    }
+}
+
+fn matches_any_regex(patterns: &[String], value: &str) -> bool {
+    patterns
+        .iter()
+        .any(|p| regex::Regex::new(p).map(|re| re.is_match(value)).unwrap_or(false))
+}
+
+fn validate_patterns(patterns: &[String], field_name: &str) -> Result<(), String> {
+    for p in patterns {
+        regex::Regex::new(p)
+            .map_err(|e| format!("{} pattern '{}' is invalid regex: {}", field_name, p, e))?;
+    }
+    Ok(())
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct Account {
@@ -99,6 +311,14 @@ pub struct Account {
     pub download_schedule: Option<String>,
     #[serde(default)]
     pub deleting: bool,
+    /// Email-level filtering rules (Pro feature).
+    /// `None` = archive everything (backward compatible).
+    #[serde(default)]
+    pub archive_rules: Option<ArchiveRules>,
+    /// Attachment text extraction rules (Pro feature).
+    /// `None` = extract everything (backward compatible).
+    #[serde(default)]
+    pub extraction_rules: Option<ExtractionRules>,
 }
 
 impl MemDbModel for Account {
@@ -139,6 +359,8 @@ impl Account {
             imap_quota_window: request.imap_quota_window,
             download_schedule: request.download_schedule,
             deleting: false,
+            archive_rules: request.archive_rules,
+            extraction_rules: request.extraction_rules,
         })
     }
 
@@ -477,7 +699,304 @@ impl Account {
         if request.clear_download_schedule == Some(true) {
             new.download_schedule = None;
         }
+        if request.extraction_rules.is_some() {
+            new.extraction_rules = request.extraction_rules;
+        }
+        if request.archive_rules.is_some() {
+            new.archive_rules = request.archive_rules;
+        }
         new.updated_at = utc_now!();
         Ok(new)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── FilterRule ───────────────────────────────────────────────────
+
+    #[test]
+    fn filter_rule_include_only() {
+        let r = FilterRule {
+            include: vec![r"@ok\.com$".into()],
+            ..Default::default()
+        };
+        assert!(r.matches_regex("bob@ok.com"));
+        assert!(!r.matches_regex("spam@bad.com"));
+    }
+
+    #[test]
+    fn filter_rule_exclude_only() {
+        let r = FilterRule {
+            exclude: vec![r"@spam\.com$".into()],
+            ..Default::default()
+        };
+        assert!(r.matches_regex("bob@ok.com"));
+        assert!(!r.matches_regex("bot@spam.com"));
+    }
+
+    #[test]
+    fn filter_rule_include_then_exclude() {
+        let r = FilterRule {
+            include: vec![r"@company\.com$".into()],
+            exclude: vec![r"noreply@company\.com$".into()],
+            ..Default::default()
+        };
+        assert!(r.matches_regex("bob@company.com"));
+        assert!(!r.matches_regex("noreply@company.com"));
+        assert!(!r.matches_regex("spam@other.com"));
+    }
+
+    #[test]
+    fn filter_rule_exact_match() {
+        let r = FilterRule {
+            include: vec!["pdf".into(), "docx".into()],
+            exclude: vec!["xlsx".into()],
+            ..Default::default()
+        };
+        assert!(r.matches_exact("pdf"));
+        assert!(r.matches_exact("docx"));
+        assert!(r.matches_exact("DOCX")); // case-insensitive
+        assert!(!r.matches_exact("xlsx"));
+        assert!(!r.matches_exact("txt"));
+    }
+
+    // ── ExtractionRules ─────────────────────────────────────────────
+
+    #[test]
+    fn extraction_rules_master_switch() {
+        let rules = ExtractionRules {
+            enabled: false,
+            ..Default::default()
+        };
+        assert!(!rules.should_extract("pdf", None, None, None));
+    }
+
+    #[test]
+    fn extraction_rules_extension_include() {
+        let rules = ExtractionRules {
+            enabled: true,
+            extensions: FilterRule {
+                include: vec!["pdf".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(rules.should_extract("pdf", None, None, None));
+        assert!(!rules.should_extract("docx", None, None, None));
+    }
+
+    #[test]
+    fn extraction_rules_extension_exclude() {
+        let rules = ExtractionRules {
+            enabled: true,
+            extensions: FilterRule {
+                exclude: vec!["xlsx".into(), "pptx".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(rules.should_extract("pdf", None, None, None));
+        assert!(!rules.should_extract("xlsx", None, None, None));
+    }
+
+    #[test]
+    fn extraction_rules_folder_regex() {
+        let rules = ExtractionRules {
+            enabled: true,
+            folders: FilterRule {
+                include: vec![r"^INBOX/Invoices".into(), r"Contracts$".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(rules.should_extract("pdf", Some("INBOX/Invoices"), None, None));
+        assert!(rules.should_extract("pdf", Some("Finance/Contracts"), None, None));
+        assert!(!rules.should_extract("pdf", Some("INBOX/Junk"), None, None));
+    }
+
+    #[test]
+    fn extraction_rules_attachment_name_regex() {
+        let rules = ExtractionRules {
+            enabled: true,
+            attachment_names: FilterRule {
+                include: vec![r"^invoice-.*\.pdf$".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(rules.should_extract("pdf", None, Some("invoice-2024.pdf"), None));
+        assert!(!rules.should_extract("pdf", None, Some("newsletter.pdf"), None));
+    }
+
+    #[test]
+    fn extraction_rules_sender_regex() {
+        let rules = ExtractionRules {
+            enabled: true,
+            senders: FilterRule {
+                exclude: vec![r"@noreply\.com$".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        // non-excluded sender passes
+        assert!(rules.should_extract("pdf", None, None, Some("bob@ok.com")));
+        // excluded sender blocked
+        assert!(!rules.should_extract("pdf", None, None, Some("bot@noreply.com")));
+    }
+
+    #[test]
+    fn extraction_rules_empty_filters_pass_everything() {
+        let rules = ExtractionRules {
+            enabled: true,
+            ..Default::default()
+        };
+        assert!(rules.should_extract(
+            "anything",
+            Some("any/folder"),
+            Some("any.pdf"),
+            Some("any@x.com")
+        ));
+    }
+
+    // ── ArchiveRules ────────────────────────────────────────────────
+
+    #[test]
+    fn archive_rules_disabled_archives_everything() {
+        let rules = ArchiveRules {
+            enabled: false,
+            ..Default::default()
+        };
+        assert!(rules.should_archive(
+            Some("spam@x.com"),
+            Some("BUY NOW"),
+            999,
+            false
+        ));
+    }
+
+    #[test]
+    fn archive_rules_sender_exclude() {
+        let rules = ArchiveRules {
+            enabled: true,
+            senders: FilterRule {
+                exclude: vec![r"@spam\.com$".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(!rules.should_archive(Some("bot@spam.com"), None, 100, false));
+        assert!(rules.should_archive(Some("friend@ok.com"), None, 100, false));
+    }
+
+    #[test]
+    fn archive_rules_subject_exclude() {
+        let rules = ArchiveRules {
+            enabled: true,
+            subjects: FilterRule {
+                exclude: vec![r"(?i)unsubscribe|buy now|limited offer".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(!rules.should_archive(None, Some("UNSUBSCRIBE NOW"), 100, false));
+        assert!(!rules.should_archive(None, Some("Limited Offer!!"), 100, false));
+        assert!(rules.should_archive(None, Some("Meeting tomorrow"), 100, false));
+    }
+
+    #[test]
+    fn archive_rules_sender_include() {
+        // Only archive emails from specific senders
+        let rules = ArchiveRules {
+            enabled: true,
+            senders: FilterRule {
+                include: vec![r"@partner\.com$".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(rules.should_archive(Some("bob@partner.com"), None, 100, false));
+        assert!(!rules.should_archive(Some("spam@random.com"), None, 100, false));
+    }
+
+    #[test]
+    fn archive_rules_skip_larger_than() {
+        let rules = ArchiveRules {
+            enabled: true,
+            skip_larger_than: Some(50_000_000),
+            ..Default::default()
+        };
+        assert!(rules.should_archive(None, None, 1_000_000, false));
+        assert!(!rules.should_archive(None, None, 60_000_000, false));
+    }
+
+    #[test]
+    fn archive_rules_skip_spam_headers() {
+        let rules = ArchiveRules {
+            enabled: true,
+            spam_headers: vec!["X-Spam-Flag".into()],
+            ..Default::default()
+        };
+        assert!(!rules.should_archive(None, None, 100, true));
+        assert!(rules.should_archive(None, None, 100, false));
+    }
+
+    // ── Validation ──────────────────────────────────────────────────
+
+    #[test]
+    fn validate_extraction_rules_valid() {
+        let rules = ExtractionRules {
+            folders: FilterRule {
+                include: vec![r"^INBOX/.*".into()],
+                ..Default::default()
+            },
+            senders: FilterRule {
+                exclude: vec![r"@spam\.com$".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(rules.validate().is_ok());
+    }
+
+    #[test]
+    fn validate_extraction_rules_invalid_regex() {
+        let rules = ExtractionRules {
+            folders: FilterRule {
+                include: vec!["***bad[".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(rules.validate().is_err());
+    }
+
+    #[test]
+    fn validate_archive_rules_valid() {
+        let rules = ArchiveRules {
+            senders: FilterRule {
+                exclude: vec![r"@spam\.com$".into()],
+                ..Default::default()
+            },
+            subjects: FilterRule {
+                include: vec![r"(?i)invoice".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(rules.validate().is_ok());
+    }
+
+    #[test]
+    fn validate_archive_rules_invalid_regex() {
+        let rules = ArchiveRules {
+            senders: FilterRule {
+                include: vec!["[unclosed".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(rules.validate().is_err());
     }
 }
