@@ -715,6 +715,31 @@ cargo test
 
 Feel free to open an [Issue](https://github.com/rustmailer/bichon/issues) or join the [Discord](https://discord.gg/Bq4M2cDmF4) to discuss ideas.
 
+#### Guidelines
+
+1. **AI-assisted, not AI-authored.** Use AI to help analyze, debug, or draft code when unsure — but understand and review every change yourself before submitting. Don't submit unreviewed AI-generated content.
+2. **Keep PRs scoped to one issue.** Don't bundle unrelated changes (CI config, dependency bumps, fixes to other modules) into the same PR. Split them into separate PRs.
+3. **Frontend/backend changes go together.** If a change affects an API, data structure, or behavior with a frontend consumer, update the frontend in the same PR (or a clearly linked companion PR).
+4. **Unit tests are required.** New or fixed logic must include tests that reproduce the original issue and verify the fix. PRs without tests won't be merged.
+5. **Maintain backward compatibility.** Changes to data formats, protocols, configs, or APIs must state whether they're backward compatible. If not, include a migration plan.
+6. **State the blast radius.** PR descriptions must specify which modules/APIs/data are affected and any downstream impact.
+
+### Commit Messages
+
+Format: `<type>(<scope>): <subject>`
+
+- **type**: `fix`, `feat`, `refactor`, `ci`, `test`, `docs`, `chore`
+- **scope**: affected module/component (e.g. `rustmailer#286`, `dedup_cache`)
+- **subject**: imperative, present tense, no period
+
+Rules:
+- One logical change per commit — don't mix a fix with CI tweaks or unrelated module changes.
+- Reference the issue number when applicable (e.g. `fix(#286): ...`).
+- Body explains *why*, not just *what* — include root cause and how it was verified for non-trivial fixes.
+- Rebase before submitting — squash WIP/fixup commits into a clean, logical sequence.
+- No vague messages like `update`, `fix bug`, `wip`.
+
+
 ## Tech Stack
 
 | Layer | Technology |
