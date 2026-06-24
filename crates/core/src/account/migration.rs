@@ -87,14 +87,10 @@ impl FilterRule {
     }
 
     fn matches_exact(&self, value: &str) -> bool {
-        if !self.include.is_empty()
-            && !self.include.iter().any(|e| e.eq_ignore_ascii_case(value))
-        {
+        if !self.include.is_empty() && !self.include.iter().any(|e| e.eq_ignore_ascii_case(value)) {
             return false;
         }
-        if !self.exclude.is_empty()
-            && self.exclude.iter().any(|e| e.eq_ignore_ascii_case(value))
-        {
+        if !self.exclude.is_empty() && self.exclude.iter().any(|e| e.eq_ignore_ascii_case(value)) {
             return false;
         }
         true
@@ -263,9 +259,11 @@ impl ArchiveRules {
 }
 
 fn matches_any_regex(patterns: &[String], value: &str) -> bool {
-    patterns
-        .iter()
-        .any(|p| regex::Regex::new(p).map(|re| re.is_match(value)).unwrap_or(false))
+    patterns.iter().any(|p| {
+        regex::Regex::new(p)
+            .map(|re| re.is_match(value))
+            .unwrap_or(false)
+    })
 }
 
 fn validate_patterns(patterns: &[String], field_name: &str) -> Result<(), String> {
@@ -584,6 +582,7 @@ impl Account {
             .map(|account: AccountModel| MinimalAccount {
                 id: account.id,
                 email: account.email,
+                name: account.account_name,
             })
             .collect::<Vec<MinimalAccount>>();
         Ok(result)
@@ -868,12 +867,7 @@ mod tests {
             enabled: false,
             ..Default::default()
         };
-        assert!(rules.should_archive(
-            Some("spam@x.com"),
-            Some("BUY NOW"),
-            999,
-            false
-        ));
+        assert!(rules.should_archive(Some("spam@x.com"), Some("BUY NOW"), 999, false));
     }
 
     #[test]

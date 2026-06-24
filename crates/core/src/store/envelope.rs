@@ -27,6 +27,7 @@ pub struct Envelope {
     pub message_id: String,
     pub account_id: u64,
     pub account_email: Option<String>,
+    pub account_name: Option<String>,
     pub mailbox_id: u64,
     pub mailbox_name: Option<String>,
     pub uid: u32,

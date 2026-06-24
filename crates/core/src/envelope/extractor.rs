@@ -296,6 +296,7 @@ async fn extract_envelope_core(
         account_email: None,
         mailbox_name: None,
         content_hash: email_content_hash.clone(),
+        account_name: None,
     };
     // 'attachments' contains both regular and inline attachments
     let ea = EnvelopeWithAttachments {
@@ -390,6 +391,7 @@ pub fn extract_envelope_from_nested_message(
         regular_attachment_count: Default::default(),
         tags: Default::default(),
         account_email: Default::default(),
+        account_name: Default::default(),
         mailbox_name: Default::default(),
         content_hash: Default::default(),
     };

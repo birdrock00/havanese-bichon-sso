@@ -25,6 +25,11 @@ import LongText from '@/components/long-text';
 import { getToken } from '@/stores/authStore';
 import { useNavigate } from '@tanstack/react-router';
 import useMinimalAccountList from '@/hooks/use-minimal-account-list';
+import {
+  Tooltip as TooltipUI,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface DailyActivity {
   date: string;
@@ -126,6 +131,12 @@ export default function MailArchiveDashboard() {
     if (!minimalList) return null;
     const account = minimalList.find(a => a.email === email);
     return account ? account.id : null;
+  };
+
+  const getAccountNameByEmail = (email: string): string | null => {
+    if (!minimalList) return null;
+    const account = minimalList.find(a => a.email === email);
+    return account?.name || null;
   };
 
   const handleQuickSearch = (filter: Record<string, any>) => {
@@ -519,16 +530,30 @@ export default function MailArchiveDashboard() {
                               <div className="text-xs flex flex-wrap gap-x-1 min-w-0 flex-1">
                                 <span className="flex items-center">
                                   <LongText className="max-w-[180px] md:max-w-[160px] lg:max-w-[200px] xl:max-w-[220px]">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleQuickSearch({ account_ids: [getAccountIdByEmail(acc.key) || 0] })
-                                      }}
-                                      className="hover:text-primary hover:underline transition-colors"
-                                    >
-                                      {acc.key}
-                                    </button>
+                                    {(() => {
+                                      const name = getAccountNameByEmail(acc.key);
+                                      const btn = (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleQuickSearch({ account_ids: [getAccountIdByEmail(acc.key) || 0] })
+                                          }}
+                                          className="hover:text-primary hover:underline transition-colors"
+                                        >
+                                          {name || acc.key}
+                                        </button>
+                                      );
+                                      if (name) {
+                                        return (
+                                          <TooltipUI>
+                                            <TooltipTrigger asChild>{btn}</TooltipTrigger>
+                                            <TooltipContent side="top">{acc.key}</TooltipContent>
+                                          </TooltipUI>
+                                        );
+                                      }
+                                      return btn;
+                                    })()}
                                   </LongText>
                                 </span>
                               </div>

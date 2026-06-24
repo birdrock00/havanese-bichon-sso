@@ -89,9 +89,9 @@ export function MailListTable({
       accessorKey: "source",
       header: t('search.source'),
       cell: ({ row }) => {
-        const { from, account_email, mailbox_name, account_id, mailbox_id } = row.original;
+        const { from, account_email, account_name, mailbox_name, account_id, mailbox_id } = row.original;
         const { setFilter } = useSearchMessages();
-        const accountPrefix = account_email.split('@')[0];
+        const accountPrefix = account_name ?? account_email.split('@')[0];//https://github.com/rustmailer/bichon/issues/306
 
         return (
           <div className="flex flex-col py-1.5 min-w-0 group">

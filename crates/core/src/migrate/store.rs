@@ -404,6 +404,7 @@ impl NewIndexWriter {
             regular_attachment_count: attachment_docs.len(),
             tags: None,
             account_email: None,
+            account_name: None,
             mailbox_name: None,
             content_hash: email_content_hash,
         };

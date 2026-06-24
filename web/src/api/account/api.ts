@@ -23,6 +23,7 @@ import { PaginatedResponse } from "..";
 export interface MinimalAccount {
     id: number;
     email: string;
+    name?: string;
 }
 
 export const minimal_account_list = async () => {

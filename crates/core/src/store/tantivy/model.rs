@@ -155,7 +155,8 @@ impl EnvelopeWithAttachments {
             id: extract_string_field(doc, fields.f_id, F_ID)?,
             message_id: extract_string_field(doc, fields.f_message_id, F_MESSAGE_ID)?,
             account_id,
-            account_email: Some(account.email),
+            account_email: Some(account.email), //https://github.com/rustmailer/bichon/issues/306
+            account_name: account.account_name,
             mailbox_id,
             mailbox_name: Some(mailbox.name),
             uid: extract_u64_field(doc, fields.f_uid, F_UID)? as u32,

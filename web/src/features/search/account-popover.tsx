@@ -31,6 +31,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 import useMinimalAccountList from '@/hooks/use-minimal-account-list'
 import { cn } from '@/lib/utils'
@@ -83,6 +88,7 @@ export function AccountPopover() {
       .filter(a =>
         !q ||
         a.email.toLowerCase().includes(q) ||
+        a.name?.toLowerCase().includes(q) ||
         String(a.id).includes(q)
       )
       .sort((a, b) => {
@@ -184,9 +190,22 @@ export function AccountPopover() {
                     className="flex-1 truncate text-xs cursor-pointer"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="truncate">
-                        {account.email}
-                      </span>
+                      {account.name ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="truncate">
+                              {account.name}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            {account.email}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <span className="truncate">
+                          {account.email}
+                        </span>
+                      )}
                       <span className="text-[10px] text-muted-foreground">
                         #{account.id}
                       </span>

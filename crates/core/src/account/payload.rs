@@ -19,7 +19,9 @@
 use std::str::FromStr;
 
 use crate::account::entity::ImapConfig;
-use crate::account::migration::{AccountModel, AccountType, ArchiveRules, ExtractionRules, QuotaWindow};
+use crate::account::migration::{
+    AccountModel, AccountType, ArchiveRules, ExtractionRules, QuotaWindow,
+};
 use crate::account::since::{DateSince, RelativeDate};
 use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
@@ -114,7 +116,10 @@ impl AccountCreateRequest {
         }
         if let Some(ref rules) = self.extraction_rules {
             rules.validate().map_err(|e| {
-                raise_error!(format!("extraction_rules: {}", e), ErrorCode::InvalidParameter)
+                raise_error!(
+                    format!("extraction_rules: {}", e),
+                    ErrorCode::InvalidParameter
+                )
             })?;
         }
         if let Some(ref rules) = self.archive_rules {
@@ -259,7 +264,10 @@ impl AccountUpdateRequest {
         }
         if let Some(ref rules) = self.extraction_rules {
             rules.validate().map_err(|e| {
-                raise_error!(format!("extraction_rules: {}", e), ErrorCode::InvalidParameter)
+                raise_error!(
+                    format!("extraction_rules: {}", e),
+                    ErrorCode::InvalidParameter
+                )
             })?;
         }
         if let Some(ref rules) = self.archive_rules {
@@ -293,6 +301,7 @@ fn validate_cron_expression(expr: &str) -> BichonResult<()> {
 pub struct MinimalAccount {
     pub id: u64,
     pub email: String,
+    pub name: Option<String>,
 }
 
 pub fn filter_accessible_accounts<'a>(
