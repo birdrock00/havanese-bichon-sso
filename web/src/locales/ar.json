@@ -413,6 +413,14 @@
     "subject": "الموضوع",
     "viewEmbeddedEmail": "عرض البريد الإلكتروني المضمن"
   },
+  "attachment_preview": {
+    "failedToLoad": "فشل تحميل المعاينة",
+    "notAvailable": "المعاينة غير متوفرة",
+    "notAvailableDesc": "لا يمكن معاينة هذا النوع من الملفات.",
+    "resetZoom": "إعادة تعيين التكبير",
+    "zoomIn": "تكبير",
+    "zoomOut": "تصغير"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "هل أنت متأكد أنك تريد تسجيل الخروج؟",
     "invalidPassword": "كلمة مرور غير صالحة. الرجاء المحاولة مرة أخرى.",

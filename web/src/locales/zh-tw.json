@@ -413,6 +413,14 @@
     "subject": "主旨",
     "viewEmbeddedEmail": "檢視內嵌郵件"
   },
+  "attachment_preview": {
+    "failedToLoad": "無法載入預覽",
+    "notAvailable": "無法預覽",
+    "notAvailableDesc": "此檔案類型不支援預覽。",
+    "resetZoom": "重設縮放",
+    "zoomIn": "放大",
+    "zoomOut": "縮小"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "確定要登出嗎？",
     "invalidPassword": "密碼無效，請再試一次。",

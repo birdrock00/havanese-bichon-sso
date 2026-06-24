@@ -280,6 +280,33 @@ impl MessageApi {
         Ok(attachment)
     }
 
+    /// Returns raw attachment content for in-browser preview with
+    /// `Content-Disposition: inline` and the correct MIME type.
+    #[oai(
+        path = "/preview-attachment/:account_id/:envelope_id",
+        method = "get",
+        operation_id = "preview_attachment"
+    )]
+    async fn preview_attachment(
+        &self,
+        /// The ID of the account.
+        account_id: Path<u64>,
+        /// The ID of the message containing the attachment.
+        envelope_id: Path<String>,
+        /// The content_hash of the attachment to preview.
+        content_hash: Query<String>,
+        context: WrappedContext,
+    ) -> ApiResult<Attachment<Body>> {
+        let account_id = account_id.0;
+        let envelope_id = envelope_id.0.trim().to_string();
+        AccountModel::check_account_exists(account_id)?;
+        context.require_permission(Some(account_id), Permission::DATA_READ)?;
+        let content_hash = content_hash.0.trim();
+        let reader = retrieve_attachment_content(account_id, envelope_id, content_hash)?;
+        let body = Body::from_async_read(reader);
+        Ok(Attachment::new(body).attachment_type(AttachmentType::Inline))
+    }
+
     /// Downloads an attachment from within a nested email (EML file).
     #[oai(
         path = "/download-nested-attachment/:account_id/:envelope_id",

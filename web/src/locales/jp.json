@@ -413,6 +413,14 @@
     "subject": "件名",
     "viewEmbeddedEmail": "埋め込みメールを表示"
   },
+  "attachment_preview": {
+    "failedToLoad": "プレビューの読み込みに失敗しました",
+    "notAvailable": "プレビューは利用できません",
+    "notAvailableDesc": "このファイル形式はプレビューできません。",
+    "resetZoom": "ズームをリセット",
+    "zoomIn": "拡大",
+    "zoomOut": "縮小"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "ログアウトしてもよろしいですか？",
     "invalidPassword": "パスワードが無効です。もう一度お試しください。",

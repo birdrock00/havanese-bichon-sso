@@ -41,6 +41,18 @@ export const download_attachment = async (accountId: number, id: string, content
     saveAs(blob, fileName);
 };
 
+/** Fetch raw attachment content for in-browser preview (Content-Disposition: inline). */
+export const preview_attachment = async (accountId: number, id: string, content_hash: string) => {
+    const response = await axiosInstance.get(
+        `api/v1/preview-attachment/${accountId}/${id}`,
+        {
+            params: { content_hash },
+            responseType: 'blob',
+        }
+    );
+    return response.data as Blob;
+};
+
 export const download_nested_attachment = async (accountId: number, id: string, content_hash: string, nested_content_hash: string, fileName: string) => {
     const response = await axiosInstance.get(`api/v1/download-nested-attachment/${accountId}/${id}?content_hash=${content_hash}&nested_content_hash=${nested_content_hash}`, { responseType: 'blob' });
     const blob = new Blob([response.data]);

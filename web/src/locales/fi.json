@@ -413,6 +413,14 @@
     "subject": "Aihe",
     "viewEmbeddedEmail": "Näytä upotettu sähköposti"
   },
+  "attachment_preview": {
+    "failedToLoad": "Esikatselun lataaminen epäonnistui",
+    "notAvailable": "Esikatselua ei saatavilla",
+    "notAvailableDesc": "Tätä tiedostotyyppiä ei voi esikatsella.",
+    "resetZoom": "Nollaa zoomaus",
+    "zoomIn": "Lähennä",
+    "zoomOut": "Loitonna"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "Oletko varma, että haluat kirjautua ulos?",
     "invalidPassword": "Virheellinen salasana. Yritä uudelleen.",

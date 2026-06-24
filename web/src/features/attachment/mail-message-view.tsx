@@ -19,7 +19,7 @@
 
 import { useEffect, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Loader, Download, Trash2, MessageSquareMore, FileText, FileImage, FileVideo, FileArchive, FileSpreadsheet, FileCode, FileIcon, FileAudio, Upload, ShieldCheck } from 'lucide-react';
+import { Loader, Download, Trash2, MessageSquareMore, FileText, FileImage, FileVideo, FileArchive, FileSpreadsheet, FileCode, FileIcon, FileAudio, Upload, ShieldCheck, Eye } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -40,6 +40,7 @@ import { MailThreadDialog } from './thread-dialog';
 import useMinimalAccountList from '@/hooks/use-minimal-account-list';
 import { useTranslation } from 'react-i18next';
 import { NestedEmailDialog } from './nested-email-dialog';
+import AttachmentPreview from './attachment-preview';
 import { EmailEnvelope } from '@/api';
 
 
@@ -123,6 +124,7 @@ export function MailMessageView({
   const [threadOpen, setThreadOpen] = useState(false);
   const [blockRemote, setBlockRemote] = useState(true);
   const [hasRemoteContent, setHasRemoteContent] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState<{ content_hash: string; file_type: string; filename: string } | null>(null);
 
   const toggleBlockRemote = () => {
     setBlockRemote((prev) => !prev);
@@ -328,12 +330,20 @@ export function MailMessageView({
                           {icon}
                         </div>
                         <div className="flex items-center justify-between min-w-0 flex-1 gap-2">
-                          <span
-                            className="truncate text-xs font-medium text-foreground/90"
+                          <button
+                            type="button"
+                            className="truncate text-xs font-medium text-foreground/90 cursor-pointer hover:text-primary hover:underline transition-colors text-left"
                             title={attachment.filename}
+                            onClick={() =>
+                              setPreviewAttachment({
+                                content_hash: attachment.content_hash,
+                                file_type: attachment.file_type,
+                                filename: attachment.filename,
+                              })
+                            }
                           >
                             {attachment.filename}
-                          </span>
+                          </button>
                           <span className="flex-shrink-0 text-[9px] font-bold text-muted-foreground/60 bg-muted px-1 py-0.5 rounded uppercase">
                             {attachment.file_type.split('/').pop()}
                           </span>
@@ -360,11 +370,21 @@ export function MailMessageView({
                         <span className="text-gray-500 text-xs shrink-0">
                           {formatBytes(attachment.size)}
                         </span>
+                        <Eye
+                          className="w-5 h-5 cursor-pointer hover:text-primary transition-colors"
+                          onClick={() =>
+                            setPreviewAttachment({
+                              content_hash: attachment.content_hash,
+                              file_type: attachment.file_type,
+                              filename: attachment.filename,
+                            })
+                          }
+                        />
                         {downloadingAttachmentFileName === attachment.filename ? (
-                          <Loader className="w-4 h-4 animate-spin" />
+                          <Loader className="w-5 h-5 animate-spin" />
                         ) : (
                           <Download
-                            className="w-4 h-4 cursor-pointer"
+                            className="w-5 h-5 cursor-pointer"
                             onClick={() => {
                               setDownloadingAttachmentFileName(attachment.filename);
                               downloadAttachmentMutation.mutate({ content_hash: attachment.content_hash });
@@ -439,6 +459,17 @@ export function MailMessageView({
         fileName={nestedEmlFile?.filename || ''}
         content_hash={nestedEmlFile?.content_hash}
       />
+      {previewAttachment && (
+        <AttachmentPreview
+          open={!!previewAttachment}
+          onOpenChange={(open) => !open && setPreviewAttachment(null)}
+          accountId={envelope.account_id}
+          envelopeId={envelope.id}
+          contentHash={previewAttachment.content_hash}
+          contentType={previewAttachment.file_type}
+          fileName={previewAttachment.filename}
+        />
+      )}
     </div>
   );
 }

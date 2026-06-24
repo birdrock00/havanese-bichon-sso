@@ -413,6 +413,14 @@
     "subject": "Emne",
     "viewEmbeddedEmail": "Vis indlejret e-mail"
   },
+  "attachment_preview": {
+    "failedToLoad": "Kunne ikke indlæse forhåndsvisning",
+    "notAvailable": "Forhåndsvisning ikke tilgængelig",
+    "notAvailableDesc": "Denne filtype kan ikke forhåndsvises.",
+    "resetZoom": "Nulstil zoom",
+    "zoomIn": "Zoom ind",
+    "zoomOut": "Zoom ud"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "Er du sikker på, du vil logge ud?",
     "invalidPassword": "Ugyldig adgangskode. Prøv venligst igen.",

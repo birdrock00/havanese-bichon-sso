@@ -413,6 +413,14 @@
     "subject": "主题",
     "viewEmbeddedEmail": "查看内嵌邮件"
   },
+  "attachment_preview": {
+    "failedToLoad": "无法加载预览",
+    "notAvailable": "无法预览",
+    "notAvailableDesc": "此文件类型不支持预览。",
+    "resetZoom": "重置缩放",
+    "zoomIn": "放大",
+    "zoomOut": "缩小"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "您确定要退出登录吗？",
     "invalidPassword": "密码无效，请重试。",

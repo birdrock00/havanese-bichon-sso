@@ -413,6 +413,14 @@
     "subject": "Assunto",
     "viewEmbeddedEmail": "Ver e-mail incorporado"
   },
+  "attachment_preview": {
+    "failedToLoad": "Falha ao carregar a visualização",
+    "notAvailable": "Visualização não disponível",
+    "notAvailableDesc": "Não é possível visualizar este tipo de arquivo.",
+    "resetZoom": "Redefinir zoom",
+    "zoomIn": "Mais zoom",
+    "zoomOut": "Menos zoom"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "Tem certeza que deseja sair?",
     "invalidPassword": "Senha inválida, por favor, tente novamente.",

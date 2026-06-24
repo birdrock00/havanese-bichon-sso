@@ -413,6 +413,14 @@
     "subject": "Betreff",
     "viewEmbeddedEmail": "Eingebettete E-Mail anzeigen"
   },
+  "attachment_preview": {
+    "failedToLoad": "Vorschau konnte nicht geladen werden",
+    "notAvailable": "Vorschau nicht verfügbar",
+    "notAvailableDesc": "Vorschau für diesen Dateityp nicht möglich.",
+    "resetZoom": "Zoom zurücksetzen",
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "Sind Sie sicher, dass Sie sich abmelden möchten?",
     "invalidPassword": "Ungültiges Passwort. Bitte versuchen Sie es erneut.",

@@ -413,6 +413,14 @@
     "subject": "Temat",
     "viewEmbeddedEmail": "Wyświetl osadzony e-mail"
   },
+  "attachment_preview": {
+    "failedToLoad": "Nie udało się załadować podglądu",
+    "notAvailable": "Podgląd niedostępny",
+    "notAvailableDesc": "Podgląd tego typu pliku nie jest obsługiwany.",
+    "resetZoom": "Resetuj powiększenie",
+    "zoomIn": "Powiększ",
+    "zoomOut": "Pomniejsz"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "Czy na pewno chcesz się wylogować?",
     "invalidPassword": "Nieprawidłowe hasło, spróbuj ponownie",

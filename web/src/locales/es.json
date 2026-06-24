@@ -413,6 +413,14 @@
     "subject": "Asunto",
     "viewEmbeddedEmail": "Ver correo electrónico incrustado"
   },
+  "attachment_preview": {
+    "failedToLoad": "Error al cargar la vista previa",
+    "notAvailable": "Vista previa no disponible",
+    "notAvailableDesc": "No se puede previsualizar este tipo de archivo.",
+    "resetZoom": "Restablecer zoom",
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "¿Estás seguro de que quieres cerrar sesión?",
     "invalidPassword": "Contraseña inválida. Inténtalo de nuevo.",

@@ -413,6 +413,14 @@
     "subject": "Тема",
     "viewEmbeddedEmail": "Просмотреть вложенное письмо"
   },
+  "attachment_preview": {
+    "failedToLoad": "Не удалось загрузить предпросмотр",
+    "notAvailable": "Предпросмотр недоступен",
+    "notAvailableDesc": "Предпросмотр для этого типа файла не поддерживается.",
+    "resetZoom": "Сбросить масштаб",
+    "zoomIn": "Увеличить масштаб",
+    "zoomOut": "Уменьшить масштаб"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "Вы уверены, что хотите выйти?",
     "invalidPassword": "Неверный пароль. Пожалуйста, попробуйте снова.",

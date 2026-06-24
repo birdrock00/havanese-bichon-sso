@@ -404,6 +404,7 @@
     "downloading": "Downloading...",
     "emailMessageNotFound": "Unable to find the original email. It may have been deleted.",
     "name": "Filename",
+    "preview": "Preview",
     "search_input_placeholder": "Search attachments (use \" \" for phrase search)",
     "sender": "Sender",
     "sender_with_count": "Sender ({{count}})",
@@ -412,6 +413,14 @@
     "source": "Source",
     "subject": "Subject",
     "viewEmbeddedEmail": "View embedded email"
+  },
+  "attachment_preview": {
+    "failedToLoad": "Failed to load preview",
+    "notAvailable": "Preview not available",
+    "notAvailableDesc": "Preview is not supported for this file type.",
+    "resetZoom": "Reset zoom",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out"
   },
   "auth": {
     "areYouSureYouWantToLogOut": "Are you sure you want to log out?",

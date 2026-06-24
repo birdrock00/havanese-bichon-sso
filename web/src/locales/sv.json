@@ -413,6 +413,14 @@
     "subject": "Ämne",
     "viewEmbeddedEmail": "Visa inbäddat e-postmeddelande"
   },
+  "attachment_preview": {
+    "failedToLoad": "Misslyckades att ladda förhandsgranskning",
+    "notAvailable": "Förhandsgranskning inte tillgänglig",
+    "notAvailableDesc": "Det går inte att förhandsgranska den här filtypen.",
+    "resetZoom": "Återställ zoom",
+    "zoomIn": "Zooma in",
+    "zoomOut": "Zooma ut"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "Är du säker på att du vill logga ut?",
     "invalidPassword": "Ogiltigt lösenord. Var god försök igen.",

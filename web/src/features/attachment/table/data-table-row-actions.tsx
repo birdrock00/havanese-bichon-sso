@@ -18,6 +18,7 @@
 
 
 import { Row } from '@tanstack/react-table'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -28,12 +29,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useTranslation } from 'react-i18next'
-import { Copy, Download, MoreVertical } from 'lucide-react'
+import { Copy, Download, Eye, MoreVertical } from 'lucide-react'
 import { AttachmentModel } from '@/api/attachment/api'
 import { useSearchAttachments } from '@/hooks/use-search-attachments'
 import { useToast } from '@/hooks/use-toast'
 import { useMutation } from '@tanstack/react-query'
 import { download_attachment } from '@/api/mailbox/envelope/api'
+import AttachmentPreview from '@/features/attachment/attachment-preview'
 
 interface DataTableRowActionsProps {
   row: Row<AttachmentModel>
@@ -43,6 +45,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const { setFilter } = useSearchAttachments();
   const { t } = useTranslation()
   const { toast } = useToast();
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const downloadMutation = useMutation({
     mutationFn: (content_hash: string) =>
@@ -89,6 +92,18 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className='text-xs'
+            onClick={(e) => {
+              e.stopPropagation();
+              setPreviewOpen(true);
+            }}
+          >
+            {t('attachment.preview')}
+            <DropdownMenuShortcut>
+              <Eye size={16} />
+            </DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className='text-xs'
             disabled={downloadMutation.isPending}
             onClick={(e) => {
               e.stopPropagation()
@@ -105,6 +120,15 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <AttachmentPreview
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        accountId={row.original.account_id}
+        envelopeId={row.original.envelope_id}
+        contentHash={row.original.content_hash}
+        contentType={row.original.content_type}
+        fileName={row.original.name ?? row.original.id}
+      />
     </>
   )
 }

@@ -413,6 +413,14 @@
     "subject": "제목",
     "viewEmbeddedEmail": "포함된 메일 보기"
   },
+  "attachment_preview": {
+    "failedToLoad": "미리보기를 불러오지 못했습니다",
+    "notAvailable": "미리보기를 사용할 수 없습니다",
+    "notAvailableDesc": "이 파일 형식은 미리볼 수 없습니다.",
+    "resetZoom": "확대/축소 초기화",
+    "zoomIn": "확대",
+    "zoomOut": "축소"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "정말로 로그아웃하시겠습니까?",
     "invalidPassword": "비밀번호가 유효하지 않습니다. 다시 시도해 주세요.",

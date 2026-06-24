@@ -413,6 +413,14 @@
     "subject": "Oggetto",
     "viewEmbeddedEmail": "Visualizza email incorporata"
   },
+  "attachment_preview": {
+    "failedToLoad": "Impossibile caricare l'anteprima",
+    "notAvailable": "Anteprima non disponibile",
+    "notAvailableDesc": "Anteprima non supportata per questo tipo di file.",
+    "resetZoom": "Ripristina zoom",
+    "zoomIn": "Ingrandisci",
+    "zoomOut": "Rimpicciolisci"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "Sei sicuro di voler uscire?",
     "invalidPassword": "Password non valida. Riprova.",

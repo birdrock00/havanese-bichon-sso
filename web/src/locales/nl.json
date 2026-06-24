@@ -413,6 +413,14 @@
     "subject": "Onderwerp",
     "viewEmbeddedEmail": "Ingesloten e-mail bekijken"
   },
+  "attachment_preview": {
+    "failedToLoad": "Voorpreview laden mislukt",
+    "notAvailable": "Voorpreview niet beschikbaar",
+    "notAvailableDesc": "Voorpreview niet ondersteund voor dit bestandstype.",
+    "resetZoom": "Zoom herstellen",
+    "zoomIn": "Inzoomen",
+    "zoomOut": "Uitzoomen"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "Weet u zeker dat u wilt uitloggen?",
     "invalidPassword": "Ongeldig wachtwoord. Probeer het opnieuw.",

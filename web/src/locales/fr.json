@@ -413,6 +413,14 @@
     "subject": "Objet",
     "viewEmbeddedEmail": "Voir l'e-mail intégré"
   },
+  "attachment_preview": {
+    "failedToLoad": "Échec du chargement de l'aperçu",
+    "notAvailable": "Aperçu non disponible",
+    "notAvailableDesc": "Aperçu non disponible pour ce type de fichier.",
+    "resetZoom": "Réinitialiser le zoom",
+    "zoomIn": "Zoom avant",
+    "zoomOut": "Zoom arrière"
+  },
   "auth": {
     "areYouSureYouWantToLogOut": "Êtes-vous sûr de vouloir vous déconnecter ?",
     "invalidPassword": "Mot de passe non valide. Veuillez réessayer.",
