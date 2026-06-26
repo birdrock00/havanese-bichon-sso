@@ -156,10 +156,16 @@ impl AccessTokenModel {
             })?;
 
         if matches!(token_model.token_type, TokenType::WebUI) {
-            let life = utc_now!() - token_model.created_at;
-            let max_life = SETTINGS.bichon_webui_token_expiration_hours * 60 * 60 * 1000;
+            // Use last_access_at if set, otherwise fall back to created_at
+            let last_active = if token_model.last_access_at > 0 {
+                token_model.last_access_at
+            } else {
+                token_model.created_at
+            };
+            let idle = utc_now!() - last_active;
+            let max_life = SETTINGS.bichon_webui_token_expiration_hours as i64 * 60 * 60 * 1000;
 
-            if life > (max_life as i64) {
+            if idle > max_life {
                 return Err(raise_error!(
                     "Permission denied: the WebUI token has expired.".into(),
                     ErrorCode::PermissionDenied
@@ -176,12 +182,14 @@ impl AccessTokenModel {
                     ));
                 }
             }
-            update_impl(DB_MANAGER.db(), &token_str, |current: AccessTokenModel| {
-                let mut updated = current.clone();
-                updated.last_access_at = utc_now!();
-                Ok(updated)
-            })?;
         }
+
+        // Update last_access_at on every successful use for both token types
+        update_impl(DB_MANAGER.db(), &token_str, |current: AccessTokenModel| {
+            let mut updated = current.clone();
+            updated.last_access_at = utc_now!();
+            Ok(updated)
+        })?;
 
         let user = UserModel::find(token_model.user_id)
             ?

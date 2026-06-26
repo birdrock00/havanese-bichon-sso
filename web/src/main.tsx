@@ -42,12 +42,6 @@ const handleAxiosError = (error: any) => {
 
   switch (error.response?.status) {
     case 401:
-      toast({
-        variant: 'destructive',
-        title: i18n.t('auth.sessionExpired'),
-        description: i18n.t('auth.sessionExpiredDesc'),
-        action: <ToastAction altText={i18n.t('common.close')}>{i18n.t('common.close')}</ToastAction>,
-      });
       resetToken();
       const currentPath = router.history.location.pathname;
       if (currentPath !== '/sign-in') {
