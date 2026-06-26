@@ -16,9 +16,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Download, FileIcon, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import {
+  Download, FileIcon, ZoomIn, ZoomOut, RotateCcw,
+  ChevronLeft, ChevronRight, X,
+} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -34,6 +37,12 @@ import { getFileConfig } from './mail-message-view';
 const PREVIEWABLE_IMAGE = /^image\/(png|jpeg|gif|webp|svg\+xml)$/;
 const PREVIEWABLE_TEXT = /^(text\/(plain|csv|html|xml|css|javascript|markdown)|application\/(json|xml|javascript|x-httpd-php|x-sh|x-perl|x-python|x-ruby))$/;
 
+export interface PreviewAttachment {
+  content_hash: string;
+  file_type: string;
+  filename: string;
+}
+
 interface AttachmentPreviewProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -42,6 +51,10 @@ interface AttachmentPreviewProps {
   contentHash: string;
   contentType: string;
   fileName: string;
+  /** Full attachment list for gallery navigation (optional). */
+  attachments?: PreviewAttachment[];
+  /** Index of the current attachment within `attachments`. */
+  attachmentIndex?: number;
 }
 
 function isImagePreview(contentType: string) {
@@ -64,21 +77,76 @@ export default function AttachmentPreview({
   contentHash,
   contentType,
   fileName,
+  attachments,
+  attachmentIndex,
 }: AttachmentPreviewProps) {
   const { t } = useTranslation();
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [textContent, setTextContent] = useState<string | null>(null);
   const [imageZoom, setImageZoom] = useState(1);
 
+  // ── Gallery state ──────────────────────────────────────────────
+  // When attachments list is provided, compute image-only indices for navigation.
+  const imageIndices = useMemo(() => {
+    if (!attachments) return [];
+    return attachments
+      .map((a, i) => (isImagePreview(a.file_type) ? i : -1))
+      .filter((i) => i >= 0);
+  }, [attachments]);
+
+  const [currentIndex, setCurrentIndex] = useState(attachmentIndex ?? 0);
+
+  // Reset to the clicked attachment every time the dialog opens.
+  useEffect(() => {
+    if (open) {
+      setCurrentIndex(attachmentIndex ?? 0);
+    }
+  }, [open, attachmentIndex]);
+
+  // Resolve which attachment to display.
+  const resolved = useMemo(() => {
+    if (attachments && currentIndex < attachments.length) {
+      const a = attachments[currentIndex];
+      return {
+        contentHash: a.content_hash,
+        contentType: a.file_type,
+        fileName: a.filename,
+      };
+    }
+    return { contentHash, contentType, fileName };
+  }, [attachments, currentIndex, contentHash, contentType, fileName]);
+
+  // Position within image-only list (for "3 / 12" counter).
+  const imagePos = imageIndices.indexOf(currentIndex); // -1 if not an image
+  const imageTotal = imageIndices.length;
+
+  const goPrev = useCallback(() => {
+    if (imagePos > 0) setCurrentIndex(imageIndices[imagePos - 1]);
+  }, [imagePos, imageIndices]);
+
+  const goNext = useCallback(() => {
+    if (imagePos < imageTotal - 1) setCurrentIndex(imageIndices[imagePos + 1]);
+  }, [imagePos, imageTotal, imageIndices]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') goPrev();
+      else if (e.key === 'ArrowRight') goNext();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, goPrev, goNext]);
+
+  // ── Fetch preview blob ─────────────────────────────────────────
   const previewMutation = useMutation({
-    mutationFn: () => preview_attachment(accountId, envelopeId, contentHash),
+    mutationFn: () => preview_attachment(accountId, envelopeId, resolved.contentHash),
     onSuccess: (blob) => {
-      if (isTextPreview(contentType)) {
+      if (isTextPreview(resolved.contentType)) {
         blob.text().then(setTextContent);
       } else {
-        // Re-wrap with the actual MIME type so browsers render PDFs/images inline
-        // instead of triggering a download (the HTTP response uses application/octet-stream).
-        const typedBlob = new Blob([blob], { type: contentType });
+        const typedBlob = new Blob([blob], { type: resolved.contentType });
         setBlobUrl(URL.createObjectURL(typedBlob));
       }
     },
@@ -98,7 +166,7 @@ export default function AttachmentPreview({
       setImageZoom(1);
       previewMutation.mutate();
     }
-  }, [open]);
+  }, [open, resolved.contentHash]);
 
   useEffect(() => {
     return () => {
@@ -107,109 +175,153 @@ export default function AttachmentPreview({
   }, [blobUrl]);
 
   const handleDownload = () => {
-    download_attachment(accountId, envelopeId, contentHash, fileName);
+    download_attachment(accountId, envelopeId, resolved.contentHash, resolved.fileName);
   };
 
-  const { icon, color } = useMemo(() => getFileConfig(contentType), [contentType]);
+  const { icon } = useMemo(() => getFileConfig(resolved.contentType), [resolved.contentType]);
 
-  const isImage = isImagePreview(contentType);
-  const isPdf = isPdfPreview(contentType);
-  const isText = isTextPreview(contentType);
+  const isImage = isImagePreview(resolved.contentType);
+  const isPdf = isPdfPreview(resolved.contentType);
+  const isText = isTextPreview(resolved.contentType);
+  const showArrows = imageTotal > 1 && isImage;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[calc(100vw-2rem)] max-w-4xl h-[85vh] flex flex-col p-0 gap-0"
+        className="w-screen h-screen max-w-none rounded-none p-0 gap-0 border-0 bg-slate-700/10"
+        hideClose
+        hideFullscreen
         onInteractOutside={(e) => {
-          // Don't close when interacting with the PDF viewer toolbar
           if (isPdf) e.preventDefault();
         }}
       >
-        {/* Toolbar */}
-        <div className="flex items-center justify-between px-4 py-2 border-b shrink-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className={color}>{icon}</div>
-            <span className="text-sm font-medium truncate max-w-[400px]">
-              {fileName}
-            </span>
+        {/* Toolbar — hidden for PDF (browser's native viewer has its own controls) */}
+        {!isPdf && (
+          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-2 bg-gradient-to-b from-black/70 to-transparent text-white">
+            <div className="flex items-center gap-2 min-w-0">
+              {icon}
+              <span className="text-sm font-medium truncate max-w-[400px]">
+                {resolved.fileName}
+              </span>
+              {imagePos >= 0 && imageTotal > 1 && (
+                <span className="text-xs text-white/60 ml-1">
+                  {imagePos + 1} / {imageTotal}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-1 pr-12">
+              {isImage && blobUrl && (
+                <>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-white hover:bg-white/20"
+                        onClick={() => setImageZoom((z) => Math.min(z + 0.25, 3))}
+                      >
+                        <ZoomIn className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('attachment_preview.zoomIn')}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-white hover:bg-white/20"
+                        onClick={() => setImageZoom((z) => Math.max(z - 0.25, 0.25))}
+                      >
+                        <ZoomOut className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('attachment_preview.zoomOut')}</TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-white hover:bg-white/20"
+                        onClick={() => setImageZoom(1)}
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{t('attachment_preview.resetZoom')}</TooltipContent>
+                  </Tooltip>
+                  <Separator orientation="vertical" className="h-5 mx-1 bg-white/20" />
+                </>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-white hover:bg-white/20"
+                    onClick={handleDownload}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t('attachment.download')}</TooltipContent>
+              </Tooltip>
+            </div>
           </div>
-          <div className="flex items-center gap-1 pr-16">
-            {isImage && blobUrl && (
-              <>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setImageZoom((z) => Math.min(z + 0.25, 3))}
-                    >
-                      <ZoomIn className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('attachment_preview.zoomIn')}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setImageZoom((z) => Math.max(z - 0.25, 0.25))}
-                    >
-                      <ZoomOut className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('attachment_preview.zoomOut')}</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setImageZoom(1)}
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>{t('attachment_preview.resetZoom')}</TooltipContent>
-                </Tooltip>
-                <Separator orientation="vertical" className="h-5 mx-1" />
-              </>
-            )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={handleDownload}
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('attachment.download')}</TooltipContent>
-            </Tooltip>
-          </div>
-        </div>
+        )}
+
+        {/* Close button — positioned below browser PDF toolbar */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={isPdf
+            ? 'absolute top-12 right-4 z-50 h-10 w-10 rounded-full text-white bg-black/50 hover:bg-black/70'
+            : 'absolute top-2 right-4 z-50 h-8 w-8 rounded-full text-white hover:bg-white/20'
+          }
+          onClick={() => onOpenChange(false)}
+        >
+          <X className={isPdf ? 'h-5 w-5' : 'h-4 w-4'} />
+        </Button>
+
+        {/* Navigation arrows */}
+        {showArrows && (
+          <>
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={imagePos <= 0}
+              className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full text-white hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-transparent"
+              onClick={goPrev}
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              disabled={imagePos >= imageTotal - 1}
+              className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full text-white hover:bg-white/20 disabled:opacity-30 disabled:hover:bg-transparent"
+              onClick={goNext}
+            >
+              <ChevronRight className="h-6 w-6" />
+            </Button>
+          </>
+        )}
 
         {/* Preview body */}
-        <div className="flex-1 min-h-0 bg-muted/30">
+        <div className="w-full h-full flex items-center justify-center">
           {previewMutation.isPending ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="flex flex-col items-center gap-3">
-                <Skeleton className="w-64 h-4" />
-                <Skeleton className="w-48 h-4" />
-                <Skeleton className="w-56 h-4" />
-              </div>
+            <div className="flex flex-col items-center gap-3">
+              <Skeleton className="w-64 h-4 bg-white/10" />
+              <Skeleton className="w-48 h-4 bg-white/10" />
+              <Skeleton className="w-56 h-4 bg-white/10" />
             </div>
           ) : isImage && blobUrl ? (
             <div className="w-full h-full overflow-auto flex items-center justify-center">
               <img
                 src={blobUrl}
-                alt={fileName}
-                className="max-w-full"
+                alt={resolved.fileName}
+                className="max-w-full max-h-full object-contain"
                 style={{
                   transform: `scale(${imageZoom})`,
                   transformOrigin: 'center center',
@@ -220,27 +332,25 @@ export default function AttachmentPreview({
             <iframe
               src={blobUrl}
               className="w-full h-full border-0"
-              title={fileName}
+              title={resolved.fileName}
             />
           ) : isText && textContent !== null ? (
-            <pre className="w-full h-full overflow-auto whitespace-pre-wrap text-sm font-mono p-6">
+            <pre className="w-full h-full overflow-auto whitespace-pre-wrap text-sm font-mono p-6 text-white/90">
               {textContent}
             </pre>
           ) : !previewMutation.isPending ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="flex flex-col items-center gap-4 text-muted-foreground">
-                <FileIcon className="h-16 w-16 opacity-30" />
-                <p className="text-sm">{t('attachment_preview.notAvailable')}</p>
-                <p className="text-xs text-center max-w-md">
-                  {t('attachment_preview.notAvailableDesc', {
-                    type: contentType || 'unknown',
-                  })}
-                </p>
-                <Button variant="outline" size="sm" onClick={handleDownload}>
-                  <Download className="h-4 w-4 mr-2" />
-                  {t('attachment.download')}
-                </Button>
-              </div>
+            <div className="flex flex-col items-center gap-4 text-white/60">
+              <FileIcon className="h-16 w-16 opacity-30" />
+              <p className="text-sm">{t('attachment_preview.notAvailable')}</p>
+              <p className="text-xs text-center max-w-md">
+                {t('attachment_preview.notAvailableDesc', {
+                  type: resolved.contentType || 'unknown',
+                })}
+              </p>
+              <Button variant="outline" size="sm" onClick={handleDownload} className="text-white border-white/20 hover:bg-white/10">
+                <Download className="h-4 w-4 mr-2" />
+                {t('attachment.download')}
+              </Button>
             </div>
           ) : null}
         </div>
