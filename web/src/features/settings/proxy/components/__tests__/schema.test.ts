@@ -32,7 +32,7 @@ describe('Proxy Form Schema', () => {
       if (!result.success) {
         expect(
           result.error.issues.some((i) =>
-            i.message?.includes('http:// or socks5://')
+            i.message?.includes('Invalid format')
           )
         ).toBe(true)
       }
@@ -53,7 +53,7 @@ describe('Proxy Form Schema', () => {
       if (!result.success) {
         expect(
           result.error.issues.some((i) =>
-            i.message?.includes('Invalid URL format')
+            i.message?.includes('Invalid format')
           )
         ).toBe(true)
       }
@@ -168,6 +168,29 @@ describe('Proxy Form Schema', () => {
         url: 'socks5://127.0.0.1:1080',
       })
       expect(result.success).toBe(true)
+    })
+  })
+
+  describe('url field - non-standard format (host:port:user:pass)', () => {
+    it('accepts non-standard format with auth', () => {
+      const result = proxyFormSchema.safeParse({
+        url: 'socks5://server.nodeprovider.com:8080:nodeprovider_a1234_alias_com-country-us-region-california-sid-b123123123-filter-medium:passwordhere',
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts simple non-standard format', () => {
+      const result = proxyFormSchema.safeParse({
+        url: 'socks5://proxy.example.com:1080:myuser:mypassword',
+      })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects non-standard format without password', () => {
+      const result = proxyFormSchema.safeParse({
+        url: 'socks5://proxy.example.com:1080:myuser',
+      })
+      expect(result.success).toBe(false)
     })
   })
 })

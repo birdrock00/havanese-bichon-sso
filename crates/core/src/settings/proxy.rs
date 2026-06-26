@@ -26,7 +26,7 @@ use crate::{
     },
     error::{code::ErrorCode, BichonResult},
     id, raise_error, utc_now,
-    utils::net::parse_proxy_addr,
+    utils::net::parse_proxy_url,
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -98,9 +98,9 @@ impl Proxy {
         insert_impl(DB_MANAGER.db(), self.to_owned())
     }
 
-    /// Validate that the URL is a valid SOCKS5 proxy URL.
+    /// Validate that the URL is a valid proxy URL.
     pub fn validate(&self) -> BichonResult<()> {
-        parse_proxy_addr(&self.url)?;
+        parse_proxy_url(&self.url)?;
         Ok(())
     }
 }
@@ -111,7 +111,15 @@ mod tests {
 
     #[test]
     fn test_valid_proxy_urls() {
-        let urls = vec!["socks5://127.0.0.1:1080", "http://127.0.0.1:8080"];
+        let urls = vec![
+            "socks5://127.0.0.1:1080",
+            "http://127.0.0.1:8080",
+            "socks5://proxy.example.com:1080",
+            "socks5://user:pass@proxy.example.com:1080",
+            "socks5://user@proxy.example.com:1080",
+            // Non-standard format: host:port:user:pass
+            "socks5://server.nodeprovider.com:8080:username123:passwordhere",
+        ];
 
         for url in urls {
             let proxy = Proxy::new(url.to_string());

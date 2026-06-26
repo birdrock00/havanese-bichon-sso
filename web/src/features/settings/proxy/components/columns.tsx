@@ -46,7 +46,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Proxy>[] => [
     cell: ({ row }) => {
       return <LongText>{row.original.url}</LongText>
     },
-    meta: { className: 'w-60' },
+    meta: { className: 'max-w-60' },
   },
   {
     accessorKey: 'created_at',
