@@ -18,6 +18,7 @@ import { Route as AuthenticatedIndexImport } from './routes/_authenticated/index
 import { Route as authSignInImport } from './routes/(auth)/sign-in'
 import { Route as auth500Import } from './routes/(auth)/500'
 import { Route as AuthenticatedSearchIndexImport } from './routes/_authenticated/search/index'
+import { Route as AuthenticatedImportIndexImport } from './routes/_authenticated/import/index'
 import { Route as AuthenticatedAttachmentIndexImport } from './routes/_authenticated/attachment/index'
 
 // Create Virtual Routes
@@ -218,6 +219,12 @@ const AuthenticatedAccountsIndexLazyRoute =
 const AuthenticatedSearchIndexRoute = AuthenticatedSearchIndexImport.update({
   id: '/search/',
   path: '/search/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+
+const AuthenticatedImportIndexRoute = AuthenticatedImportIndexImport.update({
+  id: '/import/',
+  path: '/import/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
@@ -454,6 +461,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAttachmentIndexImport
       parentRoute: typeof AuthenticatedRouteImport
     }
+    '/_authenticated/import/': {
+      id: '/_authenticated/import/'
+      path: '/import'
+      fullPath: '/import'
+      preLoaderRoute: typeof AuthenticatedImportIndexImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
     '/_authenticated/search/': {
       id: '/_authenticated/search/'
       path: '/search'
@@ -561,6 +575,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedUsersRouteLazyRoute: typeof AuthenticatedUsersRouteLazyRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAttachmentIndexRoute: typeof AuthenticatedAttachmentIndexRoute
+  AuthenticatedImportIndexRoute: typeof AuthenticatedImportIndexRoute
   AuthenticatedSearchIndexRoute: typeof AuthenticatedSearchIndexRoute
   AuthenticatedAccountsIndexLazyRoute: typeof AuthenticatedAccountsIndexLazyRoute
   AuthenticatedApiDocsIndexLazyRoute: typeof AuthenticatedApiDocsIndexLazyRoute
@@ -575,6 +590,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedUsersRouteLazyRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAttachmentIndexRoute: AuthenticatedAttachmentIndexRoute,
+  AuthenticatedImportIndexRoute: AuthenticatedImportIndexRoute,
   AuthenticatedSearchIndexRoute: AuthenticatedSearchIndexRoute,
   AuthenticatedAccountsIndexLazyRoute: AuthenticatedAccountsIndexLazyRoute,
   AuthenticatedApiDocsIndexLazyRoute: AuthenticatedApiDocsIndexLazyRoute,
@@ -606,6 +622,7 @@ export interface FileRoutesByFullPath {
   '/users/api-tokens': typeof AuthenticatedUsersApiTokensLazyRoute
   '/users/roles': typeof AuthenticatedUsersRolesLazyRoute
   '/attachment': typeof AuthenticatedAttachmentIndexRoute
+  '/import': typeof AuthenticatedImportIndexRoute
   '/search': typeof AuthenticatedSearchIndexRoute
   '/accounts': typeof AuthenticatedAccountsIndexLazyRoute
   '/api-docs': typeof AuthenticatedApiDocsIndexLazyRoute
@@ -632,6 +649,7 @@ export interface FileRoutesByTo {
   '/users/api-tokens': typeof AuthenticatedUsersApiTokensLazyRoute
   '/users/roles': typeof AuthenticatedUsersRolesLazyRoute
   '/attachment': typeof AuthenticatedAttachmentIndexRoute
+  '/import': typeof AuthenticatedImportIndexRoute
   '/search': typeof AuthenticatedSearchIndexRoute
   '/accounts': typeof AuthenticatedAccountsIndexLazyRoute
   '/api-docs': typeof AuthenticatedApiDocsIndexLazyRoute
@@ -663,6 +681,7 @@ export interface FileRoutesById {
   '/_authenticated/users/api-tokens': typeof AuthenticatedUsersApiTokensLazyRoute
   '/_authenticated/users/roles': typeof AuthenticatedUsersRolesLazyRoute
   '/_authenticated/attachment/': typeof AuthenticatedAttachmentIndexRoute
+  '/_authenticated/import/': typeof AuthenticatedImportIndexRoute
   '/_authenticated/search/': typeof AuthenticatedSearchIndexRoute
   '/_authenticated/accounts/': typeof AuthenticatedAccountsIndexLazyRoute
   '/_authenticated/api-docs/': typeof AuthenticatedApiDocsIndexLazyRoute
@@ -694,6 +713,7 @@ export interface FileRouteTypes {
     | '/users/api-tokens'
     | '/users/roles'
     | '/attachment'
+    | '/import'
     | '/search'
     | '/accounts'
     | '/api-docs'
@@ -719,6 +739,7 @@ export interface FileRouteTypes {
     | '/users/api-tokens'
     | '/users/roles'
     | '/attachment'
+    | '/import'
     | '/search'
     | '/accounts'
     | '/api-docs'
@@ -748,6 +769,7 @@ export interface FileRouteTypes {
     | '/_authenticated/users/api-tokens'
     | '/_authenticated/users/roles'
     | '/_authenticated/attachment/'
+    | '/_authenticated/import/'
     | '/_authenticated/search/'
     | '/_authenticated/accounts/'
     | '/_authenticated/api-docs/'
@@ -807,6 +829,7 @@ export const routeTree = rootRoute
         "/_authenticated/users",
         "/_authenticated/",
         "/_authenticated/attachment/",
+        "/_authenticated/import/",
         "/_authenticated/search/",
         "/_authenticated/accounts/",
         "/_authenticated/api-docs/",
@@ -895,6 +918,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/attachment/": {
       "filePath": "_authenticated/attachment/index.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/import/": {
+      "filePath": "_authenticated/import/index.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/search/": {

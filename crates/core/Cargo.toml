@@ -72,3 +72,4 @@ scopeguard = "1.2.0"
 cron = "0.15"
 quick-xml = { version = "0.40.0", features = ["serialize"] }
 hickory-resolver = "0.26.0-alpha.1"
+memmap2 = "0.9.10"

@@ -21,6 +21,8 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
+/// Memory-mapped MBOX file. Messages are yielded one at a time without
+/// loading the entire file into RAM.
 pub struct MboxFile {
     map: Mmap,
 }
@@ -127,10 +129,6 @@ impl<'a> Iterator for MboxReader<'a> {
 
 #[cfg(test)]
 mod tests {
-    use mail_parser::MessageParser;
-
-    use crate::mbox::gmail::determine_folder;
-
     use super::*;
 
     fn collect_entries(data: &[u8]) -> Vec<&[u8]> {
@@ -144,6 +142,7 @@ mod tests {
         let e = collect_entries(data);
         assert_eq!(e, vec![b"mail1\n", b"mail2\n"]);
     }
+
     #[test]
     fn no_trailing_newline() {
         let data = b"From a\nmail1";
@@ -203,23 +202,5 @@ mod tests {
         }
         let e = collect_entries(&data);
         assert_eq!(e.len(), 1000);
-    }
-
-    #[test]
-    fn test11() {
-        let mbox = MboxFile::from_file(Path::new("e:\\test.mbox")).unwrap();
-
-        for e in mbox.iter() {
-            let body = e.data;
-
-            let message = MessageParser::new().parse(body).unwrap();
-            let labels = message.header("X-Gmail-Labels").unwrap().as_text().unwrap();
-            //println!("offset={} X-Gmail-Labels={:?}", e.offset, labels);
-            println!(
-                "X-Gmail-Labels={:?}, determine_folder={}",
-                labels,
-                determine_folder(labels)
-            )
-        }
     }
 }

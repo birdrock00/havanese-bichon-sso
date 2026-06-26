@@ -65,6 +65,8 @@ pub struct SystemConfigurations {
     pub bichon_oidc_issuer_url: Option<String>,
     pub bichon_oidc_client_id: Option<String>,
     pub bichon_oidc_redirect_uri: Option<String>,
+
+    pub bichon_upload_body_limit_mb: u64,
 }
 
 impl From<&Settings> for SystemConfigurations {
@@ -103,6 +105,7 @@ impl From<&Settings> for SystemConfigurations {
             bichon_oidc_issuer_url: s.bichon_oidc_issuer_url.clone(),
             bichon_oidc_client_id: s.bichon_oidc_client_id.clone(),
             bichon_oidc_redirect_uri: s.bichon_oidc_redirect_uri.clone(),
+            bichon_upload_body_limit_mb: s.bichon_upload_body_limit_mb,
         }
     }
 }

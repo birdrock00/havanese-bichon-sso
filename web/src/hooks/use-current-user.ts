@@ -64,6 +64,9 @@ export function useCurrentUser() {
           if (accountId !== undefined) {
             return accountMap.get(accountId)?.has(perm) ?? false
           }
+          for (const perms of accountMap.values()) {
+            if (perms.has(perm)) return true
+          }
           return false
         })
       }

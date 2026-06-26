@@ -31,6 +31,7 @@ timeago.workspace = true
 chrono.workspace = true
 tracing.workspace = true
 tokio.workspace = true
+futures.workspace = true
 http.workspace = true
 urlencoding.workspace = true
 

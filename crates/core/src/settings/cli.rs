@@ -328,6 +328,17 @@ pub struct Settings {
     /// OIDC redirect URI (must match what's registered with the IdP).
     #[clap(long, env, help = "OpenID Connect redirect URI")]
     pub bichon_oidc_redirect_uri: Option<String>,
+
+    /// Maximum HTTP request body size in MB for file uploads (default: 1100 MB).
+    /// Requests exceeding this limit are rejected at the framework level before
+    /// the application reads the body, preventing memory exhaustion attacks.
+    #[clap(
+        long,
+        default_value = "1100",
+        env,
+        help = "Maximum HTTP request body size in MB for file uploads"
+    )]
+    pub bichon_upload_body_limit_mb: u64,
 }
 
 impl Settings {

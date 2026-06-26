@@ -21,7 +21,7 @@ use std::path::PathBuf;
 
 use crate::api::sender::send_batch_request;
 use crate::mbox::gmail::determine_folder;
-use crate::mbox::reader::MboxFile;
+use bichon_core::import::reader::MboxFile;
 use crate::BichonCliConfig;
 use bichon_core::base64_encode_url_safe;
 use bichon_core::envelope::meta::{parse_bichon_metadata, BichonMetadata};
@@ -37,7 +37,6 @@ const MAX_EMAIL_BYTES: usize = 100 * 1024 * 1024;
 const MAX_BUFFER_BYTES: usize = 200 * 1024 * 1024;
 
 pub mod gmail;
-pub mod reader;
 
 pub async fn handle_mbox_single_file_import(
     config: &BichonCliConfig,
