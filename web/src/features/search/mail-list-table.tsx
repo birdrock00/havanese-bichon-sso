@@ -139,31 +139,62 @@ export function MailListTable({
       accessorKey: "to",
       header: t('search.to'),
       cell: ({ row }) => {
-        const recipients = row.original.to || [];
+        const recipients: string[] = row.original.to || [];
         const { setFilter } = useSearchMessages();
+        const MAX_VISIBLE = 2;
+        const visible = recipients.slice(0, MAX_VISIBLE);
+        const hidden = recipients.slice(MAX_VISIBLE);
+
+        const handleClick = (e: React.MouseEvent, email: string) => {
+          e.stopPropagation();
+          setFilter((prev: Record<string, any>) => ({ ...prev, to: email }));
+        };
 
         return (
-          <div className="group relative flex items-center w-full min-w-0 h-full px-2 overflow-hidden">
+          <div className="group relative flex items-center w-full min-w-0 px-2 py-1.5 overflow-hidden">
             <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-
-            <div className="text-xs flex flex-wrap gap-x-1 min-w-0 flex-1">
-              {recipients.map((email, index) => (
+            <div className="text-xs flex flex-wrap items-center gap-x-1 gap-y-0.5 min-w-0 flex-1">
+              {visible.map((email, index) => (
                 <span key={index} className="flex items-center">
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFilter((prev: Record<string, any>) => ({ ...prev, to: email }));
-                    }}
-                    className="hover:text-primary hover:underline transition-colors truncate max-w-[150px]"
+                    onClick={(e) => handleClick(e, email)}
+                    className="hover:text-primary hover:underline transition-colors truncate max-w-[160px]"
                   >
                     {email}
                   </button>
-                  {index < recipients.length - 1 && (
+                  {index < visible.length - 1 && (
                     <span className="text-muted-foreground ml-0.5">,</span>
                   )}
                 </span>
               ))}
+
+              {hidden.length > 0 && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center justify-center rounded-full bg-muted text-muted-foreground px-1.5 py-0.5 text-[10px] leading-none cursor-default hover:bg-accent hover:text-accent-foreground transition-colors shrink-0"
+                    >
+                      +{hidden.length}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[480px] bg-popover text-popover-foreground border">
+                    <div className="flex flex-col gap-1">
+                      {hidden.map((email, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={(e) => handleClick(e, email)}
+                          className="text-left text-xs px-1 py-0.5 rounded hover:bg-accent hover:text-accent-foreground hover:underline transition-colors"
+                        >
+                          {email}
+                        </button>
+                      ))}
+                    </div>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
           </div>
         );
