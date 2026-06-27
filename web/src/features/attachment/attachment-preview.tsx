@@ -37,6 +37,43 @@ import { getFileConfig } from './mail-message-view';
 const PREVIEWABLE_IMAGE = /^image\/(png|jpeg|gif|webp|svg\+xml)$/;
 const PREVIEWABLE_TEXT = /^(text\/(plain|csv|html|xml|css|javascript|markdown)|application\/(json|xml|javascript|x-httpd-php|x-sh|x-perl|x-python|x-ruby))$/;
 
+const EXT_TO_MIME: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+  '.txt': 'text/plain',
+  '.csv': 'text/csv',
+  '.html': 'text/html',
+  '.htm': 'text/html',
+  '.xml': 'application/xml',
+  '.css': 'text/css',
+  '.js': 'application/javascript',
+  '.mjs': 'application/javascript',
+  '.md': 'text/markdown',
+  '.json': 'application/json',
+  '.php': 'application/x-httpd-php',
+  '.sh': 'application/x-sh',
+  '.pl': 'application/x-perl',
+  '.py': 'application/x-python',
+  '.rb': 'application/x-ruby',
+};
+
+function getExtensionMime(filename: string): string | null {
+  const dot = filename.lastIndexOf('.');
+  if (dot < 0) return null;
+  const ext = filename.slice(dot).toLowerCase();
+  return EXT_TO_MIME[ext] ?? null;
+}
+
+function resolveContentType(contentType: string, fileName: string): string {
+  if (contentType && contentType !== 'application/octet-stream') return contentType;
+  return getExtensionMime(fileName) ?? contentType;
+}
+
 export interface PreviewAttachment {
   content_hash: string;
   file_type: string;
@@ -57,16 +94,16 @@ interface AttachmentPreviewProps {
   attachmentIndex?: number;
 }
 
-function isImagePreview(contentType: string) {
-  return PREVIEWABLE_IMAGE.test(contentType);
+function isImagePreview(contentType: string, fileName?: string) {
+  return PREVIEWABLE_IMAGE.test(resolveContentType(contentType, fileName ?? ''));
 }
 
-function isPdfPreview(contentType: string) {
-  return contentType === 'application/pdf';
+function isPdfPreview(contentType: string, fileName?: string) {
+  return resolveContentType(contentType, fileName ?? '') === 'application/pdf';
 }
 
-function isTextPreview(contentType: string) {
-  return PREVIEWABLE_TEXT.test(contentType);
+function isTextPreview(contentType: string, fileName?: string) {
+  return PREVIEWABLE_TEXT.test(resolveContentType(contentType, fileName ?? ''));
 }
 
 export default function AttachmentPreview({
@@ -90,7 +127,7 @@ export default function AttachmentPreview({
   const imageIndices = useMemo(() => {
     if (!attachments) return [];
     return attachments
-      .map((a, i) => (isImagePreview(a.file_type) ? i : -1))
+      .map((a, i) => (isImagePreview(a.file_type, a.filename) ? i : -1))
       .filter((i) => i >= 0);
   }, [attachments]);
 
@@ -139,14 +176,16 @@ export default function AttachmentPreview({
     return () => window.removeEventListener('keydown', handler);
   }, [open, goPrev, goNext]);
 
+  const effectiveType = resolveContentType(resolved.contentType, resolved.fileName);
+
   // ── Fetch preview blob ─────────────────────────────────────────
   const previewMutation = useMutation({
     mutationFn: () => preview_attachment(accountId, envelopeId, resolved.contentHash),
     onSuccess: (blob) => {
-      if (isTextPreview(resolved.contentType)) {
+      if (isTextPreview(resolved.contentType, resolved.fileName)) {
         blob.text().then(setTextContent);
       } else {
-        const typedBlob = new Blob([blob], { type: resolved.contentType });
+        const typedBlob = new Blob([blob], { type: effectiveType });
         setBlobUrl(URL.createObjectURL(typedBlob));
       }
     },
@@ -180,9 +219,9 @@ export default function AttachmentPreview({
 
   const { icon } = useMemo(() => getFileConfig(resolved.contentType), [resolved.contentType]);
 
-  const isImage = isImagePreview(resolved.contentType);
-  const isPdf = isPdfPreview(resolved.contentType);
-  const isText = isTextPreview(resolved.contentType);
+  const isImage = isImagePreview(resolved.contentType, resolved.fileName);
+  const isPdf = isPdfPreview(resolved.contentType, resolved.fileName);
+  const isText = isTextPreview(resolved.contentType, resolved.fileName);
   const showArrows = imageTotal > 1 && isImage;
 
   return (
