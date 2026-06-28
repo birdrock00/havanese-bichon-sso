@@ -339,6 +339,25 @@ pub struct Settings {
         help = "Maximum HTTP request body size in MB for file uploads"
     )]
     pub bichon_upload_body_limit_mb: u64,
+
+    /// Maximum per-file size in MB for MBOX uploads via the web UI (default: 1024 MB = 1 GB).
+    /// Individual EML files are always capped at 100 MB regardless of this setting.
+    #[clap(
+        long,
+        default_value = "1024",
+        env,
+        help = "Maximum per-file size in MB for MBOX uploads via the web UI"
+    )]
+    pub bichon_web_mbox_upload_limit_mb: u64,
+
+    /// Maximum per-file size in MB for PST uploads via the web UI (default: 2048 MB = 2 GB).
+    #[clap(
+        long,
+        default_value = "2048",
+        env,
+        help = "Maximum per-file size in MB for PST uploads via the web UI"
+    )]
+    pub bichon_web_pst_upload_limit_mb: u64,
 }
 
 impl Settings {

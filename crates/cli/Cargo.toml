@@ -16,12 +16,8 @@ reqwest.workspace = true
 toml = "0.9.8"
 memmap2 = "0.9.10"
 outlook-pst = { git = "https://github.com/rustmailer/outlook-pst-rs.git", branch = "main" }
-compressed-rtf = "1.0.1"
 chrono.workspace = true
-mail-send.workspace = true
 base64.workspace = true
-codepage-strings = "1.0.2"
-hex = "0.4.3"
 sysinfo.workspace = true
 indicatif.workspace = true
 serde_json.workspace = true

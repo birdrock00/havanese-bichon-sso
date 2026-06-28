@@ -104,7 +104,7 @@ export interface FolderHint {
   /** The suggested folder name. */
   name: string;
   /** Where the hint came from. */
-  source: 'gmail-labels' | 'bichon-metadata' | 'filename' | 'mbox-filename';
+  source: 'gmail-labels' | 'bichon-metadata' | 'filename' | 'mbox-filename' | 'pst-filename';
 }
 
 /**
@@ -141,6 +141,12 @@ export async function extractFolderHint(file: File): Promise<FolderHint | null> 
   // 4. For EML files, try the filename
   const fnFolder = folderFromFileName(file.name);
   if (fnFolder) return { name: fnFolder, source: 'filename' };
+
+  // 5. For PST files, try the filename
+  if (isPst) {
+    const fnFolder = folderFromFileName(file.name);
+    if (fnFolder) return { name: fnFolder, source: 'pst-filename' };
+  }
 
   return null;
 }

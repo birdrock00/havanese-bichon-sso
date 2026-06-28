@@ -73,3 +73,7 @@ cron = "0.15"
 quick-xml = { version = "0.40.0", features = ["serialize"] }
 hickory-resolver = "0.26.0-alpha.1"
 memmap2 = "0.9.10"
+outlook-pst = { git = "https://github.com/rustmailer/outlook-pst-rs.git", branch = "main" }
+compressed-rtf = "1.0.1"
+codepage-strings = "1.0.2"
+hex.workspace = true

@@ -20,6 +20,7 @@
 //use poem_openapi::Object;
 pub mod history;
 pub mod reader;
+pub mod pst;
 pub use history::ImportHistory;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -257,9 +258,15 @@ pub fn check_temp_disk_space() -> BichonResult<u64> {
 pub enum FileFormat {
     Eml,
     Mbox,
+    Pst,
 }
 
 pub fn detect_format(bytes: &[u8], file_name: &str) -> Option<FileFormat> {
+    // PST files start with OLE2 compound document magic bytes
+    if bytes.len() >= 8 && &bytes[..8] == b"\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1" {
+        return Some(FileFormat::Pst);
+    }
+
     // MBOX files start with "From " (note the trailing space after From)
     if bytes.starts_with(b"From ") {
         // Double-check: look for a valid date after the first "From " line
@@ -290,6 +297,8 @@ pub fn detect_format(bytes: &[u8], file_name: &str) -> Option<FileFormat> {
         Some(FileFormat::Eml)
     } else if lower.ends_with(".mbox") {
         Some(FileFormat::Mbox)
+    } else if lower.ends_with(".pst") {
+        Some(FileFormat::Pst)
     } else {
         None
     }
@@ -375,7 +384,7 @@ fn validate_import_account(account_id: u64) -> BichonResult<AccountModel> {
 }
 
 /// Resolve or create a mailbox/folder for the given account.
-fn resolve_mailbox(account: &AccountModel, folder: &str) -> BichonResult<u64> {
+pub(super) fn resolve_mailbox(account: &AccountModel, folder: &str) -> BichonResult<u64> {
     match account.account_type {
         AccountType::IMAP => {
             // Shouldn't reach here (validated above), but handle gracefully
@@ -410,6 +419,13 @@ fn resolve_mailbox(account: &AccountModel, folder: &str) -> BichonResult<u64> {
             Ok(mailbox_id)
         }
     }
+}
+
+/// Resolve or create a mailbox for a given account_id and folder name.
+/// Used by PST import to create per-folder mailboxes.
+pub fn resolve_mailbox_by_account_id(account_id: u64, folder: &str) -> BichonResult<u64> {
+    let account = AccountModel::check_account_exists(account_id)?;
+    resolve_mailbox(&account, folder)
 }
 
 /// Process an uploaded file (EML or MBOX) and import into the given account/folder.
@@ -497,6 +513,7 @@ pub fn process_uploaded_file(
     match format {
         FileFormat::Eml => process_eml_file(import_id, file_path, account_id, mailbox_id, user_id, folder),
         FileFormat::Mbox => process_mbox_file(import_id, file_path, account_id, mailbox_id, user_id, folder),
+        FileFormat::Pst => process_pst_upload(import_id, file_path, account_id, mailbox_id, user_id, folder),
     }
 }
 
@@ -512,7 +529,7 @@ fn detect_format_from_file(file_path: &Path, file_name: &str) -> BichonResult<Fi
 
     detect_format(&buf, file_name).ok_or_else(|| {
         raise_error!(
-            "Unknown file format. Supported: .eml, .mbox".into(),
+            "Unknown file format. Supported: .eml, .mbox, .pst".into(),
             ErrorCode::InvalidParameter
         )
     })
@@ -692,6 +709,111 @@ fn process_single_eml(
             error_message: format!("{:?}", e),
         }]),
     }
+}
+
+/// Process a PST file uploaded via the web UI.
+/// Two-pass approach: count messages first, then process with periodic progress updates.
+fn process_pst_upload(
+    import_id: &str,
+    file_path: &Path,
+    account_id: u64,
+    _mailbox_id: u64,  // ignored; PST creates its own mailboxes per folder
+    user_id: u64,
+    folder: &str,
+) {
+    // Pass 1: count total messages
+    let total = match pst::count_pst_messages(file_path) {
+        Ok(n) => n,
+        Err(e) => {
+            fail_progress(import_id, "pst", &format!("{:?}", e), user_id, account_id, folder);
+            let _ = std::fs::remove_file(file_path);
+            return;
+        }
+    };
+
+    update_progress(import_id, ImportProgress {
+        import_id: import_id.to_string(),
+        status: ImportStatus::Processing,
+        format: "pst".to_string(),
+        total,
+        success: 0,
+        duplicates: 0,
+        failed: 0,
+        failed_details: vec![],
+    });
+
+    // Pass 2: process messages with progress updates
+    let mut success_count: usize = 0;
+    let mut failed_details: Vec<FailedItemDetail> = Vec::new();
+    let mut index: usize = 0;
+
+    let pst_store = match outlook_pst::open_store(file_path) {
+        Ok(s) => s,
+        Err(e) => {
+            fail_progress(import_id, "pst", &format!("{:?}", e), user_id, account_id, folder);
+            let _ = std::fs::remove_file(file_path);
+            return;
+        }
+    };
+
+    let ipm_sub_tree = match pst_store.properties().ipm_sub_tree_entry_id() {
+        Ok(id) => id,
+        Err(e) => {
+            fail_progress(import_id, "pst", &format!("{:?}", e), user_id, account_id, folder);
+            let _ = std::fs::remove_file(file_path);
+            return;
+        }
+    };
+
+    let ipm_subtree_folder = match pst_store.open_folder(&ipm_sub_tree) {
+        Ok(f) => f,
+        Err(e) => {
+            fail_progress(import_id, "pst", &format!("{:?}", e), user_id, account_id, folder);
+            let _ = std::fs::remove_file(file_path);
+            return;
+        }
+    };
+
+    // Progress callback: update progress every 50 messages
+    let import_id = import_id.to_string();
+    let format_str = "pst".to_string();
+    pst::process_folder_with_progress(
+        &ipm_subtree_folder,
+        "",  // parent_path starts empty
+        account_id,
+        total,  // pass pre-counted total for accurate progress
+        &mut success_count,
+        &mut failed_details,
+        &mut index,
+        &|processed, actual_failed| {
+            update_progress(&import_id, ImportProgress {
+                import_id: import_id.clone(),
+                status: ImportStatus::Processing,
+                format: format_str.clone(),
+                total,
+                success: processed - actual_failed,
+                duplicates: 0,
+                failed: actual_failed,
+                failed_details: vec![],
+            });
+        },
+    );
+
+    // Clean up temp file
+    let _ = std::fs::remove_file(file_path);
+
+    let final_progress = ImportProgress {
+        import_id: import_id.to_string(),
+        status: ImportStatus::Completed,
+        format: "pst".to_string(),
+        total,
+        success: success_count,
+        duplicates: 0,
+        failed: failed_details.len(),
+        failed_details,
+    };
+    history::save_import_history(user_id, account_id, folder, &final_progress);
+    update_progress(&import_id, final_progress);
 }
 
 /// Record a fatal failure and save history.

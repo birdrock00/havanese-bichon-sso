@@ -27,11 +27,12 @@ use bichon_core::database::MemDbModel;
 use bichon_core::import::{
     check_temp_disk_space, get_import_progress, process_uploaded_file, update_progress,
     BatchEmlRequest, BatchEmlResult, ImportEmls, ImportHistory, ImportProgress, ImportStatus,
-    MAX_WEB_EML_BYTES, MAX_WEB_MBOX_BYTES,
+    MAX_WEB_EML_BYTES,
 };
 use bichon_core::import::history::{save_import_history, MAX_HISTORY_PER_USER};
 use bichon_core::raise_error;
 use bichon_core::error::code::ErrorCode;
+use bichon_core::settings::cli::SETTINGS;
 use bichon_core::settings::dir::DATA_DIR_MANAGER;
 use bichon_core::users::permissions::Permission;
 use bichon_core::import::detect_text_file;
@@ -145,10 +146,11 @@ impl ImportApi {
             .unwrap_or_default();
         let is_mbox_ext = ext_lower == "mbox";
         let is_eml_ext = ext_lower == "eml";
-        if !is_mbox_ext && !is_eml_ext {
+        let is_pst_ext = ext_lower == "pst";
+        if !is_mbox_ext && !is_eml_ext && !is_pst_ext {
             return Err(raise_error!(
                 format!(
-                    "Unsupported file type '.{}'. Only .eml and .mbox files are allowed.",
+                    "Unsupported file type '.{}'. Only .eml, .mbox and .pst files are allowed.",
                     ext_lower
                 ),
                 ErrorCode::InvalidParameter
@@ -156,7 +158,15 @@ impl ImportApi {
         }
 
         // Check disk space (fail fast before streaming)
-        let min_required = if is_mbox_ext { MAX_WEB_MBOX_BYTES } else { MAX_WEB_EML_BYTES };
+        let max_mbox = SETTINGS.bichon_web_mbox_upload_limit_mb as usize * 1024 * 1024;
+        let max_pst = SETTINGS.bichon_web_pst_upload_limit_mb as usize * 1024 * 1024;
+        let min_required = if is_mbox_ext {
+            max_mbox
+        } else if is_pst_ext {
+            max_pst
+        } else {
+            MAX_WEB_EML_BYTES
+        };
         let free = check_temp_disk_space()?;
         if free < min_required as u64 * 2 {
             let free_gb = free as f64 / 1024.0 / 1024.0 / 1024.0;
@@ -184,19 +194,30 @@ impl ImportApi {
             data.0,
             &temp_path,
             is_mbox_ext,
+            is_pst_ext,
         ).await?;
 
         let format = format_detected.unwrap_or_else(|| {
-            if is_mbox_ext { FileFormat::Mbox } else { FileFormat::Eml }
+            if is_mbox_ext {
+                FileFormat::Mbox
+            } else if is_pst_ext {
+                FileFormat::Pst
+            } else {
+                FileFormat::Eml
+            }
         });
 
         let format_str = match format {
             FileFormat::Mbox => "mbox".to_string(),
             FileFormat::Eml => "eml".to_string(),
+            FileFormat::Pst => "pst".to_string(),
         };
 
+        let max_mbox = SETTINGS.bichon_web_mbox_upload_limit_mb as usize * 1024 * 1024;
+        let max_pst = SETTINGS.bichon_web_pst_upload_limit_mb as usize * 1024 * 1024;
         let max_size = match format {
-            FileFormat::Mbox => MAX_WEB_MBOX_BYTES,
+            FileFormat::Mbox => max_mbox,
+            FileFormat::Pst => max_pst,
             FileFormat::Eml => MAX_WEB_EML_BYTES,
         };
         if file_len > max_size {
@@ -295,13 +316,24 @@ impl ImportApi {
 /// Stream a poem `Body` to a temp file while enforcing size limits and
 /// validating that the content looks like a text-based email file.
 ///
+/// PST files are binary (OLE2) — text detection is skipped for them.
+///
 /// Returns the detected format (if any) and the total bytes written.
 async fn stream_body_to_temp(
     body: Body,
     temp_path: &std::path::Path,
     is_mbox_ext: bool,
+    is_pst_ext: bool,
 ) -> ApiResult<(Option<FileFormat>, usize)> {
-    let max_stream = if is_mbox_ext { MAX_WEB_MBOX_BYTES } else { MAX_WEB_EML_BYTES };
+    let max_mbox = SETTINGS.bichon_web_mbox_upload_limit_mb as usize * 1024 * 1024;
+    let max_pst = SETTINGS.bichon_web_pst_upload_limit_mb as usize * 1024 * 1024;
+    let max_stream = if is_mbox_ext {
+        max_mbox
+    } else if is_pst_ext {
+        max_pst
+    } else {
+        MAX_WEB_EML_BYTES
+    };
 
     let mut file = tokio::fs::File::create(temp_path).await.map_err(|e| {
         raise_error!(
@@ -353,12 +385,12 @@ async fn stream_body_to_temp(
             format_detected = bichon_core::import::detect_format(&first_chunk, "upload");
 
             // If extension is .eml but content looks like MBOX (or vice versa), that's OK.
-            // But if content doesn't look like either, reject.
-            if !detect_text_file(&first_chunk) {
+            // PST files are binary — skip text detection.
+            if !is_pst_ext && !detect_text_file(&first_chunk) {
                 drop(file);
                 let _ = tokio::fs::remove_file(temp_path).await;
                 return Err(raise_error!(
-                    "The uploaded file appears to be binary (not a valid email file). Only .eml and .mbox text files are accepted.".into(),
+                    "The uploaded file appears to be binary (not a valid email file). Only .eml, .mbox and .pst files are accepted.".into(),
                     ErrorCode::InvalidParameter
                 ))?;
             }

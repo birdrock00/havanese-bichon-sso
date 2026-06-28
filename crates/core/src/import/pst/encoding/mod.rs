@@ -16,8 +16,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-use compressed_rtf::*;
 use outlook_pst::ltp::prop_context::PropertyValue;
 
 pub fn decode_subject(value: &PropertyValue) -> Option<String> {
@@ -60,5 +58,5 @@ pub fn decode_html_body(buffer: &[u8], code_page: u16) -> Option<String> {
 }
 
 pub fn decode_rtf_compressed(buffer: &[u8]) -> Option<String> {
-    decompress_rtf(buffer).ok()
+    compressed_rtf::decompress_rtf(buffer).ok()
 }

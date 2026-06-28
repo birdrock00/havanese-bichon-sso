@@ -138,6 +138,10 @@ export type ServerConfigurations = {
     bichon_smtp_auth_required: boolean
     bichon_smtp_tls_key_path?: string | null
     bichon_smtp_tls_cert_path?: string | null
+
+    bichon_upload_body_limit_mb: number
+    bichon_web_mbox_upload_limit_mb: number
+    bichon_web_pst_upload_limit_mb: number
 }
 
 export const get_dashboard_stats = async () => {

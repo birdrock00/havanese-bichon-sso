@@ -42,11 +42,13 @@ import {
   type ImportProgress,
   type ImportHistory,
 } from '@/api/import/api';
+import { get_system_configurations } from '@/api/system/api';
 import { list_mailboxes } from '@/api/mailbox/api';
 import { extractFolderHint, type FolderHint } from './folder-hint';
 
-const MAX_EML = 100 * 1024 * 1024;   // 100 MB
-const MAX_MBOX = 1024 * 1024 * 1024; // 1 GB
+const MAX_EML = 100 * 1024 * 1024;   // 100 MB (hardcoded)
+const DEFAULT_MAX_MBOX = 1024 * 1024 * 1024; // 1 GB (fallback; actual limit from server settings)
+const DEFAULT_MAX_PST = 2048 * 1024 * 1024; // 2 GB (fallback; actual limit from server settings)
 
 // MIME types that are clearly NOT email files — reject these upfront.
 const BLOCKED_MIME_PREFIXES = [
@@ -66,10 +68,10 @@ function isValidFileType(file: File, ext: string): boolean {
     }
   }
   // Check extension
-  return ext === 'eml' || ext === 'mbox';
+  return ext === 'eml' || ext === 'mbox' || ext === 'pst';
 }
 
-type FolderMode = 'header' | 'existing' | 'custom';
+type FolderMode = '' | 'header' | 'existing' | 'custom';
 
 interface QueuedFile {
   file: File;
@@ -89,6 +91,7 @@ function folderHintLabel(hint: FolderHint): string {
     case 'bichon-metadata': return 'X-Bichon-Metadata';
     case 'filename': return 'filename';
     case 'mbox-filename': return 'mbox filename';
+    case 'pst-filename': return 'PST filename';
   }
 }
 
@@ -97,7 +100,7 @@ export default function ImportPage() {
   const { toast } = useToast();
 
   const [accountId, setAccountId] = useState<string>('');
-  const [folderMode, setFolderMode] = useState<FolderMode>('header');
+  const [folderMode, setFolderMode] = useState<FolderMode>('');
   const [folder, setFolder] = useState('INBOX');
   const [files, setFiles] = useState<QueuedFile[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -107,6 +110,7 @@ export default function ImportPage() {
   const [phase, setPhase] = useState<'idle' | 'uploading' | 'processing' | 'done'>('idle');
   const [folderHint, setFolderHint] = useState<FolderHint | null>(null);
   const [headerFolder, setHeaderFolder] = useState('INBOX');
+  const [isPstSelected, setIsPstSelected] = useState(false);
 
   // Combobox state for existing mailbox selection
   const [mailboxOpen, setMailboxOpen] = useState(false);
@@ -129,6 +133,21 @@ export default function ImportPage() {
   });
   const mailboxes = mailboxData?.mailboxes ?? [];
 
+  // Fetch system config to get the configured MBOX/PST upload limits.
+  // Falls back to defaults for non-root users or on error.
+  const { data: sysConfig } = useQuery({
+    queryKey: ['system-configurations'],
+    queryFn: get_system_configurations,
+    staleTime: 300_000,
+    retry: false,
+  });
+  const maxMbox = sysConfig
+    ? sysConfig.bichon_web_mbox_upload_limit_mb * 1024 * 1024
+    : DEFAULT_MAX_MBOX;
+  const maxPst = sysConfig
+    ? sysConfig.bichon_web_pst_upload_limit_mb * 1024 * 1024
+    : DEFAULT_MAX_PST;
+
   // Import history
   const { data: history = [], refetch: refetchHistory } = useQuery({
     queryKey: ['import-history'],
@@ -144,6 +163,8 @@ export default function ImportPage() {
       case 'existing':
       case 'custom':
         return folder;
+      default:
+        return '';
     }
   })();
 
@@ -179,7 +200,8 @@ export default function ImportPage() {
     const queued: QueuedFile[] = arr.map((f) => {
       const ext = f.name.split('.').pop()?.toLowerCase() || '';
       const isMbox = ext === 'mbox';
-      const max = isMbox ? MAX_MBOX : MAX_EML;
+      const isPst = ext === 'pst';
+      const max = isMbox ? maxMbox : isPst ? maxPst : MAX_EML;
       const typeOk = isValidFileType(f, ext);
       return { file: f, sizeOk: f.size <= max, typeOk };
     });
@@ -189,17 +211,32 @@ export default function ImportPage() {
     setProgress(null);
     //setImportId(null);
 
-    // Extract folder hint from the first valid file
+    // Extract folder hint from the first valid file.
+    // PST files are binary (OLE2) — headers can't be extracted in-browser.
     const firstOk = queued.find((q) => q.sizeOk && q.typeOk);
     if (firstOk) {
-      try {
-        const hint = await extractFolderHint(firstOk.file);
-        if (hint) {
-          setFolderHint(hint);
-          setHeaderFolder(hint.name);
+      const ext = firstOk.file.name.split('.').pop()?.toLowerCase() || '';
+      const isPstFile = ext === 'pst';
+      setIsPstSelected(isPstFile);
+      if (isPstFile) {
+        // PST: folder structure is auto-detected, no manual mode needed
+        setFolderHint(null);
+        setHeaderFolder('INBOX');
+        setFolderMode('');
+      } else {
+        // EML/MBOX: default to header auto-detect if no mode selected yet
+        if (!folderMode) {
+          setFolderMode('header');
         }
-      } catch {
-        // ignore
+        try {
+          const hint = await extractFolderHint(firstOk.file);
+          if (hint) {
+            setFolderHint(hint);
+            setHeaderFolder(hint.name);
+          }
+        } catch {
+          // ignore
+        }
       }
     }
   }, []);
@@ -209,6 +246,8 @@ export default function ImportPage() {
     if (files.length <= 1) {
       setFolderHint(null);
       setHeaderFolder('INBOX');
+      setFolderMode('');
+      setIsPstSelected(false);
     }
   };
 
@@ -273,7 +312,7 @@ export default function ImportPage() {
         <div className="flex-1 space-y-6 p-6 md:p-8 max-w-3xl mx-auto">
           <div>
             <h1 className="text-xl font-bold tracking-tight">
-              {t('import.title', 'Import EML / MBOX')}
+              {t('import.title', 'Import EML / MBOX / PST')}
             </h1>
             <p className="text-sm text-muted-foreground mt-1">
               {t('import.description', 'Import email files into a NoSync account. For larger files, use the CLI.')}
@@ -350,13 +389,20 @@ export default function ImportPage() {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium">
-                {t('import.folderMethod', '2. Choose folder method')}
+                {isPstSelected
+                  ? t('import.folderStructure', '2. Folder structure')
+                  : t('import.folderMethod', '2. Choose folder method')}
               </CardTitle>
               <CardDescription className="text-xs">
-                {t('import.folderMethodDesc', 'How should the target mail folder be determined?')}
+                {isPstSelected
+                  ? t('import.pstFolderDesc', 'The PST file contains its own folder structure (e.g. Inbox, Sent Items, etc.). Folders will be automatically created during import.')
+                  : files.length === 0
+                    ? t('import.selectFileFirst', 'Select a file first to determine available options.')
+                    : t('import.folderMethodDesc', 'How should the target mail folder be determined?')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {!isPstSelected && (
               <RadioGroup
                 value={folderMode}
                 onValueChange={(v) => handleModeChange(v as FolderMode)}
@@ -516,6 +562,7 @@ export default function ImportPage() {
                   </div>
                 </label>
               </RadioGroup>
+              )}
             </CardContent>
           </Card>
 
@@ -526,7 +573,11 @@ export default function ImportPage() {
                 {t('import.chooseFiles', '3. Choose files')}
               </CardTitle>
               <CardDescription className="text-xs">
-                {t('import.limits', 'Max: EML 100 MB · MBOX 1 GB. Larger files → CLI.')}
+                {t('import.limits', {
+                  defaultValue: 'Max: EML 100 MB · MBOX {{maxMbox}} MB · PST {{maxPst}} MB. Larger files → CLI.',
+                  maxMbox: (maxMbox / (1024 * 1024)).toFixed(0),
+                  maxPst: (maxPst / (1024 * 1024)).toFixed(0)
+                })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -542,7 +593,7 @@ export default function ImportPage() {
                 onClick={() => {
                   const input = document.createElement('input');
                   input.type = 'file';
-                  input.accept = '.eml,.mbox,message/rfc822,application/mbox,text/plain';
+                  input.accept = '.eml,.mbox,.pst,message/rfc822,application/mbox,text/plain';
                   input.multiple = true;
                   input.onchange = () => input.files && handleFiles(input.files);
                   input.click();
@@ -550,7 +601,7 @@ export default function ImportPage() {
               >
                 <Upload className="mx-auto h-10 w-10 text-muted-foreground/60 mb-3" />
                 <p className="text-sm font-medium">
-                  {t('import.dropHere', 'Drop .eml / .mbox files here')}
+                  {t('import.dropHere', 'Drop .eml / .mbox / .pst files here')}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {t('import.orClick', 'or click to browse')}
@@ -677,7 +728,9 @@ export default function ImportPage() {
           {/* Import button */}
           <div className="flex justify-between items-center">
             <div className="text-xs text-muted-foreground">
-              {t('import.willImportTo', 'Will import to')}: <span className="font-medium text-foreground">{effectiveFolder}</span>
+              {isPstSelected
+                ? t('import.pstFolders', 'PST folder structure will be preserved during import')
+                : (<>{t('import.willImportTo', 'Will import to')}: <span className="font-medium text-foreground">{effectiveFolder}</span></>)}
             </div>
             <Button
               onClick={() => importMutation.mutate()}
