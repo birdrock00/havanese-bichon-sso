@@ -114,6 +114,7 @@ export interface FolderHint {
 export async function extractFolderHint(file: File): Promise<FolderHint | null> {
   const ext = file.name.split('.').pop()?.toLowerCase();
   const isMbox = ext === 'mbox';
+  const isPst = ext === 'pst';
 
   // Read first 64 KB — enough for headers of the first message
   const chunk = new Uint8Array(await file.slice(0, HEADER_READ_BYTES).arrayBuffer());
