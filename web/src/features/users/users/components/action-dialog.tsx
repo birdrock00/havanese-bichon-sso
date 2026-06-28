@@ -20,7 +20,7 @@ import { useState, useMemo } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Loader2, Shield, Settings2, UserIcon, Plus, Trash2, Mail } from 'lucide-react'
+import { Loader2, Shield, Settings2, UserIcon, Plus, Trash2, Mail, Check, ChevronsUpDown } from 'lucide-react'
 import { AxiosError } from 'axios'
 
 import { Button } from '@/components/ui/button'
@@ -43,11 +43,21 @@ import {
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { cn } from '@/lib/utils'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { toast } from '@/hooks/use-toast'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command"
 
 import { create_user, update_user, User } from '@/api/users/api'
 import useMinimalAccountList from '@/hooks/use-minimal-account-list'
@@ -63,6 +73,66 @@ interface Props {
   currentRow?: User
   open: boolean
   onOpenChange: (open: boolean) => void
+}
+
+function AccountSearchSelect({
+  accounts,
+  value,
+  onChange,
+  placeholder,
+}: {
+  accounts: { id: number; email: string; name?: string }[]
+  value: number
+  onChange: (v: number) => void
+  placeholder: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const selectedAccount = accounts.find(a => a.id === value)
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase()
+    return accounts
+      .filter(a =>
+        !q || a.email.toLowerCase().includes(q) || a.name?.toLowerCase().includes(q) || String(a.id).includes(q)
+      )
+      .sort((a, b) => a.email.toLowerCase().localeCompare(b.email.toLowerCase()))
+  }, [accounts, search])
+
+  return (
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setSearch('') }}>
+      <PopoverTrigger asChild>
+        <FormControl>
+          <Button variant="outline" role="combobox" className="bg-muted/10 justify-between w-full font-normal">
+            {selectedAccount ? selectedAccount.email : placeholder}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </FormControl>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-[--radix-popover-trigger-width]" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput value={search} onValueChange={setSearch} placeholder={placeholder} />
+          <CommandList>
+            <CommandEmpty>No account found</CommandEmpty>
+            <CommandGroup>
+              {filtered.map(acc => (
+                <CommandItem
+                  key={acc.id}
+                  value={String(acc.id)}
+                  onSelect={() => { onChange(acc.id); setOpen(false) }}
+                >
+                  <Check className={cn("mr-2 h-4 w-4", acc.id === value ? "opacity-100" : "opacity-0")} />
+                  <span className="truncate">{acc.email}</span>
+                  {acc.name && <span className="ml-2 text-xs text-muted-foreground">{acc.name}</span>}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 export function UserActionDialog({ currentRow, open, onOpenChange }: Props) {
@@ -299,12 +369,12 @@ export function UserActionDialog({ currentRow, open, onOpenChange }: Props) {
                           <div key={item.id} className="flex items-start gap-3 p-3 border rounded-xl bg-card shadow-sm hover:border-primary/30 transition-colors">
                             <FormField control={form.control} name={`account_access_entries.${index}.accountId`} render={({ field }) => (
                               <FormItem className="flex-1">
-                                <Select onValueChange={(v) => field.onChange(Number(v))} value={field.value ? String(field.value) : undefined}>
-                                  <FormControl><SelectTrigger className="bg-muted/10"><SelectValue placeholder={t('users.actions.fields.select_account')} /></SelectTrigger></FormControl>
-                                  <SelectContent>
-                                    {allAccounts?.map(acc => <SelectItem key={acc.id} value={String(acc.id)}>{acc.email}</SelectItem>)}
-                                  </SelectContent>
-                                </Select>
+                                <AccountSearchSelect
+                                  accounts={allAccounts ?? []}
+                                  value={field.value}
+                                  onChange={(v) => field.onChange(v)}
+                                  placeholder={t('users.actions.fields.select_account')}
+                                />
                                 <FormMessage />
                               </FormItem>
                             )} />
