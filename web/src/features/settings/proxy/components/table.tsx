@@ -79,8 +79,8 @@ export function ProxyTable({ columns, data }: DataTableProps) {
     initialState: {
       pagination: {
         pageIndex: 0,
-        pageSize: Number(localStorage.getItem('bichon_proxy_page_size')) || 10
-      }
+        pageSize: Number(localStorage.getItem('bichon_proxy_page_size')) || 10,
+      },
     },
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
@@ -98,8 +98,8 @@ export function ProxyTable({ columns, data }: DataTableProps) {
   return (
     <div className='space-y-4'>
       <DataTableToolbar table={table} />
-      <div className='rounded-md border'>
-        <Table>
+      <div className='overflow-x-auto rounded-md border'>
+        <Table className='w-full table-fixed'>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className='group/row'>
@@ -113,9 +113,9 @@ export function ProxyTable({ columns, data }: DataTableProps) {
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
                   )
                 })}
@@ -133,7 +133,7 @@ export function ProxyTable({ columns, data }: DataTableProps) {
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
-                      className={cell.column.columnDef.meta?.className ?? ''}
+                      className={`overflow-hidden ${cell.column.columnDef.meta?.className ?? ''}`}
                     >
                       {flexRender(
                         cell.column.columnDef.cell,
