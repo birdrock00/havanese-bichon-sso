@@ -105,6 +105,14 @@ export interface Proxy {
     updated_at: number;
 }
 
+export interface ProxyTestResult {
+    ip?: string | null;
+    country?: string | null;
+    region?: string | null;
+    city?: string | null;
+    isp?: string | null;
+}
+
 export type ServerConfigurations = {
     bichon_log_level: string
     bichon_http_port: number
@@ -165,6 +173,11 @@ export const update_proxy = async (id: number, url: string) => {
             "Content-Type": "text/plain",
         },
     });
+    return response.data;
+};
+
+export const test_proxy = async (id: number) => {
+    const response = await axiosInstance.post<ProxyTestResult>(`api/v1/proxy/${id}/test`);
     return response.data;
 };
 

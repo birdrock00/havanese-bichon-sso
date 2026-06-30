@@ -18,8 +18,10 @@
 
 
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
+import { useMutation } from '@tanstack/react-query'
 import { Row } from '@tanstack/react-table'
 import { IconEdit, IconTrash } from '@tabler/icons-react'
+import { AxiosError } from 'axios'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -31,8 +33,9 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useProxyContext } from '../context'
 import { useTranslation } from 'react-i18next'
-import { Proxy } from '@/api/system/api'
+import { Proxy, test_proxy } from '@/api/system/api'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { toast } from '@/hooks/use-toast'
 
 
 interface DataTableRowActionsProps {
@@ -43,6 +46,34 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const { setOpen, setCurrentRow } = useProxyContext()
   const { require_any_permission } = useCurrentUser()
   const { t } = useTranslation()
+  const canManage = require_any_permission(['system:root'])
+  const testMutation = useMutation({
+    mutationFn: () => test_proxy(row.original.id),
+    onSuccess: (result) => {
+      const description = [
+        result.ip,
+        result.city,
+        result.region,
+        result.country,
+        result.isp,
+      ]
+        .filter(Boolean)
+        .join(' - ')
+      toast({
+        title: t('settings.proxyTestSuccess'),
+        description: description || undefined,
+      })
+    },
+    onError: (error) => {
+      const axiosError = error as AxiosError<{ message?: string }>
+      toast({
+        variant: 'destructive',
+        title: t('settings.proxyTestFailed'),
+        description: axiosError.response?.data?.message || axiosError.message,
+      })
+    },
+  })
+
   return (
     <>
       <DropdownMenu modal={false}>
@@ -57,7 +88,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end' className='w-[160px]'>
           <DropdownMenuItem
-            disabled={!require_any_permission(['system:root'])}
+            disabled={!canManage}
             onClick={() => {
               setCurrentRow(row.original)
               setOpen('edit')
@@ -68,9 +99,17 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
               <IconEdit size={16} />
             </DropdownMenuShortcut>
           </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={!canManage || testMutation.isPending}
+            onClick={() => testMutation.mutate()}
+          >
+            {testMutation.isPending
+              ? t('settings.proxyTesting')
+              : t('settings.proxyTest')}
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            disabled={!require_any_permission(['system:root'])}
+            disabled={!canManage}
             onClick={() => {
               setCurrentRow(row.original)
               setOpen('delete')

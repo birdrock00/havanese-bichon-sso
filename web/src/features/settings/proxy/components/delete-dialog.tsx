@@ -15,22 +15,19 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
 import { useState } from 'react'
+import { AxiosError } from 'axios'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { IconAlertTriangle } from '@tabler/icons-react'
+import { useTranslation } from 'react-i18next'
+import { delete_proxy } from '@/api/system/api'
+import { Proxy } from '@/api/system/api'
 import { toast } from '@/hooks/use-toast'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ConfirmDialog } from '@/components/confirm-dialog'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ToastAction } from '@/components/ui/toast'
-import { AxiosError } from 'axios'
-import { delete_proxy } from '@/api/system/api'
-import { useTranslation } from 'react-i18next'
-import { Proxy } from '@/api/system/api'
-
+import { ConfirmDialog } from '@/components/confirm-dialog'
 
 interface Props {
   open: boolean
@@ -40,41 +37,50 @@ interface Props {
 
 export function ProxyDeleteDialog({ open, onOpenChange, currentRow }: Props) {
   const { t } = useTranslation()
-  const [value, setValue] = useState(0)
-  const queryClient = useQueryClient();
+  const [value, setValue] = useState('')
+  const queryClient = useQueryClient()
 
   function handleSuccess() {
     toast({
       title: t('proxyDelete.successTitle'),
       description: t('proxyDelete.successDesc'),
-      action: <ToastAction altText={t('proxyDelete.close')}>{t('proxyDelete.close')}</ToastAction>,
-    });
-    queryClient.invalidateQueries({ queryKey: ['proxy-list'] });
-    onOpenChange(false);
+      action: (
+        <ToastAction altText={t('proxyDelete.close')}>
+          {t('proxyDelete.close')}
+        </ToastAction>
+      ),
+    })
+    queryClient.invalidateQueries({ queryKey: ['proxy-list'] })
+    onOpenChange(false)
   }
 
   function handleError(error: AxiosError) {
-    const errorMessage = (error.response?.data as { message?: string })?.message ||
+    const errorMessage =
+      (error.response?.data as { message?: string })?.message ||
       error.message ||
-      t('proxyDelete.failedDesc');
+      t('proxyDelete.failedDesc')
 
     toast({
-      variant: "destructive",
+      variant: 'destructive',
       title: t('proxyDelete.failedTitle'),
       description: errorMessage as string,
-      action: <ToastAction altText={t('proxyDelete.tryAgain')}>{t('proxyDelete.tryAgain')}</ToastAction>,
-    });
-    console.error(error);
+      action: (
+        <ToastAction altText={t('proxyDelete.tryAgain')}>
+          {t('proxyDelete.tryAgain')}
+        </ToastAction>
+      ),
+    })
+    console.error(error)
   }
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => delete_proxy(id),
     onSuccess: handleSuccess,
-    onError: handleError
+    onError: handleError,
   })
 
   const handleDelete = () => {
-    if (value !== currentRow.id) return
+    if (value !== `${currentRow.id}`) return
     deleteMutation.mutate(currentRow.id)
   }
 
@@ -83,8 +89,8 @@ export function ProxyDeleteDialog({ open, onOpenChange, currentRow }: Props) {
       open={open}
       onOpenChange={onOpenChange}
       handleConfirm={handleDelete}
-      disabled={value !== currentRow.id}
-      className="max-w-2xl"
+      disabled={value !== `${currentRow.id}`}
+      className='max-w-2xl'
       title={
         <span className='text-destructive'>
           <IconAlertTriangle
@@ -97,7 +103,8 @@ export function ProxyDeleteDialog({ open, onOpenChange, currentRow }: Props) {
       desc={
         <div className='space-y-4'>
           <p className='mb-2'>
-            {t('proxyDelete.confirmText')} <span className='font-bold'>{`${currentRow.id}`}</span>?
+            {t('proxyDelete.confirmText')}{' '}
+            <span className='font-bold'>{`${currentRow.id}`}</span>?
             <br />
             {t('proxyDelete.permanent')}
           </p>
@@ -105,19 +112,16 @@ export function ProxyDeleteDialog({ open, onOpenChange, currentRow }: Props) {
           <Label className='my-2'>
             {t('proxyDelete.proxyIdLabel')}
             <Input
-              type="number"
-              value={`${value}`}
-              onChange={(e) => setValue(parseInt(e.target.value, 10))}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
               placeholder={t('proxyDelete.proxyIdPlaceholder')}
-              className="mt-2"
+              className='mt-2'
             />
           </Label>
 
           <Alert variant='destructive'>
             <AlertTitle>{t('proxyDelete.warningTitle', 'Warning!')}</AlertTitle>
-            <AlertDescription>
-              {t('proxyDelete.warningDesc')}
-            </AlertDescription>
+            <AlertDescription>{t('proxyDelete.warningDesc')}</AlertDescription>
           </Alert>
         </div>
       }
@@ -126,4 +130,3 @@ export function ProxyDeleteDialog({ open, onOpenChange, currentRow }: Props) {
     />
   )
 }
-

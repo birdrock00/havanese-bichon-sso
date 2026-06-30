@@ -35,18 +35,25 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Proxy>[] => [
       <LongText className='max-w-72'>{`${row.original.id}`}</LongText>
     ),
     enableHiding: false,
-    meta: { className: 'w-60' },
-    enableSorting: false
+    meta: { className: 'w-44' },
+    enableSorting: false,
   },
   {
-    accessorKey: "url",
+    accessorKey: 'url',
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title={t('settings.url')} />
     ),
     cell: ({ row }) => {
-      return <LongText>{row.original.url}</LongText>
+      return (
+        <LongText
+          className='max-w-full'
+          contentClassName='max-w-[32rem] break-all'
+        >
+          {row.original.url}
+        </LongText>
+      )
     },
-    meta: { className: 'max-w-60' },
+    meta: { className: 'min-w-0' },
   },
   {
     accessorKey: 'created_at',
@@ -54,11 +61,12 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Proxy>[] => [
       <DataTableColumnHeader column={column} title={t('settings.createdAt')} />
     ),
     cell: ({ row }) => {
-      const created_at = row.original.created_at;
-      const date = format(new Date(created_at), 'yyyy-MM-dd HH:mm:ss');
-      return <LongText>{date}</LongText>;
+      const created_at = row.original.created_at
+      const date = format(new Date(created_at), 'yyyy-MM-dd HH:mm:ss')
+      return <LongText>{date}</LongText>
     },
     enableHiding: false,
+    meta: { className: 'w-44 whitespace-nowrap' },
   },
   {
     accessorKey: 'updated_at',
@@ -66,14 +74,16 @@ export const getColumns = (t: (key: string) => string): ColumnDef<Proxy>[] => [
       <DataTableColumnHeader column={column} title={t('settings.updatedAt')} />
     ),
     cell: ({ row }) => {
-      const updated_at = row.original.updated_at;
-      const date = format(new Date(updated_at), 'yyyy-MM-dd HH:mm:ss');
-      return <LongText>{date}</LongText>;
+      const updated_at = row.original.updated_at
+      const date = format(new Date(updated_at), 'yyyy-MM-dd HH:mm:ss')
+      return <LongText>{date}</LongText>
     },
     enableHiding: false,
+    meta: { className: 'w-44 whitespace-nowrap' },
   },
   {
     id: 'actions',
     cell: DataTableRowActions,
+    meta: { className: 'w-16' },
   },
 ]

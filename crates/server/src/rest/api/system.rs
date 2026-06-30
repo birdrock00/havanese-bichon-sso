@@ -23,7 +23,7 @@ use bichon_core::dashboard::DashboardStats;
 use bichon_core::error::code::ErrorCode;
 use bichon_core::raise_error;
 use bichon_core::settings::cli::SETTINGS;
-use bichon_core::settings::proxy::Proxy;
+use bichon_core::settings::proxy::{Proxy, ProxyTestResult};
 use bichon_core::settings::SystemConfigurations;
 use bichon_core::users::permissions::Permission;
 use bichon_core::version::{fetch_notifications, Notifications};
@@ -70,7 +70,7 @@ impl SystemApi {
         Ok(Json(stats))
     }
 
-    /// Get the full list of SOCKS5 proxy configurations.
+    /// Get the full list of proxy configurations.
     #[oai(method = "get", path = "/list-proxy", operation_id = "list_proxy")]
     async fn list_proxy(&self, _context: WrappedContext) -> ApiResult<Json<Vec<Proxy>>> {
         //The proxy list is visible to all users.
@@ -103,6 +103,17 @@ impl SystemApi {
         Ok(Json(Proxy::get(id.0)?))
     }
 
+    /// Test whether a proxy can reach a geo lookup service. Requires root permission.
+    #[oai(path = "/proxy/:id/test", method = "post", operation_id = "test_proxy")]
+    async fn test_proxy(
+        &self,
+        id: Path<u64>,
+        context: WrappedContext,
+    ) -> ApiResult<Json<ProxyTestResult>> {
+        context.require_permission(None, Permission::ROOT)?;
+        Ok(Json(Proxy::test(id.0).await?))
+    }
+
     /// Create a new proxy configuration. Requires root permission.
     #[oai(path = "/proxy", method = "post", operation_id = "create_proxy")]
     async fn create_proxy(&self, url: PlainText<String>, context: WrappedContext) -> ApiResult<()> {
@@ -122,6 +133,7 @@ impl SystemApi {
         context.require_permission(None, Permission::ROOT)?;
         Ok(Proxy::update(id.0, url.0)?)
     }
+
     /// Get system configurations.
     ///
     /// Returns a read-only snapshot of the server configuration

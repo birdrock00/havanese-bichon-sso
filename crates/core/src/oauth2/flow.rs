@@ -266,31 +266,12 @@ impl OAuth2Flow {
 fn build_http_client(use_proxy: Option<u64>) -> BichonResult<reqwest::Client> {
     if let Some(proxy_id) = use_proxy {
         let proxy = Proxy::get(proxy_id)?;
-        // Normalize the URL: reqwest only understands standard format user:pass@host:port.
-        // Our parse_proxy_url handles both standard and non-standard (host:port:user:pass).
-        let proxy_url = match parse_proxy_url(&proxy.url) {
-            Ok(addr) => {
-                if let (Some(user), Some(pass)) = (&addr.username, &addr.password) {
-                    format!("socks5://{}:{}@{}:{}", user, pass, addr.host, addr.port)
-                } else if let Some(user) = &addr.username {
-                    format!("socks5://{}@{}:{}", user, addr.host, addr.port)
-                } else {
-                    format!("socks5://{}:{}", addr.host, addr.port)
-                }
-            }
-            Err(_) => {
-                // Fallback: pass through as-is for backward compatibility
-                proxy.url.clone()
-            }
-        };
+        let proxy_url = parse_proxy_url(&proxy.url)?.standard_url();
         return oauth2::reqwest::ClientBuilder::new()
             .redirect(oauth2::reqwest::redirect::Policy::none())
-            .proxy(reqwest::Proxy::all(&proxy_url).map_err(|e| {
+            .proxy(reqwest::Proxy::all(&proxy_url).map_err(|_| {
                 raise_error!(
-                    format!(
-                        "Failed to configure SOCKS5 proxy ({}): {:#?}. Please check",
-                        &proxy_url, e
-                    ),
+                    "Failed to configure proxy. Please check the proxy configuration.".into(),
                     ErrorCode::InternalError
                 )
             })?)
