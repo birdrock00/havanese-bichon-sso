@@ -76,6 +76,12 @@ const AuthenticatedSettingsApiTokensLazyImport = createFileRoute(
 const AuthenticatedSettingsAccessLazyImport = createFileRoute(
   '/_authenticated/settings/access',
 )()
+const AuthenticatedAccountsNewLazyImport = createFileRoute(
+  '/_authenticated/accounts/new',
+)()
+const AuthenticatedAccountsIdSettingsLazyImport = createFileRoute(
+  '/_authenticated/accounts/$id/settings',
+)()
 
 // Create/Update Routes
 
@@ -317,6 +323,26 @@ const AuthenticatedSettingsAccessLazyRoute =
     import('./routes/_authenticated/settings/access.lazy').then((d) => d.Route),
   )
 
+const AuthenticatedAccountsNewLazyRoute =
+  AuthenticatedAccountsNewLazyImport.update({
+    id: '/accounts/new',
+    path: '/accounts/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/accounts/new.lazy').then((d) => d.Route),
+  )
+
+const AuthenticatedAccountsIdSettingsLazyRoute =
+  AuthenticatedAccountsIdSettingsLazyImport.update({
+    id: '/accounts/$id/settings',
+    path: '/accounts/$id/settings',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/accounts/$id.settings.lazy').then(
+      (d) => d.Route,
+    ),
+  )
+
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
@@ -396,6 +422,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
+    '/_authenticated/accounts/new': {
+      id: '/_authenticated/accounts/new'
+      path: '/accounts/new'
+      fullPath: '/accounts/new'
+      preLoaderRoute: typeof AuthenticatedAccountsNewLazyImport
       parentRoute: typeof AuthenticatedRouteImport
     }
     '/_authenticated/settings/access': {
@@ -517,6 +550,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUsersIndexLazyImport
       parentRoute: typeof AuthenticatedUsersRouteLazyImport
     }
+    '/_authenticated/accounts/$id/settings': {
+      id: '/_authenticated/accounts/$id/settings'
+      path: '/accounts/$id/settings'
+      fullPath: '/accounts/$id/settings'
+      preLoaderRoute: typeof AuthenticatedAccountsIdSettingsLazyImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
   }
 }
 
@@ -574,6 +614,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteLazyRoute: typeof AuthenticatedSettingsRouteLazyRouteWithChildren
   AuthenticatedUsersRouteLazyRoute: typeof AuthenticatedUsersRouteLazyRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAccountsNewLazyRoute: typeof AuthenticatedAccountsNewLazyRoute
   AuthenticatedAttachmentIndexRoute: typeof AuthenticatedAttachmentIndexRoute
   AuthenticatedImportIndexRoute: typeof AuthenticatedImportIndexRoute
   AuthenticatedSearchIndexRoute: typeof AuthenticatedSearchIndexRoute
@@ -581,6 +622,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedApiDocsIndexLazyRoute: typeof AuthenticatedApiDocsIndexLazyRoute
   AuthenticatedOauth2ResultIndexLazyRoute: typeof AuthenticatedOauth2ResultIndexLazyRoute
   AuthenticatedOauth2IndexLazyRoute: typeof AuthenticatedOauth2IndexLazyRoute
+  AuthenticatedAccountsIdSettingsLazyRoute: typeof AuthenticatedAccountsIdSettingsLazyRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -589,6 +631,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedUsersRouteLazyRoute:
     AuthenticatedUsersRouteLazyRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAccountsNewLazyRoute: AuthenticatedAccountsNewLazyRoute,
   AuthenticatedAttachmentIndexRoute: AuthenticatedAttachmentIndexRoute,
   AuthenticatedImportIndexRoute: AuthenticatedImportIndexRoute,
   AuthenticatedSearchIndexRoute: AuthenticatedSearchIndexRoute,
@@ -597,6 +640,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedOauth2ResultIndexLazyRoute:
     AuthenticatedOauth2ResultIndexLazyRoute,
   AuthenticatedOauth2IndexLazyRoute: AuthenticatedOauth2IndexLazyRoute,
+  AuthenticatedAccountsIdSettingsLazyRoute:
+    AuthenticatedAccountsIdSettingsLazyRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -613,6 +658,7 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404LazyRoute
   '/503': typeof errors503LazyRoute
   '/': typeof AuthenticatedIndexRoute
+  '/accounts/new': typeof AuthenticatedAccountsNewLazyRoute
   '/settings/access': typeof AuthenticatedSettingsAccessLazyRoute
   '/settings/api-tokens': typeof AuthenticatedSettingsApiTokensLazyRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceLazyRoute
@@ -630,6 +676,7 @@ export interface FileRoutesByFullPath {
   '/oauth2': typeof AuthenticatedOauth2IndexLazyRoute
   '/settings/': typeof AuthenticatedSettingsIndexLazyRoute
   '/users/': typeof AuthenticatedUsersIndexLazyRoute
+  '/accounts/$id/settings': typeof AuthenticatedAccountsIdSettingsLazyRoute
 }
 
 export interface FileRoutesByTo {
@@ -640,6 +687,7 @@ export interface FileRoutesByTo {
   '/404': typeof errors404LazyRoute
   '/503': typeof errors503LazyRoute
   '/': typeof AuthenticatedIndexRoute
+  '/accounts/new': typeof AuthenticatedAccountsNewLazyRoute
   '/settings/access': typeof AuthenticatedSettingsAccessLazyRoute
   '/settings/api-tokens': typeof AuthenticatedSettingsApiTokensLazyRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceLazyRoute
@@ -657,6 +705,7 @@ export interface FileRoutesByTo {
   '/oauth2': typeof AuthenticatedOauth2IndexLazyRoute
   '/settings': typeof AuthenticatedSettingsIndexLazyRoute
   '/users': typeof AuthenticatedUsersIndexLazyRoute
+  '/accounts/$id/settings': typeof AuthenticatedAccountsIdSettingsLazyRoute
 }
 
 export interface FileRoutesById {
@@ -672,6 +721,7 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500LazyRoute
   '/(errors)/503': typeof errors503LazyRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/accounts/new': typeof AuthenticatedAccountsNewLazyRoute
   '/_authenticated/settings/access': typeof AuthenticatedSettingsAccessLazyRoute
   '/_authenticated/settings/api-tokens': typeof AuthenticatedSettingsApiTokensLazyRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceLazyRoute
@@ -689,6 +739,7 @@ export interface FileRoutesById {
   '/_authenticated/oauth2/': typeof AuthenticatedOauth2IndexLazyRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexLazyRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexLazyRoute
+  '/_authenticated/accounts/$id/settings': typeof AuthenticatedAccountsIdSettingsLazyRoute
 }
 
 export interface FileRouteTypes {
@@ -704,6 +755,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/503'
     | '/'
+    | '/accounts/new'
     | '/settings/access'
     | '/settings/api-tokens'
     | '/settings/appearance'
@@ -721,6 +773,7 @@ export interface FileRouteTypes {
     | '/oauth2'
     | '/settings/'
     | '/users/'
+    | '/accounts/$id/settings'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/500'
@@ -730,6 +783,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/503'
     | '/'
+    | '/accounts/new'
     | '/settings/access'
     | '/settings/api-tokens'
     | '/settings/appearance'
@@ -747,6 +801,7 @@ export interface FileRouteTypes {
     | '/oauth2'
     | '/settings'
     | '/users'
+    | '/accounts/$id/settings'
   id:
     | '__root__'
     | '/_authenticated'
@@ -760,6 +815,7 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/'
+    | '/_authenticated/accounts/new'
     | '/_authenticated/settings/access'
     | '/_authenticated/settings/api-tokens'
     | '/_authenticated/settings/appearance'
@@ -777,6 +833,7 @@ export interface FileRouteTypes {
     | '/_authenticated/oauth2/'
     | '/_authenticated/settings/'
     | '/_authenticated/users/'
+    | '/_authenticated/accounts/$id/settings'
   fileRoutesById: FileRoutesById
 }
 
@@ -828,13 +885,15 @@ export const routeTree = rootRoute
         "/_authenticated/settings",
         "/_authenticated/users",
         "/_authenticated/",
+        "/_authenticated/accounts/new",
         "/_authenticated/attachment/",
         "/_authenticated/import/",
         "/_authenticated/search/",
         "/_authenticated/accounts/",
         "/_authenticated/api-docs/",
         "/_authenticated/oauth2-result/",
-        "/_authenticated/oauth2/"
+        "/_authenticated/oauth2/",
+        "/_authenticated/accounts/$id/settings"
       ]
     },
     "/(auth)/500": {
@@ -882,6 +941,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/": {
       "filePath": "_authenticated/index.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/accounts/new": {
+      "filePath": "_authenticated/accounts/new.lazy.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/settings/access": {
@@ -951,6 +1014,10 @@ export const routeTree = rootRoute
     "/_authenticated/users/": {
       "filePath": "_authenticated/users/index.lazy.tsx",
       "parent": "/_authenticated/users"
+    },
+    "/_authenticated/accounts/$id/settings": {
+      "filePath": "_authenticated/accounts/$id.settings.lazy.tsx",
+      "parent": "/_authenticated"
     }
   }
 }

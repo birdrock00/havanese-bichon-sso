@@ -67,6 +67,19 @@ const dateSelectionSchema = (t: (key: string) => string) =>
     })
     .optional()
 
+const filterRuleSchema = z.object({
+  include: z.array(z.string()),
+  exclude: z.array(z.string()),
+})
+
+const archiveRulesSchema = z.object({
+  enabled: z.boolean(),
+  senders: filterRuleSchema,
+  subjects: filterRuleSchema,
+  skip_larger_than: z.number().int().positive().optional(),
+  spam_headers: z.array(z.string()),
+})
+
 export const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
   z.object({
     account_name: z.string().optional(),
@@ -120,6 +133,7 @@ export const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
         },
         { message: t('validation.invalidCronExpression') }
       ),
+    archive_rules: archiveRulesSchema.optional(),
   })
 
 export type AccountFormValues = z.infer<

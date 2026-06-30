@@ -118,6 +118,20 @@ interface DateSelection {
 
 
 export type QuotaWindow = 'hourly' | 'daily' | 'weekly' | 'monthly'
+
+export interface FilterRule {
+    include: string[];
+    exclude: string[];
+}
+
+export interface ArchiveRules {
+    enabled: boolean;
+    senders: FilterRule;
+    subjects: FilterRule;
+    skip_larger_than?: number;
+    spam_headers: string[];
+}
+
 export interface AccountModel {
     id: number;
     account_type: AccountType;
@@ -145,6 +159,7 @@ export interface AccountModel {
     imap_quota_bytes?: number;
     auto_download_new_mailboxes?: boolean;
     download_schedule?: string;
+    archive_rules?: ArchiveRules;
     deleting?: boolean;
 }
 

@@ -19,16 +19,16 @@
 
 import { useState } from 'react'
 import useDialogState from '@/hooks/use-dialog-state'
+import { useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/ui/button'
 import { Main } from '@/components/layout/main'
-import { AccountActionDialog } from './components/action-dialog'
 import { useColumns } from './components/columns'
 import { AccountDeleteDialog } from './components/delete-dialog'
 import { AccountTable } from './components/table'
 import AccountProvider, {
   type AccountDialogType,
 } from './context'
-import { Plus } from 'lucide-react'
+import { Mail, Database } from 'lucide-react'
 import Logo from '@/assets/logo.svg'
 import { AccountDetailDrawer } from './components/account-detail'
 import { AccountModel, list_accounts } from '@/api/account/api'
@@ -42,10 +42,10 @@ import { NoSyncAccountDialog } from './components/nosync-dialog'
 import { useTranslation } from 'react-i18next'
 import { AccountAccessAssignmentDialog } from './components/access-assignment-dialog'
 import { useCurrentUser } from '@/hooks/use-current-user'
-import { AddAccountDialog } from './components/add-account-dialog'
 
 export default function Accounts() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const columns = useColumns()
   // Dialog states
   const [currentRow, setCurrentRow] = useState<AccountModel | null>(null)
@@ -77,15 +77,14 @@ export default function Accounts() {
               </p>
             </div>
             {require_any_permission(['system:root', 'account:create']) && <div className="flex gap-2">
-              <div className="flex rounded-md shadow-sm">
-                <Button
-                  onClick={() => setOpen("add")}
-                  className="border-r-0"
-                >
-                  <Plus className="h-4 w-4" />
-                  {t('accounts.add')}
-                </Button>
-              </div>
+              <Button onClick={() => navigate({ to: '/accounts/new' })}>
+                <Mail className="mr-1.5 h-4 w-4" />
+                {t('accounts.imapAccount')}
+              </Button>
+              <Button variant="outline" onClick={() => setOpen("add-nosync")}>
+                <Database className="mr-1.5 h-4 w-4" />
+                {t('accounts.noSyncAccount')}
+              </Button>
             </div>}
           </div>
 
@@ -107,8 +106,13 @@ export default function Accounts() {
                     {t('accounts.noAccountConfigurationsDesc')}
                   </p>
                   <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-4">
-                    <Button variant="default" className="w-64" onClick={() => setOpen("add")}>
-                      {t('accounts.add')}
+                    <Button variant="default" className="w-64" onClick={() => navigate({ to: '/accounts/new' })}>
+                      <Mail className="mr-1.5 h-4 w-4" />
+                      {t('accounts.imapAccount')}
+                    </Button>
+                    <Button variant="outline" className="w-64" onClick={() => setOpen('add-nosync')}>
+                      <Database className="mr-1.5 h-4 w-4" />
+                      {t('accounts.noSyncAccount')}
                     </Button>
                   </div>
                 </div>
@@ -117,16 +121,6 @@ export default function Accounts() {
           </div>
         </div>
       </Main>
-      <AddAccountDialog
-        key='account-add'
-        open={open === 'add'}
-        onOpenChange={() => setOpen('add')} />
-
-      <AccountActionDialog
-        key='imap-account-add'
-        open={open === 'add-imap'}
-        onOpenChange={() => setOpen('add-imap')}
-      />
 
       <NoSyncAccountDialog
         key='nosync-account-add'
@@ -136,17 +130,6 @@ export default function Accounts() {
 
       {currentRow && (
         <>
-          <AccountActionDialog
-            key={`imap-account-edit-${currentRow.id}`}
-            open={open === 'edit-imap'}
-            onOpenChange={() => {
-              setOpen('edit-imap')
-              setTimeout(() => {
-                setCurrentRow(null)
-              }, 500)
-            }}
-            currentRow={currentRow}
-          />
           <NoSyncAccountDialog
             key={`nosync-account-edit-${currentRow.id}`}
             open={open === 'edit-nosync'}

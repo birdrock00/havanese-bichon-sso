@@ -21,10 +21,7 @@ import { AccountModel } from '@/api/account/api';
 import React from 'react'
 
 export type AccountDialogType =
-  | 'add'
-  | 'add-imap'
   | 'add-nosync'
-  | 'edit-imap'
   | 'edit-nosync'
   | 'delete'
   | 'detail'

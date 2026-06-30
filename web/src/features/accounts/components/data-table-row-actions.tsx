@@ -30,11 +30,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAccountContext } from '../context'
-import { Mailbox, MessageSquareMore } from 'lucide-react'
+import { Mailbox, MessageSquareMore, Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { AccountModel, cancel_account_download, start_account_download } from '@/api/account/api'
 import { toast } from '@/hooks/use-toast'
+import { useNavigate } from '@tanstack/react-router'
 
 interface DataTableRowActionsProps {
   row: Row<AccountModel>
@@ -43,6 +44,7 @@ interface DataTableRowActionsProps {
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const { t } = useTranslation()
   const { setOpen, setCurrentRow } = useAccountContext()
+  const navigate = useNavigate()
 
   const account_type = row.original.account_type;
   const { require_any_permission } = useCurrentUser()
@@ -103,11 +105,10 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         <DropdownMenuContent align='end' className='w-[220px]'>
           {hasPermission && <DropdownMenuItem
             onClick={() => {
-              setCurrentRow(row.original)
               if (account_type === "IMAP") {
-                setOpen("edit-imap");
-              }
-              if (account_type === "NoSync") {
+                navigate({ to: '/accounts/$id/settings', params: { id: String(row.original.id) } });
+              } else {
+                setCurrentRow(row.original)
                 setOpen("edit-nosync");
               }
             }}
@@ -115,6 +116,16 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             {t('accounts.edit')}
             <DropdownMenuShortcut>
               <IconEdit size={16} />
+            </DropdownMenuShortcut>
+          </DropdownMenuItem>}
+          {account_type === "IMAP" && hasPermission && <DropdownMenuItem
+            onClick={() => {
+              navigate({ to: '/accounts/$id/settings', params: { id: String(row.original.id) } });
+            }}
+          >
+            {t('accounts.settings.settings')}
+            <DropdownMenuShortcut>
+              <Settings size={16} />
             </DropdownMenuShortcut>
           </DropdownMenuItem>}
           {account_type === "IMAP" && hasPermission && <DropdownMenuItem
