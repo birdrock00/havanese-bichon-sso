@@ -251,7 +251,7 @@ impl MessageApi {
         Ok(restore_emails(account_id, payload.0.envelope_ids).await?)
     }
 
-    /// Downloads a specific attachment from an email. Requires `name` query parameter.
+    /// Downloads a specific attachment from an email. Requires `content_hash` query parameter.
     #[oai(
         path = "/download-attachment/:account_id/:envelope_id",
         method = "get",
