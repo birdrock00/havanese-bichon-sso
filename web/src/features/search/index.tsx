@@ -46,6 +46,7 @@ export default function EmailSearch() {
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "date", desc: true }]);
   const [deleteMailboxId, setDeleteMailboxId] = React.useState<string | undefined>(undefined);
   const [selectedAccountId, setSelectedAccountId] = React.useState<number | undefined>(undefined);
+  const [editTagsOpen, setEditTagsOpen] = React.useState(false);
 
   const {
     emails,
@@ -98,7 +99,9 @@ export default function EmailSearch() {
             setDeleteMailboxId,
             selectedAccountId,
             setSelectedAccountId,
-            handleTagToggle
+            handleTagToggle,
+            editTagsOpen,
+            setEditTagsOpen,
           }}
         >
           <div className="mx-auto w-full px-4">
@@ -151,8 +154,8 @@ export default function EmailSearch() {
 
           <EditTagsDialog
             key='edit-tags-dialog'
-            open={open === 'edit-tags'}
-            onOpenChange={() => setOpen('edit-tags')}
+            open={editTagsOpen}
+            onOpenChange={setEditTagsOpen}
           />
 
           <UpdateTagsDialog

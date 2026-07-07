@@ -42,6 +42,8 @@ interface SearchContextType {
   filter: Record<string, any>
   setFilter: React.Dispatch<React.SetStateAction<Record<string, any>>>
   handleTagToggle: (tag: string) => void
+  editTagsOpen: boolean
+  setEditTagsOpen: (open: boolean) => void
 }
 
 const SearchContext = React.createContext<SearchContextType | null>(null)

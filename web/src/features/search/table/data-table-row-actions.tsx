@@ -37,7 +37,7 @@ interface DataTableRowActionsProps {
 }
 
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
-  const { setOpen, setCurrentEnvelope, setSelected, setToDelete } = useSearchContext()
+  const { setOpen, setCurrentEnvelope, setSelected, setToDelete, setEditTagsOpen } = useSearchContext()
   const { t } = useTranslation()
 
   const toggleToDelete = (accountId: number, mailId: string) => {
@@ -81,7 +81,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             onClick={(e) => {
               e.stopPropagation()
               setCurrentEnvelope(row.original)
-              setOpen("edit-tags")
+              setEditTagsOpen(true)
             }}
           >
             {t('search.editTag')}

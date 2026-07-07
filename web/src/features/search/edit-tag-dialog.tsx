@@ -19,8 +19,8 @@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Plus, Tag as TagIcon, X, Loader2, Check } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Plus, Tag as TagIcon, X, Loader2, Check, Search } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAvailableTags } from '@/hooks/use-available-tags';
 import { useUpdateTags } from '@/hooks/use-update-tags';
@@ -29,6 +29,7 @@ import { validateTag } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSearchContext } from './context';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Props {
     open: boolean
@@ -44,7 +45,7 @@ export function EditTagsDialog({ open, onOpenChange }: Props) {
     const [commandOpen, setCommandOpen] = useState(false);
     const { t } = useTranslation();
 
-    const { currentEnvelope } = useSearchContext()
+    const { currentEnvelope, setCurrentEnvelope } = useSearchContext()
 
     useEffect(() => {
         if (open && currentEnvelope) {
@@ -111,6 +112,10 @@ export function EditTagsDialog({ open, onOpenChange }: Props) {
             },
             {
                 onSuccess: () => {
+                    const finalTags = inputValue.trim()
+                        ? [...selectedTags, inputValue.toLowerCase().trim()]
+                        : selectedTags;
+                    setCurrentEnvelope(prev => prev ? { ...prev, tags: finalTags } : prev);
                     toast({
                         title: t('search.addTags.updatedTitle'),
                         description: (
@@ -149,7 +154,7 @@ export function EditTagsDialog({ open, onOpenChange }: Props) {
                 </DialogHeader>
 
                 <div className="space-y-5 py-4">
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 mb-3">
                         {selectedTags.length === 0 ? (
                             <p className="text-sm text-muted-foreground">{t('search.addTags.none')}</p>
                         ) : (
@@ -166,60 +171,62 @@ export function EditTagsDialog({ open, onOpenChange }: Props) {
                             ))
                         )}
                     </div>
-                    <Command shouldFilter={false} onKeyDown={(e) => e.stopPropagation()}>
-                        <div className="space-y-2">
-                            <div className="relative">
-                                <CommandInput
-                                    placeholder={t('search.addTags.searchPlaceholder')}
-                                    value={inputValue}
-                                    onValueChange={setInputValue}
-                                    onFocus={() => setCommandOpen(true)}
-                                    className="h-9 pr-10"
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && inputValue.trim()) {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            handleAddTag(inputValue);
-                                        }
-                                    }}
-                                />
-                                {inputValue.trim() && (
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="absolute right-1 top-1 h-7 w-7 p-0"
-                                        onClick={() => handleAddTag(inputValue)}
-                                    >
-                                        <Plus className="h-3.5 w-3.5" />
-                                    </Button>
-                                )}
-                            </div>
-                            {inputValue.trim() && filteredSuggestions.length === 0 && (
-                                <div className="px-1 text-xs text-muted-foreground animate-in fade-in duration-200">
-                                    {t('search.addTags.createHint', { tag: inputValue })}
-                                </div>
-                            )}
-                            {commandOpen && inputValue && filteredSuggestions.length > 0 && (
-                                <CommandList className="max-h-64 overflow-auto rounded-md border bg-popover shadow-md">
-                                    <CommandGroup>
-                                        {filteredSuggestions.map(tag => (
-                                            <CommandItem
-                                                key={tag}
-                                                onSelect={() => handleAddTag(tag)}
-                                                className="cursor-pointer"
-                                            >
-                                                <Check className="mr-2 h-4 w-4 opacity-0" />
-                                                {tag}
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                </CommandList>
+                    <div className="space-y-2">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder={t('search.addTags.searchPlaceholder')}
+                                value={inputValue}
+                                onChange={(e) => {
+                                    setInputValue(e.target.value);
+                                    setCommandOpen(true);
+                                }}
+                                onFocus={() => setCommandOpen(true)}
+                                className="h-9 pl-9 pr-10"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && inputValue.trim()) {
+                                        e.preventDefault();
+                                        handleAddTag(inputValue);
+                                    }
+                                }}
+                            />
+                            {inputValue.trim() && (
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="absolute right-1 top-1 h-7 w-7 p-0"
+                                    onClick={() => handleAddTag(inputValue)}
+                                >
+                                    <Plus className="h-3.5 w-3.5" />
+                                </Button>
                             )}
                         </div>
-                    </Command>
+                        {inputValue.trim() && filteredSuggestions.length === 0 && (
+                            <div className="px-1 text-xs text-muted-foreground">
+                                {t('search.addTags.createHint', { tag: inputValue })}
+                            </div>
+                        )}
+                        {commandOpen && inputValue && filteredSuggestions.length > 0 && (
+                            <ScrollArea className="h-[15rem] w-full pr-4 -mr-4 py-1">
+                                <div className="p-1">
+                                    {filteredSuggestions.map(tag => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            className="relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                                            onClick={() => handleAddTag(tag)}
+                                        >
+                                            <Check className="mr-2 h-4 w-4 opacity-0" />
+                                            {tag}
+                                        </button>
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        )}
+                    </div>
                 </div>
 
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center pt-4 border-t">
                     <p className="text-xs text-muted-foreground">
                         {t('search.addTags.selectedCount', { count: selectedTags.length })}
                     </p>
