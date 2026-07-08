@@ -16,9 +16,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use hickory_resolver::name_server::TokioConnectionProvider;
+use hickory_resolver::net::runtime::TokioRuntimeProvider;
 use hickory_resolver::proto::rr::RData;
-use hickory_resolver::proto::rr::RecordType;
 use hickory_resolver::TokioResolver;
 use quick_xml::de::from_str;
 use reqwest::Client;
@@ -108,28 +107,29 @@ async fn fetch_xml(client: &Client, url: &str) -> Option<MailConfig> {
 }
 
 async fn lookup_srv(domain: &str) -> Option<MailConfig> {
-    let resolver = TokioResolver::builder(TokioConnectionProvider::default())
+    let resolver = TokioResolver::builder(TokioRuntimeProvider::default())
         .ok()?
-        .build();
+        .build()
+        .ok()?;
 
     let imap_srv = format!("_imaps._tcp.{}.", domain);
-    let imap_lookup = resolver.lookup(imap_srv, RecordType::SRV).await.ok()?;
-    let imap_record = imap_lookup.iter().next()?;
-    let (imap_host, imap_port) = match imap_record {
+    let imap_lookup = resolver.srv_lookup(imap_srv).await.ok()?;
+    let imap_record = imap_lookup.answers().first()?;
+    let (imap_host, imap_port) = match &imap_record.data {
         RData::SRV(srv) => {
-            let host = srv.target().to_string().trim_end_matches('.').to_string();
-            (host, srv.port())
+            let host = srv.target.to_string().trim_end_matches('.').to_string();
+            (host, srv.port)
         }
         _ => return None,
     };
 
     let smtp_srv = format!("_submission._tcp.{}.", domain);
-    let smtp_lookup = resolver.lookup(smtp_srv, RecordType::SRV).await.ok()?;
-    let smtp_record = smtp_lookup.iter().next()?;
-    let (smtp_host, smtp_port) = match smtp_record {
+    let smtp_lookup = resolver.srv_lookup(smtp_srv).await.ok()?;
+    let smtp_record = smtp_lookup.answers().first()?;
+    let (smtp_host, smtp_port) = match &smtp_record.data {
         RData::SRV(srv) => {
-            let host = srv.target().to_string().trim_end_matches('.').to_string();
-            (host, srv.port())
+            let host = srv.target.to_string().trim_end_matches('.').to_string();
+            (host, srv.port)
         }
         _ => return None,
     };
@@ -177,13 +177,19 @@ pub async fn fetch(domain: &str) -> BichonResult<MailConfig> {
         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
     // ── ISP autoconfig (HTTPS, then HTTP) ──────────────────────────
-    if let Some(config) =
-        fetch_xml(&client, &format!("https://autoconfig.{domain}/mail/config-v1.1.xml")).await
+    if let Some(config) = fetch_xml(
+        &client,
+        &format!("https://autoconfig.{domain}/mail/config-v1.1.xml"),
+    )
+    .await
     {
         return Ok(config);
     }
-    if let Some(config) =
-        fetch_xml(&client, &format!("http://autoconfig.{domain}/mail/config-v1.1.xml")).await
+    if let Some(config) = fetch_xml(
+        &client,
+        &format!("http://autoconfig.{domain}/mail/config-v1.1.xml"),
+    )
+    .await
     {
         return Ok(config);
     }
@@ -212,8 +218,11 @@ pub async fn fetch(domain: &str) -> BichonResult<MailConfig> {
     }
 
     // ── Thunderbird central ISPDB ──────────────────────────────────
-    if let Some(config) =
-        fetch_xml(&client, &format!("https://autoconfig.thunderbird.net/v1.1/{domain}")).await
+    if let Some(config) = fetch_xml(
+        &client,
+        &format!("https://autoconfig.thunderbird.net/v1.1/{domain}"),
+    )
+    .await
     {
         return Ok(config);
     }
@@ -245,20 +254,29 @@ async fn fetch_for_mx(client: &Client, domain: &str) -> Option<MailConfig> {
     }
 
     // Try ISPDB for the MX domain
-    if let Some(config) =
-        fetch_xml(client, &format!("https://autoconfig.thunderbird.net/v1.1/{mx_domain}")).await
+    if let Some(config) = fetch_xml(
+        client,
+        &format!("https://autoconfig.thunderbird.net/v1.1/{mx_domain}"),
+    )
+    .await
     {
         return Some(config);
     }
 
     // Try ISP autoconfig for the MX domain (HTTPS then HTTP)
-    if let Some(config) =
-        fetch_xml(client, &format!("https://autoconfig.{mx_domain}/mail/config-v1.1.xml")).await
+    if let Some(config) = fetch_xml(
+        client,
+        &format!("https://autoconfig.{mx_domain}/mail/config-v1.1.xml"),
+    )
+    .await
     {
         return Some(config);
     }
-    if let Some(config) =
-        fetch_xml(client, &format!("http://autoconfig.{mx_domain}/mail/config-v1.1.xml")).await
+    if let Some(config) = fetch_xml(
+        client,
+        &format!("http://autoconfig.{mx_domain}/mail/config-v1.1.xml"),
+    )
+    .await
     {
         return Some(config);
     }
@@ -268,12 +286,16 @@ async fn fetch_for_mx(client: &Client, domain: &str) -> Option<MailConfig> {
 
 /// DNS MX lookup → extract the second-level domain of the first MX hostname.
 async fn lookup_mx_domain(domain: &str) -> Option<String> {
-    let resolver = TokioResolver::builder(TokioConnectionProvider::default())
+    let resolver = TokioResolver::builder(TokioRuntimeProvider::default())
         .ok()?
-        .build();
+        .build()
+        .ok()?;
     let lookup = resolver.mx_lookup(domain).await.ok()?;
-    let record = lookup.iter().next()?;
-    let mx_host = record.to_string().trim_end_matches('.').to_string();
+    let record = lookup.answers().first()?;
+    let mx_host = match &record.data {
+        RData::MX(mx) => mx.exchange.to_string().trim_end_matches('.').to_string(),
+        _ => return None,
+    };
 
     // Extract a reasonable base domain from the MX hostname.
     // E.g., "aspmx.l.google.com" → "google.com"
@@ -335,5 +357,96 @@ mod tests {
                 Err(e) => println!("⚠️  [{label}] {domain}: {e:?}"),
             }
         }
+    }
+
+    #[test]
+    fn test_parse_autoconfig_xml() {
+        let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
+<clientConfig version="1.1">
+    <emailProvider id="example.com">
+        <domain>example.com</domain>
+        <incomingServer type="imap">
+            <hostname>imap.example.com</hostname>
+            <port>993</port>
+            <socketType>SSL</socketType>
+            <username>%EMAILADDRESS%</username>
+            <authentication>password-cleartext</authentication>
+        </incomingServer>
+        <outgoingServer type="smtp">
+            <hostname>smtp.example.com</hostname>
+            <port>587</port>
+            <socketType>STARTTLS</socketType>
+            <username>%EMAILADDRESS%</username>
+        </outgoingServer>
+    </emailProvider>
+</clientConfig>"#;
+
+        let config = parse_autoconfig_xml(xml).expect("should parse valid XML");
+        assert_eq!(config.incoming.len(), 1);
+        assert_eq!(config.incoming[0].protocol, "imap");
+        assert_eq!(config.incoming[0].hostname, "imap.example.com");
+        assert_eq!(config.incoming[0].port, 993);
+        assert_eq!(config.incoming[0].socket_type, "SSL");
+        assert_eq!(config.incoming[0].username, "%EMAILADDRESS%");
+        assert_eq!(config.incoming[0].authentication, "password-cleartext");
+
+        assert_eq!(config.outgoing.len(), 1);
+        assert_eq!(config.outgoing[0].protocol, "smtp");
+        assert_eq!(config.outgoing[0].hostname, "smtp.example.com");
+        assert_eq!(config.outgoing[0].port, 587);
+        assert_eq!(config.outgoing[0].socket_type, "STARTTLS");
+        assert_eq!(config.outgoing[0].username, "%EMAILADDRESS%");
+    }
+
+    #[test]
+    fn test_parse_autoconfig_xml_invalid() {
+        assert!(parse_autoconfig_xml("not xml").is_none());
+        assert!(parse_autoconfig_xml("<clientConfig></clientConfig>").is_none());
+    }
+
+    #[test]
+    fn test_extract_base_domain() {
+        assert_eq!(
+            extract_base_domain("aspmx.l.google.com"),
+            Some("google.com".to_string())
+        );
+        assert_eq!(
+            extract_base_domain("company.mail.protection.outlook.com"),
+            Some("outlook.com".to_string())
+        );
+        assert_eq!(
+            extract_base_domain("mx.example.com"),
+            Some("example.com".to_string())
+        );
+        assert_eq!(
+            extract_base_domain("example.com"),
+            Some("example.com".to_string())
+        );
+        assert_eq!(extract_base_domain("localhost"), None);
+    }
+
+    #[tokio::test]
+    async fn test_lookup_srv_gmail() {
+        // Gmail should have SRV records for IMAPS and SMTP submission
+        let config = lookup_srv("gmail.com").await;
+        assert!(config.is_some(), "Gmail should have SRV records");
+        let config = config.unwrap();
+        assert_eq!(config.incoming.len(), 1);
+        assert_eq!(config.incoming[0].protocol, "imap");
+        assert_eq!(config.incoming[0].socket_type, "SSL");
+        assert!(!config.incoming[0].hostname.is_empty());
+        assert!(config.incoming[0].port > 0);
+        assert_eq!(config.outgoing.len(), 1);
+        assert_eq!(config.outgoing[0].protocol, "smtp");
+        assert_eq!(config.outgoing[0].socket_type, "STARTTLS");
+        assert!(!config.outgoing[0].hostname.is_empty());
+        assert!(config.outgoing[0].port > 0);
+    }
+
+    #[tokio::test]
+    async fn test_lookup_srv_nonexistent() {
+        // A domain without SRV records should return None
+        let config = lookup_srv("this-domain-definitely-does-not-exist-12345.com").await;
+        assert!(config.is_none());
     }
 }
