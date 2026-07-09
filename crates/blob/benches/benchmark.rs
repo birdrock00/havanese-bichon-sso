@@ -12,7 +12,6 @@ fn make_key(seed: u64) -> [u8; 32] {
 
 fn make_value(size: usize) -> Vec<u8> {
     let mut v = Vec::with_capacity(size);
-    // Fill with somewhat realistic text-like data so compression works
     let pattern = b"The quick brown fox jumps over the lazy dog. ";
     while v.len() < size {
         let rem = size - v.len();
@@ -29,7 +28,6 @@ pub fn bench_write_small(c: &mut Criterion) {
 
     let dir = TempDir::new().unwrap();
     let engine = Engine::open(dir.path(), Config::default()).unwrap();
-    engine.create_account("bench").unwrap();
 
     let value = make_value(1024); // 1 KB
     let mut counter = 0u64;
@@ -41,9 +39,7 @@ pub fn bench_write_small(c: &mut Criterion) {
                 (make_key(counter), value.clone())
             },
             |(key, val)| {
-                engine
-                    .write("bench", key, &val, Codec::Zstd)
-                    .unwrap()
+                engine.put(key, &val, Codec::Zstd).unwrap()
             },
             BatchSize::SmallInput,
         )
@@ -58,7 +54,6 @@ pub fn bench_write_medium(c: &mut Criterion) {
 
     let dir = TempDir::new().unwrap();
     let engine = Engine::open(dir.path(), Config::default()).unwrap();
-    engine.create_account("bench").unwrap();
 
     let value = make_value(64 * 1024); // 64 KB
     let mut counter = 0u64;
@@ -70,9 +65,7 @@ pub fn bench_write_medium(c: &mut Criterion) {
                 (make_key(counter), value.clone())
             },
             |(key, val)| {
-                engine
-                    .write("bench", key, &val, Codec::Zstd)
-                    .unwrap()
+                engine.put(key, &val, Codec::Zstd).unwrap()
             },
             BatchSize::SmallInput,
         )
@@ -87,7 +80,6 @@ pub fn bench_write_large(c: &mut Criterion) {
 
     let dir = TempDir::new().unwrap();
     let engine = Engine::open(dir.path(), Config::default()).unwrap();
-    engine.create_account("bench").unwrap();
 
     let value = make_value(1024 * 1024); // 1 MB
     let mut counter = 0u64;
@@ -99,9 +91,7 @@ pub fn bench_write_large(c: &mut Criterion) {
                 (make_key(counter), value.clone())
             },
             |(key, val)| {
-                engine
-                    .write("bench", key, &val, Codec::Zstd)
-                    .unwrap()
+                engine.put(key, &val, Codec::Zstd).unwrap()
             },
             BatchSize::SmallInput,
         )
@@ -109,59 +99,55 @@ pub fn bench_write_large(c: &mut Criterion) {
     group.finish();
 }
 
-pub fn bench_read_cache_hit(c: &mut Criterion) {
+pub fn bench_read_hot(c: &mut Criterion) {
     let mut group = c.benchmark_group("read");
     group.throughput(Throughput::Elements(1));
     group.measurement_time(Duration::from_secs(10));
 
     let dir = TempDir::new().unwrap();
     let engine = Engine::open(dir.path(), Config::default()).unwrap();
-    engine.create_account("bench").unwrap();
 
-    // Pre-populate: 10 keys, all in same bucket → cache hit after first read
+    // Pre-populate: 10 keys
     let value = make_value(4096);
     for i in 0..10u64 {
         engine
-            .write("bench", make_key(i), &value, Codec::Zstd)
+            .put(make_key(i), &value, Codec::Zstd)
             .unwrap();
     }
 
     let mut counter = 0u64;
-    group.bench_function("cache_hit", |b| {
+    group.bench_function("hot", |b| {
         b.iter(|| {
             let key = make_key(counter % 10);
             counter += 1;
-            std::hint::black_box(engine.read("bench", &key).unwrap());
+            std::hint::black_box(engine.get(&key).unwrap());
         })
     });
     group.finish();
 }
 
-pub fn bench_read_cache_miss(c: &mut Criterion) {
+pub fn bench_read_cold(c: &mut Criterion) {
     let mut group = c.benchmark_group("read");
     group.throughput(Throughput::Elements(1));
     group.measurement_time(Duration::from_secs(10));
 
     let dir = TempDir::new().unwrap();
-    let mut config = Config::default();
-    config.lru_bucket_count = 8; // Small cache to force misses
-    let engine = Engine::open(dir.path(), config).unwrap();
-    engine.create_account("bench").unwrap();
+    let engine = Engine::open(dir.path(), Config::default()).unwrap();
 
     let value = make_value(4096);
-    // Write 1000 keys spread across all 16 buckets — small LRU will thrash
-    for i in 0..1000u64 {
+    // Write 5000 keys across all 256 buckets — mmap page faults will occur
+    for i in 0..5000u64 {
         engine
-            .write("bench", make_key(i), &value, Codec::Zstd)
+            .put(make_key(i), &value, Codec::Zstd)
             .unwrap();
     }
 
     let mut counter = 0u64;
-    group.bench_function("cache_miss", |b| {
+    group.bench_function("cold", |b| {
         b.iter(|| {
-            let key = make_key(counter % 1000);
+            let key = make_key(counter % 5000);
             counter += 1;
-            std::hint::black_box(engine.read("bench", &key).unwrap());
+            std::hint::black_box(engine.get(&key).unwrap());
         })
     });
     group.finish();
@@ -174,21 +160,20 @@ pub fn bench_read_large_value(c: &mut Criterion) {
 
     let dir = TempDir::new().unwrap();
     let engine = Engine::open(dir.path(), Config::default()).unwrap();
-    engine.create_account("bench").unwrap();
 
     let value = make_value(1024 * 1024); // 1 MB
     for i in 0..5u64 {
         engine
-            .write("bench", make_key(i), &value, Codec::Zstd)
+            .put(make_key(i), &value, Codec::Zstd)
             .unwrap();
     }
 
     let mut counter = 0u64;
-    group.bench_function("1MB_cache_hit", |b| {
+    group.bench_function("1MB", |b| {
         b.iter(|| {
             let key = make_key(counter % 5);
             counter += 1;
-            std::hint::black_box(engine.read("bench", &key).unwrap());
+            std::hint::black_box(engine.get(&key).unwrap());
         })
     });
     group.finish();
@@ -202,7 +187,6 @@ pub fn bench_delete(c: &mut Criterion) {
     group.bench_function("delete", |b| {
         let dir = TempDir::new().unwrap();
         let engine = Engine::open(dir.path(), Config::default()).unwrap();
-        engine.create_account("bench").unwrap();
 
         let value = make_value(4096);
         let mut counter = 0u64;
@@ -211,13 +195,11 @@ pub fn bench_delete(c: &mut Criterion) {
             || {
                 counter += 1;
                 let key = make_key(counter);
-                engine
-                    .write("bench", key, &value, Codec::Zstd)
-                    .unwrap();
+                engine.put(key, &value, Codec::Zstd).unwrap();
                 key
             },
             |key| {
-                engine.delete("bench", &key).unwrap();
+                engine.delete(&key).unwrap();
             },
             BatchSize::SmallInput,
         )
@@ -232,13 +214,12 @@ pub fn bench_mixed_workload(c: &mut Criterion) {
 
     let dir = TempDir::new().unwrap();
     let engine = Engine::open(dir.path(), Config::default()).unwrap();
-    engine.create_account("bench").unwrap();
 
     // Pre-populate with 500 entries
     let value = make_value(8192);
     for i in 0..500u64 {
         engine
-            .write("bench", make_key(i), &value, Codec::Zstd)
+            .put(make_key(i), &value, Codec::Zstd)
             .unwrap();
     }
 
@@ -249,20 +230,19 @@ pub fn bench_mixed_workload(c: &mut Criterion) {
             let op = counter % 100;
             match op {
                 0..=79 => {
-                    // 80% writes
                     let key = make_key(counter);
                     let val = make_value(4096);
-                    engine.write("bench", key, &val, Codec::Zstd).unwrap();
+                    engine.put(key, &val, Codec::Zstd).unwrap();
                 }
                 80..=94 => {
-                    // 15% reads
-                    std::hint::black_box(engine.read("bench", &make_key(counter % 500)).unwrap());
+                    std::hint::black_box(
+                        engine.get(&make_key(counter % 500)).unwrap(),
+                    );
                 }
                 _ => {
-                    // 5% deletes
                     if counter % 2 == 0 {
                         let key = make_key(counter % 500);
-                        let _ = engine.delete("bench", &key);
+                        let _ = engine.delete(&key);
                     }
                 }
             }
@@ -279,23 +259,20 @@ pub fn bench_gc(c: &mut Criterion) {
     group.bench_function("gc_30pct_deleted", |b| {
         let dir = TempDir::new().unwrap();
         let engine = Engine::open(dir.path(), Config::default()).unwrap();
-        engine.create_account("bench").unwrap();
 
-        // Fill a segment with ~1000 entries, then delete 30%
-        let value = make_value(200_000); // 200KB each → ~1000 entries to fill 256MB
+        let value = make_value(200_000);
         let n = 1200u64;
         for i in 0..n {
             engine
-                .write("bench", make_key(i), &value, Codec::None)
+                .put(make_key(i), &value, Codec::None)
                 .unwrap();
         }
-        // Delete ~30%
         for i in (0..n).step_by(3) {
-            engine.delete("bench", &make_key(i)).unwrap();
+            engine.delete(&make_key(i)).unwrap();
         }
 
         b.iter(|| {
-            engine.gc("bench").unwrap();
+            engine.gc().unwrap();
         })
     });
     group.finish();
@@ -306,8 +283,8 @@ criterion_group!(
     bench_write_small,
     bench_write_medium,
     bench_write_large,
-    bench_read_cache_hit,
-    bench_read_cache_miss,
+    bench_read_hot,
+    bench_read_cold,
     bench_read_large_value,
     bench_delete,
     bench_mixed_workload,

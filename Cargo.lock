@@ -319,10 +319,11 @@ dependencies = [
 name = "bichon-blob"
 version = "0.1.0"
 dependencies = [
- "bincode",
+ "bincode_reloaded",
  "crc32fast",
  "criterion",
  "lz4_flex",
+ "memmap2",
  "rand 0.10.2",
  "serde",
  "serde_json",
@@ -482,6 +483,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "bincode_reloaded"
+version = "3.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9c6f3fe39960aac27f7de2e5f41be9fa576be3fbffddf86a06b967b579f603b8"
+dependencies = [
+ "serde",
+ "unty",
 ]
 
 [[package]]
@@ -5278,6 +5289,12 @@ name = "untrusted"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
+
+[[package]]
+name = "unty"
+version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dbe8d477efbc6c70a1dea1f9f1e0482168983a9147dee6b3a619f666f3aeac6"
 
 [[package]]
 name = "url"

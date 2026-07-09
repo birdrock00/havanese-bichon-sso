@@ -86,6 +86,31 @@ pub fn truncate(path: &Path, size: u64) -> Result<()> {
     Ok(())
 }
 
+/// Positional read: read `buf.len()` bytes at `offset` from `file`.
+/// Uses platform-specific pread so `&File` (shared ref) suffices —
+/// no Mutex needed for concurrent reads.
+pub fn pread_exact(file: &File, offset: u64, buf: &mut [u8]) -> Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::FileExt;
+        file.read_exact_at(buf, offset)?;
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::FileExt;
+        file.seek_read(buf, offset)?;
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        // Fallback: seek+read (requires &mut, so this is best-effort on exotic platforms)
+        use std::io::{Read, Seek, SeekFrom};
+        let mut tmp = file.try_clone()?;
+        tmp.seek(SeekFrom::Start(offset))?;
+        tmp.read_exact(buf)?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

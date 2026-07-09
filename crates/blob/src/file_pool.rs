@@ -7,10 +7,10 @@ use crate::error::Result;
 use crate::fs as fs_util;
 
 /// Simple LRU pool of open file handles, keyed by segment_id.
-/// Uses Arc<Mutex<File>> to allow safe concurrent reads from the same segment.
+/// Uses pread-based reads so a single `Arc<File>` supports concurrent access.
 pub struct FilePool {
     max_entries: usize,
-    entries: Mutex<VecDeque<(u32, Arc<Mutex<File>>)>>,
+    entries: Mutex<VecDeque<(u32, Arc<File>)>>,
 }
 
 impl FilePool {
@@ -22,7 +22,7 @@ impl FilePool {
     }
 
     /// Get an open File for the given segment. Reuses cached handle if available.
-    pub fn get(&self, seg_id: u32, path: &Path) -> Result<Arc<Mutex<File>>> {
+    pub fn get(&self, seg_id: u32, path: &Path) -> Result<Arc<File>> {
         let mut entries = self.entries.lock().unwrap();
 
         // Check for existing entry
@@ -35,7 +35,7 @@ impl FilePool {
         }
 
         // Open new file
-        let file = Arc::new(Mutex::new(fs_util::open_read(path)?));
+        let file = Arc::new(fs_util::open_read(path)?);
 
         // Evict oldest if full
         if entries.len() >= self.max_entries {

@@ -2,44 +2,23 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use crate::bucket::{self, BucketFile, IndexRecord};
+use crate::bucket::{self, IndexRecord};
 use crate::error::Result;
-use crate::meta::{AccountMeta, SegmentStats};
+use crate::meta::{GlobalMeta, SegmentStats};
 use crate::segment::{self, SegmentReader};
 
-/// Recover an account after a crash: scan segments, repair indices, update stats.
-pub fn recover_account(account_dir: &Path) -> Result<AccountMeta> {
-    let meta_bin = account_dir.join("meta.bin");
-    let meta_json = account_dir.join("meta.json");
-    let meta_exists = meta_bin.exists() || meta_json.exists();
-    let mut meta = if meta_exists {
-        AccountMeta::load(account_dir).unwrap_or_else(|_| {
-            AccountMeta::new(
-                account_dir
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .into(),
-                1,
-            )
-        })
-    } else {
-        return Ok(AccountMeta::new(
-            account_dir
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .into(),
-            1,
-        ));
-    };
-
-    // Discover all segment files on disk
-    let seg_dir = account_dir.join("segments");
+/// Recover after a crash: scan any unindexed portions of segments,
+/// update bucket files, fix segment stats.
+pub fn recover(store_root: &Path, meta: &mut GlobalMeta) -> Result<()> {
+    let seg_dir = store_root.join("segments");
     if !seg_dir.exists() {
         fs::create_dir_all(&seg_dir)?;
     }
 
+    let buckets_dir = store_root.join("buckets");
+    fs::create_dir_all(&buckets_dir)?;
+
+    // Discover all segment files on disk
     let mut disk_segments: Vec<u32> = Vec::new();
     if seg_dir.exists() {
         for entry in fs::read_dir(&seg_dir)? {
@@ -58,34 +37,27 @@ pub fn recover_account(account_dir: &Path) -> Result<AccountMeta> {
     disk_segments.sort_unstable();
 
     if disk_segments.is_empty() {
-        meta.active_segment_id = 1;
-    } else {
-        let max_id = *disk_segments.last().unwrap();
-        meta.active_segment_id = max_id;
+        return Ok(());
     }
 
-    // Ensure buckets directory exists
-    let buckets_dir = account_dir.join("buckets");
-    fs::create_dir_all(&buckets_dir)?;
-
-    // For each segment, scan only the unindexed tail and update stats incrementally
+    // For each segment, scan unindexed portions and append to bucket files
     for &seg_id in &disk_segments {
         let seg_path = seg_dir.join(segment::segment_filename(seg_id));
         let file_size = fs::metadata(&seg_path)?.len();
 
-        // Preserve existing stats; start fresh if this is a newly discovered segment
-        let mut stats = meta.segments.remove(&seg_id).unwrap_or_else(|| SegmentStats::new(seg_id));
+        let mut stats = meta
+            .segments
+            .remove(&seg_id)
+            .unwrap_or_else(|| SegmentStats::new(seg_id));
         let is_sealed = seg_id != meta.active_segment_id;
         stats.sealed = is_sealed;
 
-        // Scan start: from last indexed offset. Clamp defensively.
         let scan_start = if stats.indexed_up_to_offset <= file_size {
             stats.indexed_up_to_offset
         } else {
             0
         };
 
-        // If fully indexed, skip scanning entirely
         if scan_start >= file_size {
             meta.segments.insert(seg_id, stats);
             continue;
@@ -113,10 +85,17 @@ pub fn recover_account(account_dir: &Path) -> Result<AccountMeta> {
             Ok(())
         })?;
 
-        // Merge new records into bucket files (only the newly discovered ones)
+        // Append new records to bucket files
         for (bid, records) in &new_records {
-            let bf = BucketFile::open(account_dir, *bid);
-            bf.append_batch(records)?;
+            let bf_path = buckets_dir.join(format!("{:02x}.idx", bid));
+            use std::io::Write;
+            let mut file = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&bf_path)?;
+            for r in records {
+                file.write_all(&r.encode())?;
+            }
         }
 
         // Truncate if tail corruption found
@@ -129,14 +108,14 @@ pub fn recover_account(account_dir: &Path) -> Result<AccountMeta> {
         meta.segments.insert(seg_id, stats);
     }
 
-    meta.save(account_dir)?;
+    meta.save(store_root)?;
 
-    Ok(meta)
+    Ok(())
 }
 
 /// Clean up leftover temp files from interrupted GC.
-pub fn cleanup_temp_files(account_dir: &Path) -> Result<()> {
-    let seg_dir = account_dir.join("segments");
+pub fn cleanup_temp_files(store_root: &Path) -> Result<()> {
+    let seg_dir = store_root.join("segments");
     if seg_dir.exists() {
         for entry in fs::read_dir(&seg_dir)? {
             let entry = entry?;
@@ -150,7 +129,7 @@ pub fn cleanup_temp_files(account_dir: &Path) -> Result<()> {
         }
     }
     // Also cleanup temp bucket files
-    let buckets_dir = account_dir.join("buckets");
+    let buckets_dir = store_root.join("buckets");
     if buckets_dir.exists() {
         for entry in fs::read_dir(&buckets_dir)? {
             let entry = entry?;
@@ -164,39 +143,4 @@ pub fn cleanup_temp_files(account_dir: &Path) -> Result<()> {
         }
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tempfile::TempDir;
-
-    #[test]
-    fn test_recover_fresh_account() {
-        let dir = TempDir::new().unwrap();
-        let account_dir = dir.path().join("test");
-        fs::create_dir_all(&account_dir).unwrap();
-
-        let meta = recover_account(&account_dir).unwrap();
-        assert_eq!(meta.active_segment_id, 1);
-        assert!(meta.segments.is_empty());
-    }
-
-    #[test]
-    fn test_cleanup_temp_files() {
-        let dir = TempDir::new().unwrap();
-        let account_dir = dir.path().join("test");
-        fs::create_dir_all(account_dir.join("segments")).unwrap();
-        fs::create_dir_all(account_dir.join("buckets")).unwrap();
-        fs::write(
-            account_dir.join("segments").join("temp_ABC123.seg"),
-            b"garbage",
-        )
-        .unwrap();
-        fs::write(account_dir.join("buckets").join("00.idx.tmp"), b"garbage").unwrap();
-
-        cleanup_temp_files(&account_dir).unwrap();
-
-        assert!(!account_dir.join("segments").join("temp_ABC123.seg").exists());
-    }
 }

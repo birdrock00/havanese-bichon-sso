@@ -20,12 +20,6 @@ pub enum Error {
         reason: String,
     },
 
-    #[error("Account not found: {0}")]
-    AccountNotFound(String),
-
-    #[error("Account already exists: {0}")]
-    AccountAlreadyExists(String),
-
     #[error("Segment not found: {0}")]
     SegmentNotFound(u32),
 

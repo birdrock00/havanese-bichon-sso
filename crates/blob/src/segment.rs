@@ -1,7 +1,6 @@
 use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 
 use crate::checksum;
 use crate::error::{Error, Result};
@@ -232,6 +231,14 @@ impl SegmentReader {
         file.read_exact(&mut data_size_buf)?;
         let data_size = u32::from_le_bytes(data_size_buf);
 
+        if data_size as usize > crate::types::MAX_VALUE_SIZE {
+            return Err(Error::CorruptEntry {
+                path: self.path.clone(),
+                offset,
+                reason: format!("data_size {} exceeds max {}", data_size, crate::types::MAX_VALUE_SIZE),
+            });
+        }
+
         // Read data
         let mut data = vec![0u8; data_size as usize];
         file.read_exact(&mut data)?;
@@ -269,18 +276,18 @@ impl SegmentReader {
         ))
     }
 
-    /// Read a single entry at the given offset using a pre-opened File (via Mutex).
-    /// This avoids the per-read File::open cost for hot segments.
-    pub fn read_entry_at_file(&self, offset: u64, file: &Mutex<File>) -> Result<(Entry, u64)> {
+    /// Read a single entry at the given offset using a pre-opened File.
+    /// Uses pread so concurrent reads on the same segment don't block each other.
+    pub fn read_entry_at_file(&self, offset: u64, file: &File) -> Result<(Entry, u64)> {
+        // Read header (50 bytes)
+        let mut header = [0u8; ENTRY_HEADER_SIZE];
+        fs_util::pread_exact(file, offset, &mut header)?;
 
-        let mut file = file.lock().unwrap();
+        let mut pos = 0;
 
-        file.seek(SeekFrom::Start(offset))?;
-
-        // Read magic
-        let mut magic_buf = [0u8; 4];
-        file.read_exact(&mut magic_buf)?;
-        let magic = u32::from_le_bytes(magic_buf);
+        // Magic
+        let magic = u32::from_le_bytes(header[pos..pos+4].try_into().unwrap());
+        pos += 4;
         if magic != ENTRY_MAGIC {
             return Err(Error::CorruptEntry {
                 path: self.path.clone(),
@@ -289,41 +296,45 @@ impl SegmentReader {
             });
         }
 
-        // Read CRC32
-        let mut crc_buf = [0u8; 4];
-        file.read_exact(&mut crc_buf)?;
-        let stored_crc = u32::from_le_bytes(crc_buf);
+        // CRC32
+        let stored_crc = u32::from_le_bytes(header[pos..pos+4].try_into().unwrap());
+        pos += 4;
 
-        // Read flags, codec
-        let mut flags_buf = [0u8; 1];
-        file.read_exact(&mut flags_buf)?;
-        let flags = flags_buf[0];
-
-        let mut codec_buf = [0u8; 1];
-        file.read_exact(&mut codec_buf)?;
-        let codec = Codec::from_u8(codec_buf[0]).ok_or_else(|| Error::CorruptEntry {
+        // Flags, codec
+        let flags = header[pos];
+        pos += 1;
+        let codec = Codec::from_u8(header[pos]).ok_or_else(|| Error::CorruptEntry {
             path: self.path.clone(),
             offset,
-            reason: format!("unknown codec: {}", codec_buf[0]),
+            reason: format!("unknown codec: {}", header[pos]),
         })?;
+        pos += 1;
 
-        // Read key, raw_size, data_size
+        // Key
         let mut key = [0u8; 32];
-        file.read_exact(&mut key)?;
+        key.copy_from_slice(&header[pos..pos+32]);
+        pos += 32;
 
-        let mut raw_size_buf = [0u8; 4];
-        file.read_exact(&mut raw_size_buf)?;
-        let raw_size = u32::from_le_bytes(raw_size_buf);
+        // Raw size, data size
+        let raw_size = u32::from_le_bytes(header[pos..pos+4].try_into().unwrap());
+        pos += 4;
+        let data_size = u32::from_le_bytes(header[pos..pos+4].try_into().unwrap());
 
-        let mut data_size_buf = [0u8; 4];
-        file.read_exact(&mut data_size_buf)?;
-        let data_size = u32::from_le_bytes(data_size_buf);
+        // Defense against header corruption: refuse absurdly large allocations
+        if data_size as usize > crate::types::MAX_VALUE_SIZE {
+            return Err(Error::CorruptEntry {
+                path: self.path.clone(),
+                offset,
+                reason: format!("data_size {} exceeds max {}", data_size, crate::types::MAX_VALUE_SIZE),
+            });
+        }
 
         // Read data
+        let data_offset = offset + ENTRY_HEADER_SIZE as u64;
         let mut data = vec![0u8; data_size as usize];
-        file.read_exact(&mut data)?;
+        fs_util::pread_exact(file, data_offset, &mut data)?;
 
-        // Verify CRC32
+        // Verify CRC32 (over everything after the crc32 field: flags+codec+key+raw_size+data_size+data)
         let computed_crc = {
             let mut hasher = crate::checksum::CrcWriter::new();
             hasher.update(&[flags]);

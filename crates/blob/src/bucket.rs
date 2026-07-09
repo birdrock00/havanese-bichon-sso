@@ -1,6 +1,10 @@
-use std::fs::OpenOptions;
+use std::collections::HashMap;
+use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+
+use memmap2::Mmap;
 
 use crate::error::Result;
 use crate::types::{BUCKET_COUNT, INDEX_RECORD_SIZE};
@@ -37,7 +41,6 @@ impl IndexRecord {
         buf[36..44].copy_from_slice(&self.offset.to_le_bytes());
         buf[44..48].copy_from_slice(&self.data_size.to_le_bytes());
         buf[48] = self.flags;
-        // bytes 49..52 are padding (keep zero)
         buf
     }
 
@@ -58,187 +61,418 @@ impl IndexRecord {
     }
 }
 
-/// Represents a loaded and deduplicated bucket in memory.
-pub struct BucketIndex {
-    pub bucket_id: u16,
-    /// Records sorted by key, deduplicated (one record per key, latest wins).
-    pub records: Vec<IndexRecord>,
-}
-
-impl BucketIndex {
-    /// Build from raw records: sort by key, dedup keeping the one with max offset.
-    pub fn from_records(mut records: Vec<IndexRecord>, bucket_id: u16) -> Self {
-        records.sort_by_key(|a| a.key);
-        // Dedup: keep last (max offset) for each key
-        let mut deduped = Vec::with_capacity(records.len());
-        let mut i = 0;
-        while i < records.len() {
-            let mut best = i;
-            let mut j = i + 1;
-            while j < records.len() && records[j].key == records[i].key {
-                if records[j].offset > records[best].offset {
-                    best = j;
-                }
-                j += 1;
-            }
-            deduped.push(records[best].clone());
-            i = j;
-        }
-        Self {
-            bucket_id,
-            records: deduped,
-        }
-    }
-
-    /// Binary search for a key. Returns the record if found.
-    pub fn find(&self, key: &[u8; 32]) -> Option<&IndexRecord> {
-        match self.records.binary_search_by(|r| r.key.cmp(key)) {
-            Ok(idx) => Some(&self.records[idx]),
-            Err(_) => None,
-        }
-    }
-
-    /// Append a new record and maintain sorted order.
-    pub fn insert(&mut self, record: IndexRecord) {
-        match self.records.binary_search_by(|r| r.key.cmp(&record.key)) {
-            Ok(idx) => {
-                // Replace if newer (larger offset)
-                if record.offset > self.records[idx].offset {
-                    self.records[idx] = record;
-                }
-            }
-            Err(idx) => {
-                self.records.insert(idx, record);
-            }
-        }
-    }
-
-    pub fn len(&self) -> usize {
-        self.records.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.records.is_empty()
-    }
-}
-
-/// Manages a bucket index file on disk.
-pub struct BucketFile {
-    path: PathBuf,
-    bucket_id: u16,
-}
-
-impl BucketFile {
-    pub fn path_for(account_dir: &Path, bucket_id: u16) -> PathBuf {
-        account_dir.join("buckets").join(format!("{:02x}.idx", bucket_id))
-    }
-
-    pub fn open(account_dir: &Path, bucket_id: u16) -> Self {
-        Self {
-            path: Self::path_for(account_dir, bucket_id),
-            bucket_id,
-        }
-    }
-
-    pub fn path(&self) -> &Path {
-        &self.path
-    }
-
-    pub fn bucket_id(&self) -> u16 {
-        self.bucket_id
-    }
-
-    /// Ensure the buckets directory exists.
-    pub fn ensure_dir(account_dir: &Path) -> Result<()> {
-        let dir = account_dir.join("buckets");
-        std::fs::create_dir_all(&dir)?;
-        Ok(())
-    }
-
-    /// Append a single record to the bucket file.
-    pub fn append(&self, record: &IndexRecord) -> Result<()> {
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&self.path)?;
-        file.write_all(&record.encode())?;
-        Ok(())
-    }
-
-    /// Append multiple records at once.
-    pub fn append_batch(&self, records: &[IndexRecord]) -> Result<()> {
-        if records.is_empty() {
-            return Ok(());
-        }
-        let mut file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&self.path)?;
-        for r in records {
-            file.write_all(&r.encode())?;
-        }
-        Ok(())
-    }
-
-    /// Load all records from the bucket file.
-    /// If the file size is not a multiple of INDEX_RECORD_SIZE (partial write),
-    /// the trailing bytes are silently ignored.
-    pub fn load_all(&self) -> Result<Vec<IndexRecord>> {
-        if !self.path.exists() {
-            return Ok(Vec::new());
-        }
-        let data = std::fs::read(&self.path)?;
-        let remainder = data.len() % INDEX_RECORD_SIZE;
-        let count = data.len() / INDEX_RECORD_SIZE;
-        let mut records = Vec::with_capacity(count);
-        for i in 0..count {
-            let start = i * INDEX_RECORD_SIZE;
-            let end = start + INDEX_RECORD_SIZE;
-            let buf: &[u8; INDEX_RECORD_SIZE] = data[start..end]
-                .try_into()
-                .map_err(|_| crate::error::Error::BucketIndexCorrupt {
-                    path: self.path.clone(),
-                    reason: format!("unexpected file size {}, not a multiple of {}", data.len(), INDEX_RECORD_SIZE),
-                })?;
-            records.push(IndexRecord::decode(buf));
-        }
-        if remainder > 0 {
-            tracing::warn!(
-                "Bucket file {:?} has {} trailing bytes (expected multiple of {}), ignoring",
-                self.path, remainder, INDEX_RECORD_SIZE
-            );
-        }
-        Ok(records)
-    }
-
-    /// Load all records, sort, and deduplicate into a BucketIndex.
-    pub fn load_index(&self) -> Result<BucketIndex> {
-        let records = self.load_all()?;
-        Ok(BucketIndex::from_records(records, self.bucket_id))
-    }
-
-    /// Rewrite the bucket file with a sorted, deduplicated set of records.
-    /// Uses atomic temp+rename to be safe on NFS.
-    pub fn rewrite(&self, records: &[IndexRecord]) -> Result<()> {
-        let mut buf = Vec::with_capacity(records.len() * INDEX_RECORD_SIZE);
-        for r in records {
-            buf.extend_from_slice(&r.encode());
-        }
-        crate::fs::create_atomic(&self.path, &buf)
-    }
-
-    /// Delete the bucket file.
-    pub fn delete(&self) -> Result<()> {
-        if self.path.exists() {
-            std::fs::remove_file(&self.path)?;
-        }
-        Ok(())
-    }
-}
-
 /// Compute bucket_id from a key's first 2 bytes.
 pub fn bucket_id(key: &[u8; 32]) -> u16 {
     u16::from_be_bytes([key[0], key[1]]) % BUCKET_COUNT
+}
+
+// ── BucketStore ────────────────────────────────────────────────────────────
+
+/// Per-bucket mutable state behind a Mutex.
+struct BucketState {
+    /// mmap of the clean, sorted, deduplicated portion of the bucket file.
+    mmap: Mmap,
+    /// Number of sorted records in the mmap.
+    compacted_records: usize,
+    /// Recent writes not yet merged into the mmap. Key → latest record.
+    pending: HashMap<[u8; 32], IndexRecord>,
+    /// Append-only file for durability of pending writes.
+    file: File,
+    /// Path to the bucket file.
+    path: PathBuf,
+}
+
+/// Zero-heap bucket index store backed by mmap.
+///
+/// Each bucket's clean portion is mmap'd — binary search reads directly
+/// from the OS page cache without allocating heap memory proportional to
+/// the number of stored keys.  Only pending writes (since the last compact)
+/// live in a small in-memory HashMap.
+pub struct BucketStore {
+    states: Vec<Mutex<BucketState>>,
+    compact_threshold: usize,
+}
+
+impl BucketStore {
+    /// Open all bucket files.  On first open or after a crash, each file is
+    /// loaded, sorted, deduplicated, and rewritten into a clean mmap'd form.
+    pub fn open(dir: &Path, compact_threshold: usize) -> Result<Self> {
+        fs::create_dir_all(dir)?;
+
+        let mut states = Vec::with_capacity(BUCKET_COUNT as usize);
+        for bid in 0..BUCKET_COUNT {
+            let path = bucket_path(dir, bid);
+            let (mmap, compacted_records) = if path.exists() {
+                // Load, sort, dedup, rewrite clean, then mmap.
+                let records = load_records_from_file(&path)?;
+                let deduped = sort_and_dedup(records);
+                let count = deduped.len();
+                rewrite_file(&path, &deduped)?;
+                let file = fs::File::open(&path)?;
+                let mmap = unsafe { Mmap::map(&file)? };
+                (mmap, count)
+            } else {
+                // Create empty bucket file.
+                let file = fs::File::create(&path)?;
+                file.set_len(0)?;
+                let mmap = unsafe { Mmap::map(&file)? };
+                (mmap, 0)
+            };
+
+            let file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path)?;
+
+            states.push(Mutex::new(BucketState {
+                mmap,
+                compacted_records,
+                pending: HashMap::new(),
+                file,
+                path,
+            }));
+        }
+
+        Ok(Self {
+            states,
+            compact_threshold,
+        })
+    }
+
+    /// Look up a key.  Returns the latest IndexRecord, or None if absent/tombstone.
+    pub fn get(&self, key: &[u8; 32]) -> Result<Option<IndexRecord>> {
+        let bid = bucket_id(key) as usize;
+        let state = self.states[bid].lock().unwrap();
+
+        // 1. Check pending (most recent wins)
+        if let Some(rec) = state.pending.get(key) {
+            return Ok(if rec.is_tombstone() { None } else { Some(rec.clone()) });
+        }
+
+        // 2. Binary search the mmap'd sorted portion
+        let bytes: &[u8] = &state.mmap;
+        if bytes.is_empty() {
+            return Ok(None);
+        }
+
+        let count = bytes.len() / INDEX_RECORD_SIZE;
+        let result = binary_search_records(bytes, key, count);
+        match result {
+            Some(idx) => {
+                let rec = read_record_at(bytes, idx);
+                Ok(if rec.is_tombstone() { None } else { Some(rec) })
+            }
+            None => Ok(None),
+        }
+    }
+
+    /// Check whether a key exists (non-tombstone) in the store.
+    pub fn exists(&self, key: &[u8; 32]) -> Result<bool> {
+        self.get(key).map(|r| r.is_some())
+    }
+
+    /// Insert or update a record for a key.  Appends to the file for durability,
+    /// then inserts into the pending HashMap.
+    pub fn insert(&self, record: IndexRecord) -> Result<()> {
+        let bid = bucket_id(&record.key) as usize;
+        let mut state = self.states[bid].lock().unwrap();
+
+        // Durability: append to file
+        state.file.write_all(&record.encode())?;
+
+        // Update pending
+        state.pending.insert(record.key, record);
+
+        // Auto-compact if pending grows too large
+        if state.pending.len() >= self.compact_threshold {
+            drop(state);
+            self.compact_bucket(bid as u16)?;
+        }
+
+        Ok(())
+    }
+
+    /// Batch insert multiple records.  Appends all, then updates pending.
+    pub fn insert_batch(&self, records: &[IndexRecord]) -> Result<()> {
+        // Group by bucket
+        let mut grouped: HashMap<u16, Vec<&IndexRecord>> = HashMap::new();
+        for r in records {
+            let bid = bucket_id(&r.key);
+            grouped.entry(bid).or_default().push(r);
+        }
+
+        for (bid, recs) in &grouped {
+            let bid_usize = *bid as usize;
+            let mut state = self.states[bid_usize].lock().unwrap();
+
+            for r in recs {
+                state.file.write_all(&r.encode())?;
+                state.pending.insert(r.key, (*r).clone());
+            }
+        }
+
+        // Compact overfull buckets
+        for &bid in grouped.keys() {
+            let state = self.states[bid as usize].lock().unwrap();
+            let needs_compact = state.pending.len() >= self.compact_threshold;
+            drop(state);
+            if needs_compact {
+                self.compact_bucket(bid)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Run stats across all buckets: total keys (non-tombstone) and total data bytes.
+    pub fn total_keys(&self) -> usize {
+        let mut count = 0usize;
+        for state in self.states.iter() {
+            let s = state.lock().unwrap();
+            // Count from pending
+            for r in s.pending.values() {
+                if !r.is_tombstone() {
+                    count += 1;
+                }
+            }
+            // Count from mmap
+            let bytes: &[u8] = &s.mmap;
+            let n = bytes.len() / INDEX_RECORD_SIZE;
+            for i in 0..n {
+                let rec = read_record_at(bytes, i);
+                // Skip keys that are overridden in pending
+                if s.pending.contains_key(&rec.key) {
+                    continue;
+                }
+                if !rec.is_tombstone() {
+                    count += 1;
+                }
+            }
+        }
+        count
+    }
+
+    /// Compact a single bucket: merge mmap + pending, sort+dedup, rewrite file, remap.
+    fn compact_bucket(&self, bid: u16) -> Result<()> {
+        let idx = bid as usize;
+        let mut state = self.states[idx].lock().unwrap();
+
+        if state.pending.is_empty() {
+            return Ok(());
+        }
+
+        // Collect mmap records + pending records
+        let mut all: Vec<IndexRecord> = Vec::new();
+
+        let bytes: &[u8] = &state.mmap;
+        let n = bytes.len() / INDEX_RECORD_SIZE;
+        all.reserve(n + state.pending.len());
+        for i in 0..n {
+            all.push(read_record_at(bytes, i));
+        }
+        for r in state.pending.values() {
+            all.push(r.clone());
+        }
+
+        let deduped = sort_and_dedup(all);
+        let new_count = deduped.len();
+
+        // Write new file atomically
+        rewrite_file(&state.path, &deduped)?;
+
+        // Remap
+        let file = fs::File::open(&state.path)?;
+        let new_mmap = unsafe { Mmap::map(&file)? };
+
+        // Re-open append file descriptor (old one was truncated)
+        let new_file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&state.path)?;
+
+        state.mmap = new_mmap;
+        state.compacted_records = new_count;
+        state.pending.clear();
+        state.file = new_file;
+
+        Ok(())
+    }
+
+    /// Compact all buckets.
+    pub fn compact_all(&self) -> Result<()> {
+        for bid in 0..BUCKET_COUNT {
+            self.compact_bucket(bid)?;
+        }
+        Ok(())
+    }
+
+    /// Reload all mmaps from disk and reset pending state.
+    /// Used after GC rewrites bucket files externally (via rebuild_from_segments).
+    pub fn reload_all(&self) -> Result<()> {
+        for bid in 0..BUCKET_COUNT {
+            let mut state = self.states[bid as usize].lock().unwrap();
+            let path = state.path.clone();
+
+            // Load, sort, dedup, rewrite clean
+            let records = load_records_from_file(&path)?;
+            let deduped = sort_and_dedup(records);
+            let count = deduped.len();
+            rewrite_file(&path, &deduped)?;
+
+            // Remap
+            let file = fs::File::open(&path)?;
+            let new_mmap = unsafe { Mmap::map(&file)? };
+
+            // Reopen append file
+            let new_file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path)?;
+
+            state.mmap = new_mmap;
+            state.compacted_records = count;
+            state.pending.clear();
+            state.file = new_file;
+        }
+        Ok(())
+    }
+
+    /// Rebuild all bucket files from scratch by scanning segment entries.
+    /// Used by GC and recovery.
+    pub fn rebuild_from_segments(
+        dir: &Path,
+        segments: &[(u32, &Path)],
+    ) -> Result<()> {
+        use crate::segment::SegmentReader;
+
+        let mut bucket_records: HashMap<u16, Vec<IndexRecord>> = HashMap::new();
+        for i in 0..BUCKET_COUNT {
+            bucket_records.insert(i, Vec::new());
+        }
+
+        for &(seg_id, seg_path) in segments {
+            if !seg_path.exists() {
+                continue;
+            }
+            let reader = SegmentReader::open(seg_path.to_path_buf(), seg_id)?;
+            reader.scan_entries(0, |entry, offset| {
+                let bid = bucket_id(&entry.key);
+                let rec = IndexRecord::new(
+                    entry.key,
+                    seg_id,
+                    offset,
+                    entry.data.len() as u32,
+                    entry.flags,
+                );
+                bucket_records.entry(bid).or_default().push(rec);
+                Ok(())
+            })?;
+        }
+
+        for (bid, records) in &bucket_records {
+            let deduped = sort_and_dedup(records.clone());
+            let path = bucket_path(dir, *bid);
+            rewrite_file(&path, &deduped)?;
+        }
+
+        Ok(())
+    }
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+
+fn bucket_path(dir: &Path, bid: u16) -> PathBuf {
+    dir.join(format!("{:02x}.idx", bid))
+}
+
+/// Read records from a raw bucket file (may contain duplicates, not sorted).
+fn load_records_from_file(path: &Path) -> Result<Vec<IndexRecord>> {
+    let data = fs::read(path)?;
+    let remainder = data.len() % INDEX_RECORD_SIZE;
+    let count = data.len() / INDEX_RECORD_SIZE;
+    let mut records = Vec::with_capacity(count);
+    for i in 0..count {
+        let start = i * INDEX_RECORD_SIZE;
+        let end = start + INDEX_RECORD_SIZE;
+        let buf: &[u8; INDEX_RECORD_SIZE] = data[start..end].try_into().map_err(|_| {
+            crate::error::Error::BucketIndexCorrupt {
+                path: path.to_path_buf(),
+                reason: "unexpected file size".into(),
+            }
+        })?;
+        records.push(IndexRecord::decode(buf));
+    }
+    if remainder > 0 {
+        tracing::warn!(
+            "Bucket file {:?} has {} trailing bytes, ignoring",
+            path,
+            remainder
+        );
+    }
+    Ok(records)
+}
+
+/// Sort records by key, deduplicate keeping the one with the highest (segment_id, offset).
+fn sort_and_dedup(mut records: Vec<IndexRecord>) -> Vec<IndexRecord> {
+    records.sort_by_key(|a| a.key);
+    let mut out = Vec::with_capacity(records.len());
+    let mut i = 0;
+    while i < records.len() {
+        let mut best = i;
+        let mut j = i + 1;
+        while j < records.len() && records[j].key == records[i].key {
+            if records[j].segment_id > records[best].segment_id
+                || (records[j].segment_id == records[best].segment_id
+                    && records[j].offset > records[best].offset)
+            {
+                best = j;
+            }
+            j += 1;
+        }
+        out.push(records[best].clone());
+        i = j;
+    }
+    out
+}
+
+/// Binary search for `key` in `bytes` (array of INDEX_RECORD_SIZE records, sorted).
+fn binary_search_records(bytes: &[u8], key: &[u8; 32], count: usize) -> Option<usize> {
+    let mut lo = 0usize;
+    let mut hi = count;
+    while lo < hi {
+        let mid = lo + (hi - lo) / 2;
+        let rec_key = read_key_at(bytes, mid);
+        match rec_key.cmp(key) {
+            std::cmp::Ordering::Less => lo = mid + 1,
+            std::cmp::Ordering::Greater => hi = mid,
+            std::cmp::Ordering::Equal => return Some(mid),
+        }
+    }
+    None
+}
+
+/// Read the key at index `idx` from a byte slice of INDEX_RECORD_SIZE records.
+fn read_key_at(bytes: &[u8], idx: usize) -> &[u8; 32] {
+    let start = idx * INDEX_RECORD_SIZE;
+    bytes[start..start + 32].try_into().unwrap()
+}
+
+/// Read a full IndexRecord at index `idx`.
+fn read_record_at(bytes: &[u8], idx: usize) -> IndexRecord {
+    let start = idx * INDEX_RECORD_SIZE;
+    let buf: &[u8; INDEX_RECORD_SIZE] = bytes[start..start + INDEX_RECORD_SIZE]
+        .try_into()
+        .unwrap();
+    IndexRecord::decode(buf)
+}
+
+/// Atomically rewrite a bucket file with sorted, deduplicated records.
+fn rewrite_file(path: &Path, records: &[IndexRecord]) -> Result<()> {
+    let mut buf = Vec::with_capacity(records.len() * INDEX_RECORD_SIZE);
+    for r in records {
+        buf.extend_from_slice(&r.encode());
+    }
+    crate::fs::create_atomic(path, &buf)
 }
 
 #[cfg(test)]
@@ -264,66 +498,111 @@ mod tests {
         assert_eq!(bucket_id(&key), 15);
         key[0] = 0x00;
         key[1] = 0x10;
-        assert_eq!(bucket_id(&key), 0);
+        assert_eq!(bucket_id(&key), 16);
     }
 
     #[test]
-    fn test_bucket_append_and_load() {
-        let dir = TempDir::new().unwrap();
-        let bucket = BucketFile::open(dir.path(), 0);
-        BucketFile::ensure_dir(dir.path()).unwrap();
-
-        let r1 = IndexRecord::new([1u8; 32], 1, 100, 50, 0);
-        let r2 = IndexRecord::new([2u8; 32], 1, 200, 60, 0);
-
-        bucket.append(&r1).unwrap();
-        bucket.append(&r2).unwrap();
-
-        let loaded = bucket.load_all().unwrap();
-        assert_eq!(loaded.len(), 2);
-        assert_eq!(loaded[0].key, [1u8; 32]);
-        assert_eq!(loaded[1].key, [2u8; 32]);
-    }
-
-    #[test]
-    fn test_bucket_index_dedup() {
+    fn test_sort_and_dedup_keeps_latest() {
         let recs = vec![
             IndexRecord::new([1u8; 32], 1, 100, 50, 0),
-            IndexRecord::new([1u8; 32], 2, 200, 50, 0), // newer offset wins
+            IndexRecord::new([1u8; 32], 2, 200, 50, 0),
             IndexRecord::new([2u8; 32], 1, 300, 60, 0),
         ];
-        let idx = BucketIndex::from_records(recs, 0);
-        assert_eq!(idx.len(), 2);
-        let found = idx.find(&[1u8; 32]).unwrap();
+        let deduped = sort_and_dedup(recs);
+        assert_eq!(deduped.len(), 2);
+        let found = &deduped[0];
         assert_eq!(found.segment_id, 2);
         assert_eq!(found.offset, 200);
     }
 
     #[test]
-    fn test_bucket_index_find_missing() {
-        let recs = vec![IndexRecord::new([1u8; 32], 1, 100, 50, 0)];
-        let idx = BucketIndex::from_records(recs, 0);
-        assert!(idx.find(&[99u8; 32]).is_none());
+    fn test_bucket_store_put_and_get() {
+        let dir = TempDir::new().unwrap();
+        let store = BucketStore::open(dir.path(), 100).unwrap();
+
+        let key = [0xAA; 32];
+        let rec = IndexRecord::new(key, 1, 0, 500, 0);
+        store.insert(rec).unwrap();
+
+        let found = store.get(&key).unwrap();
+        assert!(found.is_some());
+        assert_eq!(found.unwrap().data_size, 500);
     }
 
     #[test]
-    fn test_bucket_rewrite() {
+    fn test_bucket_store_get_missing() {
         let dir = TempDir::new().unwrap();
-        let bucket = BucketFile::open(dir.path(), 0);
-        BucketFile::ensure_dir(dir.path()).unwrap();
+        let store = BucketStore::open(dir.path(), 100).unwrap();
 
-        let r1 = IndexRecord::new([3u8; 32], 1, 300, 70, 0);
-        let r2 = IndexRecord::new([1u8; 32], 1, 100, 50, 0);
-        bucket.append(&r1).unwrap();
-        bucket.append(&r2).unwrap();
+        let result = store.get(&[0xFF; 32]).unwrap();
+        assert!(result.is_none());
+    }
 
-        // Rewrite sorted
-        let sorted = vec![r2.clone(), r1.clone()];
-        bucket.rewrite(&sorted).unwrap();
+    #[test]
+    fn test_bucket_store_tombstone() {
+        let dir = TempDir::new().unwrap();
+        let store = BucketStore::open(dir.path(), 100).unwrap();
 
-        let loaded = bucket.load_all().unwrap();
-        assert_eq!(loaded.len(), 2);
-        assert_eq!(loaded[0].key, [1u8; 32]);
-        assert_eq!(loaded[1].key, [3u8; 32]);
+        let key = [0xBB; 32];
+
+        // Write then tombstone
+        store
+            .insert(IndexRecord::new(key, 1, 0, 100, 0))
+            .unwrap();
+        store
+            .insert(IndexRecord::new(key, 2, 0, 0, 1))
+            .unwrap();
+
+        let result = store.get(&key).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_bucket_store_compact() {
+        let dir = TempDir::new().unwrap();
+        // Use small threshold to trigger auto-compact
+        let store = BucketStore::open(dir.path(), 5).unwrap();
+
+        // Write 10 records for same bucket (all same first 2 bytes → same bucket)
+        for i in 0u8..10 {
+            let mut key = [0u8; 32];
+            key[0..2].copy_from_slice(&[0x00, 0x00]); // same bucket
+            key[2] = i;
+            store
+                .insert(IndexRecord::new(key, 1, i as u64 * 100, 50, 0))
+                .unwrap();
+        }
+
+        // All should be readable after auto-compact
+        for i in 0u8..10 {
+            let mut key = [0u8; 32];
+            key[0..2].copy_from_slice(&[0x00, 0x00]);
+            key[2] = i;
+            let found = store.get(&key).unwrap();
+            assert!(found.is_some(), "key {} should exist after compact", i);
+        }
+    }
+
+    #[test]
+    fn test_bucket_store_persistence() {
+        let dir = TempDir::new().unwrap();
+        let dir_path = dir.path().to_path_buf();
+
+        let key = [0xCC; 32];
+        {
+            let store = BucketStore::open(&dir_path, 100).unwrap();
+            store
+                .insert(IndexRecord::new(key, 1, 42, 512, 0))
+                .unwrap();
+            store.compact_all().unwrap();
+        }
+
+        // Reopen
+        {
+            let store = BucketStore::open(&dir_path, 100).unwrap();
+            let found = store.get(&key).unwrap();
+            assert!(found.is_some());
+            assert_eq!(found.unwrap().offset, 42);
+        }
     }
 }
