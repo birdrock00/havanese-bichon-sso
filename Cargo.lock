@@ -303,16 +303,23 @@ version = "1.6.2"
 dependencies = [
  "bichon-core",
  "bichon-memdb",
+ "bytes 1.12.0",
+ "chrono",
  "console",
  "dialoguer",
+ "fjall",
  "indicatif",
  "itertools 0.15.0",
+ "mail-parser",
  "native_db",
  "native_model",
  "serde",
  "serde_json",
  "snafu",
+ "tantivy",
  "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -361,6 +368,7 @@ version = "1.6.2"
 dependencies = [
  "async-imap",
  "base64 0.22.1",
+ "bichon-blob",
  "bichon-memdb",
  "blake3",
  "bytes 1.12.0",
@@ -373,7 +381,6 @@ dependencies = [
  "deunicode",
  "email_address",
  "encoding_rs",
- "fjall",
  "futures",
  "governor",
  "hex",
@@ -3581,9 +3588,9 @@ dependencies = [
 
 [[package]]
 name = "quick_cache"
-version = "0.6.21"
+version = "0.6.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a70b1b8b47e31d0498ecbc3c5470bb931399a8bfed1fd79d1717a61ce7f96e3"
+checksum = "b9c6658afe513a3b484e3abfdaa0d03ef3c0bbf017542c178dd55f94eb3051f9"
 dependencies = [
  "equivalent",
  "hashbrown 0.16.1",
@@ -5370,9 +5377,9 @@ checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
 
 [[package]]
 name = "varint-rs"
-version = "2.2.0"
+version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f54a172d0620933a27a4360d3db3e2ae0dd6cceae9730751a036bbf182c4b23"
+checksum = "bfa6c38708f6257f1ec2ca7e5a11f9bbf58a27d7060078b6b333624968183d96"
 
 [[package]]
 name = "vcpkg"
@@ -6054,9 +6061,9 @@ dependencies = [
 
 [[package]]
 name = "xxhash-rust"
-version = "0.8.15"
+version = "0.8.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdd20c5420375476fbd4394763288da7eb0cc0b8c11deed431a91562af7335d3"
+checksum = "4d93c89cdc2d3a63c3ec48ffe926931bdc069eafa8e4402fe6d8f790c9d1e576"
 
 [[package]]
 name = "yasna"

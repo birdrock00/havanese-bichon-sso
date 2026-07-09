@@ -188,8 +188,9 @@ impl Engine {
             self.shared.config.compression_level,
         );
 
+        let original_len = value.len() as u32;
         let (segment_id, offset, data_size) =
-            inner.append_entry(key, &data, 0, actual_codec)?;
+            inner.append_entry(key, &data, original_len, 0, actual_codec)?;
 
         let record = IndexRecord::new(key, segment_id, offset, data_size, 0);
         self.shared.bucket_store.insert(record)?;
@@ -226,7 +227,7 @@ impl Engine {
         let mut inner = self.shared.inner.write().unwrap();
 
         let (segment_id, offset, data_size) =
-            inner.append_entry(*key, &[], 1, Codec::None)?;
+            inner.append_entry(*key, &[], 0, 1, Codec::None)?;
 
         let record = IndexRecord::new(*key, segment_id, offset, data_size, 1);
         self.shared.bucket_store.insert(record)?;
@@ -256,7 +257,7 @@ impl Engine {
 
         for key in keys {
             let (segment_id, offset, data_size) =
-                inner.append_entry(*key, &[], 1, Codec::None)?;
+                inner.append_entry(*key, &[], 0, 1, Codec::None)?;
 
             let entry_end = offset + ENTRY_HEADER_SIZE as u64 + data_size as u64;
             records.push(IndexRecord::new(*key, segment_id, offset, data_size, 1));
@@ -298,8 +299,9 @@ impl Engine {
                 self.shared.config.compression_level,
             );
 
+            let original_len = value.len() as u32;
             let (segment_id, offset, data_size) =
-                inner.append_entry(*key, &data, 0, actual_codec)?;
+                inner.append_entry(*key, &data, original_len, 0, actual_codec)?;
 
             let entry_end = offset + ENTRY_HEADER_SIZE as u64 + data_size as u64;
             records.push(IndexRecord::new(*key, segment_id, offset, data_size, 0));
@@ -453,6 +455,7 @@ impl EngineInner {
         &mut self,
         key: [u8; 32],
         data: &[u8],
+        raw_size: u32,
         flags: u8,
         codec: Codec,
     ) -> Result<(u32, u64, u32)> {
@@ -464,7 +467,7 @@ impl EngineInner {
         let entry = if flags == 1 {
             Entry::tombstone(key)
         } else {
-            Entry::new(key, data, flags, codec)
+            Entry::new(key, data, raw_size, flags, codec)
         };
 
         let data_size = entry.data.len() as u32;

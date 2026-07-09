@@ -16,17 +16,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::raise_error;
 use crate::{
     common::signal::SIGNAL_MANAGER,
     envelope::extractor::reattach_eml_content_self_healing,
     error::{code::ErrorCode, BichonResult},
     settings::dir::DATA_DIR_MANAGER,
 };
-use crate::raise_error;
+use bichon_blob::{Codec, Config, Engine};
 use bytes::Bytes;
-use fjall::{CompressionType, Database, Keyspace, KeyspaceCreateOptions, KvSeparationOptions, config::{BlockSizePolicy, CompressionPolicy}};
 
-use std::{io::Cursor, sync::LazyLock};
+use std::{io::Cursor, sync::Arc, sync::LazyLock};
 use tokio::{
     sync::{mpsc, Mutex},
     task::{self, JoinHandle},
@@ -41,10 +41,19 @@ pub struct DetachedEmail {
 
 pub struct BlobManager {
     sender: mpsc::Sender<DetachedEmail>,
-    db: Database,
-    email_keyspace: Keyspace,
-    attachments_keyspace: Keyspace,
+    engine: Arc<Engine>,
     handle: Mutex<Option<JoinHandle<()>>>,
+}
+
+fn hex_to_key(hex: &str) -> BichonResult<[u8; 32]> {
+    let mut key = [0u8; 32];
+    hex::decode_to_slice(hex, &mut key).map_err(|e| {
+        raise_error!(
+            format!("invalid content hash '{hex}': {e:#?}"),
+            ErrorCode::InternalError
+        )
+    })?;
+    Ok(key)
 }
 
 impl BlobManager {
@@ -53,21 +62,27 @@ impl BlobManager {
         if let Some(handle) = guard.take() {
             let _ = handle.await;
         }
+        if let Err(e) = self.engine.shutdown() {
+            tracing::error!("blob engine shutdown error: {}", e);
+        }
     }
 
-    fn process_detached_email(
-        eml: DetachedEmail,
-        email_ks: &Keyspace,
-        attach_ks: &Keyspace,
-    ) {
+    fn process_detached_email(eml: DetachedEmail, engine: &Engine) {
         let (email_hash, email_data) = eml.email;
-        match email_ks.contains_key(&email_hash) {
+        let email_key = match hex_to_key(&email_hash) {
+            Ok(k) => k,
+            Err(e) => {
+                tracing::error!("{:#?}", e);
+                return;
+            }
+        };
+        match engine.exists(&email_key) {
             Ok(false) => {
-                if let Err(e) = email_ks.insert(email_hash, email_data) {
-                    tracing::error!("CRITICAL: Failed to insert email: {:?}",  e);
+                if let Err(e) = engine.put(email_key, &email_data, Codec::Lz4) {
+                    tracing::error!("CRITICAL: Failed to insert email blob: {:?}", e);
                 }
             }
-            Err(e) => tracing::error!("Fjall email_ks error: {:?}", e),
+            Err(e) => tracing::error!("blob engine error: {:?}", e),
             Ok(true) => {
                 tracing::debug!("Email blob already exists (dedup): {}", &email_hash);
             }
@@ -75,13 +90,20 @@ impl BlobManager {
 
         if let Some(attachments) = eml.attachments {
             for (a_hash, a_data) in attachments {
-                match attach_ks.contains_key(&a_hash) {
+                let a_key = match hex_to_key(&a_hash) {
+                    Ok(k) => k,
+                    Err(e) => {
+                        tracing::error!("{:#?}", e);
+                        continue;
+                    }
+                };
+                match engine.exists(&a_key) {
                     Ok(false) => {
-                        if let Err(e) = attach_ks.insert(a_hash, a_data) {
-                            tracing::error!("CRITICAL: Failed to insert attachment: {:?}", e);
+                        if let Err(e) = engine.put(a_key, &a_data, Codec::Lz4) {
+                            tracing::error!("CRITICAL: Failed to insert attachment blob: {:?}", e);
                         }
                     }
-                    Err(e) => tracing::error!("Fjall attach_ks error: {:?}", e),
+                    Err(e) => tracing::error!("blob engine error: {:?}", e),
                     Ok(true) => {
                         tracing::debug!("Attachment blob already exists (dedup): {}", &a_hash);
                     }
@@ -91,57 +113,21 @@ impl BlobManager {
     }
 
     pub fn new() -> Self {
-        let db = Database::builder(&DATA_DIR_MANAGER.storage_dir)
-        .cache_size(64 * 1024 * 1024)
-        .max_cached_files(Some(400))
-        .journal_compression(CompressionType::None)
-        .max_journaling_size(64 * 1024 * 1024)
-            .open()
-            .expect("Failed to initialize Fjall database: Check if the directory exists and has write permissions.");
+        let blob_dir = DATA_DIR_MANAGER.storage_dir.join("blobs");
 
+        let mut config = Config::default();
+        config.default_codec = Codec::Zstd;
+        config.compress_threshold = 1024;
+        config.flush_interval_secs = 60;
 
-        let email_keyspace = db
-            .keyspace("email", || {
-                KeyspaceCreateOptions::default()
-                .max_memtable_size(16 * 1024 * 1024)
-                .data_block_size_policy(BlockSizePolicy::all(4 * 1024))
-                .data_block_compression_policy(  
-                    CompressionPolicy::all(CompressionType::Lz4)  
-                )  
-                .with_kv_separation(Some(
-                    KvSeparationOptions::default()
-                        .separation_threshold(1024)
-                        .compression(CompressionType::Lz4)
-                        .file_target_size(512 * 1024 * 1024)
-                        .staleness_threshold(0.5)
-                        .age_cutoff(0.6),
-                ))
-            })
-            .expect("Failed to open 'email' keyspace: The partition metadata might be corrupted or inaccessible.");
-        
-        let attachments_keyspace = db
-            .keyspace("attachments", || {
-                KeyspaceCreateOptions::default()
-                .data_block_size_policy(BlockSizePolicy::all(4 * 1024))
-                .data_block_compression_policy(  
-                    CompressionPolicy::all(CompressionType::Lz4)  
-                )
-                .with_kv_separation(Some(
-                    KvSeparationOptions::default()
-                        .separation_threshold(1024)
-                        .compression(CompressionType::Lz4)
-                        .file_target_size(512 * 1024 * 1024)
-                        .staleness_threshold(0.5)
-                        .age_cutoff(0.6),
-                ))
-                .max_memtable_size(16 * 1024 * 1024)
-            })
-            .expect("Failed to open 'attachments' keyspace: Check disk space for blob storage initialization.");
-        
+        let engine = Engine::open(&blob_dir, config)
+            .expect("Failed to initialize blob engine: Check disk space and permissions.");
+
+        let engine = Arc::new(engine);
+
         let (sender, mut receiver) = mpsc::channel::<DetachedEmail>(100);
 
-        let email_ks = email_keyspace.clone();
-        let attach_ks = attachments_keyspace.clone();
+        let engine_bg = Arc::clone(&engine);
         let handler = task::spawn(async move {
             let mut shutdown = SIGNAL_MANAGER.subscribe();
             loop {
@@ -153,18 +139,17 @@ impl BlobManager {
                                 while let Ok(next_eml) = receiver.try_recv() {
                                     batch.push(next_eml);
                                 }
-                                let email_ks = email_ks.clone();
-                                let attach_ks = attach_ks.clone();
+                                let engine_bg = Arc::clone(&engine_bg);
                                 if let Err(e) = tokio::task::spawn_blocking(move || {
                                     for eml in batch {
-                                        Self::process_detached_email(eml, &email_ks, &attach_ks);
+                                        Self::process_detached_email(eml, &engine_bg);
                                     }
                                 }).await {
                                     tracing::error!("BlobManager: spawn_blocking join error: {:#?}", e);
                                 }
                             }
                             None => {
-                                tracing::info!("BlobManager: All senders dropped, closing storage.");
+                                tracing::info!("BlobManager: All senders dropped, closing blob storage.");
                                 break;
                             }
                         }
@@ -180,17 +165,16 @@ impl BlobManager {
                             remaining.len()
                         );
                         if !remaining.is_empty() {
-                            let email_ks = email_ks.clone();
-                            let attach_ks = attach_ks.clone();
+                            let engine_bg = Arc::clone(&engine_bg);
                             if let Err(e) = tokio::task::spawn_blocking(move || {
                                 for eml in remaining {
-                                    Self::process_detached_email(eml, &email_ks, &attach_ks);
+                                    Self::process_detached_email(eml, &engine_bg);
                                 }
                             }).await {
                                 tracing::error!("BlobManager: shutdown spawn_blocking join error: {:#?}", e);
                             }
                         }
-                        tracing::info!("BlobManager: All remaining tasks processed. Closing Fjall.");
+                        tracing::info!("BlobManager: All remaining tasks processed. Closing blob engine.");
                         break;
                     }
                 }
@@ -199,30 +183,30 @@ impl BlobManager {
 
         Self {
             sender,
-            db,
-            email_keyspace,
-            attachments_keyspace,
+            engine,
             handle: Mutex::new(Some(handler)),
         }
     }
 
     pub async fn queue(&self, email: DetachedEmail) {
         if let Err(e) = self.sender.send(email).await {
-          tracing::error!("BlobManager channel closed, email lost: {:#?}", e);
+            tracing::error!("BlobManager channel closed, email lost: {:#?}", e);
         }
     }
 
     pub fn get_email(&self, content_hash: &str) -> BichonResult<Option<Bytes>> {
-        self.email_keyspace
-            .get(content_hash)
-            .map(|user_value| user_value.map(|s| s.into()))
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
+        self.get(content_hash)
     }
 
     pub fn get_attachment(&self, content_hash: &str) -> BichonResult<Option<Bytes>> {
-        self.attachments_keyspace
-            .get(content_hash)
-            .map(|user_value| user_value.map(|s| s.into()))
+        self.get(content_hash)
+    }
+
+    fn get(&self, content_hash: &str) -> BichonResult<Option<Bytes>> {
+        let key = hex_to_key(content_hash)?;
+        self.engine
+            .get(&key)
+            .map(|v| v.map(Bytes::from))
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
     }
 
@@ -235,17 +219,23 @@ impl BlobManager {
         I1: IntoIterator,
         I1::Item: AsRef<str>,
         I2: IntoIterator,
-        I2::Item: AsRef<str> {
-        let mut batch = self.db.batch();
-        for hash in email_content_hashes {
-            batch.remove(&self.email_keyspace, hash.as_ref());
+        I2::Item: AsRef<str>,
+    {
+        let mut keys: Vec<[u8; 32]> = email_content_hashes
+            .into_iter()
+            .map(|h| hex_to_key(h.as_ref()))
+            .collect::<BichonResult<_>>()?;
+
+        for h in attachment_content_hashes {
+            keys.push(hex_to_key(h.as_ref())?);
         }
-        for hash in attachment_content_hashes {
-            batch.remove(&self.attachments_keyspace, hash.as_ref());
+
+        if !keys.is_empty() {
+            self.engine
+                .delete_batch(&keys)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         }
-        batch
-            .commit()
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
         Ok(())
     }
 }

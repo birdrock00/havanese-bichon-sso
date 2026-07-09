@@ -19,13 +19,14 @@ pub struct Entry {
 
 impl Entry {
     /// Create a normal data entry.
-    pub fn new(key: [u8; 32], raw_data: &[u8], flags: u8, codec: Codec) -> Self {
+    /// `raw_size` is the original uncompressed size; `data` is what goes to disk.
+    pub fn new(key: [u8; 32], data: &[u8], raw_size: u32, flags: u8, codec: Codec) -> Self {
         Self {
             flags,
             codec,
             key,
-            raw_size: raw_data.len() as u32,
-            data: raw_data.to_vec(),
+            raw_size,
+            data: data.to_vec(),
         }
     }
 
@@ -460,7 +461,7 @@ mod tests {
         let key = [0xAAu8; 32];
         let data = b"hello world".to_vec();
 
-        let entry = Entry::new(key, &data, 0, Codec::None);
+        let entry = Entry::new(key, &data, data.len() as u32, 0, Codec::None);
         {
             let mut writer = SegmentWriter::create(path.clone(), 1).unwrap();
             writer.append(&entry).unwrap();
@@ -506,7 +507,7 @@ mod tests {
             .map(|i| {
                 let mut key = [0u8; 32];
                 key[0] = i;
-                Entry::new(key, &vec![i; 100], 0, Codec::None)
+                Entry::new(key, &vec![i; 100], 100, 0, Codec::None)
             })
             .collect();
 

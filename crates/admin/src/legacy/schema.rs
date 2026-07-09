@@ -1,6 +1,6 @@
 use tantivy::schema::{FacetOptions, Field, Schema, FAST, INDEXED, STORED, STRING, TEXT};
 
-use crate::migrate::legacy::fields::{EmlFields, EnvelopeFields, *};
+use crate::legacy::fields::{EmlFields, EnvelopeFields, *};
 
 pub struct SchemaTools;
 

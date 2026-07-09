@@ -21,8 +21,10 @@ use dialoguer::{theme::ColorfulTheme, Select};
 
 use crate::{migrate::handle_migration, reset::handle_reset_password};
 
+pub mod legacy;
 pub mod meta;
 pub mod migrate;
+pub mod migrate_store;
 pub mod reset;
 
 

@@ -3,7 +3,7 @@ use std::{path::PathBuf, time::Instant};
 use bytes::Bytes;
 use mail_parser::MimeHeaders;
 
-use crate::{
+use bichon_core::{
     envelope::extractor::extract_references, message::content::AttachmentInfo,
     store::tantivy::tokenizers::EuroTokenizer, utils::compute_content_hash,
 };
@@ -16,7 +16,7 @@ use mail_parser::MessageParser;
 use tantivy::{indexer::NoMergePolicy, Index, IndexWriter, TantivyDocument};
 use uuid::Uuid;
 
-use crate::{
+use bichon_core::{
     common::AddrVec,
     envelope::extractor::{compute_thread_id, generate_message_id},
     error::{code::ErrorCode, BichonResult},
@@ -284,7 +284,7 @@ impl NewIndexWriter {
             .or_else(|| {
                 message
                     .body_html(0)
-                    .map(|html| crate::utils::html::extract_text(html.into_owned()))
+                    .map(|html| bichon_core::utils::html::extract_text(html.into_owned()))
             })
             .unwrap_or_default();
         let text = text.split_whitespace().collect::<Vec<_>>().join(" ");

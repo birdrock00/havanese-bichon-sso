@@ -17,6 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::context::Initialize;
+use crate::migrate::{write_storage_version, CURRENT_STORAGE_VERSION};
 use crate::settings::cli::SETTINGS;
 use crate::{
     error::{code::ErrorCode, BichonResult},
@@ -62,6 +63,14 @@ impl Initialize for DataDirManager {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         std::fs::create_dir_all(&DATA_DIR_MANAGER.storage_dir)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        // Write STORAGE_VERSION on fresh install (no existing data)
+        let version_path = DATA_DIR_MANAGER.root_dir.join("STORAGE_VERSION");
+        if !version_path.exists() && !DATA_DIR_MANAGER.storage_dir.join("blobs").exists() {
+            write_storage_version(&DATA_DIR_MANAGER.root_dir, CURRENT_STORAGE_VERSION)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        }
+
         Ok(())
     }
 }
