@@ -454,6 +454,50 @@ fn test_global_dedup_after_crash() {
 }
 
 // ---------------------------------------------------------------------------
+// 8. Recovery + mmap consistency: entries re-indexed by recovery are readable
+// ---------------------------------------------------------------------------
+
+#[test]
+fn test_recovery_reloads_bucket_mmaps() {
+    use bichon_blob::meta::GlobalMeta;
+
+    let dir = TempDir::new().unwrap();
+    let value = make_value(8192);
+    let n = 50u64;
+
+    // Phase 1: write data with clean shutdown, then corrupt meta to force
+    // re-indexing on next open (simulates crash where mark_indexed didn't run).
+    {
+        let engine = Engine::open(dir.path(), Config::default()).unwrap();
+        for i in 0..n {
+            engine.put(make_key(i), &value, Codec::None).unwrap();
+        }
+    } // clean shutdown — everything is indexed and fsynced
+
+    // Corrupt meta: zero out indexed_up_to_offset so recovery re-scans.
+    let mut meta = GlobalMeta::load(dir.path()).expect("failed to load meta");
+    for seg in meta.segments.values_mut() {
+        seg.indexed_up_to_offset = 0;
+    }
+    meta.save(dir.path()).expect("failed to save corrupted meta");
+
+    // Phase 2: reopen — recovery must re-scan the segment and append to bucket
+    // files. After the fix, reload_all() ensures the mmaps include recovered data.
+    {
+        let engine = Engine::open(dir.path(), Config::default()).unwrap();
+        for i in 0..n {
+            let result = engine.get(&make_key(i)).unwrap();
+            assert_eq!(
+                result,
+                Some(value.clone()),
+                "key {} should be readable after recovery reload",
+                i
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 

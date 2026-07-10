@@ -33,13 +33,13 @@ magic(4)  crc32(4)  flags(1)  codec(1)  key(32)  raw_size(4)  data_size(4)  data
 - `raw_size`: original uncompressed size
 - `data_size`: on-disk data size (after compression)
 
-### Bucket index record format (52 bytes)
+### Bucket index record format (56 bytes)
 
 ```
-key(32)  segment_id(4)  offset(8)  data_size(4)  flags(1)  _pad(3)
+key(32)  segment_id(4)  offset(8)  data_size(4)  flags(1)  _pad(3)  crc32(4)
 ```
 
-Index records are sorted by key, deduplicated (newest segment_id + offset wins), and mmap'd for zero-heap binary search. Pending writes (since the last compaction) live in a small in-memory HashMap.
+Every index record is CRC32-protected — a corrupted record is detected on read and never silently returned. Records are sorted by key, deduplicated (newest segment_id + offset wins), and mmap'd for zero-heap binary search. Pending writes (since the last compaction) live in a small in-memory HashMap.
 
 ## Read path
 
@@ -48,10 +48,12 @@ get(key)
   → bucket_id = (key[0..2] as u16) % 256
   → check pending HashMap (most recent wins)
   → binary search mmap'd bucket file
-  → IndexRecord → (segment_id, offset, data_size)
+  → IndexRecord CRC32 verify → (segment_id, offset, data_size)
   → pread entry from segment file
-  → CRC32 verify → decompress → return value
+  → entry CRC32 verify → decompress → return value
 ```
+
+Both the bucket index record and the segment entry carry independent CRC32 checksums. Corruption in one record or entry is contained — it never affects other keys.
 
 ## Write path
 
@@ -74,10 +76,23 @@ Deletes are **tombstones** — an entry with `flags=1` and empty data is appende
 
 **Garbage collection:** when a sealed segment's deleted-ratio exceeds `gc_deleted_ratio` (default 0.30), GC scans all segments to find the latest entry per key, then rewrites the target segment keeping only live entries. Tombstones and overwritten entries are dropped. Bucket indices are rebuilt afterward.
 
+## Data integrity
+
+Every record on disk is independently checksummed:
+
+| Layer | Format | Protection |
+|---|---|---|
+| Segment entry | 50-byte header + data | CRC32 covers all fields + data |
+| Bucket index record | 56 bytes | CRC32 covers key + segment_id + offset + data_size + flags |
+| Global metadata | bincode blob | CRC32 + version header |
+
+Corruption is **contained** — a bad segment entry or bucket record produces an error for that key only. Compaction and recovery skip corrupt records (with a warning) rather than aborting. Bucket indices can always be fully rebuilt from segments via `rebuild_from_segments`.
+
 ## Crash recovery
 
 - Temp files from interrupted GC are cleaned up on open.
 - Any segment data beyond `indexed_up_to_offset` is scanned and indexed into bucket files.
+- After appending recovered records, bucket mmaps are reloaded so they are immediately visible.
 - Partial writes at the tail of a segment (detected via CRC32 mismatch near EOF) are truncated.
 - Buckets are always repairable by re-scanning segments (`rebuild_from_segments`).
 

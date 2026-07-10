@@ -6,8 +6,8 @@ pub const ENTRY_MAGIC: u32 = 0xB3DB_0001;
 /// Fixed header size: magic(4) + crc32(4) + flags(1) + codec(1) + key(32) + raw_size(4) + data_size(4)
 pub const ENTRY_HEADER_SIZE: usize = 50;
 
-/// Index record size: key(32) + segment_id(4) + offset(8) + data_size(4) + flags(1) + _pad(3)
-pub const INDEX_RECORD_SIZE: usize = 52;
+/// Index record size: key(32) + segment_id(4) + offset(8) + data_size(4) + flags(1) + _pad(3) + crc32(4)
+pub const INDEX_RECORD_SIZE: usize = 56;
 
 /// Maximum segment size (256 MB)
 pub const SEGMENT_MAX_SIZE: u64 = 256 * 1024 * 1024;

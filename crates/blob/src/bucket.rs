@@ -41,23 +41,36 @@ impl IndexRecord {
         buf[36..44].copy_from_slice(&self.offset.to_le_bytes());
         buf[44..48].copy_from_slice(&self.data_size.to_le_bytes());
         buf[48] = self.flags;
+        let crc = crate::checksum::crc32(&buf[..52]);
+        buf[52..56].copy_from_slice(&crc.to_le_bytes());
         buf
     }
 
-    pub fn decode(buf: &[u8; INDEX_RECORD_SIZE]) -> Self {
+    pub fn decode(buf: &[u8; INDEX_RECORD_SIZE]) -> crate::error::Result<Self> {
+        let stored_crc = u32::from_le_bytes(buf[52..56].try_into().unwrap());
+        let computed = crate::checksum::crc32(&buf[..52]);
+        if stored_crc != computed {
+            return Err(crate::error::Error::BucketIndexCorrupt {
+                path: std::path::PathBuf::new(),
+                reason: format!(
+                    "CRC mismatch: stored=0x{:08X} computed=0x{:08X}",
+                    stored_crc, computed
+                ),
+            });
+        }
         let mut key = [0u8; 32];
         key.copy_from_slice(&buf[0..32]);
         let segment_id = u32::from_le_bytes(buf[32..36].try_into().unwrap());
         let offset = u64::from_le_bytes(buf[36..44].try_into().unwrap());
         let data_size = u32::from_le_bytes(buf[44..48].try_into().unwrap());
         let flags = buf[48];
-        Self {
+        Ok(Self {
             key,
             segment_id,
             offset,
             data_size,
             flags,
-        }
+        })
     }
 }
 
@@ -159,7 +172,7 @@ impl BucketStore {
         let result = binary_search_records(bytes, key, count);
         match result {
             Some(idx) => {
-                let rec = read_record_at(bytes, idx);
+                let rec = read_record_at(bytes, idx)?;
                 Ok(if rec.is_tombstone() { None } else { Some(rec) })
             }
             None => Ok(None),
@@ -239,13 +252,14 @@ impl BucketStore {
             let bytes: &[u8] = &s.mmap;
             let n = bytes.len() / INDEX_RECORD_SIZE;
             for i in 0..n {
-                let rec = read_record_at(bytes, i);
-                // Skip keys that are overridden in pending
-                if s.pending.contains_key(&rec.key) {
-                    continue;
-                }
-                if !rec.is_tombstone() {
-                    count += 1;
+                if let Ok(rec) = read_record_at(bytes, i) {
+                    // Skip keys that are overridden in pending
+                    if s.pending.contains_key(&rec.key) {
+                        continue;
+                    }
+                    if !rec.is_tombstone() {
+                        count += 1;
+                    }
                 }
             }
         }
@@ -268,7 +282,15 @@ impl BucketStore {
         let n = bytes.len() / INDEX_RECORD_SIZE;
         all.reserve(n + state.pending.len());
         for i in 0..n {
-            all.push(read_record_at(bytes, i));
+            match read_record_at(bytes, i) {
+                Ok(rec) => all.push(rec),
+                Err(_) => {
+                    tracing::warn!(
+                        "Bucket {:02x} record {} CRC mismatch during compact, dropping",
+                        bid, i
+                    );
+                }
+            }
         }
         for r in state.pending.values() {
             all.push(r.clone());
@@ -400,7 +422,15 @@ fn load_records_from_file(path: &Path) -> Result<Vec<IndexRecord>> {
                 reason: "unexpected file size".into(),
             }
         })?;
-        records.push(IndexRecord::decode(buf));
+        match IndexRecord::decode(buf) {
+            Ok(rec) => records.push(rec),
+            Err(_) => {
+                tracing::warn!(
+                    "Bucket file {:?} record {} CRC mismatch, skipping",
+                    path, i
+                );
+            }
+        }
     }
     if remainder > 0 {
         tracing::warn!(
@@ -458,7 +488,7 @@ fn read_key_at(bytes: &[u8], idx: usize) -> &[u8; 32] {
 }
 
 /// Read a full IndexRecord at index `idx`.
-fn read_record_at(bytes: &[u8], idx: usize) -> IndexRecord {
+fn read_record_at(bytes: &[u8], idx: usize) -> crate::error::Result<IndexRecord> {
     let start = idx * INDEX_RECORD_SIZE;
     let buf: &[u8; INDEX_RECORD_SIZE] = bytes[start..start + INDEX_RECORD_SIZE]
         .try_into()
@@ -486,8 +516,20 @@ mod tests {
         key[0..4].copy_from_slice(&[1, 2, 3, 4]);
         let rec = IndexRecord::new(key, 5, 12345, 500, 0);
         let encoded = rec.encode();
-        let decoded = IndexRecord::decode(&encoded);
+        assert_eq!(encoded.len(), INDEX_RECORD_SIZE);
+        let decoded = IndexRecord::decode(&encoded).unwrap();
         assert_eq!(rec, decoded);
+    }
+
+    #[test]
+    fn test_index_record_crc_detects_corruption() {
+        let mut key = [0u8; 32];
+        key[0..4].copy_from_slice(&[1, 2, 3, 4]);
+        let rec = IndexRecord::new(key, 5, 12345, 500, 0);
+        let mut encoded = rec.encode();
+        // Flip a bit in the data portion
+        encoded[40] ^= 1;
+        assert!(IndexRecord::decode(&encoded).is_err());
     }
 
     #[test]

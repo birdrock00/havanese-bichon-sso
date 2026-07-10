@@ -100,6 +100,8 @@ impl Engine {
 
         crate::recovery::cleanup_temp_files(path)?;
         crate::recovery::recover(path, &mut meta)?;
+        // Recovery may have appended new records to bucket files — reload mmaps.
+        bucket_store.reload_all()?;
 
         let seg_path = path
             .join("segments")
