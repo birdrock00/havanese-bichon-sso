@@ -9,14 +9,11 @@ All data is keyed by a 32-byte content hash — identical content is stored only
 ```
 <root>/
 ├── meta.bin              # global metadata (bincode + CRC32)
+├── index.redb            # key → (segment_id, offset, size) index (redb B-tree)
 ├── segments/
-│   ├── 00000001.seg      # append-only segment files (≤ 256 MB each)
+│   ├── 00000001.seg      # append-only segment files (≤ 1 GB each)
 │   ├── 00000002.seg
 │   └── ...
-└── buckets/
-    ├── 00.idx            # 256 bucket index files (mmap'd, binary-searchable)
-    ├── 01.idx
-    └── ...
 ```
 
 ### Segment entry format (50-byte fixed header + variable data)
@@ -33,27 +30,28 @@ magic(4)  crc32(4)  flags(1)  codec(1)  key(32)  raw_size(4)  data_size(4)  data
 - `raw_size`: original uncompressed size
 - `data_size`: on-disk data size (after compression)
 
-### Bucket index record format (56 bytes)
+### Index store
 
-```
-key(32)  segment_id(4)  offset(8)  data_size(4)  flags(1)  _pad(3)  crc32(4)
-```
+The key → (segment_id, offset, data_size, flags) mapping is stored in a single [redb](https://github.com/cberner/redb) database (`index.redb`). redb provides:
 
-Every index record is CRC32-protected — a corrupted record is detected on read and never silently returned. Records are sorted by key, deduplicated (newest segment_id + offset wins), and mmap'd for zero-heap binary search. Pending writes (since the last compaction) live in a small in-memory HashMap.
+- **B-tree + mmap**: O(log N) point lookups with zero heap allocation — pages are faulted in on demand.
+- **ACID transactions**: every index write is durable and atomic.
+- **Crash recovery**: handled transparently by redb's WAL — no manual reload or rebuild logic.
+- **O(1) startup**: only the B-tree root page is read at open time.
+
+Records are stored as fixed-size 56-byte blobs, each carrying an internal CRC32 checksum.
 
 ## Read path
 
 ```
 get(key)
-  → bucket_id = (key[0..2] as u16) % 256
-  → check pending HashMap (most recent wins)
-  → binary search mmap'd bucket file
-  → IndexRecord CRC32 verify → (segment_id, offset, data_size)
+  → index_store.get(key)           # redb B-tree lookup, zero-copy
+  → IndexRecord CRC32 verify       # (segment_id, offset, data_size, flags)
   → pread entry from segment file
   → entry CRC32 verify → decompress → return value
 ```
 
-Both the bucket index record and the segment entry carry independent CRC32 checksums. Corruption in one record or entry is contained — it never affects other keys.
+The index record and the segment entry carry independent CRC32 checksums. Corruption in one record or entry is contained — it never affects other keys.
 
 ## Write path
 
@@ -61,20 +59,53 @@ Both the bucket index record and the segment entry carry independent CRC32 check
 put(key, value, codec)
   → compress value (Zstd/Lz4 if ≥ 4 KB, else store raw)
   → append entry to active segment file
-  → insert IndexRecord into bucket store (append to .idx file + HashMap)
+  → insert IndexRecord into redb (single write txn)
   → update metadata (indexed_up_to_offset)
-  → if segment ≥ 256 MB → seal it, create new segment
+  → if segment ≥ 1 GB → seal it, create new segment
 ```
 
 ## Delete
 
-Deletes are **tombstones** — an entry with `flags=1` and empty data is appended. The bucket index maps the key to this tombstone. Read returns `None`. GC later reclaims the space.
+Deletes are **tombstones** — an entry with `flags=1` and empty data is appended to the active segment. Before writing the tombstone, the existing index record is consulted to increment `deleted_bytes` on the **original** segment (the one that holds the live data). This drives the GC threshold.
 
-## Compaction & GC
+```
+delete(key)
+  → index_store.get(key) → find original (segment_id, data_size)
+  → original_segment.deleted_bytes += data_size
+  → recompute deleted_ratio on original segment
+  → append tombstone entry to active segment
+  → insert tombstone IndexRecord into redb
+  → index_store.get(key) now returns None
+```
 
-**Bucket compaction:** when a bucket's pending HashMap grows past `compact_threshold` (default 10,000), the mmap + pending records are merged, sorted, deduplicated, and atomically rewritten. This keeps binary search fast.
+## GC
 
-**Garbage collection:** when a sealed segment's deleted-ratio exceeds `gc_deleted_ratio` (default 0.30), GC scans all segments to find the latest entry per key, then rewrites the target segment keeping only live entries. Tombstones and overwritten entries are dropped. Bucket indices are rebuilt afterward.
+**Segment GC:** two-phase, driven by the `deleted_ratio` tracked per segment.
+
+### Trigger
+
+- **Background**: the `blob-gc` thread wakes up every `gc_interval_secs` (default 300s), checks whether any sealed segment's `deleted_ratio ≥ gc_deleted_ratio` (default 0.30), and runs GC on the worst segment if so.
+- **Manual**: `engine.gc_if_needed()` or `engine.gc()`.
+
+### Phase 1 — scan & compact (read-only, no write lock)
+
+1. Pick the sealed segment with the highest `deleted_ratio`.
+2. Scan only that segment's entries.
+3. For each entry, ask the index: "is this entry still the latest version for its key?"
+   - If the index points to this exact `(segment_id, offset)` → **keep**, write to a temp segment file.
+   - If the index points elsewhere (overwritten by a later segment, or a tombstone) → **skip** (stale).
+4. Fsync the temp file.
+
+Phase 1 holds only the read lock — `put` / `delete` continue uninterrupted.
+
+### Phase 2 — commit & update index (write lock)
+
+1. Atomically rename the temp file over the original segment.
+2. Batch-insert new `IndexRecord`s (now at new offsets) into redb. Old records with the same key are naturally overwritten.
+3. Reset the segment's `deleted_bytes` and `deleted_ratio` to zero.
+4. Persist metadata.
+
+Phase 2 holds the write lock, but is fast — no full segment scan, no full index rebuild.
 
 ## Data integrity
 
@@ -83,22 +114,28 @@ Every record on disk is independently checksummed:
 | Layer | Format | Protection |
 |---|---|---|
 | Segment entry | 50-byte header + data | CRC32 covers all fields + data |
-| Bucket index record | 56 bytes | CRC32 covers key + segment_id + offset + data_size + flags |
+| Index record | 56 bytes | CRC32 covers key + segment_id + offset + data_size + flags |
 | Global metadata | bincode blob | CRC32 + version header |
 
-Corruption is **contained** — a bad segment entry or bucket record produces an error for that key only. Compaction and recovery skip corrupt records (with a warning) rather than aborting. Bucket indices can always be fully rebuilt from segments via `rebuild_from_segments`.
+Corruption is **contained** — a bad segment entry or index record produces an error for that key only. Recovery and GC skip corrupt records (with a warning) rather than aborting. The index is backed by redb's B-tree which maintains its own internal integrity.
 
 ## Crash recovery
 
 - Temp files from interrupted GC are cleaned up on open.
-- Any segment data beyond `indexed_up_to_offset` is scanned and indexed into bucket files.
-- After appending recovered records, bucket mmaps are reloaded so they are immediately visible.
+- Any segment data beyond `indexed_up_to_offset` is scanned and inserted into the index.
 - Partial writes at the tail of a segment (detected via CRC32 mismatch near EOF) are truncated.
-- Buckets are always repairable by re-scanning segments (`rebuild_from_segments`).
+- redb's WAL ensures the index is always consistent — no manual reload or rebuild needed.
 
-## Background flush
+## Background threads
 
-Set `Config.flush_interval_secs` to a positive value to have a background thread fsync the active segment and save metadata periodically. This bounds recovery time after a crash at the cost of a small I/O overhead.
+Set `Config.flush_interval_secs` and `Config.gc_interval_secs` to positive values to enable periodic background work:
+
+| Thread | Config | Default | What it does |
+|---|---|---|---|
+| `blob-flush` | `flush_interval_secs` | `0` (off) | Fsync the active segment and save metadata |
+| `blob-gc` | `gc_interval_secs` | `0` (off) | Check deleted-ratio, compact one segment if needed |
+
+The two threads are independent — a long GC run never blocks fsync.
 
 ## Config
 
@@ -107,9 +144,9 @@ Set `Config.flush_interval_secs` to a positive value to have a background thread
 | `compress_threshold` | 4096 | Bytes; smaller values stored uncompressed |
 | `default_codec` | Zstd | Also supports Lz4 |
 | `compression_level` | 0 | Zstd compression level |
-| `compact_threshold` | 10000 | Pending records per bucket before auto-compact |
 | `gc_deleted_ratio` | 0.30 | Trigger GC when a sealed segment exceeds this |
 | `flush_interval_secs` | 0 | 0 = disabled; ≥ 5 for periodic background fsync |
+| `gc_interval_secs` | 0 | 0 = disabled; ≥ 10 for periodic background GC |
 
 ## Basic usage
 

@@ -9,11 +9,8 @@ pub const ENTRY_HEADER_SIZE: usize = 50;
 /// Index record size: key(32) + segment_id(4) + offset(8) + data_size(4) + flags(1) + _pad(3) + crc32(4)
 pub const INDEX_RECORD_SIZE: usize = 56;
 
-/// Maximum segment size (256 MB)
-pub const SEGMENT_MAX_SIZE: u64 = 256 * 1024 * 1024;
-
-/// Number of hash buckets (global)
-pub const BUCKET_COUNT: u16 = 256;
+/// Maximum segment size (1 GB)
+pub const SEGMENT_MAX_SIZE: u64 = 1024 * 1024 * 1024;
 
 /// Maximum value size (100 MB)
 pub const MAX_VALUE_SIZE: usize = 100 * 1024 * 1024;
@@ -24,8 +21,8 @@ pub const DEFAULT_COMPRESS_THRESHOLD: usize = 4096;
 /// Default GC deleted ratio threshold
 pub const DEFAULT_GC_DELETED_RATIO: f64 = 0.30;
 
-/// Default bucket compact threshold (number of pending records before auto-compact)
-pub const DEFAULT_COMPACT_THRESHOLD: usize = 10_000;
+/// Default GC interval in seconds (5 minutes)
+pub const DEFAULT_GC_INTERVAL_SECS: u64 = 300;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Codec {
@@ -50,12 +47,15 @@ pub struct Config {
     pub compress_threshold: usize,
     pub default_codec: Codec,
     pub compression_level: i32,
-    pub compact_threshold: usize,
     pub gc_deleted_ratio: f64,
     /// Interval in seconds for periodic background flush (0 = disabled).
     /// When set, a background thread fsyncs the active segment and saves
     /// metadata at this interval, bounding recovery time after a crash.
     pub flush_interval_secs: u64,
+    /// Interval in seconds for periodic background GC (0 = disabled).
+    /// When set, a background thread checks whether any sealed segment
+    /// exceeds the deleted-ratio threshold and compacts it if needed.
+    pub gc_interval_secs: u64,
 }
 
 impl Default for Config {
@@ -64,20 +64,15 @@ impl Default for Config {
             compress_threshold: DEFAULT_COMPRESS_THRESHOLD,
             default_codec: Codec::Zstd,
             compression_level: 0,
-            compact_threshold: DEFAULT_COMPACT_THRESHOLD,
             gc_deleted_ratio: DEFAULT_GC_DELETED_RATIO,
             flush_interval_secs: 0,
+            gc_interval_secs: 0,
         }
     }
 }
 
 impl Config {
     pub fn validate(&self) -> crate::error::Result<()> {
-        if self.compact_threshold == 0 {
-            return Err(crate::error::Error::InvalidConfig(
-                "compact_threshold must be > 0".into(),
-            ));
-        }
         if self.gc_deleted_ratio <= 0.0 || self.gc_deleted_ratio >= 1.0 {
             return Err(crate::error::Error::InvalidConfig(
                 "gc_deleted_ratio must be in (0.0, 1.0)".into(),
@@ -91,6 +86,11 @@ impl Config {
         if self.flush_interval_secs > 0 && self.flush_interval_secs < 5 {
             return Err(crate::error::Error::InvalidConfig(
                 "flush_interval_secs must be 0 (disabled) or >= 5".into(),
+            ));
+        }
+        if self.gc_interval_secs > 0 && self.gc_interval_secs < 10 {
+            return Err(crate::error::Error::InvalidConfig(
+                "gc_interval_secs must be 0 (disabled) or >= 10".into(),
             ));
         }
         Ok(())

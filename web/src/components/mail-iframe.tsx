@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import React from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 
 interface EmailIframeProps {
   emailHtml: string;
@@ -25,16 +25,36 @@ interface EmailIframeProps {
 }
 
 const EmailIframe: React.FC<EmailIframeProps> = ({ emailHtml, height }) => {
-  const encodedHtml = encodeURIComponent(emailHtml);
-  const iframeSrc = `data:text/html;charset=utf-8,${encodedHtml}`;
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [iframeHeight, setIframeHeight] = useState<number>(height ?? 300);
+
+  const onLoad = useCallback(() => {
+    try {
+      const doc = iframeRef.current?.contentWindow?.document;
+      if (doc?.body) {
+        const h = Math.max(
+          doc.body.scrollHeight,
+          doc.body.offsetHeight,
+          doc.documentElement.scrollHeight,
+          doc.documentElement.offsetHeight,
+        );
+        if (h > 0) setIframeHeight(h + 20);
+      }
+    } catch {
+      // sandbox prevents access — keep default height
+    }
+  }, []);
 
   return (
     <iframe
-      src={iframeSrc}
-      sandbox=""
+      ref={iframeRef}
+      srcDoc={emailHtml}
+      sandbox="allow-same-origin"
+      scrolling="no"
       className="w-full border-none"
       title="Email Content"
-      style={{ height: height ?? '4000px' }}
+      onLoad={onLoad}
+      style={{ height: iframeHeight }}
     />
   );
 };

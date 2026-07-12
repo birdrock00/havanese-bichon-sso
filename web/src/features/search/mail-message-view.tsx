@@ -231,7 +231,7 @@ export function MailMessageView({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col">
       {showHeader && <div className="grid gap-1 text-xs">
         <div className="flex space-x-2">
           <span className="font-medium text-gray-400">{t('mail.account')}:</span>
@@ -456,7 +456,7 @@ export function MailMessageView({
           </span>
         </div>
       )}
-      <div className="flex-1 overflow-auto">
+      <div>
         {loading ? (
           <div className="flex justify-center items-center py-8">
             <Loader className="w-6 h-6 animate-spin" />

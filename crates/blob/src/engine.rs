@@ -1,12 +1,14 @@
-use std::collections::HashMap;
 use std::fs;
+use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use crate::bucket::{BucketStore, IndexRecord};
+use fs2::FileExt;
+
+use crate::bucket::{IndexRecord, IndexStore};
 use crate::compress;
 use crate::error::{Error, Result};
 use crate::file_pool::FilePool;
@@ -23,17 +25,25 @@ use crate::types::{Codec, Config, ENTRY_HEADER_SIZE};
 pub struct Engine {
     shared: Arc<EngineShared>,
     flush_handle: Mutex<Option<FlushHandle>>,
+    gc_handle: Mutex<Option<GcHandle>>,
 }
 
 struct EngineShared {
     config: Config,
     inner: RwLock<EngineInner>,
-    bucket_store: BucketStore,
+    index_store: IndexStore,
     write_mutex: Mutex<()>,
     file_pool: FilePool,
+    #[allow(dead_code)]
+    lock_file: File,
 }
 
 struct FlushHandle {
+    handle: JoinHandle<()>,
+    stop: Arc<AtomicBool>,
+}
+
+struct GcHandle {
     handle: JoinHandle<()>,
     stop: Arc<AtomicBool>,
 }
@@ -42,7 +52,6 @@ struct EngineInner {
     root: PathBuf,
     meta: GlobalMeta,
     active_writer: SegmentWriter,
-    readers: HashMap<u32, SegmentReader>,
 }
 
 #[derive(Debug, Clone)]
@@ -60,8 +69,23 @@ impl Engine {
         fs::create_dir_all(path)?;
         fs::create_dir_all(path.join("segments"))?;
 
-        let bucket_dir = path.join("buckets");
-        let bucket_store = BucketStore::open(&bucket_dir, config.compact_threshold)?;
+        // Acquire an exclusive file lock so that no two processes can open
+        // the same database directory concurrently.
+        let lock_path = path.join("LOCK");
+        let lock_file = File::create(&lock_path)?;
+        lock_file.try_lock_exclusive().map_err(|_| Error::AlreadyOpen {
+            path: path.display().to_string(),
+        })?;
+
+        let (index_store, index_rebuilt) = match IndexStore::open(path) {
+            Ok(s) => (s, false),
+            Err(e) => {
+                tracing::warn!("Index database unreadable, rebuilding from segments: {}", e);
+                let index_path = path.join("index.redb");
+                let _ = std::fs::remove_file(&index_path);
+                (IndexStore::open(path)?, true)
+            }
+        };
 
         let mut meta = GlobalMeta::load(path)?;
 
@@ -99,9 +123,12 @@ impl Engine {
         }
 
         crate::recovery::cleanup_temp_files(path)?;
-        crate::recovery::recover(path, &mut meta)?;
-        // Recovery may have appended new records to bucket files — reload mmaps.
-        bucket_store.reload_all()?;
+        let recovered_records = if index_rebuilt {
+            crate::recovery::rebuild_index(path, &mut meta)?
+        } else {
+            crate::recovery::recover(path, &mut meta)?
+        };
+        index_store.insert_batch(&recovered_records)?;
 
         let seg_path = path
             .join("segments")
@@ -112,18 +139,6 @@ impl Engine {
             SegmentWriter::create(seg_path, meta.active_segment_id)?
         };
 
-        let mut readers = HashMap::new();
-        for (&seg_id, stats) in &meta.segments {
-            if stats.sealed {
-                let seg_path = path
-                    .join("segments")
-                    .join(segment::segment_filename(seg_id));
-                if seg_path.exists() {
-                    readers.insert(seg_id, SegmentReader::open(seg_path, seg_id)?);
-                }
-            }
-        }
-
         meta.save(path)?;
 
         let shared = Arc::new(EngineShared {
@@ -132,11 +147,11 @@ impl Engine {
                 root: path.to_path_buf(),
                 meta,
                 active_writer,
-                readers,
             }),
-            bucket_store,
+            index_store,
             write_mutex: Mutex::new(()),
             file_pool: FilePool::new(8),
+            lock_file,
         });
 
         let flush_handle = if config.flush_interval_secs > 0 {
@@ -167,9 +182,59 @@ impl Engine {
             None
         };
 
+        let gc_handle = if config.gc_interval_secs > 0 {
+            let shared3 = Arc::clone(&shared);
+            let stop = Arc::new(AtomicBool::new(false));
+            let stop2 = Arc::clone(&stop);
+            let interval = Duration::from_secs(config.gc_interval_secs);
+
+            let handle = thread::Builder::new()
+                .name("blob-gc".into())
+                .spawn(move || {
+                    while !stop2.load(Ordering::Acquire) {
+                        thread::park_timeout(interval);
+                        if stop2.load(Ordering::Acquire) {
+                            break;
+                        }
+                        // Seal the active segment first so that the data from
+                        // this GC cycle becomes eligible for compaction.
+                        // Without this, the active segment never seals until
+                        // it reaches SEGMENT_MAX_SIZE (1 GB), and GC would
+                        // have no candidates on small databases.
+                        if let Err(e) = shared3.ensure_sealed() {
+                            tracing::error!("background GC: seal failed: {}", e);
+                        }
+                        match shared3.gc_if_needed() {
+                            Ok(Some(stats)) => {
+                                tracing::info!(
+                                    "GC compacted segment {}: {} → {} bytes (kept {}, skipped {})",
+                                    stats.segment_id,
+                                    stats.bytes_before,
+                                    stats.bytes_after,
+                                    stats.entries_kept,
+                                    stats.entries_skipped,
+                                );
+                            }
+                            Ok(None) => {
+                                tracing::debug!("GC check: no segment exceeds deleted-ratio threshold");
+                            }
+                            Err(e) => {
+                                tracing::error!("background GC failed: {}", e);
+                            }
+                        }
+                    }
+                })
+                .expect("failed to spawn blob-gc thread");
+
+            Some(GcHandle { handle, stop })
+        } else {
+            None
+        };
+
         Ok(Self {
             shared,
             flush_handle: Mutex::new(flush_handle),
+            gc_handle: Mutex::new(gc_handle),
         })
     }
 
@@ -195,7 +260,7 @@ impl Engine {
             inner.append_entry(key, &data, original_len, 0, actual_codec)?;
 
         let record = IndexRecord::new(key, segment_id, offset, data_size, 0);
-        self.shared.bucket_store.insert(record)?;
+        self.shared.index_store.insert(&record)?;
 
         let entry_end = offset + ENTRY_HEADER_SIZE as u64 + data_size as u64;
         inner.mark_indexed(segment_id, entry_end)?;
@@ -204,7 +269,7 @@ impl Engine {
     }
 
     pub fn get(&self, key: &[u8; 32]) -> Result<Option<Vec<u8>>> {
-        let record = match self.shared.bucket_store.get(key)? {
+        let record = match self.shared.index_store.get(key)? {
             Some(r) => r,
             None => return Ok(None),
         };
@@ -228,11 +293,22 @@ impl Engine {
         let _write_lock = self.shared.write_mutex.lock().unwrap();
         let mut inner = self.shared.inner.write().unwrap();
 
+        // Look up the existing record so we can account deleted_bytes on the
+        // segment that holds the original data — this is what drives GC.
+        if let Some(rec) = self.shared.index_store.get(key)? {
+            if !rec.is_tombstone() {
+                if let Some(stats) = inner.meta.segments.get_mut(&rec.segment_id) {
+                    stats.deleted_bytes += rec.data_size as u64;
+                    stats.recompute_ratio();
+                }
+            }
+        }
+
         let (segment_id, offset, data_size) =
             inner.append_entry(*key, &[], 0, 1, Codec::None)?;
 
         let record = IndexRecord::new(*key, segment_id, offset, data_size, 1);
-        self.shared.bucket_store.insert(record)?;
+        self.shared.index_store.insert(&record)?;
 
         let entry_end = offset + ENTRY_HEADER_SIZE as u64 + data_size as u64;
         inner.mark_indexed(segment_id, entry_end)?;
@@ -241,7 +317,7 @@ impl Engine {
     }
 
     pub fn exists(&self, key: &[u8; 32]) -> Result<bool> {
-        self.shared.bucket_store.exists(key)
+        self.shared.index_store.exists(key)
     }
 
     // ── Batch delete ─────────────────────────────────────────────────────
@@ -258,6 +334,16 @@ impl Engine {
         let mut ends: Vec<(u32, u64)> = Vec::with_capacity(keys.len());
 
         for key in keys {
+            // Track deleted_bytes for GC threshold on the original segment.
+            if let Some(rec) = self.shared.index_store.get(key)? {
+                if !rec.is_tombstone() {
+                    if let Some(stats) = inner.meta.segments.get_mut(&rec.segment_id) {
+                        stats.deleted_bytes += rec.data_size as u64;
+                        stats.recompute_ratio();
+                    }
+                }
+            }
+
             let (segment_id, offset, data_size) =
                 inner.append_entry(*key, &[], 0, 1, Codec::None)?;
 
@@ -268,7 +354,7 @@ impl Engine {
 
         inner.flush_active()?;
 
-        self.shared.bucket_store.insert_batch(&records)?;
+        self.shared.index_store.insert_batch(&records)?;
 
         for (segment_id, entry_end) in &ends {
             inner.mark_indexed(*segment_id, *entry_end)?;
@@ -312,7 +398,7 @@ impl Engine {
 
         inner.flush_active()?;
 
-        self.shared.bucket_store.insert_batch(&records)?;
+        self.shared.index_store.insert_batch(&records)?;
 
         for (segment_id, entry_end) in &ends {
             inner.mark_indexed(*segment_id, *entry_end)?;
@@ -324,71 +410,14 @@ impl Engine {
     // ── GC ──────────────────────────────────────────────────────────────
 
     pub fn gc(&self) -> Result<Option<GcStats>> {
-        // Phase 1: scan segments and write compacted temp file.
-        // Read-only with respect to Engine state — no write_mutex needed.
-        let prep = {
-            let inner = self.shared.inner.read().unwrap();
-            gc::gc_prepare(
-                &inner.root,
-                &inner.meta,
-                self.shared.config.gc_deleted_ratio,
-            )?
-        };
-
-        let prep = match prep {
-            Some(p) => p,
-            None => return Ok(None),
-        };
-
-        // Phase 2: rename temp file + rebuild bucket indices.
-        // This is the only part that requires exclusive access.
-        let _write_lock = self.shared.write_mutex.lock().unwrap();
-
-        let stats = gc::gc_finish(prep)?;
-        self.shared.file_pool.invalidate(stats.segment_id);
-
-        // Rebuild bucket indices from the updated segment files
-        let inner = self.shared.inner.write().unwrap();
-        let seg_ids: Vec<u32> = inner.meta.segments.keys().copied().collect();
-        let mut seg_refs: Vec<(u32, PathBuf)> = Vec::with_capacity(seg_ids.len());
-        for &id in &seg_ids {
-            let p = inner.root.join("segments").join(segment::segment_filename(id));
-            seg_refs.push((id, p));
-        }
-        let paths: Vec<(u32, &Path)> =
-            seg_refs.iter().map(|(id, p)| (*id, p.as_path())).collect();
-
-        let bucket_dir = inner.root.join("buckets");
-        BucketStore::rebuild_from_segments(&bucket_dir, &paths)?;
-
-        // Update meta (segment stats changed after GC compaction)
-        let mut meta = crate::meta::GlobalMeta::load(&inner.root)?;
-        meta.active_segment_id = inner.meta.active_segment_id;
-        meta.save(&inner.root)?;
-
-        // Reload bucket store mmaps after GC rewrites
-        self.shared.bucket_store.reload_all()?;
-
-        Ok(Some(stats))
+        self.shared.gc()
     }
 
     /// Run GC only if some segment exceeds the configured deleted-ratio threshold.
     /// Returns `Ok(None)` immediately without acquiring the write lock when no
     /// segment qualifies.
     pub fn gc_if_needed(&self) -> Result<Option<GcStats>> {
-        let inner = self.shared.inner.read().unwrap();
-        let needs_gc = inner
-            .meta
-            .segments
-            .values()
-            .any(|s| s.sealed && s.deleted_ratio >= self.shared.config.gc_deleted_ratio);
-        drop(inner);
-
-        if needs_gc {
-            self.gc()
-        } else {
-            Ok(None)
-        }
+        self.shared.gc_if_needed()
     }
 
     // ── Flush / Stats / Shutdown ────────────────────────────────────────
@@ -413,7 +442,7 @@ impl Engine {
             deleted_bytes += seg.deleted_bytes;
         }
 
-        let total_keys = self.shared.bucket_store.total_keys() as u64;
+        let total_keys = self.shared.index_store.total_keys()? as u64;
 
         Ok(Stats {
             total_keys,
@@ -423,18 +452,31 @@ impl Engine {
         })
     }
 
+    /// Seal the active segment, forcing it to become a GC candidate.
+    #[doc(hidden)]
+    pub fn seal_active_segment(&self) -> Result<u32> {
+        let _write_lock = self.shared.write_mutex.lock().unwrap();
+        let mut inner = self.shared.inner.write().unwrap();
+        let id = inner.active_writer.id();
+        inner.seal_active()?;
+        Ok(id)
+    }
+
     pub fn shutdown(&self) -> Result<()> {
-        // Stop background flush thread first
+        // Stop background threads first
         if let Some(fh) = self.flush_handle.lock().unwrap().take() {
             fh.stop.store(true, Ordering::Release);
             fh.handle.thread().unpark();
             let _ = fh.handle.join();
         }
+        if let Some(gh) = self.gc_handle.lock().unwrap().take() {
+            gh.stop.store(true, Ordering::Release);
+            gh.handle.thread().unpark();
+            let _ = gh.handle.join();
+        }
 
         let mut inner = self.shared.inner.write().unwrap();
         inner.flush_active()?;
-
-        self.shared.bucket_store.compact_all()?;
 
         inner.meta.save(&inner.root)?;
         tracing::info!("bichon-blob shut down cleanly");
@@ -444,9 +486,122 @@ impl Engine {
 
 impl Drop for Engine {
     fn drop(&mut self) {
-        if let Err(e) = self.shutdown() {
-            tracing::error!("bichon-blob shutdown error: {}", e);
+        // Best-effort shutdown that is panic-safe: only signal threads to
+        // stop — don't try to acquire write_mutex or inner.write(), which
+        // would deadlock if we're unwinding from a panic that happened while
+        // one of those locks was held.
+        if let Some(fh) = self.flush_handle.lock().ok().and_then(|mut g| g.take()) {
+            fh.stop.store(true, Ordering::Release);
+            fh.handle.thread().unpark();
+            let _ = fh.handle.join();
         }
+        if let Some(gh) = self.gc_handle.lock().ok().and_then(|mut g| g.take()) {
+            gh.stop.store(true, Ordering::Release);
+            gh.handle.thread().unpark();
+            let _ = gh.handle.join();
+        }
+    }
+}
+
+// ── EngineShared ────────────────────────────────────────────────────────────
+
+impl EngineShared {
+    /// Seal the active segment if its deleted-ratio exceeds the GC threshold,
+    /// so that the upcoming GC pass can compact it.  Called periodically by
+    /// the background GC thread.
+    fn ensure_sealed(&self) -> Result<()> {
+        let mut inner = self.inner.write().unwrap();
+        let active_id = inner.active_writer.id();
+        if let Some(stats) = inner.meta.segments.get(&active_id) {
+            if stats.deleted_ratio >= self.config.gc_deleted_ratio {
+                inner.seal_active()?;
+            }
+        }
+        Ok(())
+    }
+
+    fn gc_if_needed(&self) -> Result<Option<GcStats>> {
+        let inner = self.inner.read().unwrap();
+        let needs_gc = inner
+            .meta
+            .segments
+            .values()
+            .any(|s| s.sealed && s.deleted_ratio >= self.config.gc_deleted_ratio);
+        drop(inner);
+
+        if needs_gc {
+            self.gc()
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn gc(&self) -> Result<Option<GcStats>> {
+        // Phase 1: scan only the target segment, consult bucket index per entry.
+        // Read-only with respect to Engine state — no write_mutex needed.
+        let prep = {
+            let inner = self.inner.read().unwrap();
+            gc::gc_prepare(
+                &inner.root,
+                &inner.meta,
+                self.config.gc_deleted_ratio,
+                &self.index_store,
+            )?
+        };
+
+        let mut prep = match prep {
+            Some(p) => p,
+            None => return Ok(None),
+        };
+
+        // Phase 2: rename temp file + update bucket index.
+        let _write_lock = self.write_mutex.lock().unwrap();
+
+        let kept_records = std::mem::take(&mut prep.kept_records);
+        let deleted_keys = std::mem::take(&mut prep.deleted_keys);
+        let stats = gc::gc_finish(prep)?;
+        self.file_pool.invalidate(stats.segment_id);
+
+        // Insert new index records with updated offsets for kept entries.
+        if !kept_records.is_empty() {
+            self.index_store.insert_batch(&kept_records)?;
+        }
+
+        // Remove tombstone IndexRecords that pointed to entries in this
+        // compacted segment — they are gone now and would accumulate forever.
+        if !deleted_keys.is_empty() {
+            self.index_store.delete_batch(&deleted_keys)?;
+        }
+
+        {
+            let mut inner = self.inner.write().unwrap();
+
+            if stats.bytes_after == 0 {
+                // Segment was completely emptied — remove it from meta first,
+                // then delete the file.  If we crash between the two steps the
+                // orphaned file is rediscovered on next open and retried.
+                inner.meta.segments.remove(&stats.segment_id);
+                inner.meta.save(&inner.root)?;
+                drop(inner);
+
+                let seg_path = self.inner.read().unwrap()
+                    .root
+                    .join("segments")
+                    .join(segment::segment_filename(stats.segment_id));
+                let _ = fs::remove_file(&seg_path);
+            } else {
+                // Update segment stats: now smaller and clean.
+                if let Some(seg_stats) = inner.meta.segments.get_mut(&stats.segment_id) {
+                    seg_stats.total_bytes = stats.bytes_after;
+                    seg_stats.deleted_bytes = 0;
+                    seg_stats.deleted_ratio = 0.0;
+                    seg_stats.indexed_up_to_offset = stats.bytes_after;
+                }
+                inner.meta.save(&inner.root)?;
+            }
+        }
+
+        Ok(Some(stats))
     }
 }
 
@@ -512,13 +667,6 @@ impl EngineInner {
             .entry(old_id)
             .or_insert_with(|| SegmentStats::new(old_id));
         old_stats.sealed = true;
-
-        let seg_path = self
-            .root
-            .join("segments")
-            .join(segment::segment_filename(old_id));
-        self.readers
-            .insert(old_id, SegmentReader::open(seg_path, old_id)?);
 
         let new_id = old_id + 1;
         self.meta.active_segment_id = new_id;

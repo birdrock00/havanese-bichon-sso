@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::bucket::{IndexRecord, IndexStore};
 use crate::error::Result;
 use crate::meta::GlobalMeta;
 use crate::segment::{self, SegmentReader, SegmentWriter};
@@ -24,18 +24,25 @@ pub struct GcPrepare {
     pub bytes_after: u64,
     pub entries_kept: usize,
     pub entries_skipped: usize,
+    /// Index records for kept entries with their new offsets in the compacted segment.
+    pub kept_records: Vec<IndexRecord>,
+    /// Keys whose tombstone IndexRecord should be removed from redb after
+    /// this segment is compacted (the tombstone entries they pointed to are gone).
+    pub deleted_keys: Vec<[u8; 32]>,
     temp_path: PathBuf,
     seg_path: PathBuf,
 }
 
-/// Phase 1: pick the sealed segment with the highest deleted_ratio, scan all
-/// segments to determine the latest entry for each key, then write a compacted
-/// version of the target segment to a temp file.  Does NOT rename — the caller
-/// should hold the write lock only during `gc_finish`.
+/// Phase 1: pick the sealed segment with the highest deleted_ratio, then for
+/// each entry in that segment consult the bucket index to decide whether it is
+/// still the latest version.  Live entries are written to a temp file; stale
+/// entries and tombstones are skipped.  Does NOT rename — the caller should
+/// hold the write lock only during `gc_finish`.
 pub fn gc_prepare(
     store_root: &Path,
     meta: &GlobalMeta,
     deleted_ratio_threshold: f64,
+    index_store: &IndexStore,
 ) -> Result<Option<GcPrepare>> {
     let candidate = meta
         .segments
@@ -51,35 +58,14 @@ pub fn gc_prepare(
     let seg_path = store_root
         .join("segments")
         .join(segment::segment_filename(target.segment_id));
-    let reader = SegmentReader::open(seg_path.clone(), target.segment_id)?;
 
-    // Build a global view: for each key, which entry (segment_id + offset) is the latest?
-    let mut latest_key: HashMap<[u8; 32], (u32, u64)> = HashMap::new();
-
-    for &seg_id in meta.segments.keys() {
-        let rpath = store_root
-            .join("segments")
-            .join(segment::segment_filename(seg_id));
-        if !rpath.exists() {
-            continue;
-        }
-        let r = SegmentReader::open(rpath, seg_id)?;
-        let _ = r.scan_entries(0, |entry, offset| {
-            match latest_key.get(&entry.key) {
-                Some((existing_seg, existing_off)) => {
-                    if seg_id > *existing_seg
-                        || (seg_id == *existing_seg && offset > *existing_off)
-                    {
-                        latest_key.insert(entry.key, (seg_id, offset));
-                    }
-                }
-                None => {
-                    latest_key.insert(entry.key, (seg_id, offset));
-                }
-            }
-            Ok(())
-        })?;
+    // Guard against stale meta entries: if the segment file was deleted
+    // (e.g. after a prior GC emptied it), skip this candidate.
+    if !seg_path.exists() {
+        return Ok(None);
     }
+
+    let reader = SegmentReader::open(seg_path.clone(), target.segment_id)?;
 
     // Create temp segment (not renamed yet)
     let timestamp = std::time::SystemTime::now()
@@ -90,24 +76,47 @@ pub fn gc_prepare(
     let temp_path = store_root.join("segments").join(&temp_name);
     let mut writer = SegmentWriter::create(temp_path.clone(), target.segment_id)?;
 
+    let mut kept_records: Vec<IndexRecord> = Vec::new();
+    let mut deleted_keys: Vec<[u8; 32]> = Vec::new();
     let mut bytes_after: u64 = 0;
     let mut entries_kept: usize = 0;
     let mut entries_skipped: usize = 0;
 
     reader.scan_entries(0, |entry, offset| {
         if entry.is_tombstone() {
+            // If this tombstone is the latest version in the index, the key
+            // must be removed from redb after compaction — otherwise it
+            // accumulates forever.
+            match index_store.get(&entry.key)? {
+                Some(rec)
+                    if rec.segment_id == target.segment_id && rec.offset == offset =>
+                {
+                    deleted_keys.push(entry.key);
+                }
+                _ => {}
+            }
             entries_skipped += 1;
             return Ok(());
         }
-        if let Some((latest_seg, latest_off)) = latest_key.get(&entry.key) {
-            if *latest_seg != target.segment_id || *latest_off != offset {
+
+        // Ask the bucket index whether this entry is still the latest version.
+        match index_store.get(&entry.key)? {
+            Some(rec) if rec.segment_id == target.segment_id && rec.offset == offset => {
+                let new_offset = writer.append(entry)?;
+                kept_records.push(IndexRecord::new(
+                    entry.key,
+                    target.segment_id,
+                    new_offset,
+                    entry.data.len() as u32,
+                    entry.flags,
+                ));
+                bytes_after += entry.data.len() as u64;
+                entries_kept += 1;
+            }
+            _ => {
                 entries_skipped += 1;
-                return Ok(());
             }
         }
-        writer.append(entry)?;
-        bytes_after += entry.data.len() as u64;
-        entries_kept += 1;
         Ok(())
     })?;
 
@@ -119,6 +128,8 @@ pub fn gc_prepare(
         bytes_after,
         entries_kept,
         entries_skipped,
+        kept_records,
+        deleted_keys,
         temp_path,
         seg_path,
     }))

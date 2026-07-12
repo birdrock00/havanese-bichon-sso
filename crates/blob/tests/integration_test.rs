@@ -229,7 +229,7 @@ fn test_batch_write_persistence() {
 fn test_invalid_config_rejected() {
     let dir = TempDir::new().unwrap();
     let mut config = Config::default();
-    config.compact_threshold = 0;
+    config.compression_level = -1;
     assert!(Engine::open(dir.path(), config).is_err());
 
     let mut config = Config::default();
@@ -357,4 +357,89 @@ fn test_meta_bin_durability() {
     let engine = Engine::open(&dir_path, Config::default()).unwrap();
     let read = engine.get(&[0x42u8; 32]).unwrap();
     assert_eq!(read, Some(b"durable".to_vec()));
+}
+
+#[test]
+fn test_gc_deletes_empty_segment() {
+    let dir = TempDir::new().unwrap();
+    let engine = Engine::open(dir.path(), Config::default()).unwrap();
+
+    // Write data, seal, then delete everything so the sealed segment
+    // becomes 100% garbage.  GC should remove the segment file entirely.
+    let n = 50u64;
+    for i in 0..n {
+        let mut key = [0u8; 32];
+        key[0..8].copy_from_slice(&i.to_le_bytes());
+        engine.put(key, &vec![b'X'; 4096], Codec::None).unwrap();
+    }
+
+    // Force seal so the segment becomes a GC candidate.
+    let sealed_id = engine.seal_active_segment().unwrap();
+
+    // Delete all keys — the sealed segment is now entirely garbage.
+    let keys: Vec<[u8; 32]> = (0..n)
+        .map(|i| {
+            let mut key = [0u8; 32];
+            key[0..8].copy_from_slice(&i.to_le_bytes());
+            key
+        })
+        .collect();
+    engine.delete_batch(&keys).unwrap();
+
+    // Run GC — this should empty and then delete the sealed segment.
+    let result = engine.gc().unwrap();
+    assert!(result.is_some(), "GC should have found a candidate");
+    let stats = result.unwrap();
+    assert_eq!(stats.segment_id, sealed_id);
+    assert_eq!(stats.bytes_after, 0);
+
+    // Segment file must be deleted.
+    let seg_path = dir
+        .path()
+        .join("segments")
+        .join(format!("{:08}.seg", sealed_id));
+    assert!(
+        !seg_path.exists(),
+        "emptied segment file should have been deleted, but {:?} exists",
+        seg_path
+    );
+
+    // Subsequent reads / writes must still work (no corruption).
+    let new_key = [0x99u8; 32];
+    engine
+        .put(new_key, b"post-gc data", Codec::None)
+        .unwrap();
+    let result = engine.get(&new_key).unwrap();
+    assert_eq!(result, Some(b"post-gc data".to_vec()));
+
+    // Engine stats should be consistent.
+    let stats = engine.stats().unwrap();
+    assert_eq!(stats.total_keys, 1);
+
+    // Shutdown and reopen — persistence must be intact.
+    drop(engine);
+    let engine = Engine::open(dir.path(), Config::default()).unwrap();
+    let result = engine.get(&new_key).unwrap();
+    assert_eq!(result, Some(b"post-gc data".to_vec()));
+    let result = engine.get(&keys[0]).unwrap();
+    assert_eq!(result, None);
+}
+
+#[test]
+fn test_file_lock_prevents_concurrent_open() {
+    let dir = TempDir::new().unwrap();
+    let _engine1 = Engine::open(dir.path(), Config::default()).unwrap();
+    let result = Engine::open(dir.path(), Config::default());
+    assert!(result.is_err(), "second open on same directory must fail");
+}
+
+#[test]
+fn test_file_lock_released_after_close() {
+    let dir = TempDir::new().unwrap();
+    {
+        let _engine = Engine::open(dir.path(), Config::default()).unwrap();
+    }
+    // Lock should be released after engine is dropped
+    let engine = Engine::open(dir.path(), Config::default());
+    assert!(engine.is_ok(), "reopen after close must succeed");
 }

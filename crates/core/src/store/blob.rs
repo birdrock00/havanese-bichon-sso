@@ -119,6 +119,7 @@ impl BlobManager {
         config.default_codec = Codec::Zstd;
         config.compress_threshold = 1024;
         config.flush_interval_secs = 60;
+        config.gc_interval_secs = 300;
 
         let engine = Engine::open(&blob_dir, config)
             .expect("Failed to initialize blob engine: Check disk space and permissions.");

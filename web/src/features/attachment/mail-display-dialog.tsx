@@ -43,23 +43,24 @@ export function MailDisplayDrawer({ open, onOpenChange }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='w-full md:max-w-6xl mx-auto h-full'>
-        <DialogHeader className="p-4 pb-3 border-b shrink-0">
-          <DialogTitle>{t('mail.emailViewer')}</DialogTitle>
-        </DialogHeader>
-
-        <ScrollArea className="h-[calc(100vh-100px)]">
-          <div className='m-5'>
-            {isLoading ? (
-              <div className="p-8 text-center text-muted-foreground">{t('common.loading')}...</div>
-            ) : error ? (
-              <div className="p-8 text-center text-red-500">{t('attachment.emailMessageNotFound')}</div>
-            ) : envelope ? (
-              <MailMessageView envelope={envelope} />
-            ) : (
-              <div className="p-8 text-center text-muted-foreground">{t('mail.noMessageSelected')}</div>
-            )}
-          </div>
-        </ScrollArea>
+        <div className="flex flex-col h-full overflow-hidden -m-6">
+          <DialogHeader className="p-4 pb-3 border-b shrink-0 m-0">
+            <DialogTitle>{t('mail.emailViewer')}</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="flex-1">
+            <div className='m-5'>
+              {isLoading ? (
+                <div className="p-8 text-center text-muted-foreground">{t('common.loading')}...</div>
+              ) : error ? (
+                <div className="p-8 text-center text-red-500">{t('attachment.emailMessageNotFound')}</div>
+              ) : envelope ? (
+                <MailMessageView envelope={envelope} />
+              ) : (
+                <div className="p-8 text-center text-muted-foreground">{t('mail.noMessageSelected')}</div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   )

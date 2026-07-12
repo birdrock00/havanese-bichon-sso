@@ -40,22 +40,24 @@ export function MailDisplayDrawer({ open, onOpenChange }: Props) {
       onOpenChange={onOpenChange}
     >
       <DialogContent className='w-full md:max-w-6xl mx-auto h-full'>
-        <DialogHeader className="p-4 pb-3 border-b shrink-0">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2">
-              {t('mail.emailViewer')}
-            </DialogTitle>
-          </div>
-        </DialogHeader>
-        <ScrollArea>
-          <div className='m-5'>
-            {currentEnvelope ? (
-              <MailMessageView envelope={currentEnvelope} />
-            ) : (
-              <div className="p-8 text-center text-muted-foreground">{t('mail.noMessageSelected')}</div>
-            )}
-          </div>
-        </ScrollArea>
+        <div className="flex flex-col h-full overflow-hidden -m-6">
+          <DialogHeader className="p-4 pb-3 border-b shrink-0 m-0">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                {t('mail.emailViewer')}
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+          <ScrollArea className="flex-1">
+            <div className='m-5'>
+              {currentEnvelope ? (
+                <MailMessageView envelope={currentEnvelope} />
+              ) : (
+                <div className="p-8 text-center text-muted-foreground">{t('mail.noMessageSelected')}</div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>)
 }

@@ -1,22 +1,48 @@
-use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
-use crate::bucket::{self, IndexRecord};
+use crate::bucket::IndexRecord;
 use crate::error::Result;
 use crate::meta::{GlobalMeta, SegmentStats};
 use crate::segment::{self, SegmentReader};
 
 /// Recover after a crash: scan any unindexed portions of segments,
-/// update bucket files, fix segment stats.
-pub fn recover(store_root: &Path, meta: &mut GlobalMeta) -> Result<()> {
+/// update segment stats, and return newly discovered index records.
+///
+/// The caller is responsible for inserting the returned records into
+/// the index store.
+pub fn recover(store_root: &Path, meta: &mut GlobalMeta) -> Result<Vec<IndexRecord>> {
+    scan_segments(store_root, meta, false)
+}
+
+/// Rebuild the entire index from scratch by scanning all segments from
+/// offset 0.  Used when the index database is corrupted or lost.
+///
+/// Resets all segment stats and returns every entry found on disk.
+/// The caller should replace the index database before calling this.
+pub fn rebuild_index(store_root: &Path, meta: &mut GlobalMeta) -> Result<Vec<IndexRecord>> {
+    // Reset all segment stats — they'll be recomputed during the scan.
+    // Also reset indexed_up_to_offset so we scan from 0.
+    for stats in meta.segments.values_mut() {
+        stats.total_bytes = 0;
+        stats.deleted_bytes = 0;
+        stats.deleted_ratio = 0.0;
+        stats.indexed_up_to_offset = 0;
+    }
+    scan_segments(store_root, meta, true)
+}
+
+/// Common implementation: scan segments and collect index records.
+/// When `full_scan` is true, every segment is scanned from offset 0.
+fn scan_segments(
+    store_root: &Path,
+    meta: &mut GlobalMeta,
+    full_scan: bool,
+) -> Result<Vec<IndexRecord>> {
     let seg_dir = store_root.join("segments");
     if !seg_dir.exists() {
         fs::create_dir_all(&seg_dir)?;
     }
-
-    let buckets_dir = store_root.join("buckets");
-    fs::create_dir_all(&buckets_dir)?;
 
     // Discover all segment files on disk
     let mut disk_segments: Vec<u32> = Vec::new();
@@ -36,11 +62,9 @@ pub fn recover(store_root: &Path, meta: &mut GlobalMeta) -> Result<()> {
     }
     disk_segments.sort_unstable();
 
-    if disk_segments.is_empty() {
-        return Ok(());
-    }
+    let mut all_records: Vec<IndexRecord> = Vec::new();
 
-    // For each segment, scan unindexed portions and append to bucket files
+    // For each segment, scan unindexed portions
     for &seg_id in &disk_segments {
         let seg_path = seg_dir.join(segment::segment_filename(seg_id));
         let file_size = fs::metadata(&seg_path)?.len();
@@ -52,9 +76,13 @@ pub fn recover(store_root: &Path, meta: &mut GlobalMeta) -> Result<()> {
         let is_sealed = seg_id != meta.active_segment_id;
         stats.sealed = is_sealed;
 
-        let scan_start = if stats.indexed_up_to_offset <= file_size {
+        // Determine scan range.
+        let scan_start = if full_scan {
+            0
+        } else if stats.indexed_up_to_offset <= file_size {
             stats.indexed_up_to_offset
         } else {
+            // Segment was replaced (interrupted GC) — full rescan needed.
             0
         };
 
@@ -64,18 +92,15 @@ pub fn recover(store_root: &Path, meta: &mut GlobalMeta) -> Result<()> {
         }
 
         let reader = SegmentReader::open(seg_path.clone(), seg_id)?;
-        let mut new_records: HashMap<u16, Vec<IndexRecord>> = HashMap::new();
 
         let truncation_point = reader.scan_entries(scan_start, |entry, offset| {
-            let bid = bucket::bucket_id(&entry.key);
-            let rec = IndexRecord::new(
+            all_records.push(IndexRecord::new(
                 entry.key,
                 seg_id,
                 offset,
                 entry.data.len() as u32,
                 entry.flags,
-            );
-            new_records.entry(bid).or_default().push(rec);
+            ));
 
             stats.total_bytes += entry.data.len() as u64;
             if entry.is_tombstone() {
@@ -84,19 +109,6 @@ pub fn recover(store_root: &Path, meta: &mut GlobalMeta) -> Result<()> {
 
             Ok(())
         })?;
-
-        // Append new records to bucket files
-        for (bid, records) in &new_records {
-            let bf_path = buckets_dir.join(format!("{:02x}.idx", bid));
-            use std::io::Write;
-            let mut file = std::fs::OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(&bf_path)?;
-            for r in records {
-                file.write_all(&r.encode())?;
-            }
-        }
 
         // Truncate if tail corruption found
         if truncation_point < file_size {
@@ -110,7 +122,7 @@ pub fn recover(store_root: &Path, meta: &mut GlobalMeta) -> Result<()> {
 
     meta.save(store_root)?;
 
-    Ok(())
+    Ok(all_records)
 }
 
 /// Clean up leftover temp files from interrupted GC.
@@ -124,20 +136,6 @@ pub fn cleanup_temp_files(store_root: &Path) -> Result<()> {
             if name_str.starts_with("temp_") {
                 let path = entry.path();
                 tracing::warn!("Removing leftover temp file: {:?}", path);
-                fs::remove_file(&path)?;
-            }
-        }
-    }
-    // Also cleanup temp bucket files
-    let buckets_dir = store_root.join("buckets");
-    if buckets_dir.exists() {
-        for entry in fs::read_dir(&buckets_dir)? {
-            let entry = entry?;
-            let name = entry.file_name();
-            let name_str = name.to_string_lossy();
-            if name_str.ends_with(".tmp") {
-                let path = entry.path();
-                tracing::warn!("Removing leftover temp bucket file: {:?}", path);
                 fs::remove_file(&path)?;
             }
         }

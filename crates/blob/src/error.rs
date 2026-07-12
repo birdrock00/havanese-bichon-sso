@@ -50,4 +50,10 @@ pub enum Error {
 
     #[error("Unsupported metadata version {version} in {path}")]
     UnsupportedMetaVersion { path: PathBuf, version: u32 },
+
+    #[error("Index database error: {0}")]
+    IndexDb(String),
+
+    #[error("Database is already open by another process at {path}")]
+    AlreadyOpen { path: String },
 }
