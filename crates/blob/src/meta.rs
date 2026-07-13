@@ -10,9 +10,10 @@ const META_VERSION: u32 = 2;
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 fn write_bin<T: Serialize>(path: &Path, value: &T) -> Result<()> {
-    let payload = bincode::serde::encode_to_vec(value, bincode::config::standard()).map_err(|e| {
-        crate::error::Error::CorruptMeta(format!("{}: bincode encode: {}", path.display(), e))
-    })?;
+    let payload =
+        bincode::serde::encode_to_vec(value, bincode::config::standard()).map_err(|e| {
+            crate::error::Error::CorruptMeta(format!("{}: bincode encode: {}", path.display(), e))
+        })?;
     let crc = checksum::crc32(&payload);
     let mut buf = Vec::with_capacity(8 + payload.len());
     buf.extend_from_slice(&crc.to_le_bytes());
@@ -44,7 +45,7 @@ fn read_bin<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<T> {
         .map(|(v, _)| v)
         .map_err(|e| {
             crate::error::Error::CorruptMeta(format!("{}: bincode decode: {}", path.display(), e))
-    })
+        })
 }
 
 // ── SegmentStats ───────────────────────────────────────────────────────────
@@ -107,20 +108,6 @@ impl GlobalMeta {
         let bin_path = store_root.join("meta.bin");
         if bin_path.exists() {
             return read_bin(&bin_path);
-        }
-        // Migration from old JSON format
-        let json_path = store_root.join("meta.json");
-        if json_path.exists() {
-            let data = std::fs::read_to_string(&json_path)?;
-            let meta: Self = serde_json::from_str(&data)?;
-            write_bin(&bin_path, &meta)?;
-            let _ = std::fs::remove_file(&json_path);
-            return Ok(meta);
-        }
-        // Migration from old global_meta.bin (v1, only had accounts list)
-        let old_path = store_root.join("global_meta.bin");
-        if old_path.exists() {
-            let _ = std::fs::remove_file(&old_path);
         }
         Ok(Self::new())
     }

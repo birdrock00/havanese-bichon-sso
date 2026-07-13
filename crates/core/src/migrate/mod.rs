@@ -48,13 +48,13 @@ pub fn is_tantivy_index_dir(dir: &PathBuf) -> std::io::Result<bool> {
 }
 
 /// Check whether the data layout is compatible with the current server.
-/// Returns `false` only when legacy v0.3.7 data is detected and migration is required.
+/// Returns `false` when legacy data (v0.3.7 or v1.x) is detected and migration is required.
 pub fn check_data_status() -> std::io::Result<bool> {
     let root_dir = PathBuf::from(&SETTINGS.bichon_root_dir);
 
     // 1. Version file takes precedence
     if let Some(version) = read_storage_version(&root_dir) {
-        return Ok(version >= 1);
+        return Ok(version >= CURRENT_STORAGE_VERSION);
     }
 
     // 2. No version file — check for existing v1.x-style storage (fjall era)
@@ -66,9 +66,9 @@ pub fn check_data_status() -> std::io::Result<bool> {
     let new_storage_path = new_data_base.join("bichon-storage");
 
     if is_dir_not_empty(&new_storage_path)? {
-        // Existing v1.x install predates version file — mark it
+        // Existing v1.x install predates version file — mark it as v1
         let _ = write_storage_version(&root_dir, 1);
-        return Ok(true);
+        return Ok(false); // Needs migration: v1.x → v2.x
     }
 
     // 3. Check for legacy v0.3.7 Tantivy layout
