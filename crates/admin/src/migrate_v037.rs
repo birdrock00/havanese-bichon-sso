@@ -2,7 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use bichon_core::{
     error::{code::ErrorCode, BichonResult},
-    migrate::write_storage_version,
+    migrate::{is_tantivy_index_dir, write_storage_version},
     raise_error,
 };
 use console::style;
@@ -17,9 +17,41 @@ use tantivy::{
 };
 
 use crate::legacy::schema::SchemaTools;
-use crate::migrate::is_legacy_data_layout_with_paths;
-use crate::migrate_store::LegacyDirs;
 use crate::migrate_store_v2::{NewDirs, NewIndexWriterV2};
+
+pub struct LegacyDirs {
+    pub envelope_dir: PathBuf,
+    pub eml_dir: PathBuf,
+}
+
+impl LegacyDirs {
+    pub fn new(index: PathBuf, data: PathBuf) -> Self {
+        Self {
+            envelope_dir: index,
+            eml_dir: data,
+        }
+    }
+}
+
+pub fn is_legacy_data_layout_with_paths(
+    envelope_dir: &PathBuf,
+    eml_dir: &PathBuf,
+) -> std::io::Result<bool> {
+    let envelope_result = is_tantivy_index_dir(envelope_dir)?;
+    let eml_result = is_tantivy_index_dir(eml_dir)?;
+    Ok(envelope_result || eml_result)
+}
+
+/// Return the number of segments in the legacy EML Tantivy index.
+pub fn count_eml_segments(legacy: &LegacyDirs) -> BichonResult<usize> {
+    let eml_index = Index::open_in_dir(&legacy.eml_dir)
+        .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
+    let reader = eml_index
+        .reader()
+        .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
+    let searcher = reader.searcher();
+    Ok(searcher.segment_readers().len())
+}
 
 pub fn handle_migration_v037(theme: &ColorfulTheme) {
     println!(
@@ -301,7 +333,7 @@ pub fn handle_migration_v037(theme: &ColorfulTheme) {
     );
 
     let legacy = LegacyDirs::new(index_path.clone(), data_path.clone());
-    let total_segments = match crate::migrate::count_eml_segments(&legacy) {
+    let total_segments = match count_eml_segments(&legacy) {
         Ok(n) => n,
         Err(e) => {
             eprintln!(

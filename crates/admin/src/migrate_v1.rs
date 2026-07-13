@@ -96,22 +96,40 @@ pub fn handle_migrate_v1(theme: &ColorfulTheme) {
     );
 
     let root_dir: String = Input::with_theme(theme)
-        .with_prompt("Bichon root directory")
-        .with_initial_text("/var/lib/bichon")
-        .interact()
+        .with_prompt("Enter --bichon-root-dir (same value used by the old server)")
+        .validate_with(|input: &String| -> Result<(), &str> {
+            let path = PathBuf::from(input);
+            if !path.is_absolute() {
+                return Err("Path must be absolute.");
+            }
+            if !path.exists() {
+                return Err("Directory does not exist.");
+            }
+            Ok(())
+        })
+        .interact_text()
         .unwrap();
     let root_dir = PathBuf::from(root_dir.trim());
 
-    let data_dir: String = Input::with_theme(theme)
-        .with_prompt("Bichon data directory (leave empty to use root directory)")
-        .with_initial_text("")
-        .allow_empty(true)
-        .interact()
-        .unwrap();
-    let data_base = if data_dir.trim().is_empty() {
-        root_dir.clone()
-    } else {
-        PathBuf::from(data_dir.trim())
+    let data_base = {
+        let input: String = Input::with_theme(theme)
+            .with_prompt("Enter --bichon-data-dir (leave blank to use root directory)")
+            .allow_empty(true)
+            .interact_text()
+            .unwrap();
+        if input.trim().is_empty() {
+            root_dir.clone()
+        } else {
+            let path = PathBuf::from(input.trim());
+            if !path.exists() {
+                eprintln!(
+                    "{}",
+                    style(format!("Data directory does not exist: {}", path.display())).red()
+                );
+                return;
+            }
+            path
+        }
     };
 
     let fjall_path = data_base.join("bichon-storage");

@@ -19,12 +19,10 @@
 use console::style;
 use dialoguer::{theme::ColorfulTheme, Select};
 
-use crate::{migrate::handle_migration, migrate_v037::handle_migration_v037, migrate_v1::handle_migrate_v1, reset::handle_reset_password};
+use crate::{migrate_v037::handle_migration_v037, migrate_v1::handle_migrate_v1, reset::handle_reset_password};
 
 pub mod legacy;
 pub mod meta;
-pub mod migrate;
-pub mod migrate_store;
 pub mod migrate_store_v2;
 pub mod migrate_v037;
 pub mod migrate_v1;
@@ -45,7 +43,6 @@ async fn run_interactive() {
 
     let main_options = vec![
         "Reset Admin Password",
-        "Migrate Legacy v0.3.7 Storage to v1.x (Fjall)",
         "Migrate Legacy v0.3.7 Storage to v2.x (bichon-blob)",
         "Migrate v1.x Storage to v2.x (Fjall → bichon-blob)",
         "Exit",
@@ -60,9 +57,8 @@ async fn run_interactive() {
 
     match selection {
         0 => handle_reset_password(&theme),
-        1 => handle_migration(&theme),
-        2 => handle_migration_v037(&theme),
-        3 => handle_migrate_v1(&theme),
+        1 => handle_migration_v037(&theme),
+        2 => handle_migrate_v1(&theme),
         _ => {
             println!("{}", style("Exiting...").dim());
         }
