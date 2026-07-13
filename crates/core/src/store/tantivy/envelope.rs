@@ -2529,4 +2529,138 @@ mod tests {
         ]);
         assert_eq!(searcher.search(&q99, &Count).unwrap(), 0);
     }
+
+    // ── IMAP UID concept: order_by_fast_field(ingest_at) ─────────────
+
+    #[test]
+    fn stable_uid_ordering_by_ingest_at() {
+        let f = SchemaTools::email_fields();
+        let index = Index::create_in_ram(SchemaTools::email_schema());
+        index.tokenizers().register("euro", EuroTokenizer::new());
+
+        let mailbox_id = 42u64;
+
+        // 10 emails, some sharing the same ingest_at (simulating batch import)
+        #[rustfmt::skip]
+        let test_data: Vec<(u64, u64, i64)> = vec![
+            // (account_id, uid, ingest_at)
+            (1, 101, 1_700_000_000_000), // epoch #1
+            (1, 102, 1_700_000_000_000), // epoch #1 — same ms, different uid
+            (1, 201, 1_700_000_000_100), // epoch #2
+            (1, 202, 1_700_000_000_100), // epoch #2 — same ms
+            (1, 203, 1_700_000_000_100), // epoch #2 — 3 in same ms
+            (1, 301, 1_700_000_000_200),
+            (1, 401, 1_700_000_000_300),
+            (2, 501, 1_700_000_000_300), // different account, same ms — different mailbox
+            (1, 402, 1_700_000_000_400),
+            (1, 501, 1_700_000_000_500),
+        ];
+
+        {
+            let mut writer = index
+                .writer_with_num_threads(1, 15_000_000)
+                .expect("writer");
+
+            for (i, (account_id, uid, ingest_at)) in test_data.iter().enumerate() {
+                let mut doc = TantivyDocument::new();
+                doc.add_text(f.f_id, format!("eid-{}", i));
+                doc.add_text(f.f_message_id, format!("<msg-{}@test>", i));
+                doc.add_u64(f.f_account_id, *account_id);
+                doc.add_u64(f.f_mailbox_id, mailbox_id);
+                doc.add_u64(f.f_uid, *uid);
+                doc.add_i64(f.f_ingest_at, *ingest_at);
+                doc.add_i64(f.f_date, *ingest_at);
+                doc.add_i64(f.f_internal_date, *ingest_at);
+                doc.add_u64(f.f_size, 100);
+                doc.add_text(f.f_subject, "test");
+                doc.add_text(f.f_preview, "preview");
+                doc.add_text(f.f_content_hash, format!("hash-{}", i));
+                doc.add_text(f.f_from, "a@b.com");
+                doc.add_text(f.f_thread_id, "t1");
+                writer.add_document(doc).unwrap();
+            }
+            writer.commit().unwrap();
+        }
+
+        let reader = index
+            .reader()
+            .expect("reader");
+        let searcher = reader.searcher();
+
+        let query = TermQuery::new(
+            Term::from_field_u64(f.f_mailbox_id, mailbox_id),
+            IndexRecordOption::Basic,
+        );
+
+        // Primary sort: Tantivy fast field on ingest_at
+        let top_docs: Vec<(Option<i64>, DocAddress)> = searcher
+            .search(
+                &query,
+                &tantivy::collector::TopDocs::with_limit(100)
+                    .order_by_fast_field::<i64>(F_INGEST_AT, tantivy::Order::Asc),
+            )
+            .unwrap();
+
+        assert_eq!(top_docs.len(), 10, "all 10 docs should be returned");
+
+        // Read each doc, extract (ingest_at, uid) for app-level tie-break
+        let mut results: Vec<(i64, u64)> = Vec::new();
+        for (_, addr) in &top_docs {
+            let doc: TantivyDocument = searcher.doc(*addr).unwrap();
+            let ingest_at = doc
+                .get_first(f.f_ingest_at)
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0);
+            let uid = doc
+                .get_first(f.f_uid)
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            results.push((ingest_at, uid));
+        }
+
+        // Verify primary sort by ingest_at is correct
+        for w in results.windows(2) {
+            assert!(
+                w[0].0 <= w[1].0,
+                "ingest_at must be non-decreasing"
+            );
+        }
+
+        // Verify deterministic: run again, same order
+        let top_docs2: Vec<DocAddress> = searcher
+            .search(
+                &query,
+                &tantivy::collector::TopDocs::with_limit(100)
+                    .order_by_fast_field::<i64>(F_INGEST_AT, tantivy::Order::Asc),
+            )
+            .unwrap()
+            .into_iter()
+            .map(|(_, addr)| addr)
+            .collect();
+
+        for (i, addr) in top_docs.iter().map(|(_, a)| *a).enumerate() {
+            assert_eq!(addr, top_docs2[i], "order must be stable across queries");
+        }
+
+        // Demonstrate tie-break: same ingest_at groups MUST be ordered by uid
+        let mut current_group: Vec<u64> = Vec::new();
+        for w in results.windows(2) {
+            current_group.push(w[0].1);
+            if w[0].0 != w[1].0 {
+                current_group.push(w[0].1);
+                let mut sorted = current_group.clone();
+                sorted.sort();
+                assert_eq!(
+                    current_group, sorted,
+                    "within same ingest_at, uids must be ascending"
+                );
+                current_group = Vec::new();
+            }
+        }
+
+        println!("IMAP UID mapping (position → ingest_at, uid):");
+        for (pos, (ingest_at, uid)) in results.iter().enumerate() {
+            println!("  UID {} → (ingest_at={}, original_uid={})", pos + 1, ingest_at, uid);
+        }
+    }
 }
