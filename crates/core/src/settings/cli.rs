@@ -265,7 +265,7 @@ pub struct Settings {
             Ok(s.to_string())
         })
     )]
-    pub bichon_smtp_tls_key_path: Option<String>,
+    pub bichon_tls_key_path: Option<String>,
 
     #[clap(
         long,
@@ -282,7 +282,7 @@ pub struct Settings {
             Ok(s.to_string())
         })
     )]
-    pub bichon_smtp_tls_cert_path: Option<String>,
+    pub bichon_tls_cert_path: Option<String>,
 
     #[clap(
         long,
@@ -299,7 +299,7 @@ pub struct Settings {
         default_value = "starttls",
         help = "Set the encryption mode for SMTP: 'none', 'starttls', or 'tls'"
     )]
-    pub bichon_smtp_encryption: SmtpEncryptionMode,
+    pub bichon_smtp_encryption: EncryptionMode,
 
     #[clap(
         long,
@@ -308,6 +308,42 @@ pub struct Settings {
         help = "Enable SMTP authentication requirement"
     )]
     pub bichon_smtp_auth_required: bool,
+
+    /// Enable the built-in IMAP server for read-only email access via standard
+    /// email clients (Thunderbird, Outlook, Apple Mail, etc.).
+    #[clap(
+        long,
+        default_value = "false",
+        env,
+        help = "Enable the embedded IMAP server"
+    )]
+    pub bichon_enable_imap: bool,
+
+    #[clap(
+        long,
+        default_value = "10143",
+        env,
+        help = "Set the IMAP port (STARTTLS or plaintext)",
+        value_parser = clap::value_parser!(u16).range(1..)
+    )]
+    pub bichon_imap_port: u16,
+
+    #[clap(
+        long,
+        default_value = "10993",
+        env,
+        help = "Set the IMAPS port (implicit TLS)",
+        value_parser = clap::value_parser!(u16).range(1..)
+    )]
+    pub bichon_imaps_port: u16,
+
+    #[clap(
+        long,
+        env,
+        default_value = "none",
+        help = "Set the encryption mode for IMAP: 'none', 'starttls', or 'tls'"
+    )]
+    pub bichon_imap_encryption: EncryptionMode,
 
     /// Enable OIDC-based Single Sign-On (Pro/Enterprise feature).
     #[clap(long, default_value = "false", env, help = "Enable OpenID Connect SSO")]
@@ -417,7 +453,7 @@ impl fmt::Display for CompressionAlgorithm {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, ValueEnum)]
-pub enum SmtpEncryptionMode {
+pub enum EncryptionMode {
     #[clap(name = "none")]
     None,
     #[clap(name = "starttls")]
@@ -426,12 +462,12 @@ pub enum SmtpEncryptionMode {
     Tls,
 }
 
-impl fmt::Display for SmtpEncryptionMode {
+impl fmt::Display for EncryptionMode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SmtpEncryptionMode::None => write!(f, "none"),
-            SmtpEncryptionMode::Starttls => write!(f, "starttls"),
-            SmtpEncryptionMode::Tls => write!(f, "tls"),
+            EncryptionMode::None => write!(f, "none"),
+            EncryptionMode::Starttls => write!(f, "starttls"),
+            EncryptionMode::Tls => write!(f, "tls"),
         }
     }
 }

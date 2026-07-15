@@ -29,8 +29,8 @@ use bichon_core::settings::cli::SETTINGS;
 
 pub async fn create_acceptor() -> io::Result<TlsAcceptor> {
     let (certs, key) = if let (Some(key_path), Some(cert_path)) = (
-        &SETTINGS.bichon_smtp_tls_key_path,
-        &SETTINGS.bichon_smtp_tls_cert_path,
+        &SETTINGS.bichon_tls_key_path,
+        &SETTINGS.bichon_tls_cert_path,
     ) {
         load_certs_from_files(key_path, cert_path).await?
     } else {
