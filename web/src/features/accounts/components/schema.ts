@@ -97,8 +97,8 @@ export const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
         invalid_type_error: t('validation.incrementalSyncMustBeNumber'),
       })
       .int()
-      .min(10, {
-        message: t('validation.incrementalSyncMustBeAtLeast10'),
+      .min(1, {
+        message: t('validation.incrementalSyncMustBeAtLeast1'),
       }),
     download_batch_size: z
       .number({

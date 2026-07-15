@@ -43,7 +43,7 @@ pub struct AccountCreateRequest {
     pub date_since: Option<DateSince>,
     pub date_before: Option<RelativeDate>,
     pub account_type: AccountType,
-    #[cfg_attr(feature = "web-api", oai(validator(minimum(value = "10"))))]
+    #[cfg_attr(feature = "web-api", oai(validator(minimum(value = "1"))))]
     pub download_interval_min: Option<i64>,
     #[cfg_attr(
         feature = "web-api",
@@ -180,7 +180,7 @@ pub struct AccountUpdateRequest {
     /// Modified folders will be automatically synced on the next update.
     pub sync_folders: Option<Vec<String>>,
     /// Incremental download interval (seconds)
-    #[cfg_attr(feature = "web-api", oai(validator(minimum(value = "10"))))]
+    #[cfg_attr(feature = "web-api", oai(validator(minimum(value = "1"))))]
     pub download_interval_min: Option<i64>,
     #[cfg_attr(
         feature = "web-api",

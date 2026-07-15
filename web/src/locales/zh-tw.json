@@ -1791,7 +1791,7 @@
     "imapHostRequired": "IMAP 主機為必填項",
     "imapPortMustBeLessThan65536": "IMAP 連接埠必須小於 65536",
     "imapPortMustBePositive": "IMAP 連接埠必須是正整數",
-    "incrementalSyncMustBeAtLeast10": "增量同步間隔必須至少為 10 分鐘",
+    "incrementalSyncMustBeAtLeast1": "增量同步間隔必須至少為 1 分鐘",
     "incrementalSyncMustBeNumber": "增量同步間隔必須是數字",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "無效的電子郵件地址",
