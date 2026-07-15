@@ -469,15 +469,35 @@ impl NewIndexWriterV2 {
             self.email_buf.dedup_by(|a, b| a.0 == b.0);
 
             let count = self.email_buf.len();
+            let mut skipped = 0usize;
             for (key, data) in &self.email_buf {
-                self.engine.put(*key, data, Codec::Zstd).map_err(|e| {
-                    raise_error!(
+                if let Err(e) = self.engine.put(*key, data, Codec::Zstd) {
+                    if matches!(e, bichon_blob::Error::ValueTooLarge { .. }) {
+                        eprintln!(
+                            "{}",
+                            console::style(format!(
+                                "WARN: skipping oversized email blob key={} ({} bytes)",
+                                hex::encode(*key),
+                                data.len()
+                            ))
+                            .yellow()
+                        );
+                        skipped += 1;
+                        continue;
+                    }
+                    return Err(raise_error!(
                         format!("blob engine put error: {e:#?}"),
                         ErrorCode::InternalError
-                    )
-                })?;
+                    ));
+                }
             }
-            println!("flushed {} email blobs to engine", count);
+            println!("flushed {} email blobs to engine", count - skipped);
+            if skipped > 0 {
+                eprintln!(
+                    "{}",
+                    console::style(format!("skipped {} oversized email blobs", skipped)).yellow()
+                );
+            }
             self.email_buf.clear();
         }
 
@@ -486,15 +506,35 @@ impl NewIndexWriterV2 {
             self.attachment_buf.dedup_by(|a, b| a.0 == b.0);
 
             let count = self.attachment_buf.len();
+            let mut skipped = 0usize;
             for (key, data) in &self.attachment_buf {
-                self.engine.put(*key, data, Codec::Zstd).map_err(|e| {
-                    raise_error!(
+                if let Err(e) = self.engine.put(*key, data, Codec::Zstd) {
+                    if matches!(e, bichon_blob::Error::ValueTooLarge { .. }) {
+                        eprintln!(
+                            "{}",
+                            console::style(format!(
+                                "WARN: skipping oversized attachment blob key={} ({} bytes)",
+                                hex::encode(*key),
+                                data.len()
+                            ))
+                            .yellow()
+                        );
+                        skipped += 1;
+                        continue;
+                    }
+                    return Err(raise_error!(
                         format!("blob engine put error: {e:#?}"),
                         ErrorCode::InternalError
-                    )
-                })?;
+                    ));
+                }
             }
-            println!("flushed {} attachment blobs to engine", count);
+            println!("flushed {} attachment blobs to engine", count - skipped);
+            if skipped > 0 {
+                eprintln!(
+                    "{}",
+                    console::style(format!("skipped {} oversized attachment blobs", skipped)).yellow()
+                );
+            }
             self.attachment_buf.clear();
         }
 

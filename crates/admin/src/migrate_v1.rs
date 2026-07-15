@@ -65,12 +65,24 @@ fn migrate_keyspace(
             continue;
         }
         let raw_key = hex_key_to_raw(&key_bytes)?;
-        engine.put(raw_key, &value, Codec::Zstd).map_err(|e| {
-            raise_error!(
+        if let Err(e) = engine.put(raw_key, &value, Codec::Zstd) {
+            if matches!(e, bichon_blob::Error::ValueTooLarge { .. }) {
+                eprintln!(
+                    "{}",
+                    console::style(format!(
+                        "WARN: skipping oversized blob key={} ({} bytes)",
+                        hex::encode(raw_key),
+                        value.len()
+                    ))
+                    .yellow()
+                );
+                continue;
+            }
+            return Err(raise_error!(
                 format!("bichon-blob put error: {e:#?}"),
                 ErrorCode::InternalError
-            )
-        })?;
+            ));
+        }
         count += 1;
         if count % 1000 == 0 {
             pb.set_message(format!("{label}: {} blobs migrated...", count));
