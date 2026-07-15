@@ -26,7 +26,7 @@ use bichon_core::cache::imap::mailbox::{Attribute, AttributeEnum};
 use bichon_core::common::signal::SIGNAL_MANAGER;
 use bichon_core::envelope::extractor::extract_envelope_from_smtp;
 use bichon_core::error::BichonResult;
-use bichon_core::settings::cli::{SmtpEncryptionMode, SETTINGS};
+use bichon_core::settings::cli::{EncryptionMode, SETTINGS};
 use bichon_core::utils::create_hash;
 use bichon_core::{
     account::migration::AccountModel,
@@ -698,8 +698,8 @@ pub async fn start_smtp_server() -> std::io::Result<SmtpServer> {
     let smtp_port = SETTINGS.bichon_smtp_port;
 
     let tls_acceptor: Option<TlsAcceptor> = match SETTINGS.bichon_smtp_encryption {
-        SmtpEncryptionMode::None => None,
-        SmtpEncryptionMode::Starttls | SmtpEncryptionMode::Tls => Some(create_acceptor().await?),
+        EncryptionMode::None => None,
+        EncryptionMode::Starttls | EncryptionMode::Tls => Some(create_acceptor().await?),
     };
 
     let smtp_listener = TcpListener::bind((
@@ -721,15 +721,15 @@ pub async fn start_smtp_server() -> std::io::Result<SmtpServer> {
     let smtp_config = SmtpConfig {
         whitelist: None,
         tls_acceptor: match SETTINGS.bichon_smtp_encryption {
-            SmtpEncryptionMode::None | SmtpEncryptionMode::Tls => None,
-            SmtpEncryptionMode::Starttls => tls_acceptor.clone(),
+            EncryptionMode::None | EncryptionMode::Tls => None,
+            EncryptionMode::Starttls => tls_acceptor.clone(),
         },
         auth_required: SETTINGS.bichon_smtp_auth_required,
     };
 
     let smtp_shutdown = SIGNAL_MANAGER.subscribe();
 
-    let smtp_handle = if matches!(SETTINGS.bichon_smtp_encryption, SmtpEncryptionMode::Tls) {
+    let smtp_handle = if matches!(SETTINGS.bichon_smtp_encryption, EncryptionMode::Tls) {
         let acceptor = tls_acceptor
             .clone()
             .expect("TLS acceptor required when tls=true");
