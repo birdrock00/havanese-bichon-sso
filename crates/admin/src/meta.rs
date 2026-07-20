@@ -255,7 +255,6 @@ impl From<AccountV3> for AccountModel {
             created_at: value.created_at,
             updated_at: value.updated_at,
             created_by: value.created_by,
-            use_proxy: value.use_proxy,
             use_dangerous: value.use_dangerous,
             pgp_key: value.pgp_key,
             imap_quota_window: None,

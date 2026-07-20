@@ -152,7 +152,6 @@ export interface AccountModel {
     created_user_email: string;
     created_at: number;
     updated_at: number;
-    use_proxy?: number;
     use_dangerous: boolean;
     pgp_key?: string;
     imap_quota_window?: QuotaWindow;

@@ -44,15 +44,12 @@ const emptyImap = {
   port: 0,
   encryption: "None" as const,
   auth: { auth_type: "Password" as const, password: undefined },
-  use_proxy: undefined,
+  use_proxy: null,
 };
 
 function mapAccountToFormValues(account: AccountModel): AccountFormValues {
   const imap = { ...(account.imap ?? emptyImap) };
   imap.auth = { ...imap.auth, password: undefined };
-  if ((imap as any).use_proxy === null) {
-    (imap as any).use_proxy = undefined;
-  }
 
   return {
     account_name: account.account_name ?? undefined,
@@ -137,12 +134,14 @@ export function AccountSettingsPage({ accountId }: AccountSettingsPageProps) {
 
   const onSubmit = useCallback(
     (data: AccountFormValues) => {
+      const { use_proxy, ...imapRest } = data.imap;
       const payload: Record<string, any> = {
         email: data.email,
         account_name: data.account_name,
         login_name: data.login_name,
         imap: {
-          ...data.imap,
+          ...imapRest,
+          use_proxy,
           auth: {
             ...data.imap.auth,
             password: data.imap.auth.auth_type === 'OAuth2'
