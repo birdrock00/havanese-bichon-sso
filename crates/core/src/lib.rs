@@ -16,6 +16,7 @@ pub mod mailbox;
 pub mod message;
 pub mod migrate;
 pub mod oauth2;
+pub mod oidc;
 pub mod settings;
 pub mod store;
 pub mod tasks;
