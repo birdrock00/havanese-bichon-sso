@@ -20,4 +20,5 @@
 pub mod features;
 pub mod login;
 pub mod oauth2;
+pub mod oidc;
 pub mod status;
