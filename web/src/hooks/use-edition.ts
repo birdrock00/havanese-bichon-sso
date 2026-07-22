@@ -5,6 +5,8 @@ export interface EditionInfo {
   features: string[]
   edition: 'community' | 'pro' | 'enterprise'
   version: string
+  oidc_enabled?: boolean
+  oidc_auto_redirect?: boolean
 }
 
 async function fetchEdition(): Promise<EditionInfo> {
@@ -24,5 +26,7 @@ export function useEdition() {
     isPro: data?.edition === 'pro' || data?.edition === 'enterprise',
     edition: data?.edition ?? 'community',
     features: data?.features ?? [],
+    oidcEnabled: data?.oidc_enabled ?? false,
+    oidcAutoRedirect: data?.oidc_auto_redirect ?? false,
   } as const
 }
