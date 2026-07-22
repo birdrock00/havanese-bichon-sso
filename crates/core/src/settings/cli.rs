@@ -365,6 +365,28 @@ pub struct Settings {
     #[clap(long, env, help = "OpenID Connect redirect URI")]
     pub bichon_oidc_redirect_uri: Option<String>,
 
+    /// Role ID assigned to auto-provisioned OIDC users. Defaults to the built-in
+    /// Member role. Set to another built-in or custom role ID to change behaviour.
+    #[clap(
+        long,
+        env,
+        default_value_t = 100_200_000_000_000_u64,
+        help = "Global role ID assigned to auto-provisioned OIDC users (default: Member role)"
+    )]
+    pub bichon_oidc_default_role_id: u64,
+
+    /// When enabled and OIDC is configured, the sign-in page automatically
+    /// redirects the browser to the OIDC provider instead of showing the
+    /// username/password form. Users can still reach the local login by
+    /// visiting `/sign-in?local=1`.
+    #[clap(
+        long,
+        default_value = "false",
+        env,
+        help = "Automatically redirect the sign-in page to the OIDC provider"
+    )]
+    pub bichon_oidc_auto_redirect: bool,
+
     /// Maximum HTTP request body size in MB for file uploads (default: 1100 MB).
     /// Requests exceeding this limit are rejected at the framework level before
     /// the application reads the body, preventing memory exhaustion attacks.
