@@ -5,3 +5,5 @@ config.toml
 node_modules
 dedup_report.txt
 crates/*/target
+.tmp/
+.playwright-mcp/
