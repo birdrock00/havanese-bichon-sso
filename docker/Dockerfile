@@ -38,6 +38,6 @@ EXPOSE 15630
 WORKDIR /data
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -fs http://localhost:15630/api/status || exit 1
+  CMD curl -fs http://localhost:${BICHON_HTTP_PORT:-15630}/api/status || exit 1
 
 CMD ["/opt/bichon/bichon-server"]
