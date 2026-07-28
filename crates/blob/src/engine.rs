@@ -400,6 +400,9 @@ impl Engine {
 
         self.shared.index_store.insert_batch(&records)?;
 
+        // Deduplicate: keep only the max offset per segment.
+        ends.sort_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)));
+        ends.dedup_by(|a, b| a.0 == b.0);
         for (segment_id, entry_end) in &ends {
             inner.mark_indexed(*segment_id, *entry_end)?;
         }

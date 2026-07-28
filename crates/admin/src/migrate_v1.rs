@@ -33,7 +33,9 @@ fn migrate_keyspace(
     db: &Database,
     ks_name: &str,
     label: &str,
+    batch_size: usize,
 ) -> BichonResult<u64> {
+
     let ks = db
         .keyspace(ks_name, || {
             panic!("{ks_name} keyspace not found in fjall database")
@@ -53,6 +55,8 @@ fn migrate_keyspace(
     pb.set_message(format!("Scanning {label} blobs..."));
 
     let mut count: u64 = 0;
+    let mut batch: Vec<([u8; 32], Vec<u8>, Codec)> = Vec::with_capacity(batch_size);
+
     for item in ks.iter() {
         let (key_bytes, value) = item.into_inner().map_err(|e| {
             raise_error!(
@@ -64,29 +68,38 @@ fn migrate_keyspace(
         if value.is_empty() {
             continue;
         }
+        // MAX_VALUE_SIZE = 100 MB (bichon_blob::types)
+        if value.len() > 100 * 1024 * 1024 {
+            let raw_key = hex_key_to_raw(&key_bytes)?;
+            eprintln!(
+                "{}",
+                console::style(format!(
+                    "WARN: skipping oversized blob key={} ({} bytes)",
+                    hex::encode(raw_key),
+                    value.len()
+                ))
+                .yellow()
+            );
+            continue;
+        }
         let raw_key = hex_key_to_raw(&key_bytes)?;
-        if let Err(e) = engine.put(raw_key, &value, Codec::Zstd) {
-            if matches!(e, bichon_blob::Error::ValueTooLarge { .. }) {
-                eprintln!(
-                    "{}",
-                    console::style(format!(
-                        "WARN: skipping oversized blob key={} ({} bytes)",
-                        hex::encode(raw_key),
-                        value.len()
-                    ))
-                    .yellow()
-                );
-                continue;
-            }
-            return Err(raise_error!(
-                format!("bichon-blob put error: {e:#?}"),
-                ErrorCode::InternalError
-            ));
-        }
-        count += 1;
-        if count % 1000 == 0 {
+        batch.push((raw_key, value.to_vec(), Codec::Zstd));
+
+        if batch.len() >= batch_size {
+            engine.put_batch(&batch).map_err(|e| {
+                raise_error!(format!("{e:#?}"), ErrorCode::InternalError)
+            })?;
+            count += batch.len() as u64;
             pb.set_message(format!("{label}: {} blobs migrated...", count));
+            batch.clear();
         }
+    }
+
+    if !batch.is_empty() {
+        engine.put_batch(&batch).map_err(|e| {
+            raise_error!(format!("{e:#?}"), ErrorCode::InternalError)
+        })?;
+        count += batch.len() as u64;
     }
 
     pb.finish_with_message(format!("{label}: {} blobs migrated", count));
@@ -173,6 +186,25 @@ pub fn handle_migrate_v1(theme: &ColorfulTheme) {
         return;
     }
 
+    let batch_size: usize = {
+        let input: String = Input::with_theme(theme)
+            .with_prompt("Enter batch size (affects memory usage, higher = faster but uses more RAM)")
+            .default("1000".to_string())
+            .validate_with(|s: &String| match s.trim().parse::<usize>() {
+                Ok(n) if n > 0 => Ok(()),
+                _ => Err("Please enter a valid positive number"),
+            })
+            .interact_text()
+            .unwrap_or("1000".to_string());
+        input.trim().parse::<usize>().unwrap_or(1000)
+    };
+
+    println!(
+        "{} Using batch size: {}\n",
+        style("✓").green(),
+        style(batch_size).cyan().bold()
+    );
+
     // Open old Fjall database (read-only by nature of the iter API)
     println!("\n{}", style("Opening fjall database...").dim());
     let db = match Database::open(FjallConfig::new(&fjall_path)) {
@@ -206,7 +238,7 @@ pub fn handle_migrate_v1(theme: &ColorfulTheme) {
     };
 
     // Migrate email blobs
-    let email_count = match migrate_keyspace(&engine, &db, "email", "Email") {
+    let email_count = match migrate_keyspace(&engine, &db, "email", "Email", batch_size) {
         Ok(n) => n,
         Err(e) => {
             println!("{}", style(format!("Email migration failed: {e:#?}")).red());
@@ -217,7 +249,7 @@ pub fn handle_migrate_v1(theme: &ColorfulTheme) {
 
     // Migrate attachment blobs
     let attach_count =
-        match migrate_keyspace(&engine, &db, "attachments", "Attachment") {
+        match migrate_keyspace(&engine, &db, "attachments", "Attachment", batch_size) {
             Ok(n) => n,
             Err(e) => {
                 println!(
@@ -349,7 +381,7 @@ mod tests {
             config.gc_interval_secs = 0;
             let engine = Engine::open(&blob_path, config).unwrap();
 
-            let count = migrate_keyspace(&engine, &fjall_db, "test_ks", "Test").unwrap();
+            let count = migrate_keyspace(&engine, &fjall_db, "test_ks", "Test", 100).unwrap();
             assert_eq!(count, expected.len() as u64);
 
             engine.flush().unwrap();
@@ -400,7 +432,7 @@ mod tests {
         config.gc_interval_secs = 0;
         let engine = Engine::open(&blob_path, config).unwrap();
 
-        let count = migrate_keyspace(&engine, &fjall_db, "empty_ks", "Empty").unwrap();
+        let count = migrate_keyspace(&engine, &fjall_db, "empty_ks", "Empty", 100).unwrap();
         assert_eq!(count, 0);
 
         engine.shutdown().unwrap();

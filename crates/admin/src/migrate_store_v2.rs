@@ -465,31 +465,36 @@ impl NewIndexWriterV2 {
         self.commit_tantivy()?;
 
         if !self.email_buf.is_empty() {
-            self.email_buf.sort_by(|a, b| a.0.cmp(&b.0));
-            self.email_buf.dedup_by(|a, b| a.0 == b.0);
+            let mut buf = std::mem::take(&mut self.email_buf);
+            buf.sort_by(|a, b| a.0.cmp(&b.0));
+            buf.dedup_by(|a, b| a.0 == b.0);
 
-            let count = self.email_buf.len();
+            let count = buf.len();
             let mut skipped = 0usize;
-            for (key, data) in &self.email_buf {
-                if let Err(e) = self.engine.put(*key, data, Codec::Zstd) {
-                    if matches!(e, bichon_blob::Error::ValueTooLarge { .. }) {
-                        eprintln!(
-                            "{}",
-                            console::style(format!(
-                                "WARN: skipping oversized email blob key={} ({} bytes)",
-                                hex::encode(*key),
-                                data.len()
-                            ))
-                            .yellow()
-                        );
-                        skipped += 1;
-                        continue;
-                    }
-                    return Err(raise_error!(
-                        format!("blob engine put error: {e:#?}"),
-                        ErrorCode::InternalError
-                    ));
+            let mut batch: Vec<([u8; 32], Vec<u8>, Codec)> = Vec::with_capacity(buf.len());
+            for (key, data) in buf {
+                if data.len() > 100 * 1024 * 1024 {
+                    eprintln!(
+                        "{}",
+                        console::style(format!(
+                            "WARN: skipping oversized email blob key={} ({} bytes)",
+                            hex::encode(key),
+                            data.len()
+                        ))
+                        .yellow()
+                    );
+                    skipped += 1;
+                    continue;
                 }
+                batch.push((key, data, Codec::Zstd));
+            }
+            if !batch.is_empty() {
+                self.engine.put_batch(&batch).map_err(|e| {
+                    raise_error!(
+                        format!("blob engine put_batch error: {e:#?}"),
+                        ErrorCode::InternalError
+                    )
+                })?;
             }
             println!("flushed {} email blobs to engine", count - skipped);
             if skipped > 0 {
@@ -498,44 +503,48 @@ impl NewIndexWriterV2 {
                     console::style(format!("skipped {} oversized email blobs", skipped)).yellow()
                 );
             }
-            self.email_buf.clear();
         }
 
         if !self.attachment_buf.is_empty() {
-            self.attachment_buf.sort_by(|a, b| a.0.cmp(&b.0));
-            self.attachment_buf.dedup_by(|a, b| a.0 == b.0);
+            let mut buf = std::mem::take(&mut self.attachment_buf);
+            buf.sort_by(|a, b| a.0.cmp(&b.0));
+            buf.dedup_by(|a, b| a.0 == b.0);
 
-            let count = self.attachment_buf.len();
+            let count = buf.len();
             let mut skipped = 0usize;
-            for (key, data) in &self.attachment_buf {
-                if let Err(e) = self.engine.put(*key, data, Codec::Zstd) {
-                    if matches!(e, bichon_blob::Error::ValueTooLarge { .. }) {
-                        eprintln!(
-                            "{}",
-                            console::style(format!(
-                                "WARN: skipping oversized attachment blob key={} ({} bytes)",
-                                hex::encode(*key),
-                                data.len()
-                            ))
-                            .yellow()
-                        );
-                        skipped += 1;
-                        continue;
-                    }
-                    return Err(raise_error!(
-                        format!("blob engine put error: {e:#?}"),
-                        ErrorCode::InternalError
-                    ));
+            let mut batch: Vec<([u8; 32], Vec<u8>, Codec)> = Vec::with_capacity(buf.len());
+            for (key, data) in buf {
+                if data.len() > 100 * 1024 * 1024 {
+                    eprintln!(
+                        "{}",
+                        console::style(format!(
+                            "WARN: skipping oversized attachment blob key={} ({} bytes)",
+                            hex::encode(key),
+                            data.len()
+                        ))
+                        .yellow()
+                    );
+                    skipped += 1;
+                    continue;
                 }
+                batch.push((key, data, Codec::Zstd));
+            }
+            if !batch.is_empty() {
+                self.engine.put_batch(&batch).map_err(|e| {
+                    raise_error!(
+                        format!("blob engine put_batch error: {e:#?}"),
+                        ErrorCode::InternalError
+                    )
+                })?;
             }
             println!("flushed {} attachment blobs to engine", count - skipped);
             if skipped > 0 {
                 eprintln!(
                     "{}",
-                    console::style(format!("skipped {} oversized attachment blobs", skipped)).yellow()
+                    console::style(format!("skipped {} oversized attachment blobs", skipped))
+                        .yellow()
                 );
             }
-            self.attachment_buf.clear();
         }
 
         Ok(())
