@@ -93,7 +93,7 @@
 - **Attachment Search**: Browse and filter attachments by sender, file type, size, and other attachment properties.
 - **Faceted Tags**: Add, remove, or overwrite tags on messages and attachments. Filter by tag combinations with real-time count updates.
 - **Contacts View**: Extracted and deduplicated sender/recipient address book across all authorized accounts.
-- **Three-Layer Storage**: Tantivy for full-text indexing (Zstd compression), Fjall with LZ4 for compressed blob storage, and memdb for relational metadata. All embedded — zero external dependencies.
+- **Three-Layer Storage**: Tantivy for full-text indexing (Zstd compression), bichon-blob with Zstd for compressed blob storage, and memdb for relational metadata. All embedded — zero external dependencies.
 - **Content Deduplication**: Identical email bodies and attachments stored once via BLAKE3 content hashing. Folder moves update metadata only.
 - **Dashboard Analytics**: Email volume trends, top senders, storage usage breakdown, attachment statistics, and per-account activity. Scoped by user permissions.
 - **OpenAPI 3.0**: Interactive API documentation at `/api-docs` (Swagger UI, ReDoc, Scalar). All endpoints documented with request/response schemas.
@@ -103,7 +103,7 @@
 - **CLI Export**: Download account data as MBOX via `bichon-cli`.
 - **Bulk Restore**: Restore emails in bulk back to their original IMAP accounts.
 - **Embedded SMTP Server**: Receive emails directly at the gateway level. STARTTLS or TLS encryption. AUTH PLAIN/LOGIN with API token authentication.
-- **Admin Tooling**: Password reset for locked-out admins. Non-destructive v0.3.7 to v1.0 data migration.
+- **Admin Tooling**: Password reset for locked-out admins. Non-destructive migration from v0.3.7 and v1.x to v2.x.
 - **API Token Management**: Create, list, and revoke long-lived API tokens for programmatic access.
 - **SOCKS5 Proxy Management**: Configure and manage proxy profiles for routing IMAP traffic per account.
 - **Scheduled Download**: Configure per-account download schedules using cron expressions. Run syncs at specific times or intervals — for example, nightly-only or business-hours-only archiving.
@@ -185,10 +185,7 @@ Download from the [Releases](https://github.com/rustmailer/bichon/releases) page
 git clone https://github.com/rustmailer/bichon.git
 cd bichon
 
-# Build the WebUI (required before building the server)
-cd web && pnpm install && pnpm run build && cd ..
-
-# Build and run
+# Build and run — frontend dependencies are installed and built automatically via build.rs
 export BICHON_ENCRYPT_PASSWORD=dev-password
 cargo run -- --bichon-root-dir /tmp/bichon-data
 ```
@@ -198,9 +195,6 @@ For frontend development:
 ```bash
 cd web && pnpm run dev   # Vite dev server with API proxy to Rust backend
 ```
-
-> [!TIP]
-> The WebUI must be built at least once (`pnpm run build`) for the server to serve the frontend. In dev mode (`pnpm run dev`), Vite proxies API calls to the Rust server automatically.
 
 ## Configuration Reference
 
@@ -270,7 +264,7 @@ All settings accept both CLI flags (`--bichon-http-port`) and environment variab
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `BICHON_INDEX_DIR` | `{root}/bichon-indices` | Tantivy full-text index directory |
-| `BICHON_DATA_DIR` | `{root}/bichon-storage` | Fjall blob storage directory |
+| `BICHON_DATA_DIR` | `{root}/bichon-storage` | bichon-blob storage directory |
 
 > [!TIP]
 > Place `BICHON_INDEX_DIR` on fast SSD storage for responsive search, and `BICHON_DATA_DIR` on high-capacity HDD for cost-effective blob storage.
@@ -378,12 +372,13 @@ All imports are processed server-side — the server handles MIME parsing, index
 ./bichon-admin
 ```
 
-Interactive menu with two operations:
+Interactive menu with three operations:
 
 | Operation | Description |
 |-----------|-------------|
 | **Reset Admin Password** | Reset the built-in admin password when locked out |
-| **Migrate v0.3.7 → v1.0** | Non-destructive migration from legacy storage layout to v1.0 architecture |
+| **Migrate v0.3.7 → v2.x** | Non-destructive migration from legacy Tantivy-based storage to v2.x |
+| **Migrate v1.x → v2.x** | Blob-only migration from Fjall to bichon-blob (indexes and metadata untouched) |
 
 ## API Reference
 
@@ -412,7 +407,7 @@ All `/api/v1/*` endpoints require `Authorization: Bearer <token>`.
 | **API Import** | `POST /api/v1/import` | Base64-encoded EML payloads for programmatic use |
 | **MBOX Export** | `bichon-cli` | Download account data as `.mbox` file |
 
-All imports flow through the Bichon REST API. The server parses MIME, extracts metadata, indexes content into Tantivy, deduplicates by BLAKE3 content hash, and stores raw blobs in Fjall.
+All imports flow through the Bichon REST API. The server parses MIME, extracts metadata, indexes content into Tantivy, deduplicates by BLAKE3 content hash, and stores raw blobs in bichon-blob.
 
 ## Architecture
 
@@ -438,12 +433,12 @@ Request Layer
 Storage Layer         │
                       │
   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-  │    memdb     │  │   Tantivy    │  │    Fjall     │
+  │    memdb     │  │   Tantivy    │  │ bichon-blob  │
   │  (metadata)  │  │  (full-text) │  │   (blobs)    │
   │              │  │              │  │              │
   │ • accounts   │  │ • envelope   │  │ • raw emails │
   │ • users      │  │ • attachment │  │ • attachments│
-  │ • roles      │  │ • tags       │  │   LZ4 compr. │
+  │ • roles      │  │ • tags       │  │   Zstd compr.│
   │ • config     │  │ • contacts   │  │              │
   │ • proxies    │  │   Zstd compr.│  │ BLAKE3 hash  │
   └──────────────┘  └──────────────┘  └──────────────┘
@@ -451,7 +446,7 @@ Storage Layer         │
 
 - **memdb**: Key-value metadata store. Houses accounts, users, roles, OAuth2 configs, proxy settings, and system configuration. 
 - **Tantivy**: Full-text search indices with Zstd compression support. Two separate indices: envelope (email metadata + body text) and attachment (file metadata + extracted text). Batch-committed every 1,000 documents or 60 seconds.
-- **Fjall**: LZ4-compressed LSM tree key-value store. Two keyspaces — `email_keyspace` and `attachments_keyspace`. Content-hash addressed (BLAKE3) with insert-time deduplication. Values larger than 1 KB stored as separate files (KV separation).
+- **bichon-blob**: Zstd-compressed log-structured storage engine. Append-only segment files (1&nbsp;GB each) with a redb-backed index for O(1) key lookup. Content-hash addressed (BLAKE3) with insert-time deduplication. Supports global dedup, online GC, and crash-safe recovery.
 
 ### IMAP Download Pipeline
 
@@ -477,7 +472,7 @@ extract_envelope_and_store_it()
         │
    ┌────┼────┐
    ▼    ▼    ▼
-Tantivy Fjall memdb
+Tantivy bichon-blob memdb
 ```
 
 - Per-account background tasks managed by a global download-task singleton
@@ -513,7 +508,7 @@ Tantivy Fjall memdb
                │  attachment     │   │  → attachment_content_hash   │
                │  bytes with     │   │                              │
                │  placeholder:   │   │  Store raw undecoded bytes   │
-               │                 │   │  in Fjall attachments_ks     │
+               │                 │   │  in bichon-blob               │
                │  <<BICHON_      │   │  (skip if hash exists)       │
                │   DETACH_HASH:  │   │                              │
                │   xxx>>         │   │  Extract text for indexing   │
@@ -523,7 +518,7 @@ Tantivy Fjall memdb
                        ▼                            │
                ┌──────────────────────────────┐     │
                │  Stripped EML stored in      │     │
-               │  Fjall email_keyspace        │     │
+               │  bichon-blob                 │     │
                │  keyed by email_content_hash │     │
                │  (skip if hash exists)       │     │
                └──────────────┬───────────────┘     │
@@ -538,8 +533,8 @@ Tantivy Fjall memdb
 
    Dedup layers
    ┌─────────────────────────────────────────────────────────────────┐
-   │ Fjall (insert-time)                                             │
-   │   contains_key(hash)? → skip : store with LZ4 compression       │
+   │ bichon-blob (insert-time)                                       │
+   │   contains_key(hash)? → skip : store with Zstd compression       │
    │                                                                 │
    │ Tantivy (periodic, every 12 h)                                  │
    │   Group by (account, mailbox, content_hash)                     │
@@ -549,14 +544,14 @@ Tantivy Fjall memdb
 
    Reconstruction
    ┌─────────────────────────────────────────────────────────────────┐
-   │ Fetch stripped EML by content_hash from Fjall                  │
+   │ Fetch stripped EML by content_hash from bichon-blob            │
    │ Find <<BICHON_DETACH_HASH:xxx>> placeholders                    │
-   │ Replace each with raw attachment blob from Fjall                │
+   │ Replace each with raw attachment blob from bichon-blob          │
    │ Result → byte-identical original EML                            │
    └─────────────────────────────────────────────────────────────────┘
 ```
 
-Every ingested email is hashed with BLAKE3. Attachments are detached from the MIME tree, hashed independently (decoded content), and stored as raw undecoded bytes in Fjall's `attachments_keyspace`. The email body is patched with hash-based placeholders and stored in `email_keyspace`. Both keyspaces check for existing hashes before writing — identical content is never stored twice, regardless of which account or folder it arrives in. A periodic index dedup task (every 12 hours) scans Tantivy for duplicate `(account, mailbox, content_hash)` tuples, keeps the most recently ingested copy, and cascade-deletes orphaned attachment entries so UID-based incremental sync remains accurate. The original EML reconstructs byte-for-byte by swapping placeholders back with their attachment blobs.
+Every ingested email is hashed with BLAKE3. Attachments are detached from the MIME tree, hashed independently (decoded content), and stored as raw undecoded bytes in bichon-blob. The email body is patched with hash-based placeholders and stored separately. Both email and attachment blobs are deduplicated by content hash — identical content is never stored twice, regardless of which account or folder it arrives in. A periodic index dedup task (every 12 hours) scans Tantivy for duplicate `(account, mailbox, content_hash)` tuples, keeps the most recently ingested copy, and cascade-deletes orphaned attachment entries so UID-based incremental sync remains accurate. The original EML reconstructs byte-for-byte by swapping placeholders back with their attachment blobs.
 
 ## Storage & Backup
 
@@ -565,7 +560,7 @@ Every ingested email is hashed with BLAKE3. Attachments are detached from the MI
 ```
 {root}/
 ├── bichon-indices/         Tantivy full-text index (envelope + attachment)
-├── bichon-storage/         Fjall LZ4-compressed blob store
+├── bichon-storage/         bichon-blob Zstd-compressed blob store
 ├── memdb/                  Metadata database (accounts, users, roles, config)
 ├── logs/                   Server logs (when BICHON_LOG_TO_FILE=true)
 ```
@@ -605,25 +600,36 @@ The WebUI is available in **18 languages**:
 
 Language preference and UI theme are saved to your user profile and can be changed anytime from the WebUI settings.
 
-## Data Migration (v0.3.7 → v1.x)
+## Data Migration
 
-Bichon v1.x introduced a redesigned storage architecture:
+Bichon v2.x replaces the Fjall blob engine with bichon-blob. Two migration paths are available:
 
-| Layer | v0.3.7 (Legacy) | v1.x |
-| :--- | :--- | :--- |
-| **Index** | Tantivy (shared instance, no full attachments) | Tantivy (separate envelope + attachment indices) |
-| **Raw data** | Tantivy (inline, stored in another Tantivy instance) | Fjall (LZ4-compressed LSM-tree key-value store) |
-| **Metadata** | Native_DB (shared, disk-based DB powered by redb) | memdb (dedicated, in-house in-memory DB) |
+| Layer | v0.3.7 (Legacy) | v1.x | v2.x |
+| :--- | :--- | :--- | :--- |
+| **Index** | Tantivy (inline) | Tantivy (separate envelope + attachment) | Tantivy (unchanged from v1.x) |
+| **Blobs** | Tantivy (inline) | Fjall (LZ4-compressed LSM tree) | bichon-blob (Zstd-compressed log-structured) |
+| **Metadata** | native_db (redb-backed) | memdb | memdb (unchanged from v1.x) |
 
-If you ran Bichon prior to v1.x, migrate your data:
+**v0.3.7 → v2.x** (full migration):
 
 ```bash
 ./bichon-admin
-# Select "Migrate Legacy v0.3.7 Storage to v1.x"
+# Select "Migrate Legacy v0.3.7 Storage to v2.x"
 ```
 
+Rebuilds Tantivy indexes, migrates metadata to memdb, and converts blobs to bichon-blob.
+
+**v1.x → v2.x** (blob-only):
+
+```bash
+./bichon-admin
+# Select "Migrate v1.x Storage to v2.x"
+```
+
+Copies blobs from Fjall to bichon-blob. Tantivy indexes and memdb are left untouched.
+
 > [!NOTE]
-> The migration is **non-destructive** — original v0.3.7 files remain in place and are not modified. You can safely remove them manually after verifying the migration was successful.
+> Both migrations are **non-destructive** — legacy files are never modified. After verifying the migration was successful, see the [Migration Guide](https://github.com/rustmailer/bichon/wiki/Bichon-v2.x-Migration-Guide) for cleanup instructions.
 
 ## FAQ
 
@@ -636,7 +642,7 @@ If you ran Bichon prior to v1.x, migrate your data:
 
 ### "Legacy data layout detected" error on startup
 
-Your data was created by Bichon v0.3.7 and must be migrated. Run `./bichon-admin` and select the migration option.
+Your data was created by an older version of Bichon and must be migrated. Run `./bichon-admin` and select the appropriate migration option.
 
 ### How do I run Bichon behind a reverse proxy?
 
@@ -684,7 +690,7 @@ No. Bichon is an **archiver**, not an email client. The optional SMTP server **r
 - [x] CLI import: EML, MBOX, Thunderbird, PST
 - [x] CLI export: MBOX
 - [x] Embedded SMTP server
-- [x] Data migration tooling (v0.3.7 → v1.0)
+- [x] Data migration tooling (v0.3.7 / v1.x → v2.x)
 - [x] On-demand manual download controls
 - [ ] Post-download server cleanup (free remote mailbox space)
 - [ ] Account-to-account email merge / migration
@@ -700,10 +706,7 @@ Contributions of all kinds are welcome — code, bug reports, documentation, or 
 git clone https://github.com/rustmailer/bichon.git
 cd bichon
 
-# Build WebUI
-cd web && pnpm install && pnpm run build && cd ..
-
-# Build backend
+# Build backend — frontend dependencies and build are handled automatically via build.rs
 cargo build
 
 # Run tests
@@ -746,7 +749,7 @@ Rules:
 |-------|-----------|
 | **Backend** | Rust, Tokio, Poem + Poem OpenAPI |
 | **Full-text search** | Tantivy (Zstd compression) |
-| **Blob storage** | Fjall (LSM tree, LZ4 compression, KV separation) |
+| **Blob storage** | bichon-blob (log-structured, Zstd compression, BLAKE3 dedup) |
 | **Metadata DB** | memdb (embedded key-value store with WAL) |
 | **IMAP** | async-imap, rustls (ring), SOCKS5 proxy support |
 | **SMTP** | Embedded receiver (AUTH PLAIN/LOGIN, STARTTLS/TLS) |
