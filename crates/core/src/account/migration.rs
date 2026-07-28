@@ -300,7 +300,6 @@ pub struct Account {
     pub created_at: i64,
     pub updated_at: i64,
     pub created_by: u64, //user id
-    pub use_proxy: Option<u64>,
     pub use_dangerous: bool,
     pub pgp_key: Option<String>,
     pub imap_quota_bytes: Option<u64>,
@@ -345,7 +344,6 @@ impl Account {
             download_interval_min: request.download_interval_min,
             created_at: utc_now!(),
             updated_at: utc_now!(),
-            use_proxy: request.use_proxy,
             use_dangerous: request.use_dangerous,
             pgp_key: request.pgp_key,
             created_by: user_id,
@@ -656,10 +654,6 @@ impl Account {
 
             if let Some(max_email_size_bytes) = request.max_email_size_bytes {
                 new.max_email_size_bytes = Some(max_email_size_bytes);
-            }
-
-            if let Some(use_proxy) = request.use_proxy {
-                new.use_proxy = Some(use_proxy);
             }
         }
 

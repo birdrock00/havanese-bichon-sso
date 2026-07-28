@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/select";
 import { PasswordInput } from "@/components/password-input";
 import { AccountFormValues } from "./schema";
+import useProxyList from "@/hooks/use-proxy";
 
 interface TabServerProps {
   isEdit?: boolean;
@@ -46,6 +47,7 @@ export function TabServer({ isEdit }: TabServerProps) {
   const { t } = useTranslation();
   const { control, watch } = useFormContext<AccountFormValues>();
   const authType = watch('imap.auth.auth_type');
+  const { proxyOptions } = useProxyList();
 
   return (
     <div className="space-y-6">
@@ -160,6 +162,38 @@ export function TabServer({ isEdit }: TabServerProps) {
           )}
         />
       )}
+
+      <FormField
+        control={control}
+        name="imap.use_proxy"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{t('accounts.useProxyOptional')}</FormLabel>
+            <Select
+              onValueChange={(v) => field.onChange(v === 'none' ? undefined : Number(v))}
+              defaultValue={field.value?.toString()}
+            >
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder={t('accounts.selectProxy')}/>
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectItem key="none" value="none">{t('accounts.useNoProxy')}</SelectItem>
+                {proxyOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    <span className="max-w-[280px] truncate block" title={opt.label}>
+                      {opt.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <FormDescription>{t('accounts.imapProxy')}</FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
 
       <FormField
         control={control}

@@ -111,12 +111,14 @@ export function AccountNewPage() {
 
   const onSubmit = useCallback(
     (data: AccountFormValues) => {
+      const { use_proxy, ...imapRest } = data.imap;
       createMutation.mutate({
         email: data.email,
         account_name: data.account_name,
         login_name: data.login_name,
         imap: {
-          ...data.imap,
+          ...imapRest,
+          use_proxy,
           auth: {
             ...data.imap.auth,
             password: data.imap.auth.auth_type === 'OAuth2' ? undefined : data.imap.auth.password,
