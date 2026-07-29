@@ -1791,7 +1791,7 @@
     "imapHostRequired": "IMAPホストは必須です",
     "imapPortMustBeLessThan65536": "IMAPポートは65536未満である必要があります",
     "imapPortMustBePositive": "IMAPポートは正の整数である必要があります",
-    "incrementalSyncMustBeAtLeast10": "増分同期間隔は10分以上である必要があります",
+    "incrementalSyncMustBeAtLeast1": "増分同期間隔は1分以上である必要があります",
     "incrementalSyncMustBeNumber": "増分同期間隔は数値である必要があります",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "無効なメールアドレスです",

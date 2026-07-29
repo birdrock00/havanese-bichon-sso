@@ -1807,7 +1807,7 @@
     "imapHostRequired": "IMAP host is required",
     "imapPortMustBeLessThan65536": "IMAP port must be less than 65536",
     "imapPortMustBePositive": "IMAP port must be a positive integer",
-    "incrementalSyncMustBeAtLeast10": "Incremental sync interval must be at least 10 minutes",
+    "incrementalSyncMustBeAtLeast1": "Incremental sync interval must be at least 1 minute",
     "incrementalSyncMustBeNumber": "Incremental sync interval must be a number",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Invalid email address",
