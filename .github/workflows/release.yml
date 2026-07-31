@@ -178,11 +178,14 @@ jobs:
     name: Build and Push Docker Image
     needs: [build, release]
     runs-on: ubuntu-latest
-    
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Download Linux x86_64 artifact
         uses: actions/download-artifact@v4
         with:
@@ -194,7 +197,7 @@ jobs:
         with:
           name: aarch64-unknown-linux-gnu
           path: artifacts
-          
+
       - name: Extract amd64 binary
         run: |
           mkdir -p docker/amd64
@@ -208,16 +211,17 @@ jobs:
           ARM64_FILE=$(ls artifacts | grep aarch64-unknown-linux-gnu.tar.gz)
           echo "Extracting $ARM64_FILE"
           tar -xzf artifacts/$ARM64_FILE -C docker/arm64
-          
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        
-      - name: Login to Docker Hub
+
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -225,8 +229,8 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            rustmailer/bichon:${{ github.ref_name }}
-            rustmailer/bichon:latest
+            ghcr.io/${{ github.repository_owner }}/bichon:${{ github.ref_name }}
+            ghcr.io/${{ github.repository_owner }}/bichon:latest
           build-args: |
             CRATE_VERSION=${{ github.ref_name }}
         
