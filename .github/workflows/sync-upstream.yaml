@@ -1,0 +1,82 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+name: Sync Upstream
+
+# Keeps this fork current with rustmailer/bichon. main here also carries the
+# SSO/OIDC support from rustmailer/bichon#328 (merged locally, not upstream),
+# so unlike a plain mirror this merge can genuinely conflict if upstream ever
+# touches the same auth/login files. On a clean merge we fast-forward main
+# directly; on conflict we push the attempted merge to a branch and open a PR
+# instead of failing silently, so someone resolves it by hand.
+
+on:
+  schedule:
+    - cron: '17 3 */14 * *'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Merge rustmailer/bichon
+    if: github.repository == 'birdrock00/bichon'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Configure git identity
+        run: |-
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch upstream
+        run: |-
+          git remote add upstream https://github.com/rustmailer/bichon.git
+          git fetch upstream main
+
+      - name: Attempt merge
+        id: merge
+        run: |-
+          if git merge --no-edit upstream/main; then
+            echo "conflict=false" >> "$GITHUB_OUTPUT"
+          else
+            git merge --abort
+            echo "conflict=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push clean merge
+        if: steps.merge.outputs.conflict == 'false'
+        run: git push origin HEAD:main
+
+      - name: Push conflicting merge to a branch
+        if: steps.merge.outputs.conflict == 'true'
+        run: |-
+          branch="sync-upstream/conflict-$(date -u +%Y%m%d)"
+          echo "branch=$branch" >> "$GITHUB_ENV"
+          git merge --no-edit upstream/main || true
+          git push origin "HEAD:$branch" --force
+
+      - name: Open PR for manual resolution
+        if: steps.merge.outputs.conflict == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |-
+          gh pr list --head "$branch" --state open --json number --jq '.[0].number' > /tmp/existing_pr
+          if [ -s /tmp/existing_pr ]; then
+            echo "PR already open for $branch, skipping"
+            exit 0
+          fi
+          gh pr create \
+            --title "Sync upstream: merge conflict needs manual resolution" \
+            --body "Automated sync from rustmailer/bichon main hit a conflict, most likely against the SSO/OIDC changes from #328 that live only in this fork. Resolve the conflicts on \`$branch\` and merge manually." \
+            --head "$branch" \
+            --base main
