@@ -20,7 +20,7 @@ use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
 use crate::raise_error;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
-use ring::hmac;
+use ring::{digest, hmac};
 use serde::Deserialize;
 use serde_json::Value;
 
@@ -142,7 +142,13 @@ pub fn verify_and_parse(token: &str, params: &VerifyParams<'_>) -> BichonResult<
         "HS256" => {
             let signature = b64url_decode(s_b64)?;
             let signing_input = format!("{}.{}", h_b64, p_b64);
-            let key = hmac::Key::new(hmac::HMAC_SHA256, params.client_secret);
+            // Not the raw client_secret bytes: empirically, Authelia signs
+            // HS256 ID tokens with SHA-256(client_secret) as the HMAC key,
+            // not the secret's raw bytes as OIDC Core 1.0 sec. 10.1 literally
+            // describes. Authelia's OIDC provider is built on ORY Fosite,
+            // which appears to apply this derivation internally.
+            let derived_key = digest::digest(&digest::SHA256, params.client_secret);
+            let key = hmac::Key::new(hmac::HMAC_SHA256, derived_key.as_ref());
             hmac::verify(&key, signing_input.as_bytes(), &signature).map_err(|_| {
                 raise_error!(
                     "ID token HS256 signature verification failed".into(),
