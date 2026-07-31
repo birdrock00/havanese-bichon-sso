@@ -19,6 +19,7 @@
 use crate::common::periodic::TaskHandle;
 use crate::context::BichonTask;
 use crate::oauth2::{refresh::OAuth2RefreshTask, task::OAuth2CleanTask};
+use crate::oidc::task::OidcCleanTask;
 use crate::store::tantivy::dedup::DedupTask;
 
 pub struct PeriodicTasks {
@@ -30,6 +31,7 @@ impl PeriodicTasks {
         let mut tasks = Vec::new();
         tasks.push(OAuth2CleanTask::start());
         tasks.push(OAuth2RefreshTask::start());
+        tasks.push(OidcCleanTask::start());
         tasks.push(DedupTask::start());
         Self { tasks }
     }

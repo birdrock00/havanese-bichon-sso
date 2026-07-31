@@ -248,6 +248,44 @@ All settings accept both CLI flags (`--bichon-http-port`) and environment variab
 |----------|---------|-------------|
 | `BICHON_ENABLE_REST_HTTPS` | `false` | Serve the API over HTTPS (requires valid certificate) |
 
+### OpenID Connect (OIDC) Single Sign-On
+
+Bichon can delegate WebUI authentication to any OIDC provider (Authentik,
+Keycloak, PocketID, Authelia, Zitadel, Dex, …) using the Authorization
+Code flow with PKCE.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BICHON_OIDC_ENABLED` | `false` | Master switch for OIDC single sign-on |
+| `BICHON_OIDC_ISSUER_URL` | — | Issuer URL. Bichon appends `/.well-known/openid-configuration` for discovery. Example: `https://auth.example.com/application/o/bichon/` |
+| `BICHON_OIDC_CLIENT_ID` | — | OAuth2 client ID registered with the IdP |
+| `BICHON_OIDC_CLIENT_SECRET` | — | OAuth2 client secret registered with the IdP |
+| `BICHON_OIDC_REDIRECT_URI` | — | Redirect URI registered with the IdP. Must resolve to `<public-url>/api/auth/oidc/callback` |
+| `BICHON_OIDC_DEFAULT_ROLE_ID` | `100200000000000` (Member) | Global role ID assigned to auto-provisioned OIDC users |
+| `BICHON_OIDC_AUTO_REDIRECT` | `false` | When true, `/sign-in` immediately redirects to the IdP. Local login stays reachable via `/sign-in?local=1` |
+
+**User resolution.** On each login Bichon looks up the user by
+`(sso_provider, sso_id)` first, then by `email`, and finally auto-provisions
+a new user with `BICHON_OIDC_DEFAULT_ROLE_ID`. The `sub` claim from the IdP
+is stored on the user and used for subsequent logins.
+
+**Signature verification.** The ID token is verified with HS256 using the
+client secret. Only signed tokens are accepted — other algorithms are
+rejected until JWKS-based asymmetric verification is added. Discovery,
+issuer, audience, expiration (with 60 s skew), and nonce are validated.
+
+**Token handoff.** After a successful callback the SPA receives a one-shot
+handoff id in the URL and POSTs it to `/api/auth/oidc/handoff` to obtain the
+WebUI access token in the response body. The access token itself is never
+placed in the URL, so it does not leak into browser history, `Referer`
+headers, or server access logs.
+
+> [!IMPORTANT]
+> Set `BICHON_OIDC_REDIRECT_URI` to the exact value you registered with the
+> IdP (including scheme, host, port, and path). The IdP rejects mismatched
+> callbacks. Behind a reverse proxy this must be the externally-reachable
+> URL, not `http://localhost:15630`.
+
 ### SMTP Server
 
 | Variable | Default | Description |
@@ -286,9 +324,10 @@ All settings accept both CLI flags (`--bichon-http-port`) and environment variab
 ### Authentication
 
 1. `POST /api/login` with username + password returns a JWT access token
-2. All `/api/v1/*` endpoints require `Authorization: Bearer <token>`
-3. Tokens expire after the configured duration (`BICHON_WEBUI_TOKEN_EXPIRATION_HOURS`, default 7 days)
-4. Long-lived API tokens can be created via WebUI or API for programmatic access
+2. `GET /api/auth/oidc/login` starts an OIDC single sign-on flow (see [OIDC](#openid-connect-oidc-single-sign-on))
+3. All `/api/v1/*` endpoints require `Authorization: Bearer <token>`
+4. Tokens expire after the configured duration (`BICHON_WEBUI_TOKEN_EXPIRATION_HOURS`, default 7 days)
+5. Long-lived API tokens can be created via WebUI or API for programmatic access
 
 ### Default Admin Account
 
@@ -696,7 +735,8 @@ No. Bichon is an **archiver**, not an email client. The optional SMTP server **r
 - [ ] Account-to-account email merge / migration
 - [ ] MCP Server for LLM-powered email search and analysis
 - [ ] S3-compatible storage backend
-- [ ] Enterprise SSO (OIDC / SAML)
+- [x] OpenID Connect (OIDC) single sign-on — see [OpenID Connect](#openid-connect-oidc-single-sign-on)
+- [ ] SAML single sign-on
 
 ## Contributing
 

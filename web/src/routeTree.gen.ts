@@ -15,6 +15,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Route as rootRoute } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexImport } from './routes/_authenticated/index'
+import { Route as authSsoCallbackImport } from './routes/(auth)/sso-callback'
 import { Route as authSignInImport } from './routes/(auth)/sign-in'
 import { Route as auth500Import } from './routes/(auth)/500'
 import { Route as AuthenticatedSearchIndexImport } from './routes/_authenticated/search/index'
@@ -153,6 +154,12 @@ const AuthenticatedSettingsRouteLazyRoute =
   } as any).lazy(() =>
     import('./routes/_authenticated/settings/route.lazy').then((d) => d.Route),
   )
+
+const authSsoCallbackRoute = authSsoCallbackImport.update({
+  id: '/(auth)/sso-callback',
+  path: '/sso-callback',
+  getParentRoute: () => rootRoute,
+} as any)
 
 const authSignInRoute = authSignInImport.update({
   id: '/(auth)/sign-in',
@@ -366,6 +373,13 @@ declare module '@tanstack/react-router' {
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof authSignInImport
+      parentRoute: typeof rootRoute
+    }
+    '/(auth)/sso-callback': {
+      id: '/(auth)/sso-callback'
+      path: '/sso-callback'
+      fullPath: '/sso-callback'
+      preLoaderRoute: typeof authSsoCallbackImport
       parentRoute: typeof rootRoute
     }
     '/_authenticated/settings': {
@@ -651,6 +665,7 @@ export interface FileRoutesByFullPath {
   '': typeof AuthenticatedRouteRouteWithChildren
   '/500': typeof errors500LazyRoute
   '/sign-in': typeof authSignInRoute
+  '/sso-callback': typeof authSsoCallbackRoute
   '/settings': typeof AuthenticatedSettingsRouteLazyRouteWithChildren
   '/users': typeof AuthenticatedUsersRouteLazyRouteWithChildren
   '/401': typeof errors401LazyRoute
@@ -682,6 +697,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/500': typeof errors500LazyRoute
   '/sign-in': typeof authSignInRoute
+  '/sso-callback': typeof authSsoCallbackRoute
   '/401': typeof errors401LazyRoute
   '/403': typeof errors403LazyRoute
   '/404': typeof errors404LazyRoute
@@ -713,6 +729,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/(auth)/500': typeof auth500Route
   '/(auth)/sign-in': typeof authSignInRoute
+  '/(auth)/sso-callback': typeof authSsoCallbackRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteLazyRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRouteLazyRouteWithChildren
   '/(errors)/401': typeof errors401LazyRoute
@@ -748,6 +765,7 @@ export interface FileRouteTypes {
     | ''
     | '/500'
     | '/sign-in'
+    | '/sso-callback'
     | '/settings'
     | '/users'
     | '/401'
@@ -778,6 +796,7 @@ export interface FileRouteTypes {
   to:
     | '/500'
     | '/sign-in'
+    | '/sso-callback'
     | '/401'
     | '/403'
     | '/404'
@@ -807,6 +826,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/(auth)/500'
     | '/(auth)/sign-in'
+    | '/(auth)/sso-callback'
     | '/_authenticated/settings'
     | '/_authenticated/users'
     | '/(errors)/401'
@@ -841,6 +861,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   auth500Route: typeof auth500Route
   authSignInRoute: typeof authSignInRoute
+  authSsoCallbackRoute: typeof authSsoCallbackRoute
   errors401LazyRoute: typeof errors401LazyRoute
   errors403LazyRoute: typeof errors403LazyRoute
   errors404LazyRoute: typeof errors404LazyRoute
@@ -852,6 +873,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   auth500Route: auth500Route,
   authSignInRoute: authSignInRoute,
+  authSsoCallbackRoute: authSsoCallbackRoute,
   errors401LazyRoute: errors401LazyRoute,
   errors403LazyRoute: errors403LazyRoute,
   errors404LazyRoute: errors404LazyRoute,
@@ -872,6 +894,7 @@ export const routeTree = rootRoute
         "/_authenticated",
         "/(auth)/500",
         "/(auth)/sign-in",
+        "/(auth)/sso-callback",
         "/(errors)/401",
         "/(errors)/403",
         "/(errors)/404",
@@ -901,6 +924,9 @@ export const routeTree = rootRoute
     },
     "/(auth)/sign-in": {
       "filePath": "(auth)/sign-in.tsx"
+    },
+    "/(auth)/sso-callback": {
+      "filePath": "(auth)/sso-callback.tsx"
     },
     "/_authenticated/settings": {
       "filePath": "_authenticated/settings/route.lazy.tsx",

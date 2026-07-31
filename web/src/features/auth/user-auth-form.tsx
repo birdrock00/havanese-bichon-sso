@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import { HTMLAttributes, useState } from 'react'
+import { HTMLAttributes, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { cn, toSearchParams } from '@/lib/utils'
@@ -48,15 +48,45 @@ import { useEdition } from '@/hooks/use-edition'
 
 type UserAuthFormProps = HTMLAttributes<HTMLDivElement>
 
+function buildOidcLoginUrl(redirectTo: string): string {
+  const injectedBase = (window as unknown as { __BICHON_BASE__?: string }).__BICHON_BASE__
+  const base = !injectedBase || injectedBase === '/' ? '' : injectedBase.replace(/\/$/, '')
+  const params = new URLSearchParams()
+  if (redirectTo && redirectTo !== '/') {
+    params.set('redirect_to', redirectTo)
+  }
+  const qs = params.toString()
+  return `${base}/api/auth/oidc/login${qs ? `?${qs}` : ''}`
+}
+
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const { setTheme } = useTheme();
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { isPro } = useEdition()
+  const { oidcEnabled, oidcAutoRedirect } = useEdition()
 
   const { search } = useLocation();
-  const redirect = toSearchParams(search).get('redirect') || '/';
+  const searchParams = toSearchParams(search);
+  const redirect = searchParams.get('redirect') || '/';
+  const localOnly = searchParams.get('local') === '1';
+  const ssoError = searchParams.get('sso_error');
+
+  useEffect(() => {
+    if (ssoError) {
+      toast({
+        variant: 'destructive',
+        title: t('auth.loginFailed'),
+        description: ssoError,
+      })
+    }
+  }, [ssoError, t])
+
+  useEffect(() => {
+    if (oidcEnabled && oidcAutoRedirect && !localOnly && !ssoError) {
+      window.location.href = buildOidcLoginUrl(redirect)
+    }
+  }, [oidcEnabled, oidcAutoRedirect, localOnly, ssoError, redirect])
 
   const formSchema = getFormSchema(t)
   const form = useForm<LoginFormValues>({
@@ -159,13 +189,13 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
               {t('auth.login')}
             </Button>
 
-            {isPro && (
+            {oidcEnabled && (
               <Button
                 variant='outline'
                 className='mt-2'
                 type='button'
                 onClick={() => {
-                  window.location.href = '/api/auth/oidc/login'
+                  window.location.href = buildOidcLoginUrl(redirect)
                 }}
               >
                 <Shield size={16} className='mr-2' />
