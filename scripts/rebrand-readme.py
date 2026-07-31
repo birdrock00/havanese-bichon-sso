@@ -61,6 +61,37 @@ DOCKER_VERSION_REPLACEMENT = (
     f"</a>"
 )
 
+GHCR_IMAGE = f"ghcr.io/{FORK}"
+
+# docker pull/run/compose examples in the Quick Start section: point at this
+# fork's GHCR image instead of upstream's Docker Hub image, so the copy-paste
+# commands actually run this fork.
+DOCKER_IMAGE_REF = re.compile(r"rustmailer/bichon:latest")
+
+# Source clone instructions (Development / Contributing sections) should
+# clone this fork, not upstream -- and the directory `cd` after cloning
+# changes to match the fork's repo name.
+GIT_CLONE_URL = re.compile(r"https://github\.com/rustmailer/bichon\.git")
+CD_AFTER_CLONE = re.compile(r"^cd bichon$", re.MULTILINE)
+
+# Product-name prose: real technical identifiers in this doc (BICHON_* env
+# vars, bichon-cli/bichon-admin/bichon-blob/bichon-data/bichon-indices/
+# bichon-storage, admin@bichon, --bichon-* flags, ./bichon binaries) are all
+# either ALL_CAPS or fully-lowercase-hyphenated, so this exact-case whole-word
+# match on "Bichon" only ever hits prose/title mentions of the product name,
+# never those identifiers.
+# Both patterns exclude matches already adjacent to the replacement text
+# (HAVANESE-/-SSO, havanese-/-sso) so re-running this script -- which happens
+# on every sync, whether or not upstream's README actually changed -- can
+# never compound HAVANESE-BICHON-SSO into HAVANESE-HAVANESE-BICHON-SSO-SSO.
+PRODUCT_NAME_TITLE = re.compile(r"(?<!HAVANESE-)\bBICHON\b(?!-SSO)")
+# Also excludes "Bichon" when it's part of a kebab-case URL slug (e.g. the
+# wiki link ".../wiki/Bichon-v2.x-Migration-Guide") rather than standalone
+# prose.
+PRODUCT_NAME_PROSE = re.compile(r"(?<![-/])(?<!havanese-)\bBichon\b(?!-sso)(?!-)")
+NEW_NAME_TITLE = "HAVANESE-BICHON-SSO"
+NEW_NAME_PROSE = "havanese-bichon-sso"
+
 
 def strip_existing_notice(text: str) -> str:
     return re.sub(
@@ -80,13 +111,22 @@ def main() -> int:
     text = DOCKER_VERSION_BADGE.sub(DOCKER_VERSION_REPLACEMENT, text)
     text = SELF_REFERENTIAL_GITHUB.sub(lambda m: f"github.com/{FORK}{m.group(1)}", text)
     text = SHIELDS_GITHUB_STAT.sub(lambda m: f"{m.group(1)}/{FORK}", text)
+    text = DOCKER_IMAGE_REF.sub(f"{GHCR_IMAGE}:latest", text)
+    text = GIT_CLONE_URL.sub(f"https://github.com/{FORK}.git", text)
+    text = CD_AFTER_CLONE.sub("cd havanese-bichon-sso", text)
+    text = PRODUCT_NAME_TITLE.sub(NEW_NAME_TITLE, text)
+    text = PRODUCT_NAME_PROSE.sub(NEW_NAME_PROSE, text)
 
     # Insert the notice right after the title heading, or at the top if the
     # heading isn't found (upstream restructured the README).
-    heading = re.search(r"</H1>\s*\n", text, re.IGNORECASE)
+    heading = re.search(r"</H1>\n", text, re.IGNORECASE)
     if heading:
         insert_at = heading.end()
-        text = text[:insert_at] + "\n" + FORK_NOTICE + text[insert_at:]
+        # Collapse any blank lines upstream (or a prior run) left between the
+        # heading and the next content, so the notice always sits on exactly
+        # one blank line below the title.
+        rest = text[insert_at:].lstrip("\n")
+        text = text[:insert_at] + "\n" + FORK_NOTICE + "\n" + rest
     else:
         text = FORK_NOTICE + "\n" + text
 
