@@ -1792,7 +1792,7 @@
     "imapHostRequired": "IMAP хост обязателен",
     "imapPortMustBeLessThan65536": "IMAP порт должен быть меньше 65536",
     "imapPortMustBePositive": "IMAP порт должен быть положительным целым числом",
-    "incrementalSyncMustBeAtLeast10": "Интервал инкрементальной синхронизации должен быть не менее 10 минут",
+    "incrementalSyncMustBeAtLeast1": "Интервал инкрементальной синхронизации должен быть не менее 1 минуты",
     "incrementalSyncMustBeNumber": "Интервал инкрементальной синхронизации должен быть числом",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Неверный адрес электронной почты",

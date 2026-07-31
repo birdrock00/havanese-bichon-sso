@@ -1792,7 +1792,7 @@
     "imapHostRequired": "IMAP host is vereist",
     "imapPortMustBeLessThan65536": "IMAP poort moet kleiner zijn dan 65536",
     "imapPortMustBePositive": "IMAP poort moet een positief geheel getal zijn",
-    "incrementalSyncMustBeAtLeast10": "Incrementaal sync interval moet ten minste 10 minuten zijn",
+    "incrementalSyncMustBeAtLeast1": "Incrementaal sync interval moet ten minste 1 minuut zijn",
     "incrementalSyncMustBeNumber": "Incrementaal sync interval moet een nummer zijn",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Ongeldig e-mailadres",

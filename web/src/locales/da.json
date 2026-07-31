@@ -1792,7 +1792,7 @@
     "imapHostRequired": "IMAP-vært er påkrævet",
     "imapPortMustBeLessThan65536": "IMAP-port skal være mindre end 65536",
     "imapPortMustBePositive": "IMAP-port skal være et positivt heltal",
-    "incrementalSyncMustBeAtLeast10": "Inkrementelt synkroniseringsinterval skal være mindst 10 minutter",
+    "incrementalSyncMustBeAtLeast1": "Inkrementelt synkroniseringsinterval skal være mindst 1 minut",
     "incrementalSyncMustBeNumber": "Inkrementelt synkroniseringsinterval skal være et tal",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Ugyldig e-mailadresse",

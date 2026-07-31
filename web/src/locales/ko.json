@@ -1792,7 +1792,7 @@
     "imapHostRequired": "IMAP 호스트는 필수입니다",
     "imapPortMustBeLessThan65536": "IMAP 포트는 65536보다 작아야 합니다",
     "imapPortMustBePositive": "IMAP 포트는 양의 정수여야 합니다",
-    "incrementalSyncMustBeAtLeast10": "증분 동기화 간격은 최소 10분 이상이어야 합니다",
+    "incrementalSyncMustBeAtLeast1": "증분 동기화 간격은 최소 1분 이상이어야 합니다",
     "incrementalSyncMustBeNumber": "증분 동기화 간격은 숫자여야 합니다",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "유효하지 않은 이메일 주소",

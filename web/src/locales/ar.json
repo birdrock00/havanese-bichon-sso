@@ -1792,7 +1792,7 @@
     "imapHostRequired": "مُضيف IMAP مطلوب",
     "imapPortMustBeLessThan65536": "يجب أن يكون منفذ IMAP أقل من 65536",
     "imapPortMustBePositive": "يجب أن يكون منفذ IMAP عددًا صحيحًا موجبًا",
-    "incrementalSyncMustBeAtLeast10": "يجب أن يكون فاصل المزامنة التزايدية 10 دقائق على الأقل",
+    "incrementalSyncMustBeAtLeast1": "يجب أن يكون فاصل المزامنة التزايدية 1 دقيقة على الأقل",
     "incrementalSyncMustBeNumber": "يجب أن يكون فاصل المزامنة التزايدية رقمًا",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "عنوان بريد إلكتروني غير صالح",

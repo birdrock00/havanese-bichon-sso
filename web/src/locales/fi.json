@@ -1792,7 +1792,7 @@
     "imapHostRequired": "IMAP-isäntä on pakollinen",
     "imapPortMustBeLessThan65536": "IMAP-portin on oltava pienempi kuin 65536",
     "imapPortMustBePositive": "IMAP-portin on oltava positiivinen kokonaisluku",
-    "incrementalSyncMustBeAtLeast10": "Lisäävän synkronoinnin välin on oltava vähintään 10 minuuttia",
+    "incrementalSyncMustBeAtLeast1": "Lisäävän synkronoinnin välin on oltava vähintään 1 minuutti",
     "incrementalSyncMustBeNumber": "Lisäävän synkronoinnin välin on oltava numero",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Virheellinen sähköpostiosoite",

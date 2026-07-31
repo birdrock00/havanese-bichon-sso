@@ -1792,7 +1792,7 @@
     "imapHostRequired": "Host IMAP jest wymagany",
     "imapPortMustBeLessThan65536": "Port IMAP musi być liczbą w przedziale 0-65535",
     "imapPortMustBePositive": "Port IMAP musi być liczbą całkowitą dodatnią",
-    "incrementalSyncMustBeAtLeast10": "Przyrostowy interwał synchronizacji musi wynosić co najmniej 10 minut",
+    "incrementalSyncMustBeAtLeast1": "Przyrostowy interwał synchronizacji musi wynosić co najmniej 1 minutę",
     "incrementalSyncMustBeNumber": "Przyrostowy interwał synchronizacji musi być liczbą",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Niewłaściwy adres email",

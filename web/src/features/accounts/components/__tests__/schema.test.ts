@@ -154,18 +154,18 @@ describe('Account Form Schema', () => {
   })
 
   describe('download_interval_min field', () => {
-    it('rejects value less than 10', () => {
+    it('rejects value less than 1', () => {
       const result = getAccountSchema(false, t).safeParse({
         ...validAccountData,
-        download_interval_min: 5,
+        download_interval_min: 0,
       })
       expect(result.success).toBe(false)
     })
 
-    it('accepts value of exactly 10', () => {
+    it('accepts value of exactly 1', () => {
       const result = getAccountSchema(false, t).safeParse({
         ...validAccountData,
-        download_interval_min: 10,
+        download_interval_min: 1,
       })
       expect(result.success).toBe(true)
     })
