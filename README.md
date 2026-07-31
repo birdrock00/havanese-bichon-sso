@@ -1,16 +1,15 @@
 <p align="center">
-    <img width="200" height="175" alt="Bichon Logo" src="https://github.com/user-attachments/assets/06dc3b67-7d55-4a93-a3de-8b90951c575b" />
+    <img width="200" height="175" alt="havanese-bichon-sso Logo" src="https://github.com/user-attachments/assets/06dc3b67-7d55-4a93-a3de-8b90951c575b" />
 </p>
 
-<H1 align="center">BICHON</H1>
-
-
+<H1 align="center">HAVANESE-BICHON-SSO</H1>
 
 <!-- FORK-NOTICE:START -->
 > **This is [birdrock00/havanese-bichon-sso](https://github.com/birdrock00/havanese-bichon-sso)**, a fork of [rustmailer/bichon](https://github.com/rustmailer/bichon) with OpenID Connect single sign-on added.
 > SSO support was originally proposed upstream in [rustmailer/bichon#328](https://github.com/rustmailer/bichon/pull/328) but closed without being merged; this fork carries it going forward.
 > A GitHub Action syncs every other feature and fix from upstream on a biweekly schedule -- see [.github/workflows/sync-upstream.yaml](.github/workflows/sync-upstream.yaml).
 <!-- FORK-NOTICE:END -->
+
 <p align="center">
   <a href="https://github.com/birdrock00/havanese-bichon-sso/stargazers">
     <img src="https://img.shields.io/github/stars/birdrock00/havanese-bichon-sso?style=for-the-badge&color=gold&label=STARS" alt="GitHub Stars">
@@ -51,7 +50,7 @@
 </p>
 
 > [!NOTE]
-> Bichon is an **archiver**, not an email client. It does not send, compose, forward, or reply to emails. Its optional SMTP server is for **receiving** emails only.
+> havanese-bichon-sso is an **archiver**, not an email client. It does not send, compose, forward, or reply to emails. Its optional SMTP server is for **receiving** emails only.
 
 ## Contents
 
@@ -120,7 +119,7 @@
 
 ```bash
 # Pull the image
-docker pull rustmailer/bichon:latest
+docker pull ghcr.io/birdrock00/havanese-bichon-sso:latest
 
 # Create data directory
 mkdir -p ./bichon-data
@@ -133,7 +132,7 @@ docker run -d \
   --user 1000:1000 \
   -e BICHON_ROOT_DIR=/data \
   -e BICHON_ENCRYPT_PASSWORD=your-secure-password-here \
-  rustmailer/bichon:latest
+  ghcr.io/birdrock00/havanese-bichon-sso:latest
 ```
 
 Open **[http://localhost:15630](http://localhost:15630)** in your browser.
@@ -146,7 +145,7 @@ Open **[http://localhost:15630](http://localhost:15630)** in your browser.
 ```yaml
 services:
   bichon:
-    image: rustmailer/bichon:latest
+    image: ghcr.io/birdrock00/havanese-bichon-sso:latest
     container_name: bichon
     ports:
       - "15630:15630"
@@ -178,15 +177,15 @@ Download from the [Releases](https://github.com/birdrock00/havanese-bichon-sso/r
 .\bichon.exe --bichon-root-dir E:\bichon-data --bichon-encrypt-password your-password
 ```
 
-`--bichon-root-dir` **must be an absolute path**. All Bichon data lives under this directory.
+`--bichon-root-dir` **must be an absolute path**. All havanese-bichon-sso data lives under this directory.
 
 ### Build from Source
 
 **Prerequisites:** Rust (latest stable), Node.js 20+, pnpm
 
 ```bash
-git clone https://github.com/rustmailer/bichon.git
-cd bichon
+git clone https://github.com/birdrock00/havanese-bichon-sso.git
+cd havanese-bichon-sso
 
 # Build and run — frontend dependencies are installed and built automatically via build.rs
 export BICHON_ENCRYPT_PASSWORD=dev-password
@@ -253,21 +252,21 @@ All settings accept both CLI flags (`--bichon-http-port`) and environment variab
 
 ### OpenID Connect (OIDC) Single Sign-On
 
-Bichon can delegate WebUI authentication to any OIDC provider (Authentik,
+havanese-bichon-sso can delegate WebUI authentication to any OIDC provider (Authentik,
 Keycloak, PocketID, Authelia, Zitadel, Dex, …) using the Authorization
 Code flow with PKCE.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `BICHON_OIDC_ENABLED` | `false` | Master switch for OIDC single sign-on |
-| `BICHON_OIDC_ISSUER_URL` | — | Issuer URL. Bichon appends `/.well-known/openid-configuration` for discovery. Example: `https://auth.example.com/application/o/bichon/` |
+| `BICHON_OIDC_ISSUER_URL` | — | Issuer URL. havanese-bichon-sso appends `/.well-known/openid-configuration` for discovery. Example: `https://auth.example.com/application/o/bichon/` |
 | `BICHON_OIDC_CLIENT_ID` | — | OAuth2 client ID registered with the IdP |
 | `BICHON_OIDC_CLIENT_SECRET` | — | OAuth2 client secret registered with the IdP |
 | `BICHON_OIDC_REDIRECT_URI` | — | Redirect URI registered with the IdP. Must resolve to `<public-url>/api/auth/oidc/callback` |
 | `BICHON_OIDC_DEFAULT_ROLE_ID` | `100200000000000` (Member) | Global role ID assigned to auto-provisioned OIDC users |
 | `BICHON_OIDC_AUTO_REDIRECT` | `false` | When true, `/sign-in` immediately redirects to the IdP. Local login stays reachable via `/sign-in?local=1` |
 
-**User resolution.** On each login Bichon looks up the user by
+**User resolution.** On each login havanese-bichon-sso looks up the user by
 `(sso_provider, sso_id)` first, then by `email`, and finally auto-provisions
 a new user with `BICHON_OIDC_DEFAULT_ROLE_ID`. The `sub` claim from the IdP
 is stored on the user and used for subsequent logins.
@@ -312,7 +311,7 @@ headers, or server access logs.
 
 
 > [!IMPORTANT]
-> Bichon does NOT support writing data directly to a network file system (NFS, CIFS/SMB, etc.). All directories — `BICHON_ROOT_DIR`, `BICHON_DATA_DIR`, and `BICHON_INDEX_DIR` — must reside on a **local file system**; otherwise, data corruption may occur.
+> havanese-bichon-sso does NOT support writing data directly to a network file system (NFS, CIFS/SMB, etc.). All directories — `BICHON_ROOT_DIR`, `BICHON_DATA_DIR`, and `BICHON_INDEX_DIR` — must reside on a **local file system**; otherwise, data corruption may occur.
 
 ### Performance Tuning
 
@@ -334,7 +333,7 @@ headers, or server access logs.
 
 ### Default Admin Account
 
-On first start, Bichon creates a built-in admin user:
+On first start, havanese-bichon-sso creates a built-in admin user:
 
 - **Username:** `admin`
 - **Password:** `admin@bichon`
@@ -449,7 +448,7 @@ All `/api/v1/*` endpoints require `Authorization: Bearer <token>`.
 | **API Import** | `POST /api/v1/import` | Base64-encoded EML payloads for programmatic use |
 | **MBOX Export** | `bichon-cli` | Download account data as `.mbox` file |
 
-All imports flow through the Bichon REST API. The server parses MIME, extracts metadata, indexes content into Tantivy, deduplicates by BLAKE3 content hash, and stores raw blobs in bichon-blob.
+All imports flow through the havanese-bichon-sso REST API. The server parses MIME, extracts metadata, indexes content into Tantivy, deduplicates by BLAKE3 content hash, and stores raw blobs in bichon-blob.
 
 ## Architecture
 
@@ -611,7 +610,7 @@ Every ingested email is hashed with BLAKE3. Attachments are detached from the MI
 Back up the entire `BICHON_ROOT_DIR` (and `BICHON_INDEX_DIR` / `BICHON_DATA_DIR` if overridden). **All three layers must be backed up together** for consistency.
 
 > [!WARNING]
-> Do not place `BICHON_ROOT_DIR` or index/data directories directly on network-mounted storage (NFS, SMB, etc.). This can cause index corruption and data loss. Always run Bichon on local storage and use rsync or similar tools to sync to remote destinations.
+> Do not place `BICHON_ROOT_DIR` or index/data directories directly on network-mounted storage (NFS, SMB, etc.). This can cause index corruption and data loss. Always run havanese-bichon-sso on local storage and use rsync or similar tools to sync to remote destinations.
 
 ```bash
 # Example with rsync
@@ -644,7 +643,7 @@ Language preference and UI theme are saved to your user profile and can be chang
 
 ## Data Migration
 
-Bichon v2.x replaces the Fjall blob engine with bichon-blob. Two migration paths are available:
+havanese-bichon-sso v2.x replaces the Fjall blob engine with bichon-blob. Two migration paths are available:
 
 | Layer | v0.3.7 (Legacy) | v1.x | v2.x |
 | :--- | :--- | :--- | :--- |
@@ -684,9 +683,9 @@ Copies blobs from Fjall to bichon-blob. Tantivy indexes and memdb are left untou
 
 ### "Legacy data layout detected" error on startup
 
-Your data was created by an older version of Bichon and must be migrated. Run `./bichon-admin` and select the appropriate migration option.
+Your data was created by an older version of havanese-bichon-sso and must be migrated. Run `./bichon-admin` and select the appropriate migration option.
 
-### How do I run Bichon behind a reverse proxy?
+### How do I run havanese-bichon-sso behind a reverse proxy?
 
 Set `BICHON_BASE_URL=/bichon` (or your sub-path) and configure your proxy:
 
@@ -699,11 +698,11 @@ location /bichon/ {
 }
 ```
 
-### Can Bichon send emails?
+### Can havanese-bichon-sso send emails?
 
-No. Bichon is an **archiver**, not an email client. The optional SMTP server **receives** emails only — it cannot send, forward, or reply.
+No. havanese-bichon-sso is an **archiver**, not an email client. The optional SMTP server **receives** emails only — it cannot send, forward, or reply.
 
-### What hardware does Bichon need?
+### What hardware does havanese-bichon-sso need?
 
 - **Recommended:** 4+ CPU cores, 2+ GB RAM (sufficient for 10+ accounts and 200+ GB of archived data)
 - Filesystem: use a mainstream Linux filesystem such as **ext4** or **XFS**; avoid network / virtual filesystems (NFS, VirtIO-FS) for all data directories
@@ -746,8 +745,8 @@ No. Bichon is an **archiver**, not an email client. The optional SMTP server **r
 Contributions of all kinds are welcome — code, bug reports, documentation, or feature suggestions.
 
 ```bash
-git clone https://github.com/rustmailer/bichon.git
-cd bichon
+git clone https://github.com/birdrock00/havanese-bichon-sso.git
+cd havanese-bichon-sso
 
 # Build backend — frontend dependencies and build are handled automatically via build.rs
 cargo build
@@ -804,5 +803,5 @@ Rules:
 
 ## License
 
-Bichon is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+havanese-bichon-sso is licensed under the [GNU Affero General Public License v3.0](LICENSE).
 Copyright &copy; 2025–2026 [rustmailer.com](https://rustmailer.com)
