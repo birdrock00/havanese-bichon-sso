@@ -381,6 +381,7 @@
     "useNoProxy": "No Proxy",
     "useProxy": "Use Proxy",
     "useProxyField": "use proxy",
+    "useProxyOptional": "Use proxy (optional)",
     "value": "Value",
     "viewDetails": "view details",
     "years": "Years"
@@ -1421,9 +1422,9 @@
     },
     "proxy": "Proxy",
     "proxyTest": "Check Proxy",
-    "proxyTesting": "Checking...",
     "proxyTestFailed": "Proxy check failed",
     "proxyTestSuccess": "Proxy works",
+    "proxyTesting": "Checking...",
     "proxyUpdateOrAddFailed": "{{action}} failed, please try again later",
     "reset": "Reset",
     "resetRootPassword": "Reset Root Password",

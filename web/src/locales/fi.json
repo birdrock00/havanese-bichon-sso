@@ -371,6 +371,7 @@
     "useNoProxy": "Ei välityspalvelinta",
     "useProxy": "Käytä välityspalvelinta",
     "useProxyField": "käytä välityspalvelinta",
+    "useProxyOptional": "Käytä välityspalvelinta (valinnainen)",
     "value": "Arvo",
     "viewDetails": "katso tiedot",
     "years": "Vuotta"

@@ -371,6 +371,7 @@
     "useNoProxy": "プロキシなし",
     "useProxy": "プロキシを使用",
     "useProxyField": "プロキシを使用",
+    "useProxyOptional": "プロキシを使用（任意）",
     "value": "値",
     "viewDetails": "詳細を見る",
     "years": "年"
