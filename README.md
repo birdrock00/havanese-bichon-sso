@@ -99,7 +99,7 @@
 - **OpenAPI 3.0**: Interactive API documentation at `/api-docs` (Swagger UI, ReDoc, Scalar). All endpoints documented with request/response schemas.
 - **Multi-User RBAC**: 5 built-in roles (Admin, Manager, Member, AccountManager, AccountViewer) plus custom roles with 22 granular permissions.
 - **Account-Level Isolation**: Grant users access to specific accounts with scoped roles. Permissions enforced at the API layer.
-- **CLI Import Tools**: Import from EML directories, MBOX files (including Gmail variants), Thunderbird profiles, and Outlook PST files.
+- **CLI & WebUI Import Tools**: Import from EML directories, MBOX files (including Gmail variants), Thunderbird profiles, and Outlook PST files via CLI. Import EML files directly from the WebUI.
 - **CLI Export**: Download account data as MBOX via `bichon-cli`.
 - **Bulk Restore**: Restore emails in bulk back to their original IMAP accounts.
 - **Embedded SMTP Server**: Receive emails directly at the gateway level. STARTTLS or TLS encryption. AUTH PLAIN/LOGIN with API token authentication.
@@ -404,6 +404,7 @@ All `/api/v1/*` endpoints require `Authorization: Bearer <token>`.
 | **MBOX** | `bichon-cli` | Single-file streaming import; supports Gmail's MBOX variant |
 | **Thunderbird** | `bichon-cli` | Reads directly from local Thunderbird profile directory |
 | **PST** | `bichon-cli` | Outlook Personal Storage (`.pst`) file parsing |
+| **WebUI Import** | WebUI | Upload `.eml` files directly from the browser |
 | **API Import** | `POST /api/v1/import` | Base64-encoded EML payloads for programmatic use |
 | **MBOX Export** | `bichon-cli` | Download account data as `.mbox` file |
 
@@ -702,6 +703,9 @@ No. Bichon is an **archiver**, not an email client. The optional SMTP server **r
 
 Contributions of all kinds are welcome — code, bug reports, documentation, or feature suggestions.
 
+> [!IMPORTANT]
+> By submitting a Pull Request, you agree to the terms of the [Contributor License Agreement](CLA.md).
+
 ```bash
 git clone https://github.com/rustmailer/bichon.git
 cd bichon
@@ -714,7 +718,11 @@ cargo test
 ```
 
 > [!IMPORTANT]
-> Before implementing a new feature or making significant changes, please **open an issue first** to discuss your idea with the maintainer and ensure it aligns with the project's scope.
+> **For new features:** Please **open a feature request issue first** before starting implementation. PRs that introduce new functionality without a prior issue may be **rejected** to avoid unnecessary wasted effort.
+>
+> **For major bug fixes** with wide-ranging impact, please **open an issue and discuss with the maintainer** before acting and submitting. This ensures the fix approach is aligned and avoids duplicate or conflicting work.
+>
+> **Large, hard-to-review PRs** that touch many modules or contain substantial changes may be **rejected outright**. Break your work into smaller, focused PRs — one logical change per PR.
 
 Feel free to open an [Issue](https://github.com/rustmailer/bichon/issues) or join the [Discord](https://discord.gg/Bq4M2cDmF4) to discuss ideas.
 
