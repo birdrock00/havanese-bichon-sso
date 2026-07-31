@@ -4,25 +4,28 @@
 
 <H1 align="center">BICHON</H1>
 
+
+
+<!-- FORK-NOTICE:START -->
+> **This is [birdrock00/havanese-bichon-sso](https://github.com/birdrock00/havanese-bichon-sso)**, a fork of [rustmailer/bichon](https://github.com/rustmailer/bichon) with OpenID Connect single sign-on added.
+> SSO support was originally proposed upstream in [rustmailer/bichon#328](https://github.com/rustmailer/bichon/pull/328) but closed without being merged; this fork carries it going forward.
+> A GitHub Action syncs every other feature and fix from upstream on a biweekly schedule -- see [.github/workflows/sync-upstream.yaml](.github/workflows/sync-upstream.yaml).
+<!-- FORK-NOTICE:END -->
 <p align="center">
-  <a href="https://github.com/rustmailer/bichon/stargazers">
-    <img src="https://img.shields.io/github/stars/rustmailer/bichon?style=for-the-badge&color=gold&label=STARS" alt="GitHub Stars">
+  <a href="https://github.com/birdrock00/havanese-bichon-sso/stargazers">
+    <img src="https://img.shields.io/github/stars/birdrock00/havanese-bichon-sso?style=for-the-badge&color=gold&label=STARS" alt="GitHub Stars">
   </a>
-  <a href="https://hub.docker.com/r/rustmailer/bichon">
-    <img src="https://img.shields.io/docker/pulls/rustmailer/bichon?style=for-the-badge&color=2496ED&label=DOCKER%20PULLS" alt="Docker Pulls">
-  </a>
+  <a href="https://github.com/birdrock00/havanese-bichon-sso/pkgs/container/havanese-bichon-sso"><img src="https://img.shields.io/badge/ghcr.io-birdrock00%2Fhavanese--bichon--sso-2496ED?style=for-the-badge" alt="GHCR Image"></a>
   <a href="https://docs.google.com/forms/d/e/1FAIpQLScOlwsiUMfyQPBCLW2MLkygdRmAutEgvXDYPzzvEGPz0HFPXQ/viewform">
     <img src="https://img.shields.io/badge/Roadmap-2026_Survey-blue?style=for-the-badge&logo=googleforms" alt="User Survey">
   </a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/rustmailer/bichon/releases">
-    <img src="https://img.shields.io/github/v/release/rustmailer/bichon" alt="Release">
+  <a href="https://github.com/birdrock00/havanese-bichon-sso/releases">
+    <img src="https://img.shields.io/github/v/release/birdrock00/havanese-bichon-sso" alt="Release">
   </a>
-  <a href="https://hub.docker.com/r/rustmailer/bichon">
-    <img src="https://img.shields.io/docker/v/rustmailer/bichon?label=docker" alt="Docker">
-  </a>
+  <a href="https://github.com/birdrock00/havanese-bichon-sso/pkgs/container/havanese-bichon-sso"><img src="https://img.shields.io/badge/docker-ghcr.io-2496ED?style=for-the-badge" alt="Docker"></a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-AGPLv3-blue.svg" alt="License">
   </a>
@@ -158,7 +161,7 @@ services:
 
 ### Binary Installation
 
-Download from the [Releases](https://github.com/rustmailer/bichon/releases) page:
+Download from the [Releases](https://github.com/birdrock00/havanese-bichon-sso/releases) page:
 
 | Platform | Archive |
 |----------|---------|
@@ -668,7 +671,7 @@ Rebuilds Tantivy indexes, migrates metadata to memdb, and converts blobs to bich
 Copies blobs from Fjall to bichon-blob. Tantivy indexes and memdb are left untouched.
 
 > [!NOTE]
-> Both migrations are **non-destructive** — legacy files are never modified. After verifying the migration was successful, see the [Migration Guide](https://github.com/rustmailer/bichon/wiki/Bichon-v2.x-Migration-Guide) for cleanup instructions.
+> Both migrations are **non-destructive** — legacy files are never modified. After verifying the migration was successful, see the [Migration Guide](https://github.com/birdrock00/havanese-bichon-sso/wiki/Bichon-v2.x-Migration-Guide) for cleanup instructions.
 
 ## FAQ
 
@@ -715,9 +718,9 @@ No. Bichon is an **archiver**, not an email client. The optional SMTP server **r
 
 ### Where can I get help?
 
-- [GitHub Issues](https://github.com/rustmailer/bichon/issues)
+- [GitHub Issues](https://github.com/birdrock00/havanese-bichon-sso/issues)
 - [Discord](https://discord.gg/Bq4M2cDmF4)
-- [Wiki](https://github.com/rustmailer/bichon/wiki)
+- [Wiki](https://github.com/birdrock00/havanese-bichon-sso/wiki)
 
 ## Roadmap
 
@@ -756,7 +759,7 @@ cargo test
 > [!IMPORTANT]
 > Before implementing a new feature or making significant changes, please **open an issue first** to discuss your idea with the maintainer and ensure it aligns with the project's scope.
 
-Feel free to open an [Issue](https://github.com/rustmailer/bichon/issues) or join the [Discord](https://discord.gg/Bq4M2cDmF4) to discuss ideas.
+Feel free to open an [Issue](https://github.com/birdrock00/havanese-bichon-sso/issues) or join the [Discord](https://discord.gg/Bq4M2cDmF4) to discuss ideas.
 
 #### Guidelines
 
