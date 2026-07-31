@@ -1,12 +1,15 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 name: Sync Upstream
 
-# Keeps this fork current with rustmailer/bichon. main here also carries the
-# SSO/OIDC support from rustmailer/bichon#328 (merged locally, not upstream),
-# so unlike a plain mirror this merge can genuinely conflict if upstream ever
-# touches the same auth/login files. On a clean merge we fast-forward main
-# directly; on conflict we push the attempted merge to a branch and open a PR
-# instead of failing silently, so someone resolves it by hand.
+# Keeps this fork current with rustmailer/bichon, feature by feature. main
+# here also carries the SSO/OIDC support from rustmailer/bichon#328 (merged
+# locally, not upstream), so this merge can genuinely conflict if upstream
+# ever touches the same auth/login files -- unlike a plain mirror.
+#
+# Every run (clean or conflicting) always lands as a pull request rather than
+# a direct push to main, because the run also reapplies this fork's README
+# branding (scripts/rebrand-readme.py) on top of whatever upstream shipped,
+# and that's worth a quick look before it merges.
 
 on:
   schedule:
@@ -24,7 +27,7 @@ concurrency:
 jobs:
   sync:
     name: Merge rustmailer/bichon
-    if: github.repository == 'birdrock00/bichon'
+    if: github.repository == 'birdrock00/havanese-bichon-sso'
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
@@ -51,32 +54,40 @@ jobs:
           else
             git merge --abort
             echo "conflict=true" >> "$GITHUB_OUTPUT"
+            # Merge with conflict markers left in place so the PR shows
+            # reviewers exactly what needs manual resolution.
+            git merge --no-edit --no-ff -X ours upstream/main || true
           fi
 
-      - name: Push clean merge
-        if: steps.merge.outputs.conflict == 'false'
-        run: git push origin HEAD:main
+      - name: Reapply README branding
+        run: python3 scripts/rebrand-readme.py
 
-      - name: Push conflicting merge to a branch
-        if: steps.merge.outputs.conflict == 'true'
+      - name: Commit branding pass
         run: |-
-          branch="sync-upstream/conflict-$(date -u +%Y%m%d)"
-          echo "branch=$branch" >> "$GITHUB_ENV"
-          git merge --no-edit upstream/main || true
+          git add README.md
+          git diff --cached --quiet || git commit -m "chore: reapply fork README branding"
+
+      - name: Push sync branch
+        id: push
+        run: |-
+          branch="sync-upstream/$(date -u +%Y%m%d)"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
           git push origin "HEAD:$branch" --force
 
-      - name: Open PR for manual resolution
-        if: steps.merge.outputs.conflict == 'true'
+      - name: Open pull request
         env:
           GH_TOKEN: ${{ github.token }}
         run: |-
-          gh pr list --head "$branch" --state open --json number --jq '.[0].number' > /tmp/existing_pr
-          if [ -s /tmp/existing_pr ]; then
-            echo "PR already open for $branch, skipping"
+          existing="$(gh pr list --head "${{ steps.push.outputs.branch }}" --state open --json number --jq '.[0].number')"
+          if [ -n "$existing" ]; then
+            echo "PR #$existing already open for ${{ steps.push.outputs.branch }}, skipping"
             exit 0
           fi
-          gh pr create \
-            --title "Sync upstream: merge conflict needs manual resolution" \
-            --body "Automated sync from rustmailer/bichon main hit a conflict, most likely against the SSO/OIDC changes from #328 that live only in this fork. Resolve the conflicts on \`$branch\` and merge manually." \
-            --head "$branch" \
-            --base main
+          if [ "${{ steps.merge.outputs.conflict }}" = "true" ]; then
+            title="Sync upstream: merge conflict needs manual resolution"
+            body="Automated sync from rustmailer/bichon main hit a conflict, most likely against the SSO/OIDC changes from #328 that live only in this fork. Conflict markers are left in place on \`${{ steps.push.outputs.branch }}\` -- resolve them and merge manually."
+          else
+            title="Sync upstream: $(date -u +%Y-%m-%d)"
+            body="Clean automated merge of rustmailer/bichon main, plus a README rebrand pass. Safe to merge once checks pass."
+          fi
+          gh pr create --title "$title" --body "$body" --head "${{ steps.push.outputs.branch }}" --base main
