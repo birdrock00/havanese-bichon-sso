@@ -47,7 +47,7 @@ const emptyImap = {
 };
 
 function mapAccountToFormValues(account: AccountModel): AccountFormValues {
-  const imap = { ...(account.imap ?? emptyImap) };
+  const imap = { ...(account.imap ?? emptyImap), use_proxy: account.imap?.use_proxy ?? undefined };
   imap.auth = { ...imap.auth, password: undefined };
 
   return {

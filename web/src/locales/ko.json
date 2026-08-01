@@ -371,6 +371,7 @@
     "useNoProxy": "프록시 없음",
     "useProxy": "프록시 사용",
     "useProxyField": "프록시 사용",
+    "useProxyOptional": "프록시 사용 (선택 사항)",
     "value": "값",
     "viewDetails": "세부 정보 보기",
     "years": "년"

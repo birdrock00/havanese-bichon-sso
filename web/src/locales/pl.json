@@ -371,6 +371,7 @@
     "useNoProxy": "Brak serwera proxy",
     "useProxy": "Użyj Proxy",
     "useProxyField": "użyj proxy",
+    "useProxyOptional": "Użyj serwera proxy (opcjonalnie)",
     "value": "Wartość",
     "viewDetails": "pokaż szczegóły",
     "years": "Lata"

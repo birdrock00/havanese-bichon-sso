@@ -371,6 +371,7 @@
     "useNoProxy": "不使用代理",
     "useProxy": "使用代理",
     "useProxyField": "使用代理",
+    "useProxyOptional": "使用代理伺服器（選填）",
     "value": "值",
     "viewDetails": "檢視詳細資訊",
     "years": "年"
