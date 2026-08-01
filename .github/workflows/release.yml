@@ -67,7 +67,7 @@ jobs:
           node-version: 20
 
       - name: Install pnpm
-        run: npm install -g pnpm
+        run: npm install -g pnpm@9.15.9
 
       - name: Build frontend (web)
         working-directory: ./web
@@ -233,4 +233,3 @@ jobs:
             ghcr.io/${{ github.repository }}:latest
           build-args: |
             CRATE_VERSION=${{ github.ref_name }}
-        
