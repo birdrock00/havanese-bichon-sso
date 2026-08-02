@@ -1446,7 +1446,11 @@
   },
   "sign_out": {
     "confirm": "Wyloguj się",
+    "confirm_sso": "Wyloguj tylko z Bichon",
     "desc": "Czy na pewno chcesz się wylogować? Aby uzyskać dostęp do konta, będziesz musiał zalogować się ponownie.",
+    "full_sign_out": "Wyloguj i zakończ sesję SSO",
+    "sso_desc": "Wylogowanie z Bichon pozostawia sesję SSO aktywną. Dla pełnego bezpieczeństwa wybierz \"Wyloguj i zakończ sesję SSO\".",
+    "sso_warning": "To zakończy sesję SSO i wyloguje Cię ze wszystkich połączonych aplikacji.",
     "title": "Wyloguj się"
   },
   "system": {

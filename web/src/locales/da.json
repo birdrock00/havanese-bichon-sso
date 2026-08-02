@@ -1446,7 +1446,11 @@
   },
   "sign_out": {
     "confirm": "Log ud",
+    "confirm_sso": "Log kun ud af Bichon",
     "desc": "Er du sikker på, at du vil logge ud? Du skal logge ind igen for at få adgang til din konto.",
+    "full_sign_out": "Log ud og afslut SSO-session",
+    "sso_desc": "Udlogning fra Bichon beholder SSO-sessionen aktiv. For fuld sikkerhed, vælg \"Log ud og afslut SSO-session\".",
+    "sso_warning": "Dette vil afslutte din SSO-session og logge dig ud af alle tilknyttede apps.",
     "title": "Log ud"
   },
   "system": {

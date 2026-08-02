@@ -1456,7 +1456,11 @@
   },
   "sign_out": {
     "confirm": "退出登录",
+    "confirm_sso": "仅退出 Bichon",
     "desc": "您确定要退出登录吗？您需要重新登录才能访问账户。",
+    "full_sign_out": "退出登录并结束 SSO 会话",
+    "sso_desc": "仅退出 Bichon 仍会保持 SSO 会话。如需完全安全，请选择“退出登录并结束 SSO 会话”。",
+    "sso_warning": "这将结束 SSO 会话并从所有关联应用中退出。",
     "title": "退出登录"
   },
   "system": {

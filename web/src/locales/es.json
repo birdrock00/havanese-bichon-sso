@@ -1446,7 +1446,11 @@
   },
   "sign_out": {
     "confirm": "Cerrar sesión",
+    "confirm_sso": "Solo cerrar sesión en Bichon",
     "desc": "¿Está seguro de que desea cerrar sesión? Necesitará iniciar sesión nuevamente para acceder a su cuenta.",
+    "full_sign_out": "Cerrar sesión y finalizar sesión SSO",
+    "sso_desc": "Cerrar sesión en Bichon mantiene activa la sesión SSO. Para mayor seguridad, elija \"Cerrar sesión y finalizar sesión SSO\".",
+    "sso_warning": "Esto finalizará su sesión SSO y cerrará la sesión en todas las aplicaciones vinculadas.",
     "title": "Cerrar sesión"
   },
   "system": {

@@ -1446,7 +1446,11 @@
   },
   "sign_out": {
     "confirm": "Déconnexion",
+    "confirm_sso": "Se déconnecter de Bichon uniquement",
     "desc": "Êtes-vous sûr de vouloir vous déconnecter ? Vous devrez vous reconnecter pour accéder à votre compte.",
+    "full_sign_out": "Se déconnecter et mettre fin à la session SSO",
+    "sso_desc": "Mettre fin à Bichon laisse la session SSO active. Pour une sécurité totale, choisissez « Se déconnecter et mettre fin à la session SSO ».",
+    "sso_warning": "Ceci mettra fin à votre session SSO et vous déconnectera de toutes les applications associées.",
     "title": "Déconnexion"
   },
   "system": {

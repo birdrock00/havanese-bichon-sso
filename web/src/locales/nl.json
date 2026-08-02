@@ -1446,7 +1446,11 @@
   },
   "sign_out": {
     "confirm": "Uitloggen",
+    "confirm_sso": "Alleen uitloggen bij Bichon",
     "desc": "Weet je zeker dat je wilt uitloggen? Je moet opnieuw inloggen om toegang te krijgen tot je account.",
+    "full_sign_out": "Uitloggen en SSO-sessie beëindigen",
+    "sso_desc": "Uitloggen bij Bichon laat de SSO-sessie actief. Kies voor volledige beveiliging \"Uitloggen en SSO-sessie beëindigen\".",
+    "sso_warning": "Dit beëindigt uw SSO-sessie en logt u uit bij alle gekoppelde apps.",
     "title": "Uitloggen"
   },
   "system": {

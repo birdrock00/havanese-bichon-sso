@@ -1446,7 +1446,11 @@
   },
   "sign_out": {
     "confirm": "登出",
+    "confirm_sso": "僅登出 Bichon",
     "desc": "您確定要登出嗎？您需要重新登入才能存取帳戶。",
+    "full_sign_out": "登出並結束 SSO 工作階段",
+    "sso_desc": "僅登出 Bichon 仍會保持 SSO 工作階段。如需完全安全，請選擇「登出並結束 SSO 工作階段」。",
+    "sso_warning": "這將結束 SSO 工作階段並從所有關聯應用程式中登出。",
     "title": "登出"
   },
   "system": {

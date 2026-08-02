@@ -1462,7 +1462,11 @@
   },
   "sign_out": {
     "confirm": "Sign out",
+    "confirm_sso": "Sign out of Bichon only",
     "desc": "Are you sure you want to sign out? You will need to sign in again to access your account.",
+    "full_sign_out": "Sign out and end SSO session",
+    "sso_desc": "Signing out of Bichon leaves your SSO session active. For full security, select \"Sign out and end SSO session\".",
+    "sso_warning": "This will end your SSO session and sign you out of all connected apps.",
     "title": "Sign out"
   },
   "system": {

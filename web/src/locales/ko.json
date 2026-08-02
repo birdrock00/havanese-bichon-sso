@@ -1446,7 +1446,11 @@
   },
   "sign_out": {
     "confirm": "로그아웃",
+    "confirm_sso": "Bichon만 로그아웃",
     "desc": "로그아웃하시겠습니까? 계정에 접근하려면 다시 로그인해야 합니다.",
+    "full_sign_out": "로그아웃 및 SSO 세션 종료",
+    "sso_desc": "Bichon 로그아웃 후에도 SSO 세션은 유지됩니다. 완전한 보안을 위해 \"로그아웃 및 SSO 세션 종료\"를 선택하세요.",
+    "sso_warning": "SSO 세션이 종료되며 연결된 모든 앱에서 로그아웃됩니다.",
     "title": "로그아웃"
   },
   "system": {

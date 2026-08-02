@@ -1446,7 +1446,11 @@
   },
   "sign_out": {
     "confirm": "Sair",
+    "confirm_sso": "Sair apenas do Bichon",
     "desc": "Tem certeza de que deseja sair? Você precisará entrar novamente para acessar sua conta.",
+    "full_sign_out": "Sair e encerrar sessão SSO",
+    "sso_desc": "Sair do Bichon mantém a sessão SSO ativa. Para segurança total, escolha \"Sair e encerrar sessão SSO\".",
+    "sso_warning": "Isso encerrará sua sessão SSO e fará o logoff de todos os apps conectados.",
     "title": "Sair"
   },
   "system": {

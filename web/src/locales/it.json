@@ -1446,7 +1446,11 @@
   },
   "sign_out": {
     "confirm": "Disconnetti",
+    "confirm_sso": "Disconnettiti solo da Bichon",
     "desc": "Sei sicuro di voler disconnetterti? Dovrai accedere di nuovo per usare il tuo account.",
+    "full_sign_out": "Disconnettiti e termina sessione SSO",
+    "sso_desc": "La disconnessione da Bichon lascia attiva la sessione SSO. Per la massima sicurezza, scegli \"Disconnettiti e termina sessione SSO\".",
+    "sso_warning": "Questo terminerà la sessione SSO e ti disconnetterà da tutte le app collegate.",
     "title": "Disconnetti"
   },
   "system": {

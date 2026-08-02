@@ -1446,7 +1446,11 @@
   },
   "sign_out": {
     "confirm": "Abmelden",
+    "confirm_sso": "Nur bei Bichon abmelden",
     "desc": "Möchten Sie sich wirklich abmelden? Sie müssen sich erneut anmelden, um auf Ihr Konto zuzugreifen.",
+    "full_sign_out": "Abmelden und SSO-Sitzung beenden",
+    "sso_desc": "Abmelden bei Bichon lässt die SSO-Sitzung aktiv. Für volle Sicherheit \"Abmelden und SSO-Sitzung beenden\" wählen.",
+    "sso_warning": "Dies beendet Ihre SSO-Sitzung und meldet Sie von allen verknüpften Apps ab.",
     "title": "Abmelden"
   },
   "system": {

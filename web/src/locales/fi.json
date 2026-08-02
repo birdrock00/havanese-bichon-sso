@@ -1446,7 +1446,11 @@
   },
   "sign_out": {
     "confirm": "Kirjaudu ulos",
+    "confirm_sso": "Kirjaudu ulos vain Bichonista",
     "desc": "Haluatko varmasti kirjautua ulos? Sinun täytyy kirjautua uudelleen päästäksesi tilillesi.",
+    "full_sign_out": "Kirjaudu ulos ja lopeta SSO-istunto",
+    "sso_desc": "Uloskirjautuminen Bichonista jättää SSO-istunnon aktiiviseksi. Täyden turvallisuuden saamiseksi valitse \"Kirjaudu ulos ja lopeta SSO-istunto\".",
+    "sso_warning": "Tämä lopettaa SSO-istunnon ja kirjautuu ulos kaikista liitetyistä sovelluksista.",
     "title": "Kirjaudu ulos"
   },
   "system": {
