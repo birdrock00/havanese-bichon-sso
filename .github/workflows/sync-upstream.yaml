@@ -67,14 +67,26 @@ jobs:
           git add README.md
           git diff --cached --quiet || git commit -m "chore: reapply fork README branding"
 
+      - name: Check for upstream changes
+        id: changes
+        run: |-
+          if [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Upstream is already synchronized; no pull request is needed."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Push sync branch
         id: push
+        if: steps.changes.outputs.changed == 'true'
         run: |-
           branch="sync-upstream/$(date -u +%Y%m%d)"
           echo "branch=$branch" >> "$GITHUB_OUTPUT"
           git push origin "HEAD:$branch" --force
 
       - name: Open pull request
+        if: steps.changes.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |-
