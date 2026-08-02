@@ -26,7 +26,7 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
-import { resetToken } from '@/stores/authStore'
+import { resetToken, setToken } from '@/stores/authStore'
 import { toast } from '@/hooks/use-toast'
 import { ThemeProvider } from './context/theme-context'
 import './index.css'
@@ -117,6 +117,16 @@ const queryClient = new QueryClient({
 
 const basepath = (window as any).__BICHON_BASE__ || '/';
 console.log('Current Basepath:', basepath);
+
+// OIDC SSO callback: the Pro server redirects back with ?access_token=.
+// Store it and strip it from the URL before the router/auth flow runs.
+const ssoToken = new URLSearchParams(window.location.search).get('access_token');
+if (ssoToken) {
+  setToken({ success: true, access_token: ssoToken });
+  const clean = `${window.location.pathname}${window.location.hash}`;
+  window.history.replaceState(null, '', clean);
+}
+
 // Create a new router instance
 const router = createRouter({
   routeTree,

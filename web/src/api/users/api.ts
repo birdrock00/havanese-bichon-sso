@@ -103,6 +103,8 @@ export interface User {
     account_permissions: Record<number, string[]>
     created_at: number;
     updated_at: number;
+    sso_id?: string | null;
+    sso_provider?: string | null;
 }
 
 type Theme = 'dark' | 'light'

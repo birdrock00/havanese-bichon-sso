@@ -53,10 +53,11 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const { setTheme } = useTheme();
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { isPro } = useEdition()
-
   const { search } = useLocation();
   const redirect = toSearchParams(search).get('redirect') || '/';
+
+  const { isPro, features } = useEdition()
+  const ssoEnabled = isPro && features.includes('sso')
 
   const formSchema = getFormSchema(t)
   const form = useForm<LoginFormValues>({
@@ -159,7 +160,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
               {t('auth.login')}
             </Button>
 
-            {isPro && (
+            {ssoEnabled && (
               <Button
                 variant='outline'
                 className='mt-2'
