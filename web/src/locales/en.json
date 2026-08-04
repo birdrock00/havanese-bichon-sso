@@ -295,10 +295,14 @@
       },
       "message": "Message",
       "session": {
+        "current_folder": "Current mail folder",
+        "elapsed": "Elapsed time",
+        "last_update": "Last updated",
         "started_at": "Started At",
         "status": "Status",
         "trigger": "Trigger"
       },
+      "syncing": "Syncing",
       "tabs": {
         "active_session": "Active Session",
         "errors": "Errors",

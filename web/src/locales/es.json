@@ -293,10 +293,14 @@
       },
       "message": "Mensaje",
       "session": {
+        "current_folder": "Carpeta de correo actual",
+        "elapsed": "Tiempo transcurrido",
+        "last_update": "Última actualización",
         "started_at": "Hora de inicio",
         "status": "Estado",
         "trigger": "Disparador"
       },
+      "syncing": "Sincronizando",
       "tabs": {
         "active_session": "Sesión activa",
         "errors": "Errores",

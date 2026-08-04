@@ -295,10 +295,14 @@
       },
       "message": "消息",
       "session": {
+        "current_folder": "当前邮件夹",
+        "elapsed": "耗时",
+        "last_update": "最近更新",
         "started_at": "开始时间",
         "status": "状态",
         "trigger": "触发方式"
       },
+      "syncing": "同步中",
       "tabs": {
         "active_session": "当前任务",
         "errors": "错误",

@@ -33,7 +33,8 @@ use crate::{
         },
         error::{code::ErrorCode, BichonResult},
         imap::executor::{
-            compress_uid_list, generate_uid_sequence_hashset, ImapExecutor, DEFAULT_BATCH_SIZE,
+            compress_uid_list, generate_uid_sequence_hashset, slow_server_message, ImapExecutor,
+            DEFAULT_BATCH_SIZE,
         },
         store::tantivy::envelope::ENVELOPE_MANAGER,
     },
@@ -43,7 +44,6 @@ use tokio_util::sync::CancellationToken;
 use tracing::{debug, error, info, warn};
 
 const MAX_NETWORK_RETRIES: u32 = 3;
-
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum FetchDirection {
@@ -163,13 +163,24 @@ pub async fn fetch_and_save_by_date(
                 &batch.0,
                 account.max_email_size_bytes,
                 token.clone(),
+                Some(&|cumulative, avg_secs, stall_secs| {
+                    // Per-message progress: the current batch's cumulative count
+                    // keeps the UI moving while a slow server trickles messages.
+                    let _ = DownloadState::update_folder_progress(
+                        account_id,
+                        mailbox.name.clone(),
+                        planned,
+                        cumulative,
+                        FolderStatus::Downloading,
+                        slow_server_message(avg_secs, stall_secs),
+                    );
+                    Ok(())
+                }),
             )
             .await
             {
-                Ok(processed) => break Ok(processed),
-                Err(e)
-                    if retries < MAX_NETWORK_RETRIES && e.code() == ErrorCode::NetworkError =>
-                {
+                Ok((processed, _throttled)) => break Ok(processed),
+                Err(e) if retries < MAX_NETWORK_RETRIES && e.code() == ErrorCode::NetworkError => {
                     retries += 1;
                     warn!(
                         account_id,
@@ -183,22 +194,16 @@ pub async fn fetch_and_save_by_date(
                     match ImapExecutor::create_connection(account_id).await {
                         Ok(new_session) => {
                             session = new_session;
-                            if let Err(e2) = session.examine(&mailbox.encoded_name()).await
-                            {
-                                let err_msg = format!(
-                                    "Re-examine failed after reconnect: {:#?}",
-                                    e2
-                                );
-                                DownloadState::append_session_error(
-                                    account_id,
-                                    err_msg,
-                                )?;
+                            if let Err(e2) = session.examine(&mailbox.encoded_name()).await {
+                                let err_msg =
+                                    format!("Re-examine failed after reconnect: {:#?}", e2);
+                                DownloadState::append_session_error(account_id, err_msg)?;
                                 break Err(e);
                             }
-                            tokio::time::sleep(Duration::from_secs(
-                                1 << (retries - 1),
-                            ))
-                            .await;
+                            // Longer backoff than the original 1s/2s/4s: a
+                            // throttling server needs time to recover.
+                            let backoff = [5u64, 15, 30][(retries - 1) as usize];
+                            tokio::time::sleep(Duration::from_secs(backoff)).await;
                             continue;
                         }
                         Err(e2) => {
@@ -254,6 +259,11 @@ pub async fn fetch_and_save_by_date(
 
 /// Fetches all messages from a mailbox.
 /// Returns `Ok(Some(max_uid))` with the highest UID stored, or `Ok(None)` if empty.
+///
+/// The mailbox is enumerated via `UID SEARCH ALL` first, then downloaded in UID
+/// batches. Unlike sequence-number paging, UIDs stay stable while the download
+/// runs (new arrivals only get larger UIDs), so no message is silently skipped
+/// when the server changes mid-download.
 pub async fn fetch_and_save_full_mailbox(
     account: &AccountModel,
     mailbox: &MailBox,
@@ -279,41 +289,57 @@ pub async fn fetch_and_save_full_mailbox(
         }
     };
 
-    let total = match session.examine(&mailbox.encoded_name()).await {
-        Ok(mailbox) => mailbox.exists as u64,
-        Err(e) => {
-            let err_msg = format!("Failed to examine folder [{}]: {:#?}", mailbox.name, e);
-            DownloadState::update_folder_progress(
-                account_id,
-                mailbox.name.clone(),
-                mailbox.exists as u64,
-                0,
-                FolderStatus::Failed,
-                Some(err_msg.clone()),
-            )?;
+    let uid_list =
+        match ImapExecutor::uid_search_all_mailbox(&mut session, &mailbox.encoded_name()).await {
+            Ok(list) => list,
+            Err(e) => {
+                let err_msg = format!("UID SEARCH failed in [{}]: {:#?}", mailbox.name, e);
+                DownloadState::update_folder_progress(
+                    account_id,
+                    mailbox.name.clone(),
+                    0,
+                    0,
+                    FolderStatus::Failed,
+                    Some(err_msg.clone()),
+                )?;
+                DownloadState::append_session_error(account_id, err_msg)?;
+                session.logout().await.ok();
+                return Err(e);
+            }
+        };
 
-            DownloadState::append_session_error(account_id, err_msg)?;
-            session.logout().await.ok();
-            return Err(raise_error!(
-                format!("{:#?}", e),
-                ErrorCode::ImapCommandFailed
-            ));
-        }
-    };
+    let planned = uid_list.len() as u64;
+    if planned == 0 {
+        info!(
+            "Mailbox '{}' is empty, no emails to download.",
+            mailbox.name
+        );
+        DownloadState::update_folder_progress(
+            account_id,
+            mailbox.name.clone(),
+            0,
+            0,
+            FolderStatus::Success,
+            None,
+        )?;
+        session.logout().await.ok();
+        return Ok(None);
+    }
 
-    let page_size = account.download_batch_size.unwrap_or(DEFAULT_BATCH_SIZE);
-    let total_batches = total.div_ceil(page_size as u64);
+    let max_uid = *uid_list.last().unwrap();
+    let page_size = account.download_batch_size.unwrap_or(DEFAULT_BATCH_SIZE) as usize;
+    let uid_batches = generate_uid_sequence_hashset(uid_list, page_size);
+    let total_batches = uid_batches.len();
 
     info!(
-        "Starting full mailbox download for '{}', total={}, batches={}",
-        mailbox.name, total, total_batches
+        "Starting full mailbox download for '{}', uids={}, batches={}",
+        mailbox.name, planned, total_batches
     );
 
     let mut current_processed = 0u64;
     let mut has_error_or_cancel = false;
-    let mut max_uid: Option<u32> = None;
 
-    for page in 1..=total_batches {
+    for (index, batch) in uid_batches.into_iter().enumerate() {
         if token.is_cancelled() {
             DownloadState::update_session_status(
                 account_id,
@@ -323,7 +349,7 @@ pub async fn fetch_and_save_full_mailbox(
             DownloadState::update_folder_progress(
                 account_id,
                 mailbox.name.clone(),
-                total,
+                planned,
                 current_processed,
                 FolderStatus::Cancelled,
                 None,
@@ -332,48 +358,66 @@ pub async fn fetch_and_save_full_mailbox(
             break;
         }
 
+        // Heartbeat: keeps `current_folder` fresh so the web UI can show
+        // "waiting for server" while a slow IMAP server is mid-batch.
+        DownloadState::set_current_folder(account_id, mailbox.name.clone())?;
+
+        // Heartbeat: keeps `current_folder` fresh so the web UI can show
+        // "waiting for server" while a slow IMAP server is mid-batch.
+        DownloadState::set_current_folder(account_id, mailbox.name.clone())?;
+
         let mut retries = 0u32;
         let batch_result = loop {
-            match ImapExecutor::batch_retrieve_emails(
+            match ImapExecutor::uid_batch_retrieve_emails(
                 &mut session,
                 account_id,
                 mailbox_id,
-                total,
-                page as u64,
-                page_size as u64,
-                &mailbox.encoded_name(),
+                &batch.0,
                 account.max_email_size_bytes,
                 token.clone(),
-                &mut max_uid,
+                Some(&|cumulative, avg_secs, stall_secs| {
+                    // Per-message progress: the current batch's cumulative count
+                    // keeps the UI moving while a slow server trickles messages.
+                    let _ = DownloadState::update_folder_progress(
+                        account_id,
+                        mailbox.name.clone(),
+                        planned,
+                        cumulative,
+                        FolderStatus::Downloading,
+                        slow_server_message(avg_secs, stall_secs),
+                    );
+                    Ok(())
+                }),
             )
             .await
             {
-                Ok(count) => break Ok(count),
-                Err(e)
-                    if retries < MAX_NETWORK_RETRIES && e.code() == ErrorCode::NetworkError =>
-                {
+                Ok((count, _throttled)) => break Ok(count),
+                Err(e) if retries < MAX_NETWORK_RETRIES && e.code() == ErrorCode::NetworkError => {
                     retries += 1;
                     warn!(
                         account_id,
                         mailbox = mailbox.name,
-                        page,
+                        index,
                         retries,
                         "Network error on batch, reconnecting ({}/{})",
                         retries,
                         MAX_NETWORK_RETRIES
                     );
+                    // Refresh the heartbeat after a reconnect too.
+                    let _ = DownloadState::set_current_folder(account_id, mailbox.name.clone());
                     match ImapExecutor::create_connection(account_id).await {
                         Ok(new_session) => {
                             session = new_session;
                             if let Err(e2) = session.examine(&mailbox.encoded_name()).await {
-                                let err_msg = format!(
-                                    "Re-examine failed after reconnect: {:#?}",
-                                    e2
-                                );
+                                let err_msg =
+                                    format!("Re-examine failed after reconnect: {:#?}", e2);
                                 DownloadState::append_session_error(account_id, err_msg)?;
                                 break Err(e);
                             }
-                            tokio::time::sleep(Duration::from_secs(1 << (retries - 1))).await;
+                            // Longer backoff than the original 1s/2s/4s: a
+                            // throttling server needs time to recover.
+                            let backoff = [5u64, 15, 30][(retries - 1) as usize];
+                            tokio::time::sleep(Duration::from_secs(backoff)).await;
                             continue;
                         }
                         Err(e2) => {
@@ -391,19 +435,19 @@ pub async fn fetch_and_save_full_mailbox(
                 DownloadState::update_folder_progress(
                     account_id,
                     mailbox.name.clone(),
-                    total,
+                    planned,
                     current_processed,
                     FolderStatus::Downloading,
                     None,
                 )?;
             }
             Err(e) => {
-                let err_msg = format!("Batch {} failed: {:#?}", page, e);
+                let err_msg = format!("Batch {} failed: {:#?}", index, e);
                 DownloadState::append_session_error(account_id, err_msg.clone())?;
                 DownloadState::update_folder_progress(
                     account_id,
                     mailbox.name.clone(),
-                    total,
+                    planned,
                     current_processed,
                     FolderStatus::Failed,
                     Some(err_msg),
@@ -411,21 +455,21 @@ pub async fn fetch_and_save_full_mailbox(
                 has_error_or_cancel = true;
                 break;
             }
-        };
+        }
     }
 
     if !has_error_or_cancel {
         DownloadState::update_folder_progress(
             account_id,
             mailbox.name.clone(),
-            total,
+            planned,
             current_processed,
             FolderStatus::Success,
             None,
         )?;
     }
     session.logout().await.ok();
-    Ok(max_uid)
+    Ok(max_uid.into())
 }
 
 /// Generates a synthetic UIDVALIDITY for IMAP servers that don't provide it.
@@ -490,15 +534,13 @@ where
             Ok(None) => {
                 warn!(
                     attempt = attempt + 1,
-                    max_retries,
-                    "STATUS returned no UIDVALIDITY"
+                    max_retries, "STATUS returned no UIDVALIDITY"
                 );
             }
             Err(e) => {
                 warn!(
                     attempt = attempt + 1,
-                    max_retries,
-                    "UIDVALIDITY fetch attempt failed: {:#?}", e
+                    max_retries, "UIDVALIDITY fetch attempt failed: {:#?}", e
                 );
             }
         }
@@ -634,9 +676,7 @@ async fn reconcile_uid_validity_change(
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
-        let batch_size = account
-            .download_batch_size
-            .unwrap_or(DEFAULT_BATCH_SIZE) as usize;
+        let batch_size = account.download_batch_size.unwrap_or(DEFAULT_BATCH_SIZE) as usize;
         let batches = generate_uid_sequence_hashset(missing_uids, batch_size);
 
         let mut downloaded = 0u64;
@@ -661,10 +701,23 @@ async fn reconcile_uid_validity_change(
                 &batch.0,
                 account.max_email_size_bytes,
                 token.clone(),
+                Some(&|cumulative, avg_secs, stall_secs| {
+                    // Per-message progress: the current batch's cumulative count
+                    // keeps the UI moving while a slow server trickles messages.
+                    let _ = DownloadState::update_folder_progress(
+                        account_id,
+                        remote_mailbox.name.clone(),
+                        planned,
+                        cumulative,
+                        FolderStatus::Downloading,
+                        slow_server_message(avg_secs, stall_secs),
+                    );
+                    Ok(())
+                }),
             )
             .await
             {
-                Ok(processed) => {
+                Ok((processed, _throttled)) => {
                     downloaded += processed;
                     DownloadState::update_folder_progress(
                         account_id,
@@ -791,18 +844,12 @@ pub async fn reconcile_mailboxes(
                     account_id, local_mailbox.name, &local_mailbox.uid_validity, &remote_uid_validity
                 );
 
-                reconcile_uid_validity_change(
-                    account,
-                    local_mailbox,
-                    remote_mailbox,
-                    token.clone(),
-                )
-                .await?
+                reconcile_uid_validity_change(account, local_mailbox, remote_mailbox, token.clone())
+                    .await?
             } else {
                 perform_incremental_sync(account, local_mailbox, remote_mailbox, token.clone())
                     .await?
             };
-
             let mut updated = remote_mailbox.clone();
             updated.highest_uid = new_highest_uid;
             // Update uid_validity with the resolved value (either from server or synthetic)
@@ -924,33 +971,15 @@ async fn perform_incremental_sync(
         // Use stored highest_uid if available; otherwise fall back to Tantivy
         // query once (backward compatibility with pre-existing databases).
         let start_uid = match local_mailbox.highest_uid {
-            Some(uid) => {
-                tracing::info!(
-                    "[account {}][mailbox {}] perform_incremental_sync: stored highest_uid={}, remote.exists={}",
-                    account.id,
-                    local_mailbox.name,
-                    uid,
-                    remote_mailbox.exists
-                );
-                uid as u64 + 1
-            }
+            Some(uid) => uid as u64 + 1,
             None => {
-                let local_max_uid =
-                    ENVELOPE_MANAGER.get_max_uid(account.id, local_mailbox.id)?;
-                tracing::info!(
-                    "[account {}][mailbox {}] perform_incremental_sync: highest_uid unset, Tantivy max_uid={:?}, remote.exists={}",
-                    account.id,
-                    local_mailbox.name,
-                    local_max_uid,
-                    remote_mailbox.exists
-                );
+                let local_max_uid = ENVELOPE_MANAGER.get_max_uid(account.id, local_mailbox.id)?;
                 match local_max_uid {
                     Some(uid) => uid + 1,
                     None => {
                         info!(
                             "No maximum UID found in index for mailbox, assuming local storage is missing."
                         );
-
                         let result = match &account.date_since {
                             Some(date_since) => {
                                 fetch_and_save_by_date(
@@ -974,10 +1003,8 @@ async fn perform_incremental_sync(
                                     .await?
                                 }
                                 None => {
-                                    fetch_and_save_full_mailbox(
-                                        account, remote_mailbox, token,
-                                    )
-                                    .await?
+                                    fetch_and_save_full_mailbox(account, remote_mailbox, token)
+                                        .await?
                                 }
                             },
                         };
@@ -993,6 +1020,19 @@ async fn perform_incremental_sync(
             .as_ref()
             .map(|r| r.calculate_date())
             .transpose()?;
+        if start_uid == 1 {
+            // No stored highest_uid and no indexed messages: fall back to a
+            // full mailbox download. Tell the UI up-front so it doesn't show
+            // a stale "Pending" while the (possibly large) mailbox streams.
+            let _ = DownloadState::update_folder_progress(
+                account.id,
+                remote_mailbox.name.clone(),
+                0,
+                0,
+                FolderStatus::Downloading,
+                Some("Full mailbox download".into()),
+            )?;
+        }
 
         let new_max_uid = ImapExecutor::fetch_new_mail(
             &mut session,
@@ -1034,7 +1074,10 @@ mod tests {
     fn test_generate_synthetic_uidvalidity_different_mailboxes() {
         let inbox = generate_synthetic_uidvalidity("INBOX");
         let sent = generate_synthetic_uidvalidity("Sent");
-        assert_ne!(inbox, sent, "different mailboxes should have different uid_validity");
+        assert_ne!(
+            inbox, sent,
+            "different mailboxes should have different uid_validity"
+        );
     }
 
     #[test]
@@ -1070,10 +1113,8 @@ mod tests {
 
         // Ensure a rustls crypto provider is installed (ring).
         // May already be installed by production code; ignore duplicate.
-        rustls::crypto::CryptoProvider::install_default(
-            rustls::crypto::ring::default_provider(),
-        )
-        .ok();
+        rustls::crypto::CryptoProvider::install_default(rustls::crypto::ring::default_provider())
+            .ok();
 
         let tcp = TcpStream::connect((host, port))
             .await
@@ -1084,8 +1125,8 @@ mod tests {
         let timeout_stream = TimeoutStream::new(tcp);
         let pinned = Box::pin(timeout_stream);
 
-        let server_name = ServerName::try_from(host.to_owned())
-            .map_err(|e| format!("Invalid hostname: {e}"))?;
+        let server_name =
+            ServerName::try_from(host.to_owned()).map_err(|e| format!("Invalid hostname: {e}"))?;
 
         let config = ClientConfig::builder()
             .with_root_certificates(rustls::RootCertStore {
@@ -1208,11 +1249,7 @@ mod tests {
 
             session.logout().await.ok();
 
-            println!(
-                "Call {}: UIDVALIDITY = {:?}",
-                i + 1,
-                status.uid_validity
-            );
+            println!("Call {}: UIDVALIDITY = {:?}", i + 1, status.uid_validity);
             results.borrow_mut().push(status.uid_validity);
         }
 
@@ -1275,13 +1312,10 @@ mod tests {
         let sample: Vec<u32> = all_uids.into_iter().take(5).collect();
         let uid_set = compress_uid_list(sample.clone());
 
-        let result = ImapExecutor::fetch_uid_metadata(
-            &mut session,
-            &uid_set,
-            CancellationToken::new(),
-        )
-        .await
-        .expect("fetch_uid_metadata should succeed");
+        let result =
+            ImapExecutor::fetch_uid_metadata(&mut session, &uid_set, CancellationToken::new())
+                .await
+                .expect("fetch_uid_metadata should succeed");
 
         session.logout().await.ok();
 
@@ -1329,8 +1363,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_retry_first_attempt_succeeds() {
-        let result = fetch_uid_validity_with_retry_inner(3, mock_results(vec![Ok(Some(42))]))
-            .await;
+        let result = fetch_uid_validity_with_retry_inner(3, mock_results(vec![Ok(Some(42))])).await;
         assert_eq!(result.unwrap(), Some(42));
     }
 
@@ -1392,13 +1425,7 @@ mod tests {
         // max_retries=5, success on 5th attempt
         let result = fetch_uid_validity_with_retry_inner(
             5,
-            mock_results(vec![
-                Ok(None),
-                Ok(None),
-                Ok(None),
-                Ok(None),
-                Ok(Some(5)),
-            ]),
+            mock_results(vec![Ok(None), Ok(None), Ok(None), Ok(None), Ok(Some(5))]),
         )
         .await;
         assert_eq!(result.unwrap(), Some(5));
@@ -1418,11 +1445,7 @@ mod tests {
     #[tokio::test]
     async fn test_retry_max_retries_zero() {
         // max_retries=0 means no attempts at all
-        let result = fetch_uid_validity_with_retry_inner(
-            0,
-            mock_results(vec![Ok(Some(42))]),
-        )
-        .await;
+        let result = fetch_uid_validity_with_retry_inner(0, mock_results(vec![Ok(Some(42))])).await;
         assert_eq!(result.unwrap(), None);
     }
 
@@ -1431,8 +1454,8 @@ mod tests {
     // ============================================================
 
     use crate::imap::mock_server::{
-        examine_response, uid_fetch_metadata_response, uid_fetch_rfc822_response,
-        minimal_eml, MockImapServer, MockImapServerHandle,
+        examine_response, minimal_eml, uid_fetch_metadata_response, uid_fetch_rfc822_response,
+        MockImapServer, MockImapServerHandle,
     };
 
     /// Build an `async_imap::Session` connected to the mock server,
@@ -1453,9 +1476,11 @@ mod tests {
         client.read_response().await.unwrap();
 
         // Login
-        let mut session = client.login("user", "pass").await.map_err(|(e, _)| {
-            panic!("Login failed: {e:?}")
-        }).unwrap();
+        let mut session = client
+            .login("user", "pass")
+            .await
+            .map_err(|(e, _)| panic!("Login failed: {e:?}"))
+            .unwrap();
 
         // Examine
         session.examine("INBOX").await.unwrap();
@@ -1468,37 +1493,28 @@ mod tests {
         let handle = MockImapServer::new()
             .respond("LOGIN", "{TAG} OK LOGIN done\r\n")
             .respond("EXAMINE", examine_response("INBOX", 3, 42, 4))
-            .respond("UID FETCH", uid_fetch_metadata_response(&[
-                (1, "<msg-a@test.com>"),
-                (2, "<msg-b@test.com>"),
-                (3, "<msg-c@test.com>"),
-            ]))
+            .respond(
+                "UID FETCH",
+                uid_fetch_metadata_response(&[
+                    (1, "<msg-a@test.com>"),
+                    (2, "<msg-b@test.com>"),
+                    (3, "<msg-c@test.com>"),
+                ]),
+            )
             .start()
             .await;
 
         let mut session = mock_session(&handle).await;
 
-        let result = ImapExecutor::fetch_uid_metadata(
-            &mut session,
-            "1:3",
-            CancellationToken::new(),
-        )
-        .await
-        .unwrap();
+        let result =
+            ImapExecutor::fetch_uid_metadata(&mut session, "1:3", CancellationToken::new())
+                .await
+                .unwrap();
 
         assert_eq!(result.len(), 3);
-        assert_eq!(
-            result.get(&1).unwrap().as_deref(),
-            Some("msg-a@test.com")
-        );
-        assert_eq!(
-            result.get(&2).unwrap().as_deref(),
-            Some("msg-b@test.com")
-        );
-        assert_eq!(
-            result.get(&3).unwrap().as_deref(),
-            Some("msg-c@test.com")
-        );
+        assert_eq!(result.get(&1).unwrap().as_deref(), Some("msg-a@test.com"));
+        assert_eq!(result.get(&2).unwrap().as_deref(), Some("msg-b@test.com"));
+        assert_eq!(result.get(&3).unwrap().as_deref(), Some("msg-c@test.com"));
 
         session.logout().await.ok();
     }
@@ -1523,10 +1539,7 @@ mod tests {
         let mut session = mock_session(&handle).await;
 
         let uids: Vec<u32> = {
-            let mut stream = session
-                .uid_fetch("1:2", "(UID FLAGS)")
-                .await
-                .unwrap();
+            let mut stream = session.uid_fetch("1:2", "(UID FLAGS)").await.unwrap();
 
             use futures::TryStreamExt;
             let mut uids = Vec::new();
@@ -1557,10 +1570,7 @@ mod tests {
         let mut session = mock_session(&handle).await;
 
         let bodies: Vec<(u32, Vec<u8>)> = {
-            let mut stream = session
-                .uid_fetch("1:1", "(UID BODY[])")
-                .await
-                .unwrap();
+            let mut stream = session.uid_fetch("1:1", "(UID BODY[])").await.unwrap();
 
             use futures::TryStreamExt;
             let mut bodies = Vec::new();
@@ -1591,18 +1601,12 @@ mod tests {
 
         let mut session = mock_session(&handle).await;
 
-        let result = ImapExecutor::fetch_uid_metadata(
-            &mut session,
-            "1:*",
-            CancellationToken::new(),
-        )
-        .await
-        .unwrap();
+        let result =
+            ImapExecutor::fetch_uid_metadata(&mut session, "1:*", CancellationToken::new())
+                .await
+                .unwrap();
 
-        assert!(
-            result.is_empty(),
-            "empty mailbox should return empty map"
-        );
+        assert!(result.is_empty(), "empty mailbox should return empty map");
 
         session.logout().await.ok();
     }
@@ -1610,8 +1614,7 @@ mod tests {
     #[tokio::test]
     async fn fetch_uid_metadata_missing_message_id() {
         // One entry has a Message-ID, the other has no header at all.
-        let header_with_msgid =
-            "From: sender@example.com\r\n\
+        let header_with_msgid = "From: sender@example.com\r\n\
              Date: Thu, 01 Jan 2025 00:00:00 +0000\r\n\
              Message-ID: <ok@test.com>\r\n\r\n";
         let header_without_msgid = "\r\n";
@@ -1637,19 +1640,13 @@ mod tests {
 
         let mut session = mock_session(&handle).await;
 
-        let result = ImapExecutor::fetch_uid_metadata(
-            &mut session,
-            "1:2",
-            CancellationToken::new(),
-        )
-        .await
-        .unwrap();
+        let result =
+            ImapExecutor::fetch_uid_metadata(&mut session, "1:2", CancellationToken::new())
+                .await
+                .unwrap();
 
         assert_eq!(result.len(), 2);
-        assert_eq!(
-            result.get(&1).unwrap().as_deref(),
-            Some("ok@test.com")
-        );
+        assert_eq!(result.get(&1).unwrap().as_deref(), Some("ok@test.com"));
         // UID 2 has no Message-ID header → None
         assert_eq!(result.get(&2).unwrap().as_deref(), None);
 

@@ -293,10 +293,14 @@
       },
       "message": "Nachricht",
       "session": {
+        "current_folder": "Aktueller Ordner",
+        "elapsed": "Dauer",
+        "last_update": "Zuletzt aktualisiert",
         "started_at": "Startzeit",
         "status": "Status",
         "trigger": "Auslöser"
       },
+      "syncing": "Synchronisieren...",
       "tabs": {
         "active_session": "Aktive Sitzung",
         "errors": "Fehler",

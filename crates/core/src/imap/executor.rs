@@ -33,6 +33,7 @@ use tracing::info;
 
 const BODY_FETCH_COMMAND: &str = "(UID INTERNALDATE RFC822.SIZE BODY.PEEK[])";
 const SIZE_ONLY_FETCH: &str = "(UID RFC822.SIZE)";
+const MAX_NETWORK_RETRIES: u32 = 3;
 
 fn classify_imap_error(e: &async_imap::error::Error) -> ErrorCode {
     match e {
@@ -95,6 +96,30 @@ impl ImapExecutor {
             .append(mailbox_name, flags, internaldate, content)
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))
+    }
+
+    /// Enumerate every UID currently present in the mailbox via `UID SEARCH ALL`.
+    ///
+    /// This is the drift-safe way to page through a full mailbox: UIDs are stable
+    /// while the download runs (new arrivals only get larger UIDs), whereas
+    /// sequence numbers shift when mail is added or removed mid-download, which
+    /// silently skips messages. The caller owns the returned list and decides
+    /// how to batch it (see `generate_uid_sequence_hashset`).
+    pub async fn uid_search_all_mailbox(
+        session: &mut Session<Box<dyn SessionStream>>,
+        mailbox_name: &str,
+    ) -> BichonResult<Vec<u32>> {
+        session
+            .examine(mailbox_name)
+            .await
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
+        let results = session
+            .uid_search("ALL")
+            .await
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
+        let mut uids: Vec<u32> = results.into_iter().collect();
+        uids.sort();
+        Ok(uids)
     }
 
     /// Fetches new mail for a mailbox.
@@ -201,15 +226,33 @@ impl ImapExecutor {
                     ErrorCode::InternalError
                 ));
             }
-            let processed = Self::uid_batch_retrieve_emails(
+            let (processed, throttled) = Self::uid_batch_retrieve_emails(
                 session,
                 account.id,
                 mailbox.id,
                 &batch.0,
                 account.max_email_size_bytes,
                 token.clone(),
+                Some(&|cumulative, avg_secs, stall_secs| {
+                    // Per-message progress: the current batch's cumulative count
+                    // keeps the UI moving while a slow server trickles messages.
+                    let _ = DownloadState::update_folder_progress(
+                        account.id,
+                        mailbox.name.clone(),
+                        planned,
+                        cumulative,
+                        FolderStatus::Downloading,
+                        slow_server_message(avg_secs, stall_secs),
+                    );
+                    Ok(())
+                }),
             )
             .await?;
+            if throttled {
+                // Server appears to be rate-limiting; back off before the next
+                // batch so we don't hammer the limiter with back-to-back bursts.
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            }
             count += processed;
             DownloadState::update_folder_progress(
                 account.id,
@@ -233,8 +276,15 @@ impl ImapExecutor {
         Ok(max_uid)
     }
 
-    /// Direct ranged UID FETCH without date filtering. Streams results from
-    /// the server in a single IMAP round-trip.
+    /// Fetches all messages with UID >= start_uid via batched UID FETCH.
+    ///
+    /// A single ranged `UID FETCH {start}:*` can block for minutes on slow
+    /// servers pushing hundreds of messages, and hits the socket read timeout
+    /// if the server stalls, with zero progress feedback in the meantime.
+    /// Instead, enumerate the UIDs first, then download in small batches —
+    /// each batch is a short round-trip with a SIZE pre-check (oversized
+    /// messages are skipped without fetching their body), progress is reported
+    /// per batch, and the whole download stays responsive to cancellation.
     async fn fetch_new_mail_range(
         session: &mut Session<Box<dyn SessionStream>>,
         account: &AccountModel,
@@ -244,32 +294,48 @@ impl ImapExecutor {
     ) -> BichonResult<Option<u32>> {
         let uid_range = format!("{start_uid}:*");
         info!(
-            "[account {}][mailbox {}] fetch_new_mail: direct UID FETCH {}",
+            "[account {}][mailbox {}] fetch_new_mail: batched UID FETCH {}",
             account.id, mailbox.name, uid_range
         );
 
-        let mut stream = session
-            .uid_fetch(&uid_range, BODY_FETCH_COMMAND)
-            .await
-            .map_err(|e| {
-                let err_msg = format!("UID FETCH failed in [{}]: {:#?}", mailbox.name, e);
-                let _ = DownloadState::append_session_error(account.id, err_msg);
-                raise_error!(format!("{:#?}", e), classify_imap_error(&e))
-            })?;
+        let results = session.uid_search(&uid_range).await.map_err(|e| {
+            let err_msg = format!("UID SEARCH failed in [{}]: {:#?}", mailbox.name, e);
+            let _ = DownloadState::append_session_error(account.id, err_msg);
+            raise_error!(format!("{:#?}", e), classify_imap_error(&e))
+        })?;
+        let mut uid_vec: Vec<u32> = results.into_iter().collect();
+        uid_vec.sort();
+
+        if uid_vec.is_empty() {
+            DownloadState::update_folder_progress(
+                account.id,
+                mailbox.name.clone(),
+                0,
+                0,
+                FolderStatus::Success,
+                Some("No new emails found.".into()),
+            )?;
+            return Ok(None);
+        }
+
+        let max_uid = uid_vec.last().copied();
+        let planned = uid_vec.len() as u64;
+        let batch_size = account.download_batch_size.unwrap_or(DEFAULT_BATCH_SIZE) as usize;
+        let batches = generate_uid_sequence_hashset(uid_vec, batch_size);
+        let total_batches = batches.len();
+
+        DownloadState::update_folder_progress(
+            account.id,
+            mailbox.name.clone(),
+            planned,
+            0,
+            FolderStatus::Downloading,
+            None,
+        )?;
 
         let mut count = 0u64;
-        let mut skipped = 0u64;
-        let mut max_uid: Option<u32> = None;
-        let size_limit = account
-            .max_email_size_bytes
-            .unwrap_or(DEFAULT_MAX_EMAIL_SIZE);
-        while let Some(fetch) = stream
-            .try_next()
-            .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?
-        {
+        for (index, batch) in batches.into_iter().enumerate() {
             if token.is_cancelled() {
-                tracing::info!("Account {}: fetch_new_mail stream interrupted.", account.id);
                 DownloadState::update_session_status(
                     account.id,
                     DownloadStatus::Cancelled,
@@ -281,149 +347,134 @@ impl ImapExecutor {
                 ));
             }
 
-            let msg_size = fetch.size.unwrap_or(0) as u64;
-            if msg_size > 0 && msg_size > size_limit {
-                tracing::warn!(
-                    account_id = account.id,
-                    mailbox_id = mailbox.id,
-                    uid = fetch.uid,
-                    size = msg_size,
-                    limit = size_limit,
-                    "Skipping oversized email (streaming mode)"
-                );
-                skipped += 1;
-                continue;
+            // A slow server can stall a batch past the socket read timeout.
+            // Retry such batches on a fresh connection instead of failing the
+            // whole sync session.
+            let mut retries = 0u32;
+            let batch_result = loop {
+                match Self::uid_batch_retrieve_emails(
+                    session,
+                    account.id,
+                    mailbox.id,
+                    &batch.0,
+                    account.max_email_size_bytes,
+                    token.clone(),
+                    Some(&|cumulative, avg_secs, stall_secs| {
+                        // Report per-message so the UI moves even while a slow
+                        // server trickles out the current batch.
+                        DownloadState::update_folder_progress(
+                            account.id,
+                            mailbox.name.clone(),
+                            planned,
+                            cumulative,
+                            FolderStatus::Downloading,
+                            slow_server_message(avg_secs, stall_secs),
+                        )
+                    }),
+                )
+                .await
+                {
+                    Ok(processed) => break Ok(processed),
+                    Err(e)
+                        if retries < MAX_NETWORK_RETRIES && e.code() == ErrorCode::NetworkError =>
+                    {
+                        retries += 1;
+                        tracing::warn!(
+                            account_id = account.id,
+                            mailbox = mailbox.name,
+                            index,
+                            retries,
+                            "Network error on batch, reconnecting ({}/{})",
+                            retries,
+                            MAX_NETWORK_RETRIES
+                        );
+                        match ImapExecutor::create_connection(account.id).await {
+                            Ok(new_session) => {
+                                *session = new_session;
+                                if let Err(e2) = session.examine(&mailbox.encoded_name()).await {
+                                    let err_msg =
+                                        format!("Re-examine failed after reconnect: {:#?}", e2);
+                                    DownloadState::append_session_error(account.id, err_msg)?;
+                                    break Err(e);
+                                }
+                                // Longer backoff than the original 1s/2s/4s: a
+                                // throttling server needs time to recover.
+                                let backoff = [5u64, 15, 30][(retries - 1) as usize];
+                                tracing::warn!(
+                                    account_id = account.id,
+                                    mailbox = mailbox.name,
+                                    "Backing off {}s before retrying batch",
+                                    backoff
+                                );
+                                tokio::time::sleep(std::time::Duration::from_secs(backoff)).await;
+                                continue;
+                            }
+                            Err(e2) => {
+                                tracing::error!(
+                                    account_id = account.id,
+                                    "Reconnection failed: {:#?}",
+                                    e2
+                                );
+                                break Err(e);
+                            }
+                        }
+                    }
+                    Err(e) => break Err(e),
+                }
+            };
+            match batch_result {
+                Ok((processed, _throttled)) => {
+                    count += processed;
+                    DownloadState::update_folder_progress(
+                        account.id,
+                        mailbox.name.clone(),
+                        planned,
+                        count,
+                        FolderStatus::Downloading,
+                        None,
+                    )?;
+                    tracing::debug!(
+                        "[account {}][mailbox {}] fetch_new_mail: batch {}/{} done ({} processed)",
+                        account.id,
+                        mailbox.name,
+                        index + 1,
+                        total_batches,
+                        processed
+                    );
+                }
+                Err(e) => {
+                    DownloadState::append_session_error(account.id, format!("{:#?}", e))?;
+                    return Err(e);
+                }
             }
-
-            if let Some(uid) = fetch.uid {
-                max_uid = Some(max_uid.unwrap_or(0).max(uid));
+            if count == planned {
+                break;
             }
-            extract_envelope_and_store_it(fetch, account.id, mailbox.id).await?;
-            count += 1;
         }
 
-        let total = count + skipped;
-        if total == 0 {
-            DownloadState::update_folder_progress(
-                account.id,
-                mailbox.name.clone(),
-                0,
-                0,
-                FolderStatus::Success,
-                Some("No new emails found.".into()),
-            )?;
-        } else {
-            DownloadState::update_folder_progress(
-                account.id,
-                mailbox.name.clone(),
-                total,
-                count,
-                FolderStatus::Success,
-                if skipped > 0 {
-                    Some(format!("{skipped} email(s) skipped due to size limit"))
-                } else {
-                    None
-                },
-            )?;
-        }
+        DownloadState::update_folder_progress(
+            account.id,
+            mailbox.name.clone(),
+            count,
+            count,
+            FolderStatus::Success,
+            None,
+        )?;
 
         Ok(max_uid)
     }
 
-    pub async fn batch_retrieve_emails(
-        session: &mut Session<Box<dyn SessionStream>>,
-        account_id: u64,
-        mailbox_id: u64,
-        total: u64,
-        page: u64,
-        page_size: u64,
-        encoded_mailbox_name: &str,
-        max_email_size_bytes: Option<u64>,
-        token: CancellationToken,
-        max_uid: &mut Option<u32>,
-    ) -> BichonResult<usize> {
-        assert!(page > 0, "Page number must be greater than 0");
-        assert!(page_size > 0, "Page size must be greater than 0");
-
-        // Fetch messages starting from the oldest (ascending order).
-        let start = (page - 1) * page_size + 1;
-        if start > total {
-            return Ok(0);
-        }
-        let end = (start + page_size - 1).min(total);
-
-        let sequence_set = format!("{}:{}", start, end);
-        info!(
-            "Fetching mailbox '{}' messages: sequence {} (page {}, page_size {})",
-            encoded_mailbox_name, sequence_set, page, page_size
-        );
-
-        let limit = max_email_size_bytes.unwrap_or(DEFAULT_MAX_EMAIL_SIZE);
-
-        // PASS 1: fetch only SIZE to identify oversized messages
-        let acceptable_uids = {
-            let mut size_stream = session
-                .fetch(sequence_set.as_str(), SIZE_ONLY_FETCH)
-                .await
-                .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
-
-            let mut uids: Vec<u32> = Vec::new();
-            while let Some(fetch) = size_stream
-                .try_next()
-                .await
-                .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?
-            {
-                let uid = fetch.uid.unwrap_or(0);
-                let msg_size = fetch.size.unwrap_or(0) as u64;
-                if msg_size == 0 || msg_size <= limit {
-                    uids.push(uid);
-                } else {
-                    tracing::warn!(
-                        account_id,
-                        mailbox_id,
-                        uid,
-                        size = msg_size,
-                        limit,
-                        "Skipping oversized email"
-                    );
-                }
-            }
-            uids
-        };
-
-        if acceptable_uids.is_empty() {
-            return Ok(0);
-        }
-
-        // PASS 2: fetch bodies only for acceptable UIDs
-        let filtered = compress_uid_list(acceptable_uids);
-        let mut body_stream = session
-            .uid_fetch(&filtered, BODY_FETCH_COMMAND)
-            .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
-
-        let mut count = 0;
-        while let Some(fetch) = body_stream
-            .try_next()
-            .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?
-        {
-            if token.is_cancelled() {
-                tracing::info!("Account {}: UID fetch stream interrupted.", account_id);
-                return Err(raise_error!(
-                    "Stream cancelled".into(),
-                    ErrorCode::InternalError
-                ));
-            }
-            if let Some(uid) = fetch.uid {
-                *max_uid = Some((*max_uid).unwrap_or(0).max(uid));
-            }
-            extract_envelope_and_store_it(fetch, account_id, mailbox_id).await?;
-            count += 1;
-        }
-        Ok(count)
-    }
-
+    /// Downloads the bodies of `uid_set` in one batch.
+    ///
+    /// `progress` (if given) is invoked after each stored message with the
+    /// cumulative count for the whole mailbox, the current average
+    /// inter-message interval in seconds (None until at least two messages
+    /// arrived), and the current stall duration in seconds when the server is
+    /// silent (None when a message just arrived). The UI can then move per
+    /// message — and detect a slow server — instead of only updating when a
+    /// batch finishes. Slow servers push a batch's messages over many seconds
+    /// (even minutes); without per-message updates the UI freezes and looks
+    /// stuck.
     pub async fn uid_batch_retrieve_emails(
         session: &mut Session<Box<dyn SessionStream>>,
         account_id: u64,
@@ -431,7 +482,10 @@ impl ImapExecutor {
         uid_set: &str,
         max_email_size_bytes: Option<u64>,
         token: CancellationToken,
-    ) -> BichonResult<u64> {
+        progress: Option<
+            &(dyn Fn(u64, Option<f64>, Option<f64>) -> BichonResult<()> + Send + Sync),
+        >,
+    ) -> BichonResult<(u64, bool)> {
         let limit = max_email_size_bytes.unwrap_or(DEFAULT_MAX_EMAIL_SIZE);
 
         // PASS 1: fetch only SIZE to identify oversized messages
@@ -466,7 +520,7 @@ impl ImapExecutor {
         };
 
         if acceptable_uids.is_empty() {
-            return Ok(0);
+            return Ok((0, false));
         }
 
         // PASS 2: fetch bodies only for acceptable UIDs
@@ -477,11 +531,43 @@ impl ImapExecutor {
             .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
 
         let mut count = 0u64;
-        while let Some(fetch) = body_stream
-            .try_next()
-            .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?
-        {
+        // Sliding window of recent per-message receive times, used to estimate
+        // how slow the server is: slow servers push messages seconds apart.
+        let mut recv_times: std::collections::VecDeque<std::time::Instant> =
+            std::collections::VecDeque::with_capacity(11);
+        let mut last_recv = std::time::Instant::now();
+        // Consecutive stall reports. A high value means the server is
+        // throttling us; the caller sleeps before the next batch to avoid
+        // hammering the rate limiter back-to-back.
+        let mut consecutive_stalls = 0u32;
+        // While the server is silent, re-report the current wait every few
+        // seconds so the UI shows the wait climbing instead of a stale
+        // average (the average only moves when a message actually arrives).
+        const STALL_REPORT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
+        loop {
+            let item =
+                match tokio::time::timeout(STALL_REPORT_INTERVAL, body_stream.try_next()).await {
+                    Ok(item) => item
+                        .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?,
+                    Err(_) => {
+                        if token.is_cancelled() {
+                            tracing::info!("Account {}: UID fetch stream interrupted.", account_id);
+                            return Err(raise_error!(
+                                "Stream cancelled".into(),
+                                ErrorCode::InternalError
+                            ));
+                        }
+                        let stall_secs = last_recv.elapsed().as_secs_f64();
+                        consecutive_stalls += 1;
+
+                        if let Some(progress) = progress {
+                            progress(count, None, Some(stall_secs))?;
+                        }
+                        continue;
+                    }
+                };
+            let Some(fetch) = item else { break };
+
             if token.is_cancelled() {
                 tracing::info!("Account {}: UID fetch stream interrupted.", account_id);
                 return Err(raise_error!(
@@ -489,10 +575,29 @@ impl ImapExecutor {
                     ErrorCode::InternalError
                 ));
             }
+            let now = std::time::Instant::now();
+            consecutive_stalls = 0;
+            last_recv = now;
+            recv_times.push_back(now);
+            if recv_times.len() > 10 {
+                recv_times.pop_front();
+            }
+            let avg_secs = if recv_times.len() >= 2 {
+                let span = recv_times
+                    .back()
+                    .unwrap()
+                    .duration_since(*recv_times.front().unwrap());
+                Some(span.as_secs_f64() / (recv_times.len() as f64 - 1.0))
+            } else {
+                None
+            };
             extract_envelope_and_store_it(fetch, account_id, mailbox_id).await?;
             count += 1;
+            if let Some(progress) = progress {
+                progress(count, avg_secs, None)?;
+            }
         }
-        Ok(count)
+        Ok((count, consecutive_stalls >= 2))
     }
 
     /// Fetches the raw RFC822 body of a single message by UID.
@@ -587,6 +692,46 @@ impl ImapExecutor {
 
 pub const DEFAULT_BATCH_SIZE: u32 = 30;
 pub const DEFAULT_MAX_EMAIL_SIZE: u64 = 100 * 1024 * 1024;
+
+/// Average seconds between consecutive messages above which the IMAP server is
+/// considered slow (a healthy server responds in milliseconds).
+const SLOW_SERVER_THRESHOLD_SECS: f64 = 3.0;
+/// Seconds of silence before the UI is told the server is stalling on the
+/// current message (lower than SLOW_SERVER_THRESHOLD so the message flips to
+/// "waiting" promptly once the server stops feeding).
+const STALL_REPORT_THRESHOLD_SECS: f64 = 3.0;
+/// Silence beyond this is treated as likely rate limiting (throttling), not
+/// just slowness — the UI then explains what Bichon is doing about it.
+const RATE_LIMIT_THRESHOLD_SECS: f64 = 10.0;
+
+/// Returns a user-facing hint when the IMAP server is feeding messages slowly
+/// or has gone silent, so the UI can explain "this is the server, not Bichon".
+/// `None` when the server is responding normally or not enough messages
+/// arrived to tell. `stall_secs` (server silent on the current message) takes
+/// precedence over the running average.
+pub fn slow_server_message(avg_secs: Option<f64>, stall_secs: Option<f64>) -> Option<String> {
+    if let Some(stall) = stall_secs {
+        if stall >= RATE_LIMIT_THRESHOLD_SECS {
+            return Some(format!(
+                "Possible IMAP rate limiting: server has been silent for {:.0}s. Bichon is pacing the download (pausing between batches) and will retry with backoff if the connection stalls.",
+                stall
+            ));
+        }
+        if stall >= STALL_REPORT_THRESHOLD_SECS {
+            return Some(format!(
+                "IMAP server is slow: no response for {:.0}s while fetching the next message; download is still in progress.",
+                stall
+            ));
+        }
+    }
+    match avg_secs {
+        Some(secs) if secs >= SLOW_SERVER_THRESHOLD_SECS => Some(format!(
+            "IMAP server is slow (avg {:.1}s between messages); download is still in progress.",
+            secs
+        )),
+        _ => None,
+    }
+}
 
 /// Compresses a sorted list of UIDs into an IMAP sequence-set string.
 /// Consecutive UIDs become ranges (e.g. `1:5`), non-consecutive are
@@ -737,10 +882,7 @@ mod test {
     #[test]
     fn parse_message_id_lowercase() {
         let header = b"Message-Id: <foo@bar.com>\r\n";
-        assert_eq!(
-            parse_message_id_header(header),
-            Some("foo@bar.com".into())
-        );
+        assert_eq!(parse_message_id_header(header), Some("foo@bar.com".into()));
     }
 
     #[test]

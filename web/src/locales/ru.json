@@ -293,10 +293,14 @@
       },
       "message": "Сообщение",
       "session": {
+        "current_folder": "Текущая почтовая папка",
+        "elapsed": "Прошло времени",
+        "last_update": "Последнее обновление",
         "started_at": "Время начала",
         "status": "Статус",
         "trigger": "Триггер"
       },
+      "syncing": "Синхронизация",
       "tabs": {
         "active_session": "Активная сессия",
         "errors": "Ошибки",

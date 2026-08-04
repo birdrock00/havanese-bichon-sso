@@ -24,7 +24,9 @@ import { useTranslation } from 'react-i18next';
 import { useCurrentUser } from '@/hooks/use-current-user';
 import { toast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { AccountModel } from '@/api/account/api';
+import { useQuery } from '@tanstack/react-query'
+import { download_state, AccountModel, DownloadStatus } from '@/api/account/api';
+import { Loader2 } from 'lucide-react'
 
 interface Props {
   row: Row<AccountModel>
@@ -44,29 +46,50 @@ export function RunningStateCellAction({ row }: Props) {
   }
   const hasPermission = require_any_permission(['system:root', 'account:read_details'], row.original.id)
 
+  // Live sync status pill. While a download session is running, poll every 5s
+  // so the list always reflects progress without needing the dialog open.
+  const { data: state } = useQuery({
+    queryKey: ['running-state', row.original.id],
+    queryFn: () => download_state(row.original.id),
+    refetchInterval: (query) => {
+      const s = query.state.data?.active_session
+      return s && s.status === DownloadStatus.Running ? 5000 : false
+    },
+  })
+  const running = state?.active_session
+  const isRunning = !!running && running.status === DownloadStatus.Running
+
   return (
-    <Button variant='ghost' className="h-auto p-1" onClick={() => {
-      if (hasPermission) {
-        setCurrentRow(row.original)
-        setOpen('running-state')
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Forbidden',
-          description: 'You do not have permission to view this account.',
-          action: (
-            <ToastAction altText="Close">
-              Close
-            </ToastAction>
-          ),
-        })
-      }
-    }}>
-      <span
-        className="text-xs text-primary cursor-pointer underline underline-offset-2 hover:opacity-80 transition-opacity"
-      >
-        {t('accounts.viewDetails')}
-      </span>
-    </Button>
+    <div className="flex items-center justify-center gap-2">
+      {isRunning && (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 text-blue-600 border border-blue-500/20 px-2 py-0.5 text-[11px] font-medium shrink-0">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          {t('accounts.runningState.syncing')}
+        </span>
+      )}
+      <Button variant='ghost' className="h-auto p-1" onClick={() => {
+        if (hasPermission) {
+          setCurrentRow(row.original)
+          setOpen('running-state')
+        } else {
+          toast({
+            variant: 'destructive',
+            title: 'Forbidden',
+            description: 'You do not have permission to view this account.',
+            action: (
+              <ToastAction altText="Close">
+                Close
+              </ToastAction>
+            ),
+          })
+        }
+      }}>
+        <span
+          className="text-xs text-primary cursor-pointer underline underline-offset-2 hover:opacity-80 transition-opacity"
+        >
+          {t('accounts.viewDetails')}
+        </span>
+      </Button>
+    </div>
   )
 }

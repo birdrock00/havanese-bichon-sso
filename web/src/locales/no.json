@@ -293,10 +293,14 @@
       },
       "message": "Melding",
       "session": {
+        "current_folder": "Nåværende e-postmappe",
+        "elapsed": "Varighet",
+        "last_update": "Sist oppdatert",
         "started_at": "Starttid",
         "status": "Status",
-        "trigger": "Trigger"
+        "trigger": "Utløser"
       },
+      "syncing": "Synkroniserer",
       "tabs": {
         "active_session": "Aktiv økt",
         "errors": "Feil",

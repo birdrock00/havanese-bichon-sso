@@ -293,10 +293,14 @@
       },
       "message": "Message",
       "session": {
+        "current_folder": "Dossier de courrier actuel",
+        "elapsed": "Temps écoulé",
+        "last_update": "Dernière mise à jour",
         "started_at": "Heure de début",
         "status": "Statut",
         "trigger": "Déclencheur"
       },
+      "syncing": "Synchronisation",
       "tabs": {
         "active_session": "Session active",
         "errors": "Erreurs",

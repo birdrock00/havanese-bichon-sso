@@ -293,10 +293,14 @@
       },
       "message": "Besked",
       "session": {
+        "current_folder": "Nuværende postmappe",
+        "elapsed": "Varighed",
+        "last_update": "Senest opdateret",
         "started_at": "Starttid",
         "status": "Status",
-        "trigger": "Trigger"
+        "trigger": "Udløsermetode"
       },
+      "syncing": "Synkroniserer",
       "tabs": {
         "active_session": "Aktiv session",
         "errors": "Fejl",

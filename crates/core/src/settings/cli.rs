@@ -245,6 +245,14 @@ pub struct Settings {
     #[clap(
         long,
         env,
+        default_value = "90",
+        help = "IMAP socket read timeout in seconds (0 disables the timeout). Servers that throttle or burst slowly (e.g. Zoho) can pause for 30-60s between responses; keep this above the longest expected server silence so throttling surfaces as progress delay, not a failed sync."
+    )]
+    pub bichon_imap_timeout_seconds: u64,
+
+    #[clap(
+        long,
+        env,
         default_value = "false",
         help = "Enable the embedded SMTP server for real-time email receiving"
     )]

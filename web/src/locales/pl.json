@@ -293,10 +293,14 @@
       },
       "message": "Wiadomość",
       "session": {
+        "current_folder": "Bieżący folder poczty",
+        "elapsed": "Czas trwania",
+        "last_update": "Ostatnia aktualizacja",
         "started_at": "Czas rozpoczęcia",
         "status": "Status",
         "trigger": "Wyzwalacz"
       },
+      "syncing": "Synchronizowanie",
       "tabs": {
         "active_session": "Aktywna sesja",
         "errors": "Błędy",

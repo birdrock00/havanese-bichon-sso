@@ -293,10 +293,14 @@
       },
       "message": "訊息",
       "session": {
+        "current_folder": "目前郵件資料夾",
+        "elapsed": "耗時",
+        "last_update": "最近更新",
         "started_at": "開始時間",
         "status": "狀態",
         "trigger": "觸發方式"
       },
+      "syncing": "同步中",
       "tabs": {
         "active_session": "目前任務",
         "errors": "錯誤",

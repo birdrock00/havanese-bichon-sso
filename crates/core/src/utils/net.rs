@@ -18,7 +18,7 @@
 
 use crate::error::code::ErrorCode;
 use crate::raise_error;
-use crate::settings::proxy::Proxy;
+use crate::settings::{cli::SETTINGS, proxy::Proxy};
 use crate::utils::tls::establish_tls_stream;
 use crate::{error::BichonResult, imap::session::SessionStream};
 use base64::{engine::general_purpose, Engine as _};
@@ -90,9 +90,16 @@ pub(crate) async fn establish_tcp_connection_with_timeout(
     let tcp_stream = connect_with_optional_proxy(use_proxy, address).await?;
     let mut timeout_stream = TimeoutStream::new(tcp_stream);
 
-    // Set read and write timeouts
+    // Set read and write timeouts. The read timeout bounds how long the sync
+    // task blocks waiting for a slow IMAP server between commands; a hung
+    // server therefore surfaces as a network error (and retry) instead of a
+    // silently stuck download. 0 disables the read timeout (server decides).
+    let read_timeout = SETTINGS
+        .bichon_imap_timeout_seconds
+        .checked_sub(1)
+        .map(|seconds| Duration::from_secs(seconds.max(1)));
     timeout_stream.set_write_timeout(Some(Duration::from_secs(15)));
-    timeout_stream.set_read_timeout(Some(Duration::from_secs(30)));
+    timeout_stream.set_read_timeout(read_timeout);
 
     // Return the timeout-wrapped TCP stream as a Pin
     Ok(Box::pin(timeout_stream))

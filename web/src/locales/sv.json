@@ -293,10 +293,14 @@
       },
       "message": "Meddelande",
       "session": {
+        "current_folder": "Aktuell e-postmapp",
+        "elapsed": "Tidsåtgång",
+        "last_update": "Senast uppdaterad",
         "started_at": "Starttid",
         "status": "Status",
-        "trigger": "Trigger"
+        "trigger": "Utlösare"
       },
+      "syncing": "Synkroniserar",
       "tabs": {
         "active_session": "Aktiv session",
         "errors": "Fel",

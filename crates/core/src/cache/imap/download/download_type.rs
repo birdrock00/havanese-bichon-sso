@@ -53,6 +53,7 @@ pub async fn decide_next_download_task(
 
     let should_start = match trigger_type {
         TriggerType::Manual => true,
+        TriggerType::SyncFull => true,
         TriggerType::Scheduled => {
             let now = utc_now!();
             let cooldown_ok = now - state.last_finished_at.unwrap_or(0) > 60 * 1000;
@@ -73,10 +74,14 @@ pub async fn decide_next_download_task(
         DownloadState::start_new_session(account.id, trigger_type)?;
         Ok(DownloadTask::TraceFetch)
     } else {
+        // Nothing to download right now. A Running active_session at this point
+        // is a leftover from an interrupted run (a real download would have
+        // been blocked by the busy guard before reaching here), so mark it
+        // Cancelled instead of leaving the UI showing a phantom "syncing".
+        DownloadState::finalize_stale_session(account.id)?;
         Ok(DownloadTask::Idle)
     }
 }
-
 fn should_trigger_next_download(last_trigger_at: i64, sync_interval_min: i64) -> bool {
     let now = utc_now!();
     now - last_trigger_at > (sync_interval_min * 60 * 1000)

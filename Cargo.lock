@@ -298,6 +298,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 
 [[package]]
+name = "base64"
+version = "0.23.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b25655df2c3cdd83c5e5b293b88acd880332b2ddadd7c30ac43144fdc0033da9"
+
+[[package]]
 name = "bichon-admin"
 version = "2.0.1-alpha.1"
 dependencies = [
@@ -348,7 +354,7 @@ dependencies = [
 name = "bichon-cli"
 version = "2.0.1-alpha.1"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.0",
  "bichon-core",
  "chrono",
  "clap",
@@ -371,7 +377,7 @@ name = "bichon-core"
 version = "2.0.1-alpha.1"
 dependencies = [
  "async-imap",
- "base64 0.22.1",
+ "base64 0.23.0",
  "bichon-blob",
  "bichon-memdb",
  "blake3",
@@ -471,7 +477,7 @@ dependencies = [
 name = "bichon-smtp"
 version = "2.0.1-alpha.1"
 dependencies = [
- "base64 0.22.1",
+ "base64 0.23.0",
  "bichon-core",
  "lettre",
  "rcgen",
@@ -1976,9 +1982,9 @@ checksum = "e9025058dae765dee5070ec375f591e2ba14638c63feff74f13805a72e523163"
 
 [[package]]
 name = "http"
-version = "1.4.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6970f50e31d6fc17d3fa27329444bfa74e196cf62e95052a3f6fee181dba6425"
+checksum = "918d3568bebf352712bc2ef3d46a8bcf1a75b373be6539de198e9105cbbf9ce0"
 dependencies = [
  "bytes 1.12.0",
  "itoa",
@@ -4928,9 +4934,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.52.3"
+version = "1.53.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fc7f01b389ac15039e4dc9531aa973a135d7a4135281b12d7c1bc79fd57fffe"
+checksum = "202caea871b69668250d242070849eb495be178ed697a3e98aebce5bc81a0bed"
 dependencies = [
  "bytes 1.12.0",
  "libc",
@@ -5382,9 +5388,9 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "uuid"
-version = "1.23.4"
+version = "1.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf80a72845275afea99e7f2b434723d3bc7e38470fcd1c7ed39a599c73319a53"
+checksum = "bf3923a6f5c4c6382e0b653c4117f48d631ea17f38ed86e2a828e6f7412f5239"
 dependencies = [
  "getrandom 0.4.2",
  "js-sys",

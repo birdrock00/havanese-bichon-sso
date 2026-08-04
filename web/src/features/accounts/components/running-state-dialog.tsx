@@ -26,7 +26,8 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { useQuery } from '@tanstack/react-query'
-import { download_state, AccountModel, FolderProgress } from '@/api/account/api'
+import { useEffect, useState } from 'react'
+import { download_state, DownloadStatus, AccountModel, FolderProgress } from '@/api/account/api'
 import { format } from 'date-fns'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
@@ -114,11 +115,19 @@ function FolderDetailItem({ f, t }: { f: FolderProgress, t: (key: string) => str
 
       {f.message && (
         <div className="px-4 pb-4">
-          <div className="bg-muted/50 border rounded-lg p-3 flex gap-3 items-start">
-            <Info className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+          <div className={`border rounded-lg p-3 flex gap-3 items-start ${f.message.toLowerCase().includes('slow') || f.message.toLowerCase().includes('limiting')
+            ? 'bg-amber-500/10 border-amber-500/30'
+            : 'bg-muted/50'}`}>
+            {f.message.toLowerCase().includes('slow') || f.message.toLowerCase().includes('limiting') ? (
+              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+            ) : (
+              <Info className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+            )}
             <div className="space-y-0.5">
               <p className="text-[10px] font-bold text-foreground">{t('accounts.runningState.message')}:</p>
-              <p className="text-[10px] font-medium text-muted-foreground leading-relaxed">{f.message}</p>
+              <p className={`text-[10px] font-medium leading-relaxed ${f.message.toLowerCase().includes('slow') || f.message.toLowerCase().includes('limiting')
+                ? 'text-amber-700'
+                : 'text-muted-foreground'}`}>{f.message}</p>
             </div>
           </div>
         </div>
@@ -133,12 +142,37 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
   const { data: state, isLoading } = useQuery({
     queryKey: ['running-state', currentRow.id],
     queryFn: () => download_state(currentRow.id),
-    refetchInterval: 5000,
+    refetchInterval: (query) => {
+      const s = query.state.data?.active_session
+      return s && s.status === DownloadStatus.Running ? 5000 : false
+    },
     enabled: open && !!currentRow.id,
   })
 
   const session = state?.active_session
   const history = state?.history || []
+  const isRunning = !!session && session.status === DownloadStatus.Running
+
+  // When the poll is active, tick once per second so the "elapsed" and
+  // "last updated Xs ago" readouts stay fresh between refetches.
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (!isRunning) return
+    const id = setInterval(() => setTick((v) => v + 1), 1000)
+    return () => clearInterval(id)
+  }, [isRunning])
+
+  const elapsedSec = session && isRunning
+    ? Math.max(0, Math.floor((Date.now() - new Date(session.start_time).getTime()) / 1000))
+    : 0
+  const formatDur = (s: number) => {
+    const h = Math.floor(s / 3600)
+    const m = Math.floor((s % 3600) / 60)
+    const sec = s % 60
+    if (h > 0) return `${h}h ${m}m ${sec}s`
+    if (m > 0) return `${m}m ${sec}s`
+    return `${sec}s`
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -202,6 +236,23 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
                               </div>
                             </div>
                           </div>
+                          {isRunning && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="p-3 sm:p-4 rounded-xl border bg-card shadow-sm flex items-center justify-between sm:block">
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">{t('accounts.runningState.session.elapsed')}</p>
+                                <div className="text-sm font-bold font-mono text-blue-600 flex items-center gap-1.5">
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  {formatDur(elapsedSec)}
+                                </div>
+                              </div>
+                              {session.current_folder && (
+                                <div className="p-3 sm:p-4 rounded-xl border bg-card shadow-sm flex items-center justify-between sm:block">
+                                  <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">{t('accounts.runningState.session.current_folder')}</p>
+                                  <div className="text-sm font-bold text-foreground truncate">{session.current_folder}</div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                           <Tabs defaultValue="folders" className="w-full">
                             <TabsList className="bg-muted mb-3 h-8">
                               <TabsTrigger value="folders" className="text-[11px] font-bold">

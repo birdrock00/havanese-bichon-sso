@@ -293,10 +293,14 @@
       },
       "message": "Mensagem",
       "session": {
+        "current_folder": "Pasta de e-mail atual",
+        "elapsed": "Tempo decorrido",
+        "last_update": "Última atualização",
         "started_at": "Hora de início",
         "status": "Status",
         "trigger": "Gatilho"
       },
+      "syncing": "Sincronizando",
       "tabs": {
         "active_session": "Sessão ativa",
         "errors": "Erros",

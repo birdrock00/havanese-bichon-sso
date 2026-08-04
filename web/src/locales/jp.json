@@ -293,10 +293,14 @@
       },
       "message": "メッセージ",
       "session": {
+        "current_folder": "現在のメールフォルダー",
+        "elapsed": "経過時間",
+        "last_update": "最終更新",
         "started_at": "開始時刻",
         "status": "状態",
         "trigger": "トリガー"
       },
+      "syncing": "同期中",
       "tabs": {
         "active_session": "実行中タスク",
         "errors": "エラー",

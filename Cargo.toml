@@ -18,19 +18,19 @@ edition = "2021"
 
 [workspace.dependencies]
 chrono = "0.4.45"
-clap = { version = "4.6.1", features = ["derive", "env"] }
+clap = { version = "4.6", features = ["derive", "env"] }
 bichon-memdb = { path = "crates/memdb" }
 bichon-blob = { path = "crates/blob" }
 itertools = "0.15.0"
 ring = { version = "0.17.14", features = ["std"] }
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.150"
-tokio = { version = "1.52.3", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.53", features = ["full"] }
 tracing = "0.1.44"
 tracing-appender = "0.2.3"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
-base64 = "0.22.1"
-snafu = "0.9.1"
+base64 = "0.23"
+snafu = "0.9"
 reqwest = { version = "0.12.24", default-features = false, features = [
     "json",
     "stream",
@@ -40,10 +40,10 @@ reqwest = { version = "0.12.24", default-features = false, features = [
     "socks",
 ] }
 tokio-socks = "0.5.3"
-http = "1.4.2"
+http = "1.5"
 regex = "1.13"
 email_address = "0.2.9"
-futures = "0.3.32"
+futures = "0.3"
 utf7-imap = "0.3.2"
 mail-parser = { version = '0.11', features = ["serde"] }
 # mail-send = "0.5.2"
@@ -58,16 +58,16 @@ sysinfo = "0.39"
 num_cpus = "1.17.0"
 rand = "0.10.2"
 encoding_rs = "0.8.35"
-webpki-roots = "1.0.8"
-rustls = { version = "0.23.41", default-features = false, features = ["ring"] }
-rustls-pki-types = "1.15.0"
+webpki-roots = "1.0"
+rustls = { version = "0.23", default-features = false, features = ["ring"] }
+rustls-pki-types = "1.15"
 tokio-io-timeout = "1.2.1"
 semver = "1.0.28"
 governor = "0.10.4"
 lru = "0.18.1"
 mime_guess = "2.0.5"
 hex = "0.4.3"
-time = { version = "0.3.53", features = [
+time = { version = "0.3", features = [
     "formatting",
     "parsing",
     "local-offset",
@@ -86,10 +86,10 @@ mail-send = "0.6.1"
 rcgen = "0.14.8"
 rustls-pemfile = "2.2.0"
 blake3 = "1.8.5"
-uuid = { version = "1.23.4", features = ["v4", "serde"] }
-fjall = { version = "3.1.6", features = ["lz4", "metrics", "bytes_1"] }
+uuid = { version = "1.24", features = ["v4", "serde"] }
+fjall = { version = "3.1", features = ["lz4", "metrics", "bytes_1"] }
 tracing-log = "0.2.0"
-tokio-util = "0.7.18"
+tokio-util = "0.7"
 indicatif = "0.18.6"
 
 [profile.release]

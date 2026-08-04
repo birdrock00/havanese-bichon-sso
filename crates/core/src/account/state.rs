@@ -40,6 +40,10 @@ pub enum TriggerType {
     Manual,
     #[default]
     Scheduled,
+    /// Full re-sync (UID SEARCH ALL) invoked explicitly, e.g. to repair a
+    /// mailbox whose incremental download was interrupted. Semantically a
+    /// manual trigger, tracked distinctly for diagnostics.
+    SyncFull,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
@@ -189,6 +193,47 @@ impl DownloadState {
         })
     }
 
+    /// Moves a stale Running session into history as Cancelled.
+    ///
+    /// A Running `active_session` that survives an Idle decision means the
+    /// previous run was interrupted without a clean shutdown (e.g. process
+    /// killed mid-download). Leaving it in place makes the UI show a phantom
+    /// "syncing" state even though nothing is downloading. Callers invoke this
+    /// only when no download is actually running for the account, so a
+    /// legitimately active session is never touched.
+    ///
+    /// Returns `true` if a stale session was finalized (i.e. the previous sync
+    /// did not finish) and `false` otherwise.
+    pub fn finalize_stale_session(account_id: u64) -> BichonResult<bool> {
+        let stale = Self::get(account_id)?
+            .and_then(|s| s.active_session)
+            .map_or(false, |s| s.status == DownloadStatus::Running);
+        if stale {
+            Self::update_state(account_id, move |current| {
+                let mut updated = current.clone();
+                if updated
+                    .active_session
+                    .as_ref()
+                    .map_or(false, |s| s.status == DownloadStatus::Running)
+                {
+                    if let Some(mut session) = updated.active_session.take() {
+                        session.status = DownloadStatus::Cancelled;
+                        session.end_time = Some(utc_now!());
+                        session.message = Some(
+                            "Previous sync did not finish cleanly; marked as cancelled on startup."
+                                .into(),
+                        );
+                        updated.history.push(session);
+                        updated.last_finished_at = Some(utc_now!());
+                        updated.active_session = None;
+                    }
+                }
+                Ok(updated)
+            })?;
+        }
+        Ok(stale)
+    }
+
     pub fn update_folder_progress(
         account_id: u64,
         folder_name: String,
@@ -215,6 +260,19 @@ impl DownloadState {
                 progress.current = current;
                 progress.status = status;
                 progress.message = message;
+            }
+            Ok(updated)
+        })
+    }
+
+    /// Touches only `current_folder` without rewriting folder progress. Lets
+    /// long-running IMAP operations (e.g. waiting on a slow server mid-batch)
+    /// keep the UI's "last activity" indicator fresh without spamming writes.
+    pub fn set_current_folder(account_id: u64, folder_name: String) -> BichonResult<()> {
+        Self::update_state(account_id, move |state| {
+            let mut updated = state.clone();
+            if let Some(ref mut session) = updated.active_session {
+                session.current_folder = Some(folder_name);
             }
             Ok(updated)
         })

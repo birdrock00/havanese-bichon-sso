@@ -293,10 +293,14 @@
       },
       "message": "Messaggio",
       "session": {
+        "current_folder": "Cartella posta corrente",
+        "elapsed": "Tempo trascorso",
+        "last_update": "Ultimo aggiornamento",
         "started_at": "Ora di inizio",
         "status": "Stato",
-        "trigger": "Trigger"
+        "trigger": "Innesco"
       },
+      "syncing": "Sincronizzazione in corso",
       "tabs": {
         "active_session": "Sessione attiva",
         "errors": "Errori",

@@ -293,10 +293,14 @@
       },
       "message": "رسالة",
       "session": {
+        "current_folder": "مجلد البريد الحالي",
+        "elapsed": "الوقت المنقضي",
+        "last_update": "آخر تحديث",
         "started_at": "وقت البدء",
         "status": "الحالة",
-        "trigger": "المشغّل"
+        "trigger": "طريقة المشغّل"
       },
+      "syncing": "جاري المزامنة",
       "tabs": {
         "active_session": "الجلسة النشطة",
         "errors": "أخطاء",

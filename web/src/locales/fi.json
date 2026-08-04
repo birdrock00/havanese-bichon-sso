@@ -293,10 +293,14 @@
       },
       "message": "Viesti",
       "session": {
+        "current_folder": "Nykyinen postikansio",
+        "elapsed": "Kesto",
+        "last_update": "Viimeksi päivitetty",
         "started_at": "Aloitusaika",
         "status": "Tila",
-        "trigger": "Laukaisija"
+        "trigger": "Käynnistystapa"
       },
+      "syncing": "Synkronoidaan",
       "tabs": {
         "active_session": "Aktiivinen istunto",
         "errors": "Virheet",

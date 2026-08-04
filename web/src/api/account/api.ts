@@ -42,6 +42,7 @@ export enum DownloadStatus {
 export enum TriggerType {
     Manual = "Manual",
     Scheduled = "Scheduled",
+    SyncFull = "SyncFull",
 }
 
 export enum FolderStatus {

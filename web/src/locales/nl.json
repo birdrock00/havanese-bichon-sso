@@ -293,10 +293,14 @@
       },
       "message": "Bericht",
       "session": {
+        "current_folder": "Huidige e-mailmap",
+        "elapsed": "Verstreken tijd",
+        "last_update": "Laatst bijgewerkt",
         "started_at": "Starttijd",
         "status": "Status",
-        "trigger": "Trigger"
+        "trigger": "Triggermethode"
       },
+      "syncing": "Synchroniseren",
       "tabs": {
         "active_session": "Actieve sessie",
         "errors": "Fouten",
