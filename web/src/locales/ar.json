@@ -240,6 +240,7 @@
     "imapPortPlaceholder": "مثال: 993",
     "imapProxy": "استخدم وكيل SOCKS5 لاتصالات IMAP.",
     "incDownload": "الفاصل",
+    "incSync": "فترة التزامن",
     "lastSync": "آخر مزامنة",
     "leaveEmptyToKeepExisting": "اترك فارغًا للاحتفاظ بكلمة المرور الحالية، أو أدخل كلمة مرور جديدة لتحديثها.",
     "leaveEmptyToKeepPassword": "اترك فارغًا للاحتفاظ بكلمة المرور الحالية",
@@ -271,6 +272,7 @@
     "refreshToken": "رمز التحديث",
     "refreshTokenCopiedToClipboard": "تم نسخ رمز التحديث إلى الحافظة",
     "relative": "نسبي",
+    "runGapFill": "فحص البريد الجديد وتنزيله، مع ملء الرسائل القديمة المفقودة محلياً تلقائياً",
     "runningState": {
       "account": {
         "id": "معرّف الحساب"
@@ -283,10 +285,15 @@
         "no_active_download": "لا يوجد تنزيل نشط",
         "no_errors_current": "لا توجد أخطاء في الجلسة الحالية",
         "no_errors_session": "لا توجد أخطاء في هذه الجلسة",
+        "no_gap_fill_folders": "لا توجد مجلدات لمزامنة الرسائل المفقودة",
+        "no_gap_fill_history": "لا يوجد سجل لاستكمال الرسائل",
         "no_global_errors": "لا توجد أخطاء عامة",
         "no_history": "لا يوجد سجل"
       },
       "folders": "صناديق البريد",
+      "gap_fill_active": "عملية الاستكمال قيد التشغيل",
+      "gap_fill_downloaded_suffix": "تم تنزيلها",
+      "gap_fill_failed_suffix": "فشلت",
       "latest": "الأحدث",
       "loading": {
         "fetching_account_state": "جارٍ تحميل حالة الحساب..."
@@ -305,6 +312,7 @@
         "active_session": "الجلسة النشطة",
         "errors": "أخطاء",
         "folders": "صناديق البريد",
+        "gap_fill": "استكمال الرسائل الناقصة",
         "history": "السجل"
       }
     },
@@ -345,6 +353,7 @@
     "sinceRelativeDesc": "تنزيل رسائل الفترة الأخيرة فقط (مثل آخر 3 أشهر). يتحرك تاريخ البدء تلقائياً مع مرور الوقت.",
     "sinceRelativeValue": "تنزيل رسائل البريد الإلكتروني من آخر",
     "startDownload": "بدء التنزيل",
+    "startDownloadConfirmDesc": "بدء تنزيل بيانات الحسابات المحددة؟",
     "state": "الحالة",
     "status": "الحالة",
     "step": "الخطوة {{index}}",

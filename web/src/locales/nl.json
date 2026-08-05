@@ -240,6 +240,7 @@
     "imapPortPlaceholder": "bv. 993",
     "imapProxy": "Gebruik een SOCKS5-proxy voor IMAP-verbindingen.",
     "incDownload": "Interval",
+    "incSync": "Synch.-interval",
     "lastSync": "Laatste Sync",
     "leaveEmptyToKeepExisting": "Laat leeg om het bestaande wachtwoord te behouden, of voer een nieuw wachtwoord in om het bij te werken.",
     "leaveEmptyToKeepPassword": "Laat leeg om huidig wachtwoord te behouden",
@@ -271,6 +272,7 @@
     "refreshToken": "Vernieuwingstoken (Refresh Token)",
     "refreshTokenCopiedToClipboard": "Vernieuwingstoken naar klembord gekopieerd",
     "relative": "Relatief",
+    "runGapFill": "Controleer op nieuwe e-mails en vul oudere ontbrekende e-mails automatisch aan",
     "runningState": {
       "account": {
         "id": "Account-ID"
@@ -283,10 +285,15 @@
         "no_active_download": "Geen actieve download",
         "no_errors_current": "Geen fouten in huidige sessie",
         "no_errors_session": "Geen fouten in deze sessie",
+        "no_gap_fill_folders": "Geen mappen die ontbrekende berichten synchroniseren",
+        "no_gap_fill_history": "Geen backfill-geschiedenis",
         "no_global_errors": "Geen globale fouten",
         "no_history": "Geen geschiedenis beschikbaar"
       },
       "folders": "mailboxen",
+      "gap_fill_active": "Lopende backfill-taak",
+      "gap_fill_downloaded_suffix": "Gedownload",
+      "gap_fill_failed_suffix": "mislukt",
       "latest": "RECENT",
       "loading": {
         "fetching_account_state": "Accountstatus ophalen..."
@@ -305,6 +312,7 @@
         "active_session": "Actieve sessie",
         "errors": "Fouten",
         "folders": "Mailboxen",
+        "gap_fill": "Ontbrekende berichten aanvullen",
         "history": "Geschiedenis"
       }
     },
@@ -345,6 +353,7 @@
     "sinceRelativeDesc": "Download alleen e-mails uit de afgelopen periode (bijv. laatste 3 maanden). De startdatum verschuift automatisch mee.",
     "sinceRelativeValue": "Download e-mails van de laatste",
     "startDownload": "Download starten",
+    "startDownloadConfirmDesc": "Download starten voor geselecteerde accounts?",
     "state": "Status",
     "status": "Status",
     "step": "Stap {{index}}",

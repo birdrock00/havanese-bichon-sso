@@ -850,12 +850,25 @@ pub async fn reconcile_mailboxes(
                 perform_incremental_sync(account, local_mailbox, remote_mailbox, token.clone())
                     .await?
             };
+            info!(
+                account_id,
+                mailbox = %remote_mailbox.name,
+                local_highest = local_mailbox.highest_uid,
+                new_highest = new_highest_uid,
+                "reconcile: computed highest_uid for mailbox"
+            );
             let mut updated = remote_mailbox.clone();
             updated.highest_uid = new_highest_uid;
             // Update uid_validity with the resolved value (either from server or synthetic)
             if updated.uid_validity.is_none() {
                 updated.uid_validity = Some(remote_uid_validity);
             }
+            info!(
+                account_id,
+                mailbox = %updated.name,
+                highest_uid = updated.highest_uid,
+                "reconcile: persisting mailbox state"
+            );
             mailboxes_to_update.push(updated);
         }
         //The metadata of this mailbox must only be updated after a successful synchronization;
@@ -971,8 +984,21 @@ async fn perform_incremental_sync(
         // Use stored highest_uid if available; otherwise fall back to Tantivy
         // query once (backward compatibility with pre-existing databases).
         let start_uid = match local_mailbox.highest_uid {
-            Some(uid) => uid as u64 + 1,
+            Some(uid) => {
+                info!(
+                    account_id = account.id,
+                    mailbox = %local_mailbox.name,
+                    highest_uid = uid,
+                    "incremental: stored highest_uid"
+                );
+                uid as u64 + 1
+            }
             None => {
+                warn!(
+                    account_id = account.id,
+                    mailbox = %local_mailbox.name,
+                    "incremental: no stored highest_uid, falling back to Tantivy get_max_uid"
+                );
                 let local_max_uid = ENVELOPE_MANAGER.get_max_uid(account.id, local_mailbox.id)?;
                 match local_max_uid {
                     Some(uid) => uid + 1,

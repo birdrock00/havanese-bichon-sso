@@ -240,6 +240,7 @@
     "imapPortPlaceholder": "f.eks. 993",
     "imapProxy": "Brug en SOCKS5-proxy til IMAP-forbindelser.",
     "incDownload": "Interval",
+    "incSync": "Synk-interval",
     "lastSync": "Sidste synk.",
     "leaveEmptyToKeepExisting": "Lad stå tomt for at beholde den eksisterende adgangskode, eller indtast en ny for at opdatere den.",
     "leaveEmptyToKeepPassword": "Lad stå tomt for at beholde nuværende adgangskode",
@@ -271,6 +272,7 @@
     "refreshToken": "Opdateringstoken",
     "refreshTokenCopiedToClipboard": "Opdateringstoken kopieret til udklipsholderen",
     "relative": "Relativ",
+    "runGapFill": "Tjek for nye e-mails og fyld automatisk op på ældre manglende e-mails",
     "runningState": {
       "account": {
         "id": "Konto-ID"
@@ -283,10 +285,15 @@
         "no_active_download": "Ingen aktiv download",
         "no_errors_current": "Ingen fejl i nuværende session",
         "no_errors_session": "Ingen fejl i denne session",
+        "no_gap_fill_folders": "Ingen mapper med manglende e-mails",
+        "no_gap_fill_history": "Ingen historik over backfill",
         "no_global_errors": "Ingen globale fejl",
         "no_history": "Ingen historik"
       },
       "folders": "postkasser",
+      "gap_fill_active": "Kørende backfill-kørsel",
+      "gap_fill_downloaded_suffix": "downloadet",
+      "gap_fill_failed_suffix": "misllykkedes",
       "latest": "SENESTE",
       "loading": {
         "fetching_account_state": "Henter kontostatus..."
@@ -305,6 +312,7 @@
         "active_session": "Aktiv session",
         "errors": "Fejl",
         "folders": "Postkasser",
+        "gap_fill": "Udfyld manglende e-mails",
         "history": "Historik"
       }
     },
@@ -345,6 +353,7 @@
     "sinceRelativeDesc": "Download kun e-mails fra den seneste periode (f.eks. de seneste 3 måneder). Startdatoen flyttes automatisk fremad.",
     "sinceRelativeValue": "Download e-mails fra de sidste",
     "startDownload": "Start download",
+    "startDownloadConfirmDesc": "Start download for valgte konti?",
     "state": "Tilstand",
     "status": "Status",
     "step": "Trin {{index}}",

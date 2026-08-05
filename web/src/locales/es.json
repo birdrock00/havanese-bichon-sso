@@ -240,6 +240,7 @@
     "imapPortPlaceholder": "ej. 993",
     "imapProxy": "Usar proxy SOCKS5 para conexiones IMAP.",
     "incDownload": "Intervalo",
+    "incSync": "Intervalo de sinc.",
     "lastSync": "Última sincronización",
     "leaveEmptyToKeepExisting": "Deja vacío para mantener la contraseña existente, o introduce un nuevo valor para actualizarla.",
     "leaveEmptyToKeepPassword": "Deja vacío para mantener la contraseña actual",
@@ -271,6 +272,7 @@
     "refreshToken": "Token de actualización",
     "refreshTokenCopiedToClipboard": "Token de actualización copiado al portapapeles",
     "relative": "Relativa",
+    "runGapFill": "Verificar correos nuevos y rellenar automáticamente los faltantes antiguos",
     "runningState": {
       "account": {
         "id": "ID de cuenta"
@@ -283,10 +285,15 @@
         "no_active_download": "No hay descargas en curso",
         "no_errors_current": "Sin errores en la sesión actual",
         "no_errors_session": "Sin errores en esta sesión",
+        "no_gap_fill_folders": "No hay carpetas sincronizando mensajes faltantes",
+        "no_gap_fill_history": "Sin historial de backfill",
         "no_global_errors": "Sin errores globales",
         "no_history": "Sin historial"
       },
       "folders": "buzones",
+      "gap_fill_active": "Tarea de backfill en ejecución",
+      "gap_fill_downloaded_suffix": "descargados",
+      "gap_fill_failed_suffix": "fallidos",
       "latest": "RECIENTE",
       "loading": {
         "fetching_account_state": "Obteniendo estado de la cuenta..."
@@ -305,6 +312,7 @@
         "active_session": "Sesión activa",
         "errors": "Errores",
         "folders": "Buzones",
+        "gap_fill": "Completar mensajes faltantes",
         "history": "Historial"
       }
     },
@@ -345,6 +353,7 @@
     "sinceRelativeDesc": "Solo descargar correos del período reciente (ej. últimos 3 meses). La fecha de inicio avanza automáticamente.",
     "sinceRelativeValue": "Descargar correos de los últimos",
     "startDownload": "Iniciar descarga",
+    "startDownloadConfirmDesc": "¿Iniciar descarga para las cuentas seleccionadas?",
     "state": "Estado",
     "status": "Estado",
     "step": "Paso {{index}}",

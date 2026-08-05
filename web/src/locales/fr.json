@@ -240,6 +240,7 @@
     "imapPortPlaceholder": "ex. 993",
     "imapProxy": "Utiliser un proxy SOCKS5 pour les connexions IMAP.",
     "incDownload": "Intervalle",
+    "incSync": "Intervalle de synchro",
     "lastSync": "Dernière Synchronisation",
     "leaveEmptyToKeepExisting": "Laissez vide pour conserver le mot de passe existant, ou entrez-en un nouveau pour le mettre à jour.",
     "leaveEmptyToKeepPassword": "Laisser vide pour conserver le mot de passe actuel",
@@ -271,6 +272,7 @@
     "refreshToken": "Jeton de Rafraîchissement",
     "refreshTokenCopiedToClipboard": "Jeton de rafraîchissement copié dans le presse-papiers",
     "relative": "Relative",
+    "runGapFill": "Vérifier les nouveaux e-mails et rattraper automatiquement les anciens messages manquants",
     "runningState": {
       "account": {
         "id": "ID du compte"
@@ -283,10 +285,15 @@
         "no_active_download": "Aucun téléchargement en cours",
         "no_errors_current": "Aucune erreur dans la session actuelle",
         "no_errors_session": "Aucune erreur dans cette session",
+        "no_gap_fill_folders": "Aucun dossier en cours de synchronisation des messages manquants",
+        "no_gap_fill_history": "Aucun historique de rattrapage",
         "no_global_errors": "Aucune erreur globale",
         "no_history": "Aucun historique disponible"
       },
       "folders": "boîtes mail",
+      "gap_fill_active": "Tâche de rattrapage en cours",
+      "gap_fill_downloaded_suffix": "téléchargés",
+      "gap_fill_failed_suffix": "échec(s)",
       "latest": "RÉCENT",
       "loading": {
         "fetching_account_state": "Chargement de l'état du compte..."
@@ -305,6 +312,7 @@
         "active_session": "Session active",
         "errors": "Erreurs",
         "folders": "Boîtes mail",
+        "gap_fill": "Rattrapage des messages",
         "history": "Historique"
       }
     },
@@ -345,6 +353,7 @@
     "sinceRelativeDesc": "Télécharger uniquement les e-mails récents (ex. 3 derniers mois). La date de début avance automatiquement.",
     "sinceRelativeValue": "Télécharger les e-mails des derniers",
     "startDownload": "Lancer le téléchargement",
+    "startDownloadConfirmDesc": "Démarrer le téléchargement pour les comptes sélectionnés ?",
     "state": "État",
     "status": "Statut",
     "step": "Étape {{index}}",

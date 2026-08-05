@@ -68,6 +68,64 @@ pub struct FolderProgress {
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "web-api", derive(poem_openapi::Enum))]
+pub enum GapFillStatus {
+    #[default]
+    Running,
+    Success,
+    Failed,
+    Cancelled,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
+pub struct GapFillFolderStats {
+    pub downloaded: u64,
+    pub failed: u64,
+    pub candidate_count: u64,
+    /// Live progress hint (e.g. "IMAP server is slow...") shown while the
+    /// folder is being scanned; usually `None` once the folder is done.
+    pub message: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
+pub struct GapFillRun {
+    pub started_at: i64,
+    pub finished_at: Option<i64>,
+    pub status: GapFillStatus,
+    /// Per-mailbox gap-fill outcome, keyed by mailbox name.
+    pub folders: BTreeMap<String, GapFillFolderStats>,
+    /// Total emails newly downloaded by gap-fill.
+    pub downloaded: u64,
+    /// Total emails that failed to download during gap-fill.
+    pub failed: u64,
+}
+
+/// Independent, repeatable gap-fill history for an account. Gap-fill is a
+/// distinct operation from downloading (it can be run again and again until
+/// `failed == 0`), so its runs are tracked separately from `DownloadState`
+/// instead of being mixed into download sessions.
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
+pub struct GapFillState {
+    pub account_id: u64,
+    /// The gap-fill run currently in progress, if any.
+    pub active: Option<GapFillRun>,
+    /// Finished runs, most recent last.
+    pub history: Vec<GapFillRun>,
+}
+
+impl MemDbModel for GapFillState {
+    fn collection() -> &'static str {
+        "gap_fill_states"
+    }
+    fn key(&self) -> String {
+        self.account_id.to_string()
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct DownloadSession {
     pub start_time: i64,
@@ -321,6 +379,18 @@ impl DownloadState {
         })
     }
 
+    /// Appends/updates a free-form message on the active session without
+    /// changing its status. Used to record the gap-fill summary.
+    pub fn update_session_message(account_id: u64, message: String) -> BichonResult<()> {
+        Self::update_state(account_id, move |current| {
+            let mut updated = current.clone();
+            if let Some(ref mut session) = updated.active_session {
+                session.message = Some(message);
+            }
+            Ok(updated)
+        })
+    }
+
     fn update_state(
         account_id: u64,
         updater: impl FnOnce(DownloadState) -> BichonResult<DownloadState> + Send + 'static,
@@ -337,5 +407,163 @@ impl DownloadState {
         }
 
         delete_impl::<DownloadState>(DB_MANAGER.db(), &account_id.to_string())
+    }
+}
+
+impl GapFillState {
+    pub fn get(account_id: u64) -> BichonResult<Option<GapFillState>> {
+        find_impl::<GapFillState>(DB_MANAGER.db(), &account_id.to_string())
+    }
+
+    /// Starts a new gap-fill run, moving any stale active run into history as
+    /// Cancelled. Creates the state record on first use.
+    pub fn start_run(account_id: u64) -> BichonResult<()> {
+        let now = utc_now!();
+        let run = GapFillRun {
+            started_at: now,
+            status: GapFillStatus::Running,
+            ..Default::default()
+        };
+        if Self::get(account_id)?.is_none() {
+            let state = GapFillState {
+                account_id,
+                active: Some(run),
+                history: Vec::new(),
+            };
+            return upsert_impl(DB_MANAGER.db(), state);
+        }
+        Self::update_state(account_id, move |current| {
+            let mut updated = current.clone();
+            if let Some(mut old) = updated.active.take() {
+                if old.status == GapFillStatus::Running {
+                    old.status = GapFillStatus::Cancelled;
+                    old.finished_at = Some(utc_now!());
+                }
+                updated.history.push(old);
+                let keep = updated.history.len().saturating_sub(10);
+                if keep > 0 {
+                    updated.history.drain(0..keep);
+                }
+            }
+            updated.active = Some(run);
+            Ok(updated)
+        })
+    }
+
+    /// Accumulates a per-folder outcome into the active run.
+    pub fn add_folder_result(
+        account_id: u64,
+        folder_name: String,
+        stats: GapFillFolderStats,
+    ) -> BichonResult<()> {
+        Self::update_state(account_id, move |current| {
+            let mut updated = current.clone();
+            if let Some(ref mut run) = updated.active {
+                run.downloaded += stats.downloaded;
+                run.failed += stats.failed;
+                run.folders.insert(folder_name, stats);
+            }
+            Ok(updated)
+        })
+    }
+    /// Updates the live per-folder progress of the active run (used during a
+    /// gap-fill scan so the UI can show per-folder progress without waiting
+    /// for the folder to finish). `candidate_count` is the planned total,
+    /// `downloaded` the current count, `message` an optional live hint
+    /// (e.g. slow-server notice).
+    pub fn update_folder_progress(
+        account_id: u64,
+        folder_name: String,
+        candidate_count: u64,
+        downloaded: u64,
+        message: Option<String>,
+    ) -> BichonResult<()> {
+        Self::update_state(account_id, move |current| {
+            let mut updated = current.clone();
+            if let Some(ref mut run) = updated.active {
+                let entry = run
+                    .folders
+                    .entry(folder_name.clone())
+                    .or_insert(GapFillFolderStats {
+                        downloaded: 0,
+                        failed: 0,
+                        candidate_count,
+                        message: None,
+                    });
+                entry.candidate_count = candidate_count;
+                entry.downloaded = downloaded;
+                entry.message = message;
+            }
+            Ok(updated)
+        })
+    }
+
+    /// Finalizes the active run: moves it to history with the given status and
+    /// totals. `failed`/`downloaded` are the authoritative accumulated values.
+    pub fn finish_run(
+        account_id: u64,
+        status: GapFillStatus,
+        downloaded: u64,
+        failed: u64,
+    ) -> BichonResult<()> {
+        Self::update_state(account_id, move |current| {
+            let mut updated = current.clone();
+            if let Some(mut run) = updated.active.take() {
+                run.status = status;
+                run.finished_at = Some(utc_now!());
+                run.downloaded = downloaded;
+                run.failed = failed;
+                updated.history.push(run);
+                let keep = updated.history.len().saturating_sub(10);
+                if keep > 0 {
+                    updated.history.drain(0..keep);
+                }
+            }
+            Ok(updated)
+        })
+    }
+
+    /// Moves a stale Running active run into history as Cancelled.
+    ///
+    /// A Running `active` that survives a restart means the previous gap-fill
+    /// run was interrupted without finishing (process killed mid-scan). Leaving
+    /// it in place makes the UI show a phantom "Running" gap-fill. Callers
+    /// invoke this on startup, when no gap-fill is actually running.
+    ///
+    /// Returns `true` if a stale run was finalized.
+    pub fn finalize_stale_run(account_id: u64) -> BichonResult<bool> {
+        let stale = Self::get(account_id)?
+            .and_then(|s| s.active)
+            .map_or(false, |r| r.status == GapFillStatus::Running);
+        if stale {
+            Self::update_state(account_id, move |current| {
+                let mut updated = current.clone();
+                if let Some(mut run) = updated.active.take() {
+                    if run.status == GapFillStatus::Running {
+                        run.status = GapFillStatus::Cancelled;
+                        run.finished_at = Some(utc_now!());
+                        updated.history.push(run);
+                        let keep = updated.history.len().saturating_sub(10);
+                        if keep > 0 {
+                            updated.history.drain(0..keep);
+                        }
+                    } else {
+                        updated.active = Some(run);
+                    }
+                }
+                Ok(updated)
+            })?;
+        }
+        Ok(stale)
+    }
+
+    fn update_state(
+        account_id: u64,
+        updater: impl FnOnce(GapFillState) -> BichonResult<GapFillState> + Send + 'static,
+    ) -> BichonResult<()> {
+        if Self::get(account_id)?.is_some() {
+            update_impl(DB_MANAGER.db(), &account_id.to_string(), updater)?;
+        }
+        Ok(())
     }
 }

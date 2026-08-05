@@ -17,6 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import { useState } from 'react'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Row } from '@tanstack/react-table'
 import { IconEdit, IconPlayerPlay, IconPlayerStop, IconShieldLock, IconTrash } from '@tabler/icons-react'
@@ -33,9 +34,10 @@ import { useAccountContext } from '../context'
 import { Mailbox, MessageSquareMore, Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/use-current-user'
-import { AccountModel, cancel_account_download, start_account_download } from '@/api/account/api'
+import { AccountModel, cancel_account_download } from '@/api/account/api'
 import { toast } from '@/hooks/use-toast'
 import { useNavigate } from '@tanstack/react-router'
+import { StartDownloadDialog } from './start-download-dialog'
 
 interface DataTableRowActionsProps {
   row: Row<AccountModel>
@@ -45,6 +47,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const { t } = useTranslation()
   const { setOpen, setCurrentRow } = useAccountContext()
   const navigate = useNavigate()
+  const [startDialogOpen, setStartDialogOpen] = useState(false)
 
   const account_type = row.original.account_type;
   const { require_any_permission } = useCurrentUser()
@@ -64,16 +67,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const showDownload = !isDeleting && account_type === 'IMAP' && hasPermission;
 
   const handleStartDownload = async () => {
-    try {
-      await start_account_download(row.original.id);
-      toast({ title: t('accounts.downloadStarted') });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: t('accounts.downloadFailed'),
-        description: error.response?.data?.message || error.message
-      });
-    }
+    setStartDialogOpen(true)
   }
 
 
@@ -198,6 +192,11 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuItem>}
         </DropdownMenuContent>
       </DropdownMenu>
+      <StartDownloadDialog
+        row={row.original}
+        open={startDialogOpen}
+        onOpenChange={setStartDialogOpen}
+      />
     </>
   )
 }

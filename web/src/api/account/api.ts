@@ -67,6 +67,35 @@ export interface AccountError {
     error: string;
 }
 
+export interface GapFillFolderStats {
+    downloaded: number;
+    failed: number;
+    candidate_count: number;
+    message?: string | null;
+}
+
+export enum GapFillStatus {
+    Running = "Running",
+    Success = "Success",
+    Failed = "Failed",
+    Cancelled = "Cancelled",
+}
+
+export interface GapFillRun {
+    started_at: number;
+    finished_at: number | null;
+    status: GapFillStatus;
+    folders: Record<string, GapFillFolderStats>;
+    downloaded: number;
+    failed: number;
+}
+
+export interface GapFillState {
+    account_id: number;
+    active: GapFillRun | null;
+    history: GapFillRun[];
+}
+
 export interface DownloadSession {
     start_time: number;
     end_time: number | null;
@@ -168,6 +197,11 @@ export const download_state = async (account_id: number) => {
     return response.data;
 };
 
+export const gap_fill_state = async (account_id: number) => {
+    const response = await axiosInstance.get<GapFillState>(`api/v1/accounts/${account_id}/gap-fill-stats`);
+    return response.data;
+};
+
 export const create_account = async (data: Record<string, any>) => {
     const response = await axiosInstance.post("api/v1/account", data);
     return response.data;
@@ -189,8 +223,8 @@ export const remove_account = async (account_id: number) => {
 };
 
 
-export const start_account_download = async (account_id: number) => {
-    const response = await axiosInstance.post(`api/v1/accounts/${account_id}/start-download`);
+export const start_account_download = async (account_id: number, run_gap_fill = false) => {
+    const response = await axiosInstance.post(`api/v1/accounts/${account_id}/start-download`, { run_gap_fill });
     return response.data;
 };
 

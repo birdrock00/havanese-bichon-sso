@@ -240,6 +240,7 @@
     "imapPortPlaceholder": "z.B. 993",
     "imapProxy": "SOCKS5-Proxy für IMAP-Verbindungen verwenden.",
     "incDownload": "Intervall",
+    "incSync": "Synch.-Intervall",
     "lastSync": "Letzte Synchronisierung",
     "leaveEmptyToKeepExisting": "Leer lassen, um das bestehende Passwort beizubehalten, oder einen neuen Wert eingeben, um es zu aktualisieren.",
     "leaveEmptyToKeepPassword": "Leer lassen, um das aktuelle Passwort beizubehalten",
@@ -271,6 +272,7 @@
     "refreshToken": "Aktualisierungstoken",
     "refreshTokenCopiedToClipboard": "Aktualisierungstoken in die Zwischenablage kopiert",
     "relative": "Relativ",
+    "runGapFill": "Neue Mails prüfen und ältere, lokal fehlende Mails automatisch nachladen",
     "runningState": {
       "account": {
         "id": "Konto-ID"
@@ -283,10 +285,15 @@
         "no_active_download": "Kein aktiver Download",
         "no_errors_current": "Keine Fehler in der aktuellen Sitzung",
         "no_errors_session": "Keine Fehler in dieser Sitzung",
+        "no_gap_fill_folders": "Keine Ordner für den Abgleich fehlender Mails",
+        "no_gap_fill_history": "Kein Backfill-Verlauf vorhanden",
         "no_global_errors": "Keine globalen Fehler",
         "no_history": "Kein Verlauf vorhanden"
       },
       "folders": "Postfächer",
+      "gap_fill_active": "Laufender Backfill-Prozess",
+      "gap_fill_downloaded_suffix": "heruntergeladen",
+      "gap_fill_failed_suffix": "fehlgeschlagen",
       "latest": "NEU",
       "loading": {
         "fetching_account_state": "Kontostatus wird geladen..."
@@ -305,6 +312,7 @@
         "active_session": "Aktive Sitzung",
         "errors": "Fehler",
         "folders": "Postfächer",
+        "gap_fill": "Lückenfüllung",
         "history": "Verlauf"
       }
     },
@@ -345,6 +353,7 @@
     "sinceRelativeDesc": "Nur E-Mails aus dem jüngsten Zeitraum herunterladen (z. B. letzte 3 Monate). Das Startdatum verschiebt sich automatisch.",
     "sinceRelativeValue": "E-Mails der letzten Zeit herunterladen",
     "startDownload": "Download starten",
+    "startDownloadConfirmDesc": "E-Mail-Download für gewählte Konten starten?",
     "state": "Zustand",
     "status": "Status",
     "step": "Schritt {{index}}",

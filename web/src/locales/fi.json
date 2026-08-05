@@ -240,6 +240,7 @@
     "imapPortPlaceholder": "esim. 993",
     "imapProxy": "Käytä SOCKS5-välityspalvelinta IMAP-yhteyksiin.",
     "incDownload": "Väli",
+    "incSync": "Synkronointiväli",
     "lastSync": "Viimeisin synkronointi",
     "leaveEmptyToKeepExisting": "Jätä tyhjäksi säilyttääksesi olemassa olevan salasanan, tai syötä uusi päivittääksesi sen.",
     "leaveEmptyToKeepPassword": "Jätä tyhjäksi säilyttääksesi nykyisen salasanan",
@@ -271,6 +272,7 @@
     "refreshToken": "Virheettömyystunnus",
     "refreshTokenCopiedToClipboard": "Virheettömyystunnus kopioitu leikepöydälle",
     "relative": "Suhteellinen",
+    "runGapFill": "Tarkista uudet sähköpostit ja täydennä vanhat puuttuvat viestit automaattisesti",
     "runningState": {
       "account": {
         "id": "Tilin ID"
@@ -283,10 +285,15 @@
         "no_active_download": "Ei aktiivista latausta",
         "no_errors_current": "Ei virheitä nykyisessä istunnossa",
         "no_errors_session": "Ei virheitä tässä istunnossa",
+        "no_gap_fill_folders": "Ei kansioita puuttuvien viestien täydennykseen",
+        "no_gap_fill_history": "Ei täydennyshistoriaa",
         "no_global_errors": "Ei yleisiä virheitä",
         "no_history": "Ei historiaa"
       },
       "folders": "postilaatikot",
+      "gap_fill_active": "Käynnissä oleva täydennys",
+      "gap_fill_downloaded_suffix": "ladattu",
+      "gap_fill_failed_suffix": "epäonnistui",
       "latest": "UUSIN",
       "loading": {
         "fetching_account_state": "Haetaan tilan tietoja..."
@@ -305,6 +312,7 @@
         "active_session": "Aktiivinen istunto",
         "errors": "Virheet",
         "folders": "Postilaatikot",
+        "gap_fill": "Puuttuvien täydennys",
         "history": "Historia"
       }
     },
@@ -345,6 +353,7 @@
     "sinceRelativeDesc": "Lataa vain viimeaikaiset sähköpostit (esim. viimeiset 3 kuukautta). Aloituspäivämäärä siirtyy automaattisesti eteenpäin.",
     "sinceRelativeValue": "Lataa sähköpostit viimeisimmiltä",
     "startDownload": "Aloita lataus",
+    "startDownloadConfirmDesc": "Aloitetaanko valittujen tilien lataus?",
     "state": "Tila",
     "status": "Tila",
     "step": "Vaihe {{index}}",

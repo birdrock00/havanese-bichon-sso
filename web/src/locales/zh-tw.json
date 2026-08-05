@@ -240,6 +240,7 @@
     "imapPortPlaceholder": "例如：993",
     "imapProxy": "使用 SOCKS5 代理進行 IMAP 連線。",
     "incDownload": "間隔",
+    "incSync": "同步間隔",
     "lastSync": "上次同步",
     "leaveEmptyToKeepExisting": "保留現有密碼請留空。若要更新，請輸入新密碼。",
     "leaveEmptyToKeepPassword": "保留現有密碼請留空",
@@ -271,6 +272,7 @@
     "refreshToken": "更新權杖 (Refresh Token)",
     "refreshTokenCopiedToClipboard": "更新權杖已複製到剪貼簿",
     "relative": "相對",
+    "runGapFill": "檢查並下載新郵件，同時自動補全本地缺失的歷史舊郵件",
     "runningState": {
       "account": {
         "id": "帳戶 ID"
@@ -283,10 +285,15 @@
         "no_active_download": "目前沒有下載任務",
         "no_errors_current": "目前任務沒有錯誤",
         "no_errors_session": "此任務沒有錯誤",
+        "no_gap_fill_folders": "暫無需要補充缺失郵件的郵件資料夾",
+        "no_gap_fill_history": "暫無查漏補缺歷史記錄",
         "no_global_errors": "沒有全域錯誤",
         "no_history": "沒有歷史記錄"
       },
       "folders": "個郵件夾",
+      "gap_fill_active": "執行中的查漏補缺任務",
+      "gap_fill_downloaded_suffix": "已下載",
+      "gap_fill_failed_suffix": "失敗",
       "latest": "最新",
       "loading": {
         "fetching_account_state": "正在取得帳戶狀態..."
@@ -305,6 +312,7 @@
         "active_session": "目前任務",
         "errors": "錯誤",
         "folders": "郵件夾",
+        "gap_fill": "缺失郵件查漏補缺",
         "history": "歷史記錄"
       }
     },
@@ -345,6 +353,7 @@
     "sinceRelativeDesc": "僅下載最近一段時間（如過去 3 個月）的郵件。開始日期會隨時間推移自動向前滾動。",
     "sinceRelativeValue": "下載最近一段時期的郵件",
     "startDownload": "啟動下載",
+    "startDownloadConfirmDesc": "確定開始下載所選帳號的郵件資料？",
     "state": "狀態",
     "status": "狀態",
     "step": "步驟 {{index}}",

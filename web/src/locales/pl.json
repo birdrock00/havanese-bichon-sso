@@ -240,6 +240,7 @@
     "imapPortPlaceholder": "np. 993 (szyfrowany TLS/SSL) lub 143 (bez szyfrowania)",
     "imapProxy": "Użyj proxy gniazda SOCKS5 dla połączeń IMAP.",
     "incDownload": "Interwał",
+    "incSync": "Interwał synch.",
     "lastSync": "OStatnia synchronizacja",
     "leaveEmptyToKeepExisting": "Pozostaw to pole puste, jeśli chcesz zachować dotychczasowe hasło lub wpisz nowe, aby zaktualizować.",
     "leaveEmptyToKeepPassword": "Pozostaw to pole puste, jeśli chcesz zachować dotychczasowe hasło",
@@ -271,6 +272,7 @@
     "refreshToken": "Odśwież token",
     "refreshTokenCopiedToClipboard": "Token odśwież skopiowany do schowka",
     "relative": "Wzglednie",
+    "runGapFill": "Sprawdzaj nowe e-maile i automatycznie uzupełniaj starsze, brakujące wiadomości",
     "runningState": {
       "account": {
         "id": "ID konta"
@@ -283,10 +285,15 @@
         "no_active_download": "Brak aktywnego pobierania",
         "no_errors_current": "Brak błędów w bieżącej sesji",
         "no_errors_session": "Brak błędów w tej sesji",
+        "no_gap_fill_folders": "Brak folderów z brakującymi wiadomościami do pobrania",
+        "no_gap_fill_history": "Brak historii uzupełniania",
         "no_global_errors": "Brak błędów globalnych",
         "no_history": "Brak historii"
       },
       "folders": "skrzynki",
+      "gap_fill_active": "Trwające uzupełnianie",
+      "gap_fill_downloaded_suffix": "pobrano",
+      "gap_fill_failed_suffix": "niepowodzenie",
       "latest": "NAJNOWSZE",
       "loading": {
         "fetching_account_state": "Pobieranie stanu konta..."
@@ -305,6 +312,7 @@
         "active_session": "Aktywna sesja",
         "errors": "Błędy",
         "folders": "Skrzynki",
+        "gap_fill": "Uzupełnianie braków",
         "history": "Historia"
       }
     },
@@ -345,6 +353,7 @@
     "sinceRelativeDesc": "Pobieraj tylko wiadomości z ostatniego okresu (np. ostatnie 3 miesiące). Data początkowa automatycznie przesuwa się w czasie.",
     "sinceRelativeValue": "Pobierz e-maile z ostatnich",
     "startDownload": "Uruchom pobieranie",
+    "startDownloadConfirmDesc": "Rozpocząć pobieranie dla wybranych kont?",
     "state": "Status",
     "status": "Status",
     "step": "Krok {{index}}",

@@ -240,6 +240,7 @@
     "imapPortPlaceholder": "예: 993",
     "imapProxy": "IMAP 연결에 SOCKS5 프록시를 사용합니다.",
     "incDownload": "간격",
+    "incSync": "동기화 간격",
     "lastSync": "최종 동기화",
     "leaveEmptyToKeepExisting": "기존 비밀번호를 유지하려면 비워 두십시오. 업데이트할 경우에만 새 비밀번호를 입력하십시오.",
     "leaveEmptyToKeepPassword": "현재 비밀번호를 유지하려면 비워 두십시오",
@@ -271,6 +272,7 @@
     "refreshToken": "새로 고침 토큰",
     "refreshTokenCopiedToClipboard": "새로 고침 토큰이 클립보드에 복사되었습니다",
     "relative": "상대적",
+    "runGapFill": "새 메일을 확인하여 다운로드하고, 누락된 과거 메일도 자동으로 백필합니다",
     "runningState": {
       "account": {
         "id": "계정 ID"
@@ -283,10 +285,15 @@
         "no_active_download": "진행 중인 다운로드가 없습니다",
         "no_errors_current": "현재 작업에 오류가 없습니다",
         "no_errors_session": "이 작업에 오류가 없습니다",
+        "no_gap_fill_folders": "누락된 메일을 동기화 중인 메일함이 없습니다",
+        "no_gap_fill_history": "백필 기록 없음",
         "no_global_errors": "전체 오류가 없습니다",
         "no_history": "기록이 없습니다"
       },
       "folders": "메일함",
+      "gap_fill_active": "실행 중인 백필 작업",
+      "gap_fill_downloaded_suffix": "개 다운로드됨",
+      "gap_fill_failed_suffix": "개 실패",
       "latest": "최신",
       "loading": {
         "fetching_account_state": "계정 상태를 불러오는 중..."
@@ -305,6 +312,7 @@
         "active_session": "현재 작업",
         "errors": "오류",
         "folders": "메일함",
+        "gap_fill": "누락 메일 백필",
         "history": "기록"
       }
     },
@@ -345,6 +353,7 @@
     "sinceRelativeDesc": "최근 기간(예: 지난 3개월)의 이메일만 다운로드합니다. 시작 날짜는 시간이 지남에 따라 자동으로 이동합니다.",
     "sinceRelativeValue": "최근 기간의 이메일 다운로드",
     "startDownload": "다운로드 시작",
+    "startDownloadConfirmDesc": "선택한 계정의 메일 데이터를 다운로드할까요?",
     "state": "상태",
     "status": "상태",
     "step": "단계 {{index}}",

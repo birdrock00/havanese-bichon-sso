@@ -240,6 +240,7 @@
     "imapPortPlaceholder": "例: 993",
     "imapProxy": "IMAP接続にSOCKS5プロキシを使用します。",
     "incDownload": "間隔",
+    "incSync": "同期間隔",
     "lastSync": "最終同期",
     "leaveEmptyToKeepExisting": "既存のパスワードを保持する場合は空欄にしてください。更新する場合は新しいパスワードを入力してください。",
     "leaveEmptyToKeepPassword": "現在のパスワードを保持する場合は空欄にしてください",
@@ -271,6 +272,7 @@
     "refreshToken": "リフレッシュトークン",
     "refreshTokenCopiedToClipboard": "リフレッシュトークンをクリップボードにコピーしました",
     "relative": "相対",
+    "runGapFill": "新着メールを確認してダウンロードし、過去の未取得メールも自動的に差分補填します",
     "runningState": {
       "account": {
         "id": "アカウントID"
@@ -283,10 +285,15 @@
         "no_active_download": "現在ダウンロード中のタスクはありません",
         "no_errors_current": "現在のタスクにエラーはありません",
         "no_errors_session": "このタスクにエラーはありません",
+        "no_gap_fill_folders": "未取得メールを同期中のフォルダーはありません",
+        "no_gap_fill_history": "差分補填の履歴はありません",
         "no_global_errors": "全体エラーはありません",
         "no_history": "履歴がありません"
       },
       "folders": "メールボックス",
+      "gap_fill_active": "実行中の差分補填タスク",
+      "gap_fill_downloaded_suffix": "件ダウンロード済み",
+      "gap_fill_failed_suffix": "件失敗",
       "latest": "最新",
       "loading": {
         "fetching_account_state": "アカウント状態を取得中..."
@@ -305,6 +312,7 @@
         "active_session": "実行中タスク",
         "errors": "エラー",
         "folders": "メールボックス",
+        "gap_fill": "差分メール補填",
         "history": "履歴"
       }
     },
@@ -345,6 +353,7 @@
     "sinceRelativeDesc": "直近の期間（例：過去3ヶ月）のメールのみをダウンロードします。開始日は時間経過に伴い自動的に更新されます。",
     "sinceRelativeValue": "直近の期間のメールをダウンロード",
     "startDownload": "ダウンロードを開始",
+    "startDownloadConfirmDesc": "選択したアカウントのメールデータをダウンロードしますか？",
     "state": "状態",
     "status": "ステータス",
     "step": "ステップ {{index}}",

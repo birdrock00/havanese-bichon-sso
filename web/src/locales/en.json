@@ -242,6 +242,7 @@
     "imapPortPlaceholder": "e.g 993",
     "imapProxy": "Use a proxy (http/socks5) for IMAP connections.",
     "incDownload": "Interval",
+    "incSync": "Sync interval",
     "lastSync": "Last Sync",
     "leaveEmptyToKeepExisting": "Leave empty to keep the existing password, or enter a new password to update it.",
     "leaveEmptyToKeepPassword": "Leave empty to keep current password",
@@ -273,6 +274,7 @@
     "refreshToken": "Refresh Token",
     "refreshTokenCopiedToClipboard": "Refresh token copied to clipboard",
     "relative": "Relative",
+    "runGapFill": "Check new emails and automatically backfill older missing emails",
     "runningState": {
       "account": {
         "id": "Account ID"
@@ -285,10 +287,15 @@
         "no_active_download": "No download in progress",
         "no_errors_current": "No errors in current session",
         "no_errors_session": "No errors in this session",
+        "no_gap_fill_folders": "No folders syncing missing messages",
+        "no_gap_fill_history": "No backfill history",
         "no_global_errors": "No global errors",
         "no_history": "No historical records found"
       },
       "folders": "mailboxes",
+      "gap_fill_active": "Running backfill task",
+      "gap_fill_downloaded_suffix": "downloaded",
+      "gap_fill_failed_suffix": "failed",
       "latest": "LATEST",
       "loading": {
         "fetching_account_state": "Fetching account state..."
@@ -307,6 +314,7 @@
         "active_session": "Active Session",
         "errors": "Errors",
         "folders": "Mailboxes",
+        "gap_fill": "Backfill missing emails",
         "history": "History"
       }
     },
@@ -355,6 +363,7 @@
     "sinceRelativeDesc": "Only download emails from the recent period (e.g. last 3 months). The start date automatically moves forward over time.",
     "sinceRelativeValue": "Download emails from the last",
     "startDownload": "Start download",
+    "startDownloadConfirmDesc": "Start downloading mail data for selected accounts?",
     "state": "State",
     "status": "Status",
     "step": "Step {{index}}",

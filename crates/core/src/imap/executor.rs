@@ -178,6 +178,13 @@ impl ImapExecutor {
         })?;
 
         if results.is_empty() {
+            info!(
+                account_id = account.id,
+                mailbox = %mailbox.name,
+                start_uid,
+                date,
+                "fetch_new_mail_with_before: UID SEARCH returned no results"
+            );
             DownloadState::update_folder_progress(
                 account.id,
                 mailbox.name.clone(),
@@ -191,6 +198,20 @@ impl ImapExecutor {
 
         let mut uid_vec: Vec<u32> = results.into_iter().collect();
         uid_vec.sort();
+        // Same non-compliant-server guard as fetch_new_mail_range: `{start}:*`
+        // may be clamped by the server and return uids below start_uid, which
+        // are already stored locally (or are drift — gap-fill's job).
+        uid_vec.retain(|&uid| (uid as u64) >= start_uid);
+        info!(
+            account_id = account.id,
+            mailbox = %mailbox.name,
+            start_uid,
+            date,
+            found = uid_vec.len(),
+            first = uid_vec.first().copied(),
+            last = uid_vec.last().copied(),
+            "fetch_new_mail_with_before: UID SEARCH result"
+        );
         let max_uid = uid_vec.last().copied();
         let planned = uid_vec.len() as u64;
         let batch_size = account.download_batch_size.unwrap_or(DEFAULT_BATCH_SIZE) as usize;
@@ -305,6 +326,21 @@ impl ImapExecutor {
         })?;
         let mut uid_vec: Vec<u32> = results.into_iter().collect();
         uid_vec.sort();
+        // Some non-compliant servers (e.g. Zoho) interpret `{start}:*` as a
+        // sequence range and clamp it, returning the last message even when
+        // start_uid exceeds the highest UID. Such results are below start_uid
+        // and are already stored locally (or are drift — gap-fill's job), so
+        // filter them out to avoid re-downloading the same email every sync.
+        uid_vec.retain(|&uid| (uid as u64) >= start_uid);
+        info!(
+            account_id = account.id,
+            mailbox = %mailbox.name,
+            start_uid,
+            found = uid_vec.len(),
+            first = uid_vec.first().copied(),
+            last = uid_vec.last().copied(),
+            "fetch_new_mail_range: UID SEARCH result"
+        );
 
         if uid_vec.is_empty() {
             DownloadState::update_folder_progress(
@@ -545,31 +581,51 @@ impl ImapExecutor {
         // average (the average only moves when a message actually arrives).
         const STALL_REPORT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
         loop {
-            let item =
-                match tokio::time::timeout(STALL_REPORT_INTERVAL, body_stream.try_next()).await {
-                    Ok(item) => item
-                        .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?,
-                    Err(_) => {
-                        if token.is_cancelled() {
-                            tracing::info!("Account {}: UID fetch stream interrupted.", account_id);
-                            return Err(raise_error!(
-                                "Stream cancelled".into(),
-                                ErrorCode::InternalError
-                            ));
-                        }
-                        let stall_secs = last_recv.elapsed().as_secs_f64();
-                        consecutive_stalls += 1;
-
+            // On error, report the number of emails already stored through the
+            // progress callback so a partial batch is not counted as fully
+            // failed by callers (gap_fill uses the last reported count).
+            let item = match tokio::time::timeout(STALL_REPORT_INTERVAL, body_stream.try_next()).await
+            {
+                Ok(Ok(item)) => Ok(item),
+                Ok(Err(e)) => Err((count, e)),
+                Err(_) => {
+                    if token.is_cancelled() {
                         if let Some(progress) = progress {
-                            progress(count, None, Some(stall_secs))?;
+                            let _ = progress(count, None, None);
                         }
-                        continue;
+                        return Err(raise_error!(
+                            "Stream cancelled".into(),
+                            ErrorCode::InternalError
+                        ));
                     }
-                };
+                    let stall_secs = last_recv.elapsed().as_secs_f64();
+                    consecutive_stalls += 1;
+
+                    if let Some(progress) = progress {
+                        progress(count, None, Some(stall_secs))?;
+                    }
+                    continue;
+                }
+            };
+            let item = match item {
+                Ok(item) => item,
+                Err((processed, e)) => {
+                    if let Some(progress) = progress {
+                        let _ = progress(processed, None, None);
+                    }
+                    return Err(raise_error!(
+                        format!("{:#?}", e),
+                        classify_imap_error(&e)
+                    ));
+                }
+            };
             let Some(fetch) = item else { break };
 
             if token.is_cancelled() {
                 tracing::info!("Account {}: UID fetch stream interrupted.", account_id);
+                if let Some(progress) = progress {
+                    let _ = progress(count, None, None);
+                }
                 return Err(raise_error!(
                     "Stream cancelled".into(),
                     ErrorCode::InternalError
@@ -591,7 +647,12 @@ impl ImapExecutor {
             } else {
                 None
             };
-            extract_envelope_and_store_it(fetch, account_id, mailbox_id).await?;
+            if let Err(e) = extract_envelope_and_store_it(fetch, account_id, mailbox_id).await {
+                if let Some(progress) = progress {
+                    let _ = progress(count, None, None);
+                }
+                return Err(e);
+            }
             count += 1;
             if let Some(progress) = progress {
                 progress(count, avg_secs, None)?;
@@ -685,6 +746,98 @@ impl ImapExecutor {
             let uid = fetch.uid.unwrap_or(0);
             let msg_id = fetch.header().and_then(parse_message_id_header);
             result.insert(uid, msg_id);
+        }
+        Ok(result)
+    }
+
+    /// Fetch lightweight header metadata (UID, size, internal date, message-id)
+    /// for a UID sequence-set, without downloading bodies. Used by gap-fill to
+    /// build the remote side of the diff. The fetch deliberately asks only for
+    /// the Message-ID header (no SUBJECT): parsing out a SUBJECT forces the
+    /// server to decode the full header for every message, which some servers
+    /// (e.g. Zoho) answer very slowly or in bursts. Message-ID alone is the
+    /// primary match key; the fingerprint fallback for messages without one
+    /// uses (size, internal date).
+    ///
+    /// `progress` (if given) is invoked with the number of headers received so
+    /// far and the current stall duration in seconds (None while the server is
+    /// feeding) every few seconds while the server is slow or silent, so
+    /// callers can surface "server is slow / rate limiting" feedback instead
+    /// of appearing stuck (mirrors `uid_batch_retrieve_emails`).
+    pub async fn fetch_uid_headers(
+        session: &mut Session<Box<dyn SessionStream>>,
+        uid_set: &str,
+        token: CancellationToken,
+        progress: Option<
+            &(dyn Fn(u64, Option<f64>) -> BichonResult<()> + Send + Sync),
+        >,
+    ) -> BichonResult<Vec<crate::cache::imap::download::gap_fill::RemoteHeader>> {
+        let mut stream = session
+            .uid_fetch(uid_set, "(UID RFC822.SIZE INTERNALDATE BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)])")
+            .await
+            .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
+
+        let mut result = Vec::new();
+        let mut last_recv = std::time::Instant::now();
+        // While the server is silent, re-report the current count every few
+        // seconds so the UI shows the wait climbing instead of a stale state.
+        const STALL_REPORT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
+        loop {
+            let item =
+                match tokio::time::timeout(STALL_REPORT_INTERVAL, stream.try_next()).await {
+                    Ok(Ok(item)) => Ok(item),
+                    Ok(Err(e)) => Err(raise_error!(
+                        format!("{:#?}", e),
+                        classify_imap_error(&e)
+                    )),
+                    Err(_) => {
+                        if token.is_cancelled() {
+                            return Err(raise_error!(
+                                "Stream cancelled".into(),
+                                ErrorCode::InternalError
+                            ));
+                        }
+                        let stall_secs = last_recv.elapsed().as_secs_f64();
+                        if let Some(progress) = progress {
+                            progress(result.len() as u64, Some(stall_secs))?;
+                        }
+                        tracing::warn!(
+                            stall_secs = format!("{:.0}", stall_secs),
+                            fetched = result.len(),
+                            "fetch_uid_headers: server silent, waiting"
+                        );
+                        continue;
+                    }
+                };
+            let item = match item {
+                Ok(item) => item,
+                Err(e) => return Err(e),
+            };
+            let Some(fetch) = item else { break };
+            last_recv = std::time::Instant::now();
+            if token.is_cancelled() {
+                return Err(raise_error!(
+                    "Stream cancelled".into(),
+                    ErrorCode::InternalError
+                ));
+            }
+            let uid = fetch.uid.unwrap_or(0);
+            let size = fetch.size.unwrap_or(0) as u64;
+            let internal_date = fetch
+                .internal_date()
+                .map(|d| d.timestamp_millis())
+                .unwrap_or(0);
+            let header_bytes = match fetch.header() {
+                Some(h) => h,
+                None => &[],
+            };
+            let message_id = parse_message_id_header(header_bytes);
+            result.push(crate::cache::imap::download::gap_fill::RemoteHeader {
+                uid,
+                message_id,
+                size,
+                internal_date,
+            });
         }
         Ok(result)
     }

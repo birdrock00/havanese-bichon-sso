@@ -240,6 +240,7 @@
     "imapPortPlaceholder": "f.eks. 993",
     "imapProxy": "Bruk en SOCKS5-proxy for IMAP-tilkoblinger.",
     "incDownload": "Intervall",
+    "incSync": "Synk-intervall",
     "lastSync": "Siste synkronisering",
     "leaveEmptyToKeepExisting": "La stå tomt for å beholde det eksisterende passordet, eller skriv inn et nytt passord for å oppdatere det.",
     "leaveEmptyToKeepPassword": "La stå tomt for å beholde nåværende passord",
@@ -271,6 +272,7 @@
     "refreshToken": "Oppfriskningstoken",
     "refreshTokenCopiedToClipboard": "Oppfriskningstoken kopiert til utklippstavlen",
     "relative": "Relativ",
+    "runGapFill": "Sjekk etter nye e-poster og fyll automatisk inn eldre manglende e-poster",
     "runningState": {
       "account": {
         "id": "Konto-ID"
@@ -283,10 +285,15 @@
         "no_active_download": "Ingen aktiv nedlasting",
         "no_errors_current": "Ingen feil i gjeldende økt",
         "no_errors_session": "Ingen feil i denne økten",
+        "no_gap_fill_folders": "Ingen mapper med manglende e-poster",
+        "no_gap_fill_history": "Ingen backfill-historikk",
         "no_global_errors": "Ingen globale feil",
         "no_history": "Ingen historikk"
       },
       "folders": "postbokser",
+      "gap_fill_active": "Kjørende backfill-oppgave",
+      "gap_fill_downloaded_suffix": "lastet ned",
+      "gap_fill_failed_suffix": "mislyktes",
       "latest": "NYEST",
       "loading": {
         "fetching_account_state": "Henter kontostatus..."
@@ -305,6 +312,7 @@
         "active_session": "Aktiv økt",
         "errors": "Feil",
         "folders": "Postbokser",
+        "gap_fill": "Fyll inn manglende e-poster",
         "history": "Historikk"
       }
     },
@@ -345,6 +353,7 @@
     "sinceRelativeDesc": "Last bare ned e-poster fra den siste perioden (f.eks. siste 3 måneder). Startdatoen flyttes automatisk fremover.",
     "sinceRelativeValue": "Last ned e-poster fra de siste",
     "startDownload": "Start nedlasting",
+    "startDownloadConfirmDesc": "Start nedlasting for valgte kontoer?",
     "state": "Tilstand",
     "status": "Status",
     "step": "Trinn {{index}}",

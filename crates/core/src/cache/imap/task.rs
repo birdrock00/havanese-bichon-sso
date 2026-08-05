@@ -30,7 +30,7 @@ use std::{sync::LazyLock, time::Duration};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 static _DESCRIPTION: &str = "This task periodically synchronizes mailbox data for a specified account, ensuring that all local data is up-to-date.";
 const TASK_INTERVAL: Duration = Duration::from_secs(10);
@@ -90,7 +90,7 @@ impl AccountDownTask {
             let internal_token = task_token.clone();
             Box::pin(async move {
                 if SYNC_TASKS.is_manual_running(account_id).await {
-                    info!(
+                    debug!(
                         "Account {}: Scheduled task skipped (Manual task is running).",
                         account_id
                     );
@@ -98,7 +98,7 @@ impl AccountDownTask {
                 }
 
                 if !SYNC_TASKS.try_set_busy(account_id).await {
-                    warn!(
+                    debug!(
                         "Account {}: Scheduled task skipped (Previous sync still active).",
                         account_id
                     );
@@ -141,6 +141,7 @@ impl AccountDownTask {
                                 &account,
                                 internal_token,
                                 TriggerType::Scheduled,
+                                false,
                             )
                             .await
                             {
@@ -211,7 +212,7 @@ impl AccountDownTask {
         }
     }
 
-    pub async fn start_manual_task(&self, account_id: u64) -> BichonResult<()> {
+    pub async fn start_manual_task(&self, account_id: u64, run_gap_fill: bool) -> BichonResult<()> {
         {
             if self.is_manual_running(account_id).await {
                 return Err(raise_error!(
@@ -253,7 +254,9 @@ impl AccountDownTask {
                 return;
             }
 
-            if let Err(e) = process_imap_download(&account, token_clone, TriggerType::Manual).await
+            if let Err(e) =
+                process_imap_download(&account, token_clone, TriggerType::Manual, run_gap_fill)
+                    .await
             {
                 error!("Manual download failed for {}: {:?}", account_id, e);
                 let error_msg = format!("error in account download task: {:#?}", e);

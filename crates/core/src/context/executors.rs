@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::account::migration::AccountType;
-use crate::account::state::DownloadState;
+use crate::account::state::{DownloadState, GapFillState};
 use crate::context::Initialize;
 use crate::{
     {
@@ -83,6 +83,23 @@ impl BichonContext {
                 Err(e) => {
                     warn!(
                         "Failed to finalize stale session for account {}: {:#?}",
+                        account.id, e
+                    );
+                }
+                Ok(false) => {}
+            }
+            // Same for a leftover gap-fill run: a Running active run surviving
+            // startup is a phantom — nothing is scanning at this point.
+            match GapFillState::finalize_stale_run(account.id) {
+                Ok(true) => {
+                    info!(
+                        "Account {}: stale gap-fill run finalized on startup.",
+                        account.id
+                    );
+                }
+                Err(e) => {
+                    warn!(
+                        "Failed to finalize stale gap-fill run for account {}: {:#?}",
                         account.id, e
                     );
                 }

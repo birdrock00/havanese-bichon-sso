@@ -240,6 +240,7 @@
     "imapPortPlaceholder": "es. 993",
     "imapProxy": "Usa un proxy SOCKS5 per le connessioni IMAP.",
     "incDownload": "Intervallo",
+    "incSync": "Intervallo sinc.",
     "lastSync": "Ultima Sincronizzazione",
     "leaveEmptyToKeepExisting": "Lascia vuoto per mantenere la password esistente, o inseriscine una nuova per aggiornarla.",
     "leaveEmptyToKeepPassword": "Lascia vuoto per mantenere la password attuale",
@@ -271,6 +272,7 @@
     "refreshToken": "Token di Refresh",
     "refreshTokenCopiedToClipboard": "Token di refresh copiato negli appunti",
     "relative": "Relativa",
+    "runGapFill": "Controlla le nuove email e recupera automaticamente i vecchi messaggi mancanti",
     "runningState": {
       "account": {
         "id": "ID account"
@@ -283,10 +285,15 @@
         "no_active_download": "Nessun download in corso",
         "no_errors_current": "Nessun errore nella sessione corrente",
         "no_errors_session": "Nessun errore in questa sessione",
+        "no_gap_fill_folders": "Nessuna cartella con messaggi mancanti da scaricare",
+        "no_gap_fill_history": "Nessuna cronologia di backfill",
         "no_global_errors": "Nessun errore globale",
         "no_history": "Nessuna cronologia disponibile"
       },
       "folders": "caselle di posta",
+      "gap_fill_active": "Attività di backfill in esecuzione",
+      "gap_fill_downloaded_suffix": "scaricati",
+      "gap_fill_failed_suffix": "non riusciti",
       "latest": "RECENTE",
       "loading": {
         "fetching_account_state": "Caricamento stato account..."
@@ -305,6 +312,7 @@
         "active_session": "Sessione attiva",
         "errors": "Errori",
         "folders": "Caselle di posta",
+        "gap_fill": "Recupero messaggi mancanti",
         "history": "Cronologia"
       }
     },
@@ -345,6 +353,7 @@
     "sinceRelativeDesc": "Scarica solo le email del periodo recente (es. ultimi 3 mesi). La data di inizio si aggiorna automaticamente.",
     "sinceRelativeValue": "Scarica email degli ultimi",
     "startDownload": "Avvia download",
+    "startDownloadConfirmDesc": "Avviare il download per gli account selezionati?",
     "state": "Stato",
     "status": "Stato",
     "step": "Passo {{index}}",

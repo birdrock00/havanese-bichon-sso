@@ -81,6 +81,24 @@ use tracing::{info, warn};
 
 pub static ENVELOPE_MANAGER: LazyLock<IndexManager> = LazyLock::new(IndexManager::new);
 
+/// Lightweight snapshot of a single envelope, used as the local side of
+/// the gap-fill diff without materializing full `Envelope` structs.
+///
+/// Loads every document of the mailbox into memory at once — the caller
+/// must not use this for mailboxes too large to hold in a full in-memory
+/// pass. Documents without a message-id are excluded by
+/// `get_envelope_snapshots_for_mailbox` since the diff relies on
+/// message-id / fingerprint matching.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct EnvelopeSnapshot {
+    pub message_id: String,
+    pub uid: u64,
+    pub size: u64,
+    /// Epoch millis (internal date).
+    pub internal_date: i64,
+    //pub subject: String,
+}
+
 pub struct IndexManager {
     index: Arc<Index>,
     index_writer: Arc<Mutex<IndexWriter>>,
@@ -262,7 +280,7 @@ impl IndexManager {
         Box::new(TermQuery::new(account_term, IndexRecordOption::Basic))
     }
 
-    fn mailbox_query(&self, account_id: u64, mailbox_id: u64) -> Box<dyn Query> {
+    pub(crate) fn mailbox_query(&self, account_id: u64, mailbox_id: u64) -> Box<dyn Query> {
         let account_query = TermQuery::new(
             Term::from_field_u64(SchemaTools::email_fields().f_account_id, account_id),
             IndexRecordOption::Basic,
@@ -309,6 +327,68 @@ impl IndexManager {
             }
         }
         Ok(result)
+    }
+
+    /// Returns lightweight snapshots of every envelope stored for a mailbox:
+    /// message-id, uid, size, internal date (epoch millis), subject.
+    /// Used by gap-fill to compute the local side of the diff without
+    /// materializing full `Envelope` structs.
+    pub fn get_envelope_snapshots_for_mailbox(
+        &self,
+        account_id: u64,
+        mailbox_id: u64,
+    ) -> BichonResult<Vec<EnvelopeSnapshot>> {
+        let query = self.mailbox_query(account_id, mailbox_id);
+        let fields = SchemaTools::email_fields();
+        let searcher = self.create_searcher()?;
+
+        let docs = searcher
+            .search(&query, &DocSetCollector)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        let mut snapshots = Vec::with_capacity(docs.len());
+        for doc_address in docs {
+            let doc = searcher
+                .doc::<TantivyDocument>(doc_address)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            let message_id = doc
+                .get_first(fields.f_message_id)
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            // Skip documents without a message-id: they are useless for
+            // gap-fill (the diff matches on message-id / fingerprint) and
+            // would otherwise surface as spurious "missing" entries in the
+            // difference set. Other fields keep their fallback defaults.
+            if message_id.is_empty() {
+                continue;
+            }
+            let uid = doc
+                .get_first(fields.f_uid)
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let size = doc
+                .get_first(fields.f_size)
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let internal_date = doc
+                .get_first(fields.f_internal_date)
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0);
+            // let subject = doc
+            //     .get_first(fields.f_subject)
+            //     .and_then(|v| v.as_str())
+            //     .unwrap_or("")
+            //     .to_string();
+            snapshots.push(EnvelopeSnapshot {
+                message_id,
+                uid,
+                size,
+                internal_date,
+                //subject,
+            });
+        }
+        Ok(snapshots)
     }
 
     /// Check whether a specific Message-ID exists in a mailbox.
@@ -485,7 +565,10 @@ impl IndexManager {
                 }
             }
             if !participant_queries.is_empty() {
-                subqueries.push((Occur::Must, Box::new(BooleanQuery::new(participant_queries))));
+                subqueries.push((
+                    Occur::Must,
+                    Box::new(BooleanQuery::new(participant_queries)),
+                ));
             }
         }
 
@@ -2238,9 +2321,7 @@ mod tests {
             ]))
         };
 
-        let docs = searcher
-            .search(&query, &DocSetCollector)
-            .unwrap();
+        let docs = searcher.search(&query, &DocSetCollector).unwrap();
 
         let mut ids: Vec<String> = Vec::new();
         for addr in docs {
@@ -2582,9 +2663,7 @@ mod tests {
             writer.commit().unwrap();
         }
 
-        let reader = index
-            .reader()
-            .expect("reader");
+        let reader = index.reader().expect("reader");
         let searcher = reader.searcher();
 
         let query = TermQuery::new(
@@ -2611,19 +2690,13 @@ mod tests {
                 .get_first(f.f_ingest_at)
                 .and_then(|v| v.as_i64())
                 .unwrap_or(0);
-            let uid = doc
-                .get_first(f.f_uid)
-                .and_then(|v| v.as_u64())
-                .unwrap_or(0);
+            let uid = doc.get_first(f.f_uid).and_then(|v| v.as_u64()).unwrap_or(0);
             results.push((ingest_at, uid));
         }
 
         // Verify primary sort by ingest_at is correct
         for w in results.windows(2) {
-            assert!(
-                w[0].0 <= w[1].0,
-                "ingest_at must be non-decreasing"
-            );
+            assert!(w[0].0 <= w[1].0, "ingest_at must be non-decreasing");
         }
 
         // Verify deterministic: run again, same order
@@ -2660,7 +2733,12 @@ mod tests {
 
         println!("IMAP UID mapping (position → ingest_at, uid):");
         for (pos, (ingest_at, uid)) in results.iter().enumerate() {
-            println!("  UID {} → (ingest_at={}, original_uid={})", pos + 1, ingest_at, uid);
+            println!(
+                "  UID {} → (ingest_at={}, original_uid={})",
+                pos + 1,
+                ingest_at,
+                uid
+            );
         }
     }
 }

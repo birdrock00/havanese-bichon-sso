@@ -240,6 +240,7 @@
     "imapPortPlaceholder": "например, 993",
     "imapProxy": "Использовать SOCKS5 прокси для соединений IMAP.",
     "incDownload": "Интервал",
+    "incSync": "Интервал синхр.",
     "lastSync": "Посл. синхр.",
     "leaveEmptyToKeepExisting": "Оставьте пустым, чтобы сохранить существующий пароль, или введите новый для обновления.",
     "leaveEmptyToKeepPassword": "Оставьте пустым, чтобы сохранить текущий пароль",
@@ -271,6 +272,7 @@
     "refreshToken": "Refresh Token",
     "refreshTokenCopiedToClipboard": "Refresh token скопирован в буфер обмена",
     "relative": "Относительная",
+    "runGapFill": "Проверять новые письма и автоматически восполнять старые недостающие сообщения",
     "runningState": {
       "account": {
         "id": "ID аккаунта"
@@ -283,10 +285,15 @@
         "no_active_download": "Нет активных загрузок",
         "no_errors_current": "Нет ошибок в текущей сессии",
         "no_errors_session": "Нет ошибок в этой сессии",
+        "no_gap_fill_folders": "Нет папок для загрузки недостающих писем",
+        "no_gap_fill_history": "История восполнения отсутствует",
         "no_global_errors": "Нет глобальных ошибок",
         "no_history": "Нет истории"
       },
       "folders": "почтовые ящики",
+      "gap_fill_active": "Выполняемый запуск восполнения",
+      "gap_fill_downloaded_suffix": "скачано",
+      "gap_fill_failed_suffix": "ошибок",
       "latest": "ПОСЛЕДНЕЕ",
       "loading": {
         "fetching_account_state": "Загрузка состояния аккаунта..."
@@ -305,6 +312,7 @@
         "active_session": "Активная сессия",
         "errors": "Ошибки",
         "folders": "Почтовые ящики",
+        "gap_fill": "Восполнение пропусков",
         "history": "История"
       }
     },
@@ -345,6 +353,7 @@
     "sinceRelativeDesc": "Скачивать письма только за последний период (напр., за 3 месяца). Дата начала автоматически сдвигается со временем.",
     "sinceRelativeValue": "Скачать письма за последние",
     "startDownload": "Запустить загрузку",
+    "startDownloadConfirmDesc": "Начать загрузку почты для выбранных аккаунтов?",
     "state": "Состояние",
     "status": "Статус",
     "step": "Шаг {{index}}",

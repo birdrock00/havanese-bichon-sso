@@ -240,6 +240,7 @@
     "imapPortPlaceholder": "t.ex. 993",
     "imapProxy": "Använd en SOCKS5-proxy för IMAP-anslutningar.",
     "incDownload": "Intervall",
+    "incSync": "Synkintervall",
     "lastSync": "Senaste synk",
     "leaveEmptyToKeepExisting": "Lämna tomt för att behålla det befintliga lösenordet, eller ange ett nytt för att uppdatera det.",
     "leaveEmptyToKeepPassword": "Lämna tomt för att behålla nuvarande lösenord",
@@ -271,6 +272,7 @@
     "refreshToken": "Uppdateringstoken",
     "refreshTokenCopiedToClipboard": "Uppdateringstoken kopierad till urklipp",
     "relative": "Relativ",
+    "runGapFill": "Kontrollera nya e-postmeddelanden och komplettera automatiskt äldre saknade meddelanden",
     "runningState": {
       "account": {
         "id": "Kontots ID"
@@ -283,10 +285,15 @@
         "no_active_download": "Ingen aktiv nedladdning",
         "no_errors_current": "Inga fel i aktuell session",
         "no_errors_session": "Inga fel i denna session",
+        "no_gap_fill_folders": "Inga mappar för synkning av saknade meddelanden",
+        "no_gap_fill_history": "Ingen kompletteringshistorik",
         "no_global_errors": "Inga globala fel",
         "no_history": "Ingen historik"
       },
       "folders": "postlådor",
+      "gap_fill_active": "Pågående kompletteringskörning",
+      "gap_fill_downloaded_suffix": "nedladdade",
+      "gap_fill_failed_suffix": "misslyckades",
       "latest": "SENASTE",
       "loading": {
         "fetching_account_state": "Hämtar kontostatus..."
@@ -305,6 +312,7 @@
         "active_session": "Aktiv session",
         "errors": "Fel",
         "folders": "Postlådor",
+        "gap_fill": "Komplettera saknade meddelanden",
         "history": "Historik"
       }
     },
@@ -345,6 +353,7 @@
     "sinceRelativeDesc": "Ladda endast ner e-postmeddelanden från den senaste perioden (t.ex. senaste 3 månaderna). Startdatumet flyttas automatiskt framåt.",
     "sinceRelativeValue": "Ladda ner e-post från de senaste",
     "startDownload": "Starta hämtning",
+    "startDownloadConfirmDesc": "Starta nedladdning för valda konton?",
     "state": "Tillstånd",
     "status": "Status",
     "step": "Steg {{index}}",
