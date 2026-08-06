@@ -24,6 +24,7 @@ use crate::rest::ApiResult;
 use bichon_core::account::migration::AccountModel;
 use bichon_core::database::manager::DB_MANAGER;
 use bichon_core::database::MemDbModel;
+use bichon_core::ext::event_bus::{emit, Event};
 use bichon_core::import::{
     check_temp_disk_space, get_import_progress, process_uploaded_file, update_progress,
     BatchEmlRequest, BatchEmlResult, ImportEmls, ImportHistory, ImportProgress, ImportStatus,
@@ -67,6 +68,14 @@ impl ImportApi {
         let folder = payload.0.mail_folder.clone();
         context.require_permission(Some(account_id), Permission::DATA_IMPORT_BATCH)?;
         let result = ImportEmls::do_import(payload.0).await?;
+        emit(Event::ImportPerformed {
+            user: context.user.username.clone(),
+            account_id,
+            format: "eml".to_string(),
+            total: result.total as u64,
+            success: result.success as u64,
+            failed: result.failed as u64,
+        });
 
         // Save import history
         let progress = ImportProgress {
@@ -252,6 +261,14 @@ impl ImportApi {
         let id = import_id.clone();
         let folder_clone = folder.clone();
         let user_id = context.user.id;
+        emit(Event::ImportPerformed {
+            user: context.user.username.clone(),
+            account_id,
+            format: format_str.clone(),
+            total: 0,
+            success: 0,
+            failed: 0,
+        });
         tokio::task::spawn_blocking(move || {
             process_uploaded_file(&id, &temp_path, &file_name, account_id, &folder_clone, user_id);
         });

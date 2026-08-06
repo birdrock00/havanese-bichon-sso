@@ -811,7 +811,8 @@
     "oauth2": "OAuth2",
     "other": "Other",
     "settings": "Settings",
-    "users": "System Users"
+    "users": "System Users",
+    "auditLog": "Audit Log"
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "A secret key provided by the OAuth provider to authenticate your application.",
@@ -1526,6 +1527,22 @@
       "missing": "Missing",
       "notSet": "Not set"
     }
+  },
+  "audit": {
+    "account": "Account ID",
+    "allTypes": "All",
+    "apply": "Apply",
+    "detail": "Detail",
+    "empty": "No audit events found",
+    "endDate": "End date",
+    "eventType": "Event type",
+    "loading": "Loading…",
+    "reset": "Reset",
+    "startDate": "Start date",
+    "time": "Time",
+    "title": "Audit Log",
+    "user": "User",
+    "userPlaceholder": "username"
   },
   "table": {
     "asc": "Asc",

@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Loader, Download, Trash2, MessageSquareMore, FileText, FileImage, FileVideo, FileArchive, FileSpreadsheet, FileCode, FileIcon, FileAudio, Upload, ShieldCheck } from 'lucide-react';
 
@@ -167,7 +167,11 @@ export function MailMessageView({
     setBlockRemote(true);
   }, [envelope.id]);
 
+  const loadedKeyRef = useRef('');
   useEffect(() => {
+    const key = `${envelope.account_id}:${envelope.id}:${blockRemote}`;
+    if (loadedKeyRef.current === key) return;
+    loadedKeyRef.current = key;
     setLoading(true);
     loadMessageMutation.mutate();
   }, [envelope.id, blockRemote]);

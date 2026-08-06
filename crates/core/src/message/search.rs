@@ -169,6 +169,10 @@ pub struct AttachmentSearchRequest {
     desc: Option<bool>,
 }
 impl AttachmentSearchRequest {
+    pub fn filter(&self) -> &AttachmentSearchFilter {
+        &self.filter
+    }
+
     pub fn validate(&self) -> BichonResult<()> {
         if self.page == 0 || self.page_size == 0 {
             return Err(raise_error!(

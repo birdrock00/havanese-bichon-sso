@@ -19,6 +19,7 @@
 use crate::common::auth::WrappedContext;
 use crate::rest::api::ApiTags;
 use crate::rest::ApiResult;
+use bichon_core::ext::event_bus::{emit, Event};
 use bichon_core::token::view::AccessTokenResp;
 use bichon_core::users::permissions::Permission;
 use bichon_core::{token::payload::AccessTokenCreateRequest, token::AccessTokenModel};
@@ -60,8 +61,18 @@ impl AccessTokenApi {
         if context.user.id != token.user_id {
             context.require_permission(None, Permission::TOKEN_MANAGE)?;
         }
-
-        Ok(AccessTokenModel::delete(&token.token)?)
+        let token_name = token.name.clone();
+        let token_user = token.user_id;
+        AccessTokenModel::delete(&token.token)?;
+        let target_username = bichon_core::users::UserModel::find(token_user)?
+            .map(|u| u.username)
+            .unwrap_or_else(|| format!("user-{token_user}"));
+        emit(Event::AccessTokenRemoved {
+            user: context.user.username.clone(),
+            token_user: target_username,
+            name: token_name,
+        });
+        Ok(())
     }
 
     /// Creates a new api token.
@@ -81,8 +92,16 @@ impl AccessTokenApi {
         if target_user_id != current_user_id {
             context.require_permission(None, Permission::USER_MANAGE)?;
         }
-
+        let token_name = payload.0.name.clone();
         let token_string = AccessTokenModel::create_api_token(target_user_id, payload.0)?;
+        let target_username = bichon_core::users::UserModel::find(target_user_id)?
+            .map(|u| u.username)
+            .unwrap_or_else(|| format!("user-{target_user_id}"));
+        emit(Event::AccessTokenCreated {
+            user: context.user.username.clone(),
+            target_user: target_username,
+            name: token_name,
+        });
         Ok(PlainText(token_string))
     }
 }

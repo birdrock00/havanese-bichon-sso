@@ -16,8 +16,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use bichon_core::ext::event_bus::{emit, Event};
+use bichon_core::token::AccessTokenModel;
 use bichon_core::users::UserModel;
-use poem::{handler, web::Json, IntoResponse, Response};
+use poem::web::{Json, RealIp};
+use poem::{handler, FromRequest, IntoResponse, Request, Response};
 use serde::Deserialize;
 use tracing::error;
 
@@ -32,20 +35,39 @@ pub struct LoginPayload {
 /// Accepts a plain text password and returns the `root_token`
 /// on successful authentication.
 #[handler]
-pub fn login(payload: Json<LoginPayload>) -> Response {
-    let payload = payload.0;
-    match UserModel::authenticate_user(payload.username, payload.password) {
-        Ok(result) => match serde_json::to_string(&result) {
-            Ok(json_string) => Response::builder()
-                .status(http::StatusCode::OK)
-                .content_type("application/json")
-                .body(json_string)
-                .into_response(),
-            Err(_) => Response::builder()
-                .status(http::StatusCode::INTERNAL_SERVER_ERROR)
-                .body("Internal server error during response serialization.")
-                .into_response(),
-        },
+pub async fn login(payload: Json<LoginPayload>, req: &Request) -> Response {
+    let login_username = payload.0.username.clone();
+    match UserModel::authenticate_user(payload.0.username, payload.0.password) {
+        Ok(result) => {
+            // Audit: record the successful login (user + client IP).
+            let username = result
+                .access_token
+                .as_deref()
+                .and_then(|t| AccessTokenModel::resolve_user_from_token(t).ok())
+                .map(|u| u.username)
+                .unwrap_or(login_username);
+            let ip = RealIp::from_request_without_body(req)
+                .await
+                .ok()
+                .and_then(|r| r.0);
+            if let Some(ip) = ip {
+                emit(Event::UserLoggedIn {
+                    user: username,
+                    ip,
+                });
+            }
+            match serde_json::to_string(&result) {
+                Ok(json_string) => Response::builder()
+                    .status(http::StatusCode::OK)
+                    .content_type("application/json")
+                    .body(json_string)
+                    .into_response(),
+                Err(_) => Response::builder()
+                    .status(http::StatusCode::INTERNAL_SERVER_ERROR)
+                    .body("Internal server error during response serialization.")
+                    .into_response(),
+            }
+        }
         Err(e) => {
             error!("Authentication failed with system error: {:?}", e);
             Response::builder()

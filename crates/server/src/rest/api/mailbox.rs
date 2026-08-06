@@ -19,6 +19,7 @@
 use crate::common::auth::WrappedContext;
 use crate::rest::api::ApiTags;
 use crate::rest::ApiResult;
+use bichon_core::ext::event_bus::{emit, Event};
 use bichon_core::mailbox::delete::delete_mailbox_impl;
 use bichon_core::mailbox::list::{get_account_mailboxes, MailboxListResponse};
 use bichon_core::users::permissions::Permission;
@@ -80,6 +81,12 @@ impl MailBoxApi {
         let account_id = account_id.0;
         let mailbox_id = mailbox_id.0;
         context.require_permission(Some(account_id), Permission::DATA_DELETE)?;
-        Ok(delete_mailbox_impl(account_id, mailbox_id).await?)
+        delete_mailbox_impl(account_id, mailbox_id).await?;
+        emit(Event::MailboxRemoved {
+            user: context.user.username.clone(),
+            account_id,
+            mailbox_id,
+        });
+        Ok(())
     }
 }

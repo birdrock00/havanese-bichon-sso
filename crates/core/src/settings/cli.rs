@@ -402,6 +402,17 @@ pub struct Settings {
         help = "Maximum per-file size in MB for PST uploads via the web UI"
     )]
     pub bichon_web_pst_upload_limit_mb: u64,
+
+    /// Audit log retention period in days (default: 90). Older audit records
+    /// are purged periodically by a background task. 0 disables the cleanup.
+    /// Pro edition only.
+    #[clap(
+        long,
+        default_value = "90",
+        env,
+        help = "Audit log retention period in days (0 disables cleanup). Pro edition only."
+    )]
+    pub bichon_audit_retention_days: u64,
 }
 
 impl Settings {

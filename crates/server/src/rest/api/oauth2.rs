@@ -23,6 +23,7 @@ use bichon_core::error::code::ErrorCode;
 use crate::common::auth::WrappedContext;
 use crate::rest::api::ApiTags;
 use crate::rest::ApiResult;
+use bichon_core::ext::event_bus::{emit, Event};
 use bichon_core::oauth2::entity::{OAuth2, OAuth2CreateRequest, OAuth2UpdateRequest};
 use bichon_core::oauth2::flow::{AuthorizeUrlRequest, OAuth2Flow};
 use bichon_core::oauth2::token::{ExternalOAuth2Request, OAuth2AccessToken};
@@ -81,7 +82,17 @@ impl OAuth2Api {
         context: WrappedContext,
     ) -> ApiResult<()> {
         context.require_permission(None, Permission::ROOT)?;
-        Ok(OAuth2::delete(id.0)?)
+        let id = id.0;
+        let name = OAuth2::get(id)?
+            .map(|o| o.description.unwrap_or_default())
+            .unwrap_or_else(|| format!("oauth2-{id}"));
+        OAuth2::delete(id)?;
+        emit(Event::OAuth2ConfigRemoved {
+            user: context.user.username.clone(),
+            oauth2_id: id,
+            name,
+        });
+        Ok(())
     }
 
     /// Creates a new OAuth2 configuration.
@@ -100,8 +111,16 @@ impl OAuth2Api {
         context: WrappedContext,
     ) -> ApiResult<()> {
         context.require_permission(None, Permission::ROOT)?;
+        let name = request.0.description.clone().unwrap_or_default();
         let entity = OAuth2::new(request.0)?;
-        Ok(entity.save()?)
+        let id = entity.id;
+        entity.save()?;
+        emit(Event::OAuth2ConfigCreated {
+            user: context.user.username.clone(),
+            oauth2_id: id,
+            name,
+        });
+        Ok(())
     }
 
     /// Updates an existing OAuth2 configuration.
@@ -122,7 +141,17 @@ impl OAuth2Api {
         context: WrappedContext,
     ) -> ApiResult<()> {
         context.require_permission(None, Permission::ROOT)?;
-        Ok(OAuth2::update(id.0, payload.0)?)
+        let id = id.0;
+        let name = OAuth2::get(id)?
+            .map(|o| o.description.unwrap_or_default())
+            .unwrap_or_else(|| format!("oauth2-{id}"));
+        OAuth2::update(id, payload.0)?;
+        emit(Event::OAuth2ConfigUpdated {
+            user: context.user.username.clone(),
+            oauth2_id: id,
+            name,
+        });
+        Ok(())
     }
 
     /// Lists OAuth2 configurations with pagination and sorting options.
@@ -237,6 +266,10 @@ impl OAuth2Api {
         // Check account access permissions
         context.require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)?;
         OAuth2AccessToken::upsert_external_oauth_token(account_id, request.0)?;
+        emit(Event::OAuth2TokenStored {
+            user: context.user.username.clone(),
+            account_id,
+        });
         Ok(())
     }
 }

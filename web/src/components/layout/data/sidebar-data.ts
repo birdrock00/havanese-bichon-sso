@@ -22,15 +22,18 @@ import {
   IconLayoutDashboard,
   IconSettings
 } from '@tabler/icons-react'
-import { IdCard, Inbox, Paperclip, Search, Upload, Users2 } from 'lucide-react'
+import { IdCard, Inbox, Paperclip, Search, Upload, Users2, ScrollText } from 'lucide-react'
 import { type SidebarData } from '../types'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { useEdition } from '@/hooks/use-edition'
 
 export function useSidebarData(): SidebarData {
   const { t } = useTranslation()
 
   const { require_any_permission } = useCurrentUser()
+  const { features } = useEdition()
+  const auditEnabled = features.includes('audit_log')
 
   return {
     navGroups: [
@@ -103,6 +106,12 @@ export function useSidebarData(): SidebarData {
             title: t('navigation.apiDocs'),
             url: '/api-docs',
             icon: IconHelp,
+          },
+          {
+            title: t('navigation.auditLog'),
+            url: '/audit-log',
+            icon: ScrollText,
+            visible: auditEnabled && require_any_permission(['system:root', 'user:manage', 'data:read:all']),
           },
         ],
       },

@@ -80,7 +80,8 @@ const VirtualizedCommand = ({
     setFilteredOptions(
       options.filter((option) =>
         option.value.toLowerCase().includes(search.toLowerCase()) ||
-        option.label.toLowerCase().includes(search.toLowerCase())
+        option.label.toLowerCase().includes(search.toLowerCase()) ||
+        (option.description ?? '').toLowerCase().includes(search.toLowerCase())
       ),
     );
   };

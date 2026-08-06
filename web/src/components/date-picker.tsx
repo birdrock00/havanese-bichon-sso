@@ -27,7 +27,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover'
 import i18n from '@/i18n'
-import { dateFnsLocaleMap } from '@/lib/utils'
+import { cn, dateFnsLocaleMap } from '@/lib/utils'
 import { enUS } from 'date-fns/locale'
 import { useEffect, useState } from 'react'
 
@@ -35,12 +35,14 @@ type DatePickerProps = {
   selected: Date | undefined
   onSelect: (date: Date | undefined) => void
   placeholder?: string
+  className?: string
 }
 
 export function DatePicker({
   selected,
   onSelect,
   placeholder = 'Pick a date',
+  className,
 }: DatePickerProps) {
 
   const currentLang = i18n.language.toLowerCase().replace('_', '-');
@@ -60,7 +62,11 @@ export function DatePicker({
         <Button
           variant='outline'
           data-empty={!selected}
-          className='data-[empty=true]:text-muted-foreground w-[240px] justify-start text-start font-normal'
+          className={cn(
+            'h-9 w-[240px] justify-start text-start text-sm font-normal',
+            'data-[empty=true]:text-muted-foreground',
+            className
+          )}
         >
           {selected ? (
             format(selected, 'PPP', { locale: dateLocale })

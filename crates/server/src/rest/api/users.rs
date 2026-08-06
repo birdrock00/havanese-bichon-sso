@@ -21,6 +21,7 @@ use std::collections::BTreeMap;
 use crate::common::auth::WrappedContext;
 use crate::rest::api::ApiTags;
 use crate::rest::ApiResult;
+use bichon_core::ext::event_bus::{emit, Event};
 use bichon_core::token::AccessTokenModel;
 use bichon_core::users::minimal::MinimalUser;
 use bichon_core::users::payload::{
@@ -53,7 +54,17 @@ impl UsersApi {
     ) -> ApiResult<()> {
         let id = id.0;
         context.require_permission(None, Permission::USER_MANAGE)?;
-        Ok(UserRole::delete(id)?)
+        let role_name = UserRole::list_all()?
+            .into_iter()
+            .find(|r| r.id == id)
+            .map(|r| r.name)
+            .unwrap_or_else(|| format!("role-{id}"));
+        UserRole::delete(id)?;
+        emit(Event::RoleRemoved {
+            removed_by: context.user.username.clone(),
+            role_name,
+        });
+        Ok(())
     }
 
     /// Create a new account
@@ -66,6 +77,10 @@ impl UsersApi {
     ) -> ApiResult<Json<UserRole>> {
         context.require_permission(None, Permission::USER_MANAGE)?;
         let role = UserRole::create(payload.0)?;
+        emit(Event::RoleCreated {
+            created_by: context.user.username.clone(),
+            role_name: role.name.clone(),
+        });
         Ok(Json(role))
     }
 
@@ -81,7 +96,17 @@ impl UsersApi {
     ) -> ApiResult<()> {
         let id = id.0;
         context.require_permission(None, Permission::USER_MANAGE)?;
-        Ok(UserRole::update(id, payload.0)?)
+        let role = UserRole::list_all()?
+            .into_iter()
+            .find(|r| r.id == id)
+            .map(|r| r.name)
+            .unwrap_or_else(|| format!("role-{id}"));
+        UserRole::update(id, payload.0)?;
+        emit(Event::RoleUpdated {
+            updated_by: context.user.username.clone(),
+            role_name: role,
+        });
+        Ok(())
     }
 
     #[oai(path = "/list-users", method = "get", operation_id = "list_users")]
@@ -122,7 +147,15 @@ impl UsersApi {
     ) -> ApiResult<()> {
         let id = id.0;
         context.require_permission(None, Permission::USER_MANAGE)?;
-        Ok(UserModel::remove(id)?)
+        let target_username = UserModel::find(id)?
+            .map(|u| u.username)
+            .unwrap_or_else(|| format!("user-{id}"));
+        UserModel::remove(id)?;
+        emit(Event::UserRemoved {
+            removed_by: context.user.username.clone(),
+            target_user: target_username,
+        });
+        Ok(())
     }
 
     #[oai(path = "/users", method = "post", operation_id = "create_user")]
@@ -133,6 +166,10 @@ impl UsersApi {
     ) -> ApiResult<Json<UserView>> {
         context.require_permission(None, Permission::USER_MANAGE)?;
         let user = UserModel::create(payload.0)?;
+        emit(Event::UserCreated {
+            created_by: context.user.username.clone(),
+            new_user: user.username.clone(),
+        });
         let roles = UserRole::list_all()?;
         let role_lookup: BTreeMap<u64, UserRole> = roles.into_iter().map(|r| (r.id, r)).collect();
         Ok(Json(user.to_view(&role_lookup)))
@@ -156,7 +193,15 @@ impl UsersApi {
             update_data.account_access_map = None;
             update_data.acl = None;
         }
-        Ok(UserModel::update(target_id, update_data)?)
+        UserModel::update(target_id, update_data)?;
+        let target_username = UserModel::find(target_id)?
+            .map(|u| u.username)
+            .unwrap_or_else(|| format!("user-{target_id}"));
+        emit(Event::UserUpdated {
+            updated_by: context.user.username.clone(),
+            target_user: target_username,
+        });
+        Ok(())
     }
 
     #[oai(

@@ -30,6 +30,7 @@ use bichon_core::account::view::AccountResp;
 use bichon_core::cache::imap::task::SYNC_TASKS;
 use bichon_core::common::paginated::{paginate_vec, DataPage};
 use bichon_core::error::code::ErrorCode;
+use bichon_core::ext::event_bus::{emit, Event};
 use bichon_core::raise_error;
 use bichon_core::store::tantivy::envelope::ENVELOPE_MANAGER;
 use bichon_core::users::permissions::Permission;
@@ -86,7 +87,15 @@ impl AccountApi {
     ) -> ApiResult<()> {
         let account_id = account_id.0;
         context.require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)?;
+        let email = AccountModel::find(account_id)?
+            .map(|a| a.email)
+            .unwrap_or_else(|| format!("account-{account_id}"));
         AccountModel::delete(account_id).await?;
+        emit(Event::AccountRemoved {
+            removed_by: context.user.username.clone(),
+            account_id,
+            email,
+        });
         Ok(())
     }
 
@@ -100,6 +109,11 @@ impl AccountApi {
     ) -> ApiResult<Json<AccountModel>> {
         context.require_permission(None, Permission::ACCOUNT_CREATE)?;
         let account = AccountModel::create_account(context.user.id, payload.0).await?;
+        emit(Event::AccountCreated {
+            created_by: context.user.username.clone(),
+            account_id: account.id,
+            email: account.email.clone(),
+        });
         Ok(Json(account))
     }
 
@@ -119,7 +133,16 @@ impl AccountApi {
     ) -> ApiResult<()> {
         let account_id = account_id.0;
         context.require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)?;
-        Ok(AccountModel::update(account_id, payload.0, true)?)
+        AccountModel::update(account_id, payload.0, true)?;
+        let email = AccountModel::find(account_id)?
+            .map(|a| a.email)
+            .unwrap_or_else(|| format!("account-{account_id}"));
+        emit(Event::AccountUpdated {
+            updated_by: context.user.username.clone(),
+            account_id,
+            email,
+        });
+        Ok(())
     }
 
     /// List accounts with optional pagination parameters
@@ -255,6 +278,11 @@ impl AccountApi {
         }
         context.require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)?;
         SYNC_TASKS.start_manual_task(account_id, body.run_gap_fill).await?;
+        emit(Event::AccountDownloadStarted {
+            user: context.user.username.clone(),
+            account_id,
+            run_gap_fill: body.run_gap_fill,
+        });
         Ok(())
     }
 
@@ -288,6 +316,10 @@ impl AccountApi {
             ))?;
         }
         SYNC_TASKS.cancel_manual_task(account_id).await;
+        emit(Event::AccountDownloadStopped {
+            user: context.user.username.clone(),
+            account_id,
+        });
         Ok(())
     }
 
@@ -343,8 +375,25 @@ impl AccountApi {
         req: Json<BatchAccountRoleRequest>,
         context: WrappedContext,
     ) -> ApiResult<()> {
+        let req = req.0;
         req.validate_existence()?;
-        req.0.do_assign(&context)?;
+        let role_name = bichon_core::users::role::UserRole::find(req.role_id)?
+            .map(|r| r.name)
+            .unwrap_or_else(|| format!("role-{}", req.role_id));
+        let target_users: Vec<String> = req
+            .user_ids
+            .iter()
+            .filter_map(|uid| UserModel::find(*uid).ok().flatten())
+            .map(|u| u.username)
+            .collect();
+        let account_count = req.account_ids.len();
+        req.do_assign(&context)?;
+        emit(Event::AccountRoleAssigned {
+            user: context.user.username.clone(),
+            target_user: target_users.join(", "),
+            account_count,
+            roles: vec![role_name],
+        });
         Ok(())
     }
 }
