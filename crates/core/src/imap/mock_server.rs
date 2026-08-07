@@ -255,6 +255,20 @@ pub fn uid_search_response(uids: &[u32]) -> Vec<u8> {
     format!("* SEARCH {uid_str}\r\n{{TAG}} OK SEARCH completed\r\n").into_bytes()
 }
 
+/// Build a UID FETCH response returning UID + RFC822.SIZE + INTERNALDATE
+/// (no body). Each entry: (uid, size)
+pub fn uid_fetch_size_response(entries: &[(u32, u32)]) -> Vec<u8> {
+    let mut out = Vec::new();
+    for (uid, size) in entries {
+        let line = format!(
+            "* {uid} FETCH (UID {uid} RFC822.SIZE {size} INTERNALDATE \"01-Jan-2025 00:00:00 +0000\")\r\n"
+        );
+        out.extend_from_slice(line.as_bytes());
+    }
+    out.extend_from_slice(b"{TAG} OK FETCH completed\r\n");
+    out
+}
+
 /// Build a UID FETCH response returning full headers (for BODY[HEADER]).
 /// Each entry: (uid, message_id)
 pub fn uid_fetch_metadata_response(entries: &[(u32, &str)]) -> Vec<u8> {

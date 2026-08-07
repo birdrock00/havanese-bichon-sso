@@ -124,10 +124,12 @@ impl ImapExecutor {
 
     /// Fetches new mail for a mailbox.
     ///
-    /// When `before` is `Some(date)`, a two-step approach is used:
-    /// `UID SEARCH` to find matching UIDs (standard IMAP), then batch `UID FETCH`
-    /// for the specific UIDs. When `before` is `None`, a direct ranged
-    /// `UID FETCH {start}:*` is issued and results are streamed.
+    /// UIDs are enumerated via a ranged `UID FETCH {start}:* (UID RFC822.SIZE
+    /// INTERNALDATE)` (RFC 3501 §6.4.4 closed-interval semantics — unlike
+    /// `UID SEARCH`, which servers may answer with a subset, a truncated
+    /// enumeration cannot silently skip messages), then bodies are downloaded
+    /// in batches. When `before` is `Some(date)`, the INTERNALDATE is compared
+    /// against the date client-side (equivalent to SEARCH's BEFORE key).
     ///
     /// Returns `Ok(Some(max_uid))` with the highest UID fetched, or `Ok(None)`
     /// if no new mail was found.
@@ -141,63 +143,60 @@ impl ImapExecutor {
     ) -> BichonResult<Option<u32>> {
         assert!(start_uid > 0, "start_uid must be greater than 0");
 
-        session
+        let examined = session
             .examine(&mailbox.encoded_name())
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
 
         match before {
             Some(date) => {
-                Self::fetch_new_mail_with_before(session, account, mailbox, start_uid, date, token)
+                Self::fetch_new_mail_with_before(
+                    session,
+                    account,
+                    mailbox,
+                    start_uid,
+                    date,
+                    examined,
+                    token,
+                )
+                .await
+            }
+            None => {
+                Self::fetch_new_mail_range(session, account, mailbox, start_uid, examined, token)
                     .await
             }
-            None => Self::fetch_new_mail_range(session, account, mailbox, start_uid, token).await,
         }
     }
 
-    /// Two-step approach for date-filtered incremental fetch: UID SEARCH first,
-    /// then batch UID FETCH for matching UIDs. Uses standard IMAP syntax that
-    /// works across all compliant servers.
+    /// Date-filtered incremental fetch: enumerate UIDs in `{start}:*` via
+    /// ranged `UID FETCH` (RFC 3501 §6.4.4 closed-interval semantics, so a
+    /// truncated result cannot silently skip messages), then filter by
+    /// INTERNALDATE client-side and batch-download the bodies.
+    ///
+    /// The `BEFORE {date}` filter is applied locally: RFC 3501's BEFORE key
+    /// matches messages whose internal date (ignoring time and timezone) is
+    /// earlier than the given date, which is exactly the same comparison done
+    /// here on the INTERNALDATE returned by the enumeration fetch.
     async fn fetch_new_mail_with_before(
         session: &mut Session<Box<dyn SessionStream>>,
         account: &AccountModel,
         mailbox: &MailBox,
         start_uid: u64,
         date: &str,
+        examined: async_imap::types::Mailbox,
         token: CancellationToken,
     ) -> BichonResult<Option<u32>> {
-        let query = format!("UID {start_uid}:* BEFORE {date}");
-        info!(
-            "[account {}][mailbox {}] fetch_new_mail: UID SEARCH {}",
-            account.id, mailbox.name, query
-        );
-        let results = session.uid_search(&query).await.map_err(|e| {
-            let err_msg = format!("UID SEARCH failed in [{}]: {:#?}", mailbox.name, e);
-            let _ = DownloadState::append_session_error(account.id, err_msg);
-            raise_error!(format!("{:#?}", e), classify_imap_error(&e))
-        })?;
-
-        if results.is_empty() {
-            info!(
-                account_id = account.id,
-                mailbox = %mailbox.name,
-                start_uid,
-                date,
-                "fetch_new_mail_with_before: UID SEARCH returned no results"
-            );
-            DownloadState::update_folder_progress(
-                account.id,
-                mailbox.name.clone(),
-                0,
-                0,
-                FolderStatus::Success,
-                Some("No new emails found.".into()),
-            )?;
-            return Ok(None);
-        }
-
-        let mut uid_vec: Vec<u32> = results.into_iter().collect();
-        uid_vec.sort();
+        let uid_range = format!("{start_uid}:*");
+        let (entries, skipped_oversized) = Self::collect_range_uids(
+            session,
+            &uid_range,
+            account.id,
+            mailbox,
+            account.max_email_size_bytes,
+            token.clone(),
+        )
+        .await?;
+        let mut uid_vec = filter_before_date(&entries, date)?;
         // Same non-compliant-server guard as fetch_new_mail_range: `{start}:*`
         // may be clamped by the server and return uids below start_uid, which
         // are already stored locally (or are drift — gap-fill's job).
@@ -210,8 +209,54 @@ impl ImapExecutor {
             found = uid_vec.len(),
             first = uid_vec.first().copied(),
             last = uid_vec.last().copied(),
-            "fetch_new_mail_with_before: UID SEARCH result"
+            skipped_oversized,
+            "fetch_new_mail_with_before: UID FETCH result"
         );
+
+        if uid_vec.is_empty() {
+            // Same truncated-result guard as fetch_new_mail_range: if the
+            // server claims new mail but nothing passed the filters, refuse to
+            // advance highest_uid. A legitimate empty result here is: mail
+            // existed but was all oversized (skipped_oversized > 0), or all
+            // entries fell outside the date window (entries non-empty).
+            if skipped_oversized == 0 && entries.is_empty() {
+                if let Some(msg) = empty_enumeration_anomaly(
+                    mailbox.name.as_str(),
+                    &uid_range,
+                    start_uid,
+                    examined.uid_next,
+                ) {
+                    tracing::warn!(
+                        account_id = account.id,
+                        mailbox = %mailbox.name,
+                        start_uid,
+                        uid_next = examined.uid_next,
+                        "{}",
+                        msg
+                    );
+                    DownloadState::append_session_error(account.id, msg)?;
+                    DownloadState::update_folder_progress(
+                        account.id,
+                        mailbox.name.clone(),
+                        0,
+                        0,
+                        FolderStatus::Failed,
+                        Some("UID enumeration came back empty despite new mail on server. Retrying on next sync.".into()),
+                    )?;
+                    return Ok(None);
+                }
+            }
+            DownloadState::update_folder_progress(
+                account.id,
+                mailbox.name.clone(),
+                0,
+                0,
+                FolderStatus::Success,
+                Some("No new emails found.".into()),
+            )?;
+            return Ok(None);
+        }
+
         let max_uid = uid_vec.last().copied();
         let planned = uid_vec.len() as u64;
         let batch_size = account.download_batch_size.unwrap_or(DEFAULT_BATCH_SIZE) as usize;
@@ -297,34 +342,128 @@ impl ImapExecutor {
         Ok(max_uid)
     }
 
+    /// Enumerates every UID in `{start}:*` via a lightweight
+    /// `UID FETCH {start}:* (UID RFC822.SIZE INTERNALDATE)` — no bodies.
+    ///
+    /// Unlike `UID SEARCH`, a ranged UID FETCH is required by RFC 3501 §6.4.4
+    /// to return the full closed interval, so a truncated response cannot
+    /// silently skip messages in the middle of the range.
+    ///
+    /// UIDs whose RFC822.SIZE exceeds `max_email_size_bytes` are dropped here
+    /// (they would be skipped again by the batched body fetch's SIZE pre-check,
+    /// so filtering up front saves a round trip per batch). Returns the
+    /// accepted `(uid, size, internal_date_epoch_millis)` entries and the
+    /// number of oversized messages skipped.
+    async fn collect_range_uids(
+        session: &mut Session<Box<dyn SessionStream>>,
+        uid_range: &str,
+        account_id: u64,
+        mailbox: &MailBox,
+        max_email_size_bytes: Option<u64>,
+        token: CancellationToken,
+    ) -> BichonResult<(Vec<(u32, u64, i64)>, u64)> {
+        let limit = max_email_size_bytes.unwrap_or(DEFAULT_MAX_EMAIL_SIZE);
+        let mut uid_stream = session
+            .uid_fetch(uid_range, "(UID RFC822.SIZE INTERNALDATE)")
+            .await
+            .map_err(|e| {
+                let err_msg = format!("UID FETCH failed in [{}]: {:#?}", mailbox.name, e);
+                let _ = DownloadState::append_session_error(account_id, err_msg);
+                raise_error!(format!("{:#?}", e), classify_imap_error(&e))
+            })?;
+        let mut entries: Vec<(u32, u64, i64)> = Vec::new();
+        let mut skipped_oversized = 0u64;
+        while let Some(fetch) = uid_stream
+            .try_next()
+            .await
+            .map_err(|e| {
+                let err_msg = format!("UID FETCH stream failed in [{}]: {:#?}", mailbox.name, e);
+                let _ = DownloadState::append_session_error(account_id, err_msg);
+                raise_error!(format!("{:#?}", e), classify_imap_error(&e))
+            })?
+        {
+            if token.is_cancelled() {
+                DownloadState::update_session_status(
+                    account_id,
+                    DownloadStatus::Cancelled,
+                    Some("User stopped or system shutdown".to_string()),
+                )?;
+                return Err(raise_error!(
+                    "Stream cancelled".into(),
+                    ErrorCode::InternalError
+                ));
+            }
+            let Some(uid) = fetch.uid else {
+                continue;
+            };
+            let size = fetch.size.unwrap_or(0) as u64;
+            let internal_date = fetch
+                .internal_date()
+                .map(|d| d.timestamp_millis())
+                .unwrap_or(0);
+            if size == 0 || size <= limit {
+                entries.push((uid, size, internal_date));
+            } else {
+                skipped_oversized += 1;
+                tracing::warn!(
+                    account_id,
+                    mailbox_id = mailbox.id,
+                    uid,
+                    size,
+                    limit,
+                    "Skipping oversized email during UID enumeration"
+                );
+            }
+        }
+        Ok((entries, skipped_oversized))
+    }
+
     /// Fetches all messages with UID >= start_uid via batched UID FETCH.
     ///
-    /// A single ranged `UID FETCH {start}:*` can block for minutes on slow
-    /// servers pushing hundreds of messages, and hits the socket read timeout
-    /// if the server stalls, with zero progress feedback in the meantime.
-    /// Instead, enumerate the UIDs first, then download in small batches —
-    /// each batch is a short round-trip with a SIZE pre-check (oversized
-    /// messages are skipped without fetching their body), progress is reported
-    /// per batch, and the whole download stays responsive to cancellation.
+    /// A single ranged `UID FETCH {start}:* (BODY[])` can block for minutes on
+    /// slow servers pushing hundreds of messages, and hits the socket read
+    /// timeout if the server stalls, with zero progress feedback in the
+    /// meantime. Instead, enumerate the UIDs first via a lightweight
+    /// `UID FETCH {start}:* (UID RFC822.SIZE)` (headers/size only, no bodies),
+    /// then download in small batches — each batch is a short round-trip with
+    /// a SIZE pre-check (oversized messages are skipped without fetching their
+    /// body), progress is reported per batch, and the whole download stays
+    /// responsive to cancellation.
+    ///
+    /// A plain `UID SEARCH {start}:*` is NOT used to enumerate: RFC 3501
+    /// grants SEARCH the freedom to return a subset or non-normalized results,
+    /// and servers in the wild (e.g. Gmail) occasionally return only the last
+    /// matching UID for a huge range. Since the caller advances highest_uid to
+    /// the last UID found, a truncated SEARCH permanently skips everything
+    /// between start_uid and that last UID. UID FETCH on a range, by contrast,
+    /// is REQUIRED by RFC 3501 §6.4.4 to return the full closed interval
+    /// [start_uid, max UID].
     async fn fetch_new_mail_range(
         session: &mut Session<Box<dyn SessionStream>>,
         account: &AccountModel,
         mailbox: &MailBox,
         start_uid: u64,
+        examined: async_imap::types::Mailbox,
         token: CancellationToken,
     ) -> BichonResult<Option<u32>> {
         let uid_range = format!("{start_uid}:*");
         info!(
-            "[account {}][mailbox {}] fetch_new_mail: batched UID FETCH {}",
+            "[account {}][mailbox {}] fetch_new_mail: enumerate UIDs via UID FETCH {}",
             account.id, mailbox.name, uid_range
         );
 
-        let results = session.uid_search(&uid_range).await.map_err(|e| {
-            let err_msg = format!("UID SEARCH failed in [{}]: {:#?}", mailbox.name, e);
-            let _ = DownloadState::append_session_error(account.id, err_msg);
-            raise_error!(format!("{:#?}", e), classify_imap_error(&e))
-        })?;
-        let mut uid_vec: Vec<u32> = results.into_iter().collect();
+        // Track how many messages were dropped by the size filter so an empty
+        // result is not misread as an enumeration failure (anomaly guard).
+        let (entries, skipped_oversized) = Self::collect_range_uids(
+            session,
+            &uid_range,
+            account.id,
+            mailbox,
+            account.max_email_size_bytes,
+            token.clone(),
+        )
+        .await?;
+        let mut uid_vec: Vec<u32> = entries.iter().map(|&(uid, _, _)| uid).collect();
         uid_vec.sort();
         // Some non-compliant servers (e.g. Zoho) interpret `{start}:*` as a
         // sequence range and clamp it, returning the last message even when
@@ -339,10 +478,47 @@ impl ImapExecutor {
             found = uid_vec.len(),
             first = uid_vec.first().copied(),
             last = uid_vec.last().copied(),
-            "fetch_new_mail_range: UID SEARCH result"
+            skipped_oversized,
+            "fetch_new_mail_range: UID FETCH result"
         );
 
         if uid_vec.is_empty() {
+            // Guard against a truncated (or silently dropped) FETCH result:
+            // if the server reports a UIDNEXT well above start_uid yet no UIDs
+            // came back, do NOT advance highest_uid past start_uid — that would
+            // permanently skip everything in between. Report the anomaly and
+            // keep the old highest_uid so the next sync retries.
+            //
+            // Oversized-only mail is legitimate (nothing to download within the
+            // size limit), so skip the anomaly check when the size filter (not
+            // the server) is what emptied the range.
+            if skipped_oversized == 0 {
+                if let Some(msg) = empty_enumeration_anomaly(
+                    mailbox.name.as_str(),
+                    &uid_range,
+                    start_uid,
+                    examined.uid_next,
+                ) {
+                    tracing::warn!(
+                        account_id = account.id,
+                        mailbox = %mailbox.name,
+                        start_uid,
+                        uid_next = examined.uid_next,
+                        "{}",
+                        msg
+                    );
+                    DownloadState::append_session_error(account.id, msg)?;
+                    DownloadState::update_folder_progress(
+                        account.id,
+                        mailbox.name.clone(),
+                        0,
+                        0,
+                        FolderStatus::Failed,
+                        Some("UID enumeration came back empty despite new mail on server. Retrying on next sync.".into()),
+                    )?;
+                    return Ok(None);
+                }
+            }
             DownloadState::update_folder_progress(
                 account.id,
                 mailbox.name.clone(),
@@ -944,6 +1120,58 @@ pub fn generate_uid_sequence_hashset(
     result
 }
 
+/// Filters `(uid, size, internal_date_epoch_millis)` entries to those whose
+/// internal date (ignoring time and timezone, matching RFC 3501's BEFORE key)
+/// is strictly earlier than `date` (`%d-%b-%Y`, e.g. "26-May-2025").
+/// Returns the matching UIDs sorted ascending. Errors if the date cannot be
+/// parsed — a silently-broken date filter would download mail the user asked
+/// to exclude.
+fn filter_before_date(
+    entries: &[(u32, u64, i64)],
+    date: &str,
+) -> BichonResult<Vec<u32>> {
+    let cutoff = chrono::NaiveDate::parse_from_str(date, "%d-%b-%Y").map_err(|e| {
+        raise_error!(
+            format!("Invalid BEFORE date '{date}': {e}"),
+            ErrorCode::InvalidParameter
+        )
+    })?;
+    let mut uid_vec: Vec<u32> = entries
+        .iter()
+        .filter(|&&(_, _, internal_date)| {
+            let d = chrono::DateTime::from_timestamp_millis(internal_date)
+                .map(|dt| dt.date_naive())
+                .unwrap_or_default();
+            d < cutoff
+        })
+        .map(|&(uid, _, _)| uid)
+        .collect();
+    uid_vec.sort();
+    Ok(uid_vec)
+}
+
+/// When a range enumeration comes back empty, decide whether that is an
+/// anomaly (server claims messages exist in the range but none were returned)
+/// or a genuine "no new mail" result. Returns a warning message for the
+/// anomaly, `None` when the empty result is legitimate (and highest_uid may be
+/// left unchanged safely).
+fn empty_enumeration_anomaly(
+    mailbox_name: &str,
+    uid_range: &str,
+    start_uid: u64,
+    server_uid_next: Option<u32>,
+) -> Option<String> {
+    let uid_next = server_uid_next?;
+    if (uid_next as u64) > start_uid {
+        Some(format!(
+            "Mailbox '{}': UID FETCH {} returned no UIDs but server UIDNEXT={} ({} messages in range). Refusing to advance highest_uid to avoid skipping them; the next sync will retry.",
+            mailbox_name, uid_range, uid_next, uid_next.saturating_sub(start_uid as u32)
+        ))
+    } else {
+        None
+    }
+}
+
 fn parse_message_id_header(header_bytes: &[u8]) -> Option<String> {
     let header = std::str::from_utf8(header_bytes).ok()?;
     for line in header.lines() {
@@ -968,6 +1196,8 @@ fn parse_message_id_header(header_bytes: &[u8]) -> Option<String> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::imap::session::SessionStream;
+    use tokio_io_timeout::TimeoutStream;
 
     // ── compress_uid_list ──────────────────────────────────────────
 
@@ -1019,6 +1249,46 @@ mod test {
         assert_eq!(batches[1].1, 2);
         assert_eq!(batches[2].0, "5");
         assert_eq!(batches[2].1, 1);
+    }
+
+    // ── filter_before_date ─────────────────────────────────────────
+
+    fn ms(y: i32, m: u32, d: u32) -> i64 {
+        chrono::NaiveDate::from_ymd_opt(y, m, d)
+            .unwrap()
+            .and_hms_opt(12, 0, 0)
+            .unwrap()
+            .and_utc()
+            .timestamp_millis()
+    }
+
+    #[test]
+    fn filter_before_date_keeps_only_earlier_dates() {
+        let entries = vec![
+            (1, 100, ms(2025, 5, 20)),
+            (2, 200, ms(2025, 5, 26)), // exactly on the cutoff day — excluded (BEFORE is strict)
+            (3, 300, ms(2025, 5, 27)),
+        ];
+        let uids = filter_before_date(&entries, "27-May-2025").unwrap();
+        assert_eq!(uids, vec![1, 2]);
+    }
+
+    #[test]
+    fn filter_before_date_timezone_ignored() {
+        // Internal date late in the day in +1400 still counts as that day:
+        // 2025-05-26 23:59:00 +1400 == 2025-05-26 09:59 UTC.
+        let entries = vec![
+            (1, 100, ms(2025, 5, 25)),
+            (2, 200, ms(2025, 5, 26)),
+        ];
+        let uids = filter_before_date(&entries, "26-May-2025").unwrap();
+        assert_eq!(uids, vec![1]);
+    }
+
+    #[test]
+    fn filter_before_date_invalid_date_errors() {
+        let entries = vec![(1, 100, ms(2025, 5, 20))];
+        assert!(filter_before_date(&entries, "not-a-date").is_err());
     }
 
     // ── parse_message_id_header ─────────────────────────────────────
@@ -1092,5 +1362,177 @@ To: recipient@example.com\r\n\r\n";
             parse_message_id_header(header),
             Some("plain@example.com".into())
         );
+    }
+
+    // ── empty_enumeration_anomaly ──────────────────────────────────
+
+    #[test]
+    fn empty_enumeration_no_anomaly_when_uidnext_below_start() {
+        // No new mail: server UIDNEXT <= start_uid → legitimate empty result.
+        assert_eq!(
+            empty_enumeration_anomaly("INBOX", "816098:*", 816098, Some(816098)),
+            None
+        );
+        assert_eq!(
+            empty_enumeration_anomaly("INBOX", "816098:*", 816098, Some(816097)),
+            None
+        );
+    }
+
+    #[test]
+    fn empty_enumeration_no_anomaly_when_uidnext_unknown() {
+        // Server did not report UIDNEXT; cannot prove mail exists in range.
+        assert_eq!(
+            empty_enumeration_anomaly("INBOX", "816098:*", 816098, None),
+            None
+        );
+    }
+
+    #[test]
+    fn empty_enumeration_anomaly_when_uidnext_above_start() {
+        // Server claims messages exist but none came back → anomaly message.
+        let msg = empty_enumeration_anomaly("portal_issues", "816098:*", 816098, Some(816118));
+        let msg = msg.expect("should be Some for anomalous empty enumeration");
+        assert!(msg.contains("portal_issues"));
+        assert!(msg.contains("UIDNEXT=816118"));
+    }
+
+    // ── collect_range_uids via mock server ─────────────────────────
+
+    use crate::imap::mock_server::{
+        examine_response, uid_fetch_size_response, MockImapServer, MockImapServerHandle,
+    };
+
+    /// Build an `async_imap::Session` connected to the mock server,
+    /// authenticated and with the given mailbox examined.
+    async fn mock_session(
+        handle: &MockImapServerHandle,
+    ) -> async_imap::Session<Box<dyn SessionStream>> {
+        let tcp = tokio::net::TcpStream::connect((handle.host(), handle.port()))
+            .await
+            .unwrap();
+        let timeout_stream = TimeoutStream::new(tcp);
+        let pinned: std::pin::Pin<Box<TimeoutStream<tokio::net::TcpStream>>> =
+            Box::pin(timeout_stream);
+        let stream: Box<dyn SessionStream> = Box::new(pinned);
+        let mut client = async_imap::Client::new(stream);
+
+        // Read greeting
+        client.read_response().await.unwrap();
+
+        // Login
+        let mut session = client
+            .login("user", "pass")
+            .await
+            .map_err(|(e, _)| panic!("Login failed: {e:?}"))
+            .unwrap();
+
+        // Examine
+        session.examine("INBOX").await.unwrap();
+
+        session
+    }
+
+    #[tokio::test]
+    async fn collect_range_uids_via_mock_server() {
+        let handle = MockImapServer::new()
+            .respond("LOGIN", "{TAG} OK LOGIN done\r\n")
+            .respond("EXAMINE", examine_response("INBOX", 3, 42, 4))
+            .respond(
+                "UID FETCH",
+                uid_fetch_size_response(&[(1, 100), (2, 200), (3, 300)]),
+            )
+            .start()
+            .await;
+
+        let mut session = mock_session(&handle).await;
+
+        let mut mailbox = MailBox::default();
+        mailbox.name = "INBOX".into();
+
+        let (entries, skipped) = ImapExecutor::collect_range_uids(
+            &mut session,
+            "1:*",
+            1,
+            &mailbox,
+            None,
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            entries.iter().map(|&(uid, _, _)| uid).collect::<Vec<_>>(),
+            vec![1, 2, 3]
+        );
+        assert_eq!(skipped, 0);
+        session.logout().await.ok();
+    }
+
+    #[tokio::test]
+    async fn collect_range_uids_empty_mailbox() {
+        let handle = MockImapServer::new()
+            .respond("LOGIN", "{TAG} OK LOGIN done\r\n")
+            .respond("EXAMINE", examine_response("INBOX", 0, 42, 1))
+            .respond("UID FETCH", b"{TAG} OK FETCH completed\r\n".to_vec())
+            .start()
+            .await;
+
+        let mut session = mock_session(&handle).await;
+
+        let mut mailbox = MailBox::default();
+        mailbox.name = "INBOX".into();
+
+        let (entries, skipped) = ImapExecutor::collect_range_uids(
+            &mut session,
+            "1:*",
+            1,
+            &mailbox,
+            None,
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+
+        assert!(entries.is_empty());
+        assert_eq!(skipped, 0);
+        session.logout().await.ok();
+    }
+
+    #[tokio::test]
+    async fn collect_range_uids_filters_oversized() {
+        let handle = MockImapServer::new()
+            .respond("LOGIN", "{TAG} OK LOGIN done\r\n")
+            .respond("EXAMINE", examine_response("INBOX", 4, 42, 5))
+            .respond(
+                "UID FETCH",
+                uid_fetch_size_response(&[(1, 100), (2, 500), (3, 1000), (4, 2000)]),
+            )
+            .start()
+            .await;
+
+        let mut session = mock_session(&handle).await;
+
+        let mut mailbox = MailBox::default();
+        mailbox.name = "INBOX".into();
+
+        // Limit 1000: UIDs 1..3 accepted, UID 4 (2000) skipped.
+        let (entries, skipped) = ImapExecutor::collect_range_uids(
+            &mut session,
+            "1:*",
+            1,
+            &mailbox,
+            Some(1000),
+            CancellationToken::new(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(
+            entries.iter().map(|&(uid, _, _)| uid).collect::<Vec<_>>(),
+            vec![1, 2, 3]
+        );
+        assert_eq!(skipped, 1);
+        session.logout().await.ok();
     }
 }
