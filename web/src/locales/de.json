@@ -490,7 +490,9 @@
   "audit": {
     "account": "Konto",
     "accountPlaceholder": "Konto auswählen",
+    "allAccounts": "Alle Konten",
     "allTypes": "Alle Typen",
+    "allUsers": "Alle Benutzer",
     "apply": "Anwenden",
     "detail": "Detail",
     "empty": "Keine Audit-Ereignisse gefunden",

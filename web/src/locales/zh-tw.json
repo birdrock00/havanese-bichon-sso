@@ -490,7 +490,9 @@
   "audit": {
     "account": "郵箱帳號",
     "accountPlaceholder": "選擇郵箱帳號",
+    "allAccounts": "所有郵箱帳號",
     "allTypes": "所有類型",
+    "allUsers": "所有使用者",
     "apply": "套用",
     "detail": "詳細資料",
     "empty": "未找到稽核事件",

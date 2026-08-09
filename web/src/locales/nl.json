@@ -490,7 +490,9 @@
   "audit": {
     "account": "Account",
     "accountPlaceholder": "Selecteer account",
+    "allAccounts": "Alle accounts",
     "allTypes": "Alle typen",
+    "allUsers": "Alle gebruikers",
     "apply": "Toepassen",
     "detail": "Detail",
     "empty": "Geen auditgebeurtenissen gevonden",

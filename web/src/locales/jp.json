@@ -490,7 +490,9 @@
   "audit": {
     "account": "アカウント",
     "accountPlaceholder": "アカウントを選択",
+    "allAccounts": "所有のアカウント",
     "allTypes": "すべてのタイプ",
+    "allUsers": "すべてのユーザー",
     "apply": "適用",
     "detail": "詳細",
     "empty": "監査イベントが見つかりません",

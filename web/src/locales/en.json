@@ -501,7 +501,9 @@
   "audit": {
     "account": "Account",
     "accountPlaceholder": "Select account",
+    "allAccounts": "All accounts",
     "allTypes": "All",
+    "allUsers": "All users",
     "apply": "Apply",
     "detail": "Detail",
     "empty": "No audit events found",

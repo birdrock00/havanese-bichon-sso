@@ -490,7 +490,9 @@
   "audit": {
     "account": "Tili",
     "accountPlaceholder": "Valitse tili",
+    "allAccounts": "Kaikki tilit",
     "allTypes": "Kaikki tyypit",
+    "allUsers": "Kaikki käyttäjät",
     "apply": "Käytä",
     "detail": "Tiedot",
     "empty": "Tarkastustapahtumia ei löytynyt",

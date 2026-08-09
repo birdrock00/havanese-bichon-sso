@@ -490,7 +490,9 @@
   "audit": {
     "account": "Konto",
     "accountPlaceholder": "Velg konto",
+    "allAccounts": "Alle konti",
     "allTypes": "Alle typer",
+    "allUsers": "Alle brukere",
     "apply": "Bruk",
     "detail": "Detalj",
     "empty": "Ingen revisjonshendelser funnet",

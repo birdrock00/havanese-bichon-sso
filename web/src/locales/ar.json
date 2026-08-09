@@ -490,7 +490,9 @@
   "audit": {
     "account": "الحساب",
     "accountPlaceholder": "اختر الحساب",
+    "allAccounts": "جميع الحسابات",
     "allTypes": "جميع الأنواع",
+    "allUsers": "جميع المستخدمين",
     "apply": "تطبيق",
     "detail": "التفاصيل",
     "empty": "لم يتم العثور على أحداث تدقيق",

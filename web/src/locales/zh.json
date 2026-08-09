@@ -500,7 +500,9 @@
   "audit": {
     "account": "邮箱账号",
     "accountPlaceholder": "选择邮箱账号",
+    "allAccounts": "所有邮箱账号",
     "allTypes": "所有类型",
+    "allUsers": "所有用户",
     "apply": "应用",
     "detail": "详情",
     "empty": "未找到审计事件",

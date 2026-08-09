@@ -490,7 +490,9 @@
   "audit": {
     "account": "계정",
     "accountPlaceholder": "계정 선택",
+    "allAccounts": "모든 계정",
     "allTypes": "모든 유형",
+    "allUsers": "모든 사용자",
     "apply": "적용",
     "detail": "상세",
     "empty": "감사 이벤트를 찾을 수 없습니다",

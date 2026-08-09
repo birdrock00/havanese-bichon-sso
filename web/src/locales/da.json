@@ -490,7 +490,9 @@
   "audit": {
     "account": "Konto",
     "accountPlaceholder": "Vælg konto",
+    "allAccounts": "Alle konti",
     "allTypes": "Alle typer",
+    "allUsers": "Alle brugere",
     "apply": "Anvend",
     "detail": "Detalje",
     "empty": "Ingen aktivitets-hændelser fundet",

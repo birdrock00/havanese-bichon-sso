@@ -490,7 +490,9 @@
   "audit": {
     "account": "Аккаунт",
     "accountPlaceholder": "Выберите аккаунт",
+    "allAccounts": "Все аккаунты",
     "allTypes": "Все типы",
+    "allUsers": "Все пользователи",
     "apply": "Применить",
     "detail": "Детали",
     "empty": "События аудита не найдены",

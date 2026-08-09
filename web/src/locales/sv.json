@@ -490,7 +490,9 @@
   "audit": {
     "account": "Konto",
     "accountPlaceholder": "Välj konto",
+    "allAccounts": "Alla konton",
     "allTypes": "Alla typer",
+    "allUsers": "Alla användare",
     "apply": "Verkställ",
     "detail": "Detalj",
     "empty": "Inga granskningshändelser hittades",
