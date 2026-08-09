@@ -20,7 +20,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { FixedHeader } from '@/components/layout/fixed-header';
 import { Main } from '@/components/layout/main';
-import { AttachmentListPagination } from '@/components/pagination';
+import { TablePagination } from '@/components/pagination';
 import React from 'react';
 import AttachmentProvider, { AttachmentDialogType } from './context';
 import useDialogState from '@/hooks/use-dialog-state';
@@ -119,7 +119,7 @@ export default function AttachmentSearch() {
                   setSortBy={setSortBy}
                   setSortOrder={setSortOrder}
                 />
-                {total > 0 && <AttachmentListPagination
+                {total > 0 && <TablePagination
                   totalItems={total}
                   hasNextPage={() => page < totalPages}
                   pageIndex={page - 1}

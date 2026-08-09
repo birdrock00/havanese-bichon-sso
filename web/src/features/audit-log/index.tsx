@@ -9,7 +9,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Main } from '@/components/layout/main'
 import { FixedHeader } from '@/components/layout/fixed-header'
-import { AttachmentListPagination } from '@/components/pagination'
+import { TablePagination } from '@/components/pagination'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -276,10 +276,10 @@ export default function AuditLog() {
         start_ms: applied.start ? applied.start.getTime() : undefined,
         end_ms: applied.end
           ? new Date(
-              applied.end.getFullYear(),
-              applied.end.getMonth(),
-              applied.end.getDate() + 1,
-            ).getTime()
+            applied.end.getFullYear(),
+            applied.end.getMonth(),
+            applied.end.getDate() + 1,
+          ).getTime()
           : undefined,
       }),
     placeholderData: (prev) => prev,
@@ -459,19 +459,16 @@ export default function AuditLog() {
                   </TableBody>
                 </Table>
               </div>
-              <div className='mt-3 flex items-center justify-between'>
-                <span className='text-sm text-muted-foreground'>
-                  {t('table.total', { total: data?.total ?? 0 })}
-                </span>
-                <AttachmentListPagination
+              {data && data.total > 0 && <div className='mt-2'>
+                <TablePagination
                   totalItems={data?.total ?? 0}
                   pageIndex={page - 1}
                   pageSize={PAGE_SIZE}
                   hasNextPage={() => (data?.total ?? 0) > page * PAGE_SIZE}
                   setPageIndex={(i) => setPage(i + 1)}
-                  setPageSize={() => {}}
+                  setPageSize={() => { }}
                 />
-              </div>
+              </div>}
               {isFetching && (
                 <div className='mt-2 text-xs text-muted-foreground'>
                   {t('audit.loading', 'Loading…')}

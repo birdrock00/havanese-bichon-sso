@@ -21,7 +21,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { FixedHeader } from '@/components/layout/fixed-header';
 import { Main } from '@/components/layout/main';
 import { useSearchMessages } from '@/hooks/use-search-messages';
-import { AttachmentListPagination } from '@/components/pagination';
+import { TablePagination } from '@/components/pagination';
 import React from 'react';
 import { EmailEnvelope } from '@/api';
 import { MailDisplayDrawer } from './mail-display-dialog';
@@ -128,7 +128,7 @@ export default function EmailSearch() {
                   setSortBy={setSortBy}
                   setSortOrder={setSortOrder}
                 />
-                {total > 0 && <AttachmentListPagination
+                {total > 0 && <TablePagination
                   totalItems={total}
                   hasNextPage={() => page < totalPages}
                   pageIndex={page - 1}
