@@ -249,7 +249,7 @@ export default function AuditLog() {
   })
 
   const userOptions = [
-    { value: 'all', label: t('audit.allTypes', 'All') },
+    { value: 'all', label: t('audit.allUsers', 'All') },
     ...(users ?? []).map((u) => ({
       value: u.username,
       label: `${u.username}${u.email ? ` · ${u.email}` : ''}`,
@@ -257,7 +257,7 @@ export default function AuditLog() {
   ]
 
   const accountOptions = [
-    { value: 'all', label: t('audit.allTypes', 'All') },
+    { value: 'all', label: t('audit.allAccounts', 'All') },
     ...(accounts ?? []).map((a) => ({
       value: String(a.id),
       label: a.email,
