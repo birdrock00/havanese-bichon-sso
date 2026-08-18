@@ -739,7 +739,6 @@
     "detectedFolder": "Detected",
     "detectedFrom": "Detected from",
     "dropHere": "Drop .eml / .mbox / .pst files here",
-    "duplicateCount": "{{count}} duplicates skipped",
     "failed": "Import failed",
     "failedCount": "{{count}} failed",
     "failedDetails": "Failed items",
