@@ -42,6 +42,15 @@ use tantivy::schema::Facet;
 use tracing::error;
 use uuid::Uuid;
 
+/// The outcome of extracting an envelope: either the message was imported,
+/// or it was skipped because its content hash was already archived.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[must_use]
+pub enum ExtractOutcome {
+    Imported,
+    Duplicate,
+}
+
 pub async fn extract_envelope_and_store_it(
     fetch: Fetch,
     account_id: u64,
@@ -64,14 +73,16 @@ pub async fn extract_envelope_and_store_it(
         }
     };
     let size = fetch.size.unwrap_or(body.len() as u32);
-    extract_envelope_core(body, uid, size, internal_date, account_id, mailbox_id).await
+    extract_envelope_core(body, uid, size, internal_date, account_id, mailbox_id)
+        .await
+        .map(|_| ())
 }
 
 pub async fn extract_envelope_from_eml(
     body: &[u8],
     account_id: u64,
     mailbox_id: u64,
-) -> BichonResult<()> {
+) -> BichonResult<ExtractOutcome> {
     extract_envelope_core(body, 0, body.len() as u32, 0, account_id, mailbox_id).await
 }
 
@@ -79,7 +90,7 @@ pub async fn extract_envelope_from_smtp(
     body: &[u8],
     account_id: u64,
     mailbox_id: u64,
-) -> BichonResult<()> {
+) -> BichonResult<ExtractOutcome> {
     extract_envelope_core(
         body,
         0,
@@ -98,13 +109,13 @@ async fn extract_envelope_core(
     internal_date: i64,
     account_id: u64,
     mailbox_id: u64,
-) -> BichonResult<()> {
+) -> BichonResult<ExtractOutcome> {
     //The content hash of the original raw EML
     let email_content_hash = compute_content_hash(body);
     if DEDUP_CACHE.contains(account_id, mailbox_id, &email_content_hash) {
         tracing::debug!("Duplicate email detected");
         //println!("Duplicate email detected");
-        return Ok(());
+        return Ok(ExtractOutcome::Duplicate);
     }
     let message: Message<'_> = MessageParser::new().parse(body).ok_or_else(|| {
         raise_error!(
@@ -136,7 +147,7 @@ async fn extract_envelope_core(
                     subject = subject.as_deref().unwrap_or("?"),
                     "Email filtered out by archive rules"
                 );
-                return Ok(());
+                return Ok(ExtractOutcome::Imported);
             }
         }
     }
@@ -317,7 +328,7 @@ async fn extract_envelope_core(
     for doc in attachment_docs {
         ATTACHMENT_MANAGER.queue(doc).await;
     }
-    Ok(())
+    Ok(ExtractOutcome::Imported)
 }
 
 pub fn extract_envelope_from_nested_message(

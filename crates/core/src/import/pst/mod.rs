@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::base64_encode_url_safe;
-use crate::envelope::extractor::extract_envelope_from_eml;
+use crate::envelope::extractor::{extract_envelope_from_eml, ExtractOutcome};
 use chrono::{DateTime, TimeZone, Utc};
 use mail_send::mail_builder::headers::text::Text;
 use mail_send::mail_builder::MessageBuilder;
@@ -327,11 +327,12 @@ pub fn process_folder_with_progress<F>(
     account_id: u64,
     total: usize,
     success_count: &mut usize,
+    duplicate_count: &mut usize,
     failed_details: &mut Vec<super::FailedItemDetail>,
     index: &mut usize,
     progress_cb: &F,
 ) where
-    F: Fn(usize, usize), // (processed, failed)
+    F: Fn(usize, usize, usize), // (success, duplicates, failed)
 {
     process_folder_with_progress_inner(
         folder,
@@ -339,6 +340,7 @@ pub fn process_folder_with_progress<F>(
         account_id,
         total,
         success_count,
+        duplicate_count,
         failed_details,
         index,
         progress_cb,
@@ -351,11 +353,12 @@ fn process_folder_with_progress_inner<F>(
     account_id: u64,
     total: usize,
     success_count: &mut usize,
+    duplicate_count: &mut usize,
     failed_details: &mut Vec<super::FailedItemDetail>,
     index: &mut usize,
     progress_cb: &F,
 ) where
-    F: Fn(usize, usize),
+    F: Fn(usize, usize, usize),
 {
     let folder_name = folder
         .properties()
@@ -386,6 +389,7 @@ fn process_folder_with_progress_inner<F>(
                                 account_id,
                                 total,
                                 success_count,
+                                duplicate_count,
                                 failed_details,
                                 index,
                                 progress_cb,
@@ -437,8 +441,11 @@ fn process_folder_with_progress_inner<F>(
                         match futures::executor::block_on(
                             extract_envelope_from_eml(&decoded, account_id, mailbox_id)
                         ) {
-                            Ok(_) => {
+                            Ok(ExtractOutcome::Imported) => {
                                 *success_count += 1;
+                            }
+                            Ok(ExtractOutcome::Duplicate) => {
+                                *duplicate_count += 1;
                             }
                             Err(e) => {
                                 failed_details.push(super::FailedItemDetail {
@@ -459,7 +466,7 @@ fn process_folder_with_progress_inner<F>(
 
             // Report progress every 50 messages
             if batch_size % 50 == 0 {
-                progress_cb(*success_count + failed_details.len(), failed_details.len());
+                progress_cb(*success_count, *duplicate_count, failed_details.len());
             }
         }
     }
@@ -475,6 +482,7 @@ fn process_folder_with_progress_inner<F>(
                         account_id,
                         total,
                         success_count,
+                        duplicate_count,
                         failed_details,
                         index,
                         progress_cb,

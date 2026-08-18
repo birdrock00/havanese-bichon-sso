@@ -88,7 +88,7 @@ impl ImportApi {
             ),
             status: if result.failed == 0 {
                 ImportStatus::Completed
-            } else if result.success == 0 {
+            } else if result.success == 0 && result.duplicates == 0 {
                 ImportStatus::Failed
             } else {
                 ImportStatus::Completed

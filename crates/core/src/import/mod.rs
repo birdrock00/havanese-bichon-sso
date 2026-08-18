@@ -34,7 +34,7 @@ use crate::{
     {
         account::migration::{AccountModel, AccountType},
         cache::imap::mailbox::{Attribute, AttributeEnum, MailBox},
-        envelope::extractor::extract_envelope_from_eml,
+        envelope::extractor::{extract_envelope_from_eml, ExtractOutcome},
         error::{BichonResult, code::ErrorCode},
         settings::dir::DATA_DIR_MANAGER,
         utils::create_hash,
@@ -132,6 +132,7 @@ impl ImportEmls {
 
         let account_id = account.id;
         let mut success_count = 0;
+        let mut duplicate_count = 0;
         let mut failed_details: Vec<FailedItemDetail> = Vec::new(); // Store failure details
 
         let total = request.emls.len();
@@ -169,8 +170,11 @@ impl ImportEmls {
             }
 
             match extract_envelope_from_eml(&decoded, account_id, mailbox_id).await {
-                Ok(_) => {
+                Ok(ExtractOutcome::Imported) => {
                     success_count += 1;
+                },
+                Ok(ExtractOutcome::Duplicate) => {
+                    duplicate_count += 1;
                 },
                 Err(e) => {
                     let error_msg = format!(
@@ -194,7 +198,7 @@ impl ImportEmls {
         Ok(BatchEmlResult {
             total,
             success: success_count,
-            duplicates: 0,
+            duplicates: duplicate_count,
             failed: failed_count,
             failed_details, // Return the list of failure details
         })
@@ -566,7 +570,8 @@ fn process_eml_file(
         failed_details: vec![],
     });
 
-    let (success_count, failed_details) = process_single_eml(&file_bytes, 0, account_id, mailbox_id);
+    let (success_count, duplicate_count, failed_details) =
+        process_single_eml(&file_bytes, 0, account_id, mailbox_id);
 
     // Clean up
     let _ = std::fs::remove_file(file_path);
@@ -577,7 +582,7 @@ fn process_eml_file(
         format: "eml".to_string(),
         total,
         success: success_count,
-        duplicates: 0,
+        duplicates: duplicate_count,
         failed: failed_details.len(),
         failed_details,
     };
@@ -619,6 +624,7 @@ fn process_mbox_file(
     });
 
     let mut success_count = 0usize;
+    let mut duplicate_count = 0usize;
     let mut failed_details: Vec<FailedItemDetail> = Vec::new();
 
     for (index, entry) in mbox.iter().enumerate() {
@@ -639,8 +645,11 @@ fn process_mbox_file(
         }
 
         match futures::executor::block_on(extract_envelope_from_eml(eml_bytes, account_id, mailbox_id)) {
-            Ok(_) => {
+            Ok(ExtractOutcome::Imported) => {
                 success_count += 1;
+            }
+            Ok(ExtractOutcome::Duplicate) => {
+                duplicate_count += 1;
             }
             Err(e) => {
                 failed_details.push(FailedItemDetail {
@@ -658,7 +667,7 @@ fn process_mbox_file(
                 format: "mbox".to_string(),
                 total,
                 success: success_count,
-                duplicates: 0,
+                duplicates: duplicate_count,
                 failed: failed_details.len(),
                 failed_details: failed_details.clone(),
             });
@@ -675,7 +684,7 @@ fn process_mbox_file(
         format: "mbox".to_string(),
         total,
         success: success_count,
-        duplicates: 0,
+        duplicates: duplicate_count,
         failed: failed_details.len(),
         failed_details,
     };
@@ -683,16 +692,16 @@ fn process_mbox_file(
     update_progress(import_id, final_progress);
 }
 
-/// Process a single EML byte slice and return (success_count, failed_details).
+/// Process a single EML byte slice and return (success_count, duplicate_count, failed_details).
 fn process_single_eml(
     eml_bytes: &[u8],
     index: usize,
     account_id: u64,
     mailbox_id: u64,
-) -> (usize, Vec<FailedItemDetail>) {
+) -> (usize, usize, Vec<FailedItemDetail>) {
     if eml_bytes.len() > MAX_SINGLE_EML_BYTES {
         let size_mb = eml_bytes.len() as f64 / 1024.0 / 1024.0;
-        return (0, vec![FailedItemDetail {
+        return (0, 0, vec![FailedItemDetail {
             index,
             error_message: format!(
                 "Email is {:.1} MB (limit {} MB). Skipping.",
@@ -703,8 +712,9 @@ fn process_single_eml(
     }
 
     match futures::executor::block_on(extract_envelope_from_eml(eml_bytes, account_id, mailbox_id)) {
-        Ok(_) => (1, vec![]),
-        Err(e) => (0, vec![FailedItemDetail {
+        Ok(ExtractOutcome::Imported) => (1, 0, vec![]),
+        Ok(ExtractOutcome::Duplicate) => (0, 1, vec![]),
+        Err(e) => (0, 0, vec![FailedItemDetail {
             index,
             error_message: format!("{:?}", e),
         }]),
@@ -744,6 +754,7 @@ fn process_pst_upload(
 
     // Pass 2: process messages with progress updates
     let mut success_count: usize = 0;
+    let mut duplicate_count: usize = 0;
     let mut failed_details: Vec<FailedItemDetail> = Vec::new();
     let mut index: usize = 0;
 
@@ -783,16 +794,17 @@ fn process_pst_upload(
         account_id,
         total,  // pass pre-counted total for accurate progress
         &mut success_count,
+        &mut duplicate_count,
         &mut failed_details,
         &mut index,
-        &|processed, actual_failed| {
+        &|success, duplicates, actual_failed| {
             update_progress(&import_id, ImportProgress {
                 import_id: import_id.clone(),
                 status: ImportStatus::Processing,
                 format: format_str.clone(),
                 total,
-                success: processed - actual_failed,
-                duplicates: 0,
+                success,
+                duplicates,
                 failed: actual_failed,
                 failed_details: vec![],
             });
@@ -808,7 +820,7 @@ fn process_pst_upload(
         format: "pst".to_string(),
         total,
         success: success_count,
-        duplicates: 0,
+        duplicates: duplicate_count,
         failed: failed_details.len(),
         failed_details,
     };

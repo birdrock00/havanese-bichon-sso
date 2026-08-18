@@ -666,6 +666,7 @@ async fn parse_email(data: &[u8], session: &Session) -> BichonResult<()> {
 
     extract_envelope_from_smtp(data, rcpt.id, mailbox_id)
         .await
+        .map(|_| ())
         .map_err(|e| {
             tracing::error!(
                 "SMTP: Envelope extraction failed for {}: {:?}",
