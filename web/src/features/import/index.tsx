@@ -681,7 +681,7 @@ export default function ImportPage() {
                       {t('import.failedCount', { count: progress.failed })}
                     </span>
                     {progress.duplicates > 0 && (
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1" title={t('import.duplicateCountHint')}>
                         <Copy className="h-3.5 w-3.5 text-muted-foreground" />
                         {t('import.duplicateCount', { count: progress.duplicates })}
                       </span>

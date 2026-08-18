@@ -728,6 +728,7 @@
     "detectedFrom": "識別自",
     "dropHere": "將 .eml / .mbox / .pst 檔案拖曳到此處",
     "duplicateCount": "已略過 {{count}} 個重複項",
+    "duplicateCountHint": "這些郵件已封存",
     "failed": "匯入失敗",
     "failedCount": "{{count}} 個失敗",
     "failedDetails": "失敗詳情",

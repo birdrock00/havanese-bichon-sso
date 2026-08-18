@@ -728,6 +728,7 @@
     "detectedFrom": "Détecté depuis",
     "dropHere": "Déposez les fichiers .eml / .mbox / .pst ici",
     "duplicateCount": "{{count}} doublon(s) ignoré(s)",
+    "duplicateCountHint": "Ces messages sont déjà archivés",
     "failed": "Échec de l'importation",
     "failedCount": "{{count}} échoué(s)",
     "failedDetails": "Éléments en échec",

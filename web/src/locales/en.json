@@ -740,6 +740,7 @@
     "detectedFrom": "Detected from",
     "dropHere": "Drop .eml / .mbox / .pst files here",
     "duplicateCount": "{{count}} duplicates skipped",
+    "duplicateCountHint": "These messages are already in the archive",
     "failed": "Import failed",
     "failedCount": "{{count}} failed",
     "failedDetails": "Failed items",

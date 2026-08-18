@@ -728,6 +728,7 @@
     "detectedFrom": "検出元:",
     "dropHere": "ここに .eml / .mbox / .pst 文件をドロップ",
     "duplicateCount": "{{count}} 件の重複をスキップ",
+    "duplicateCountHint": "これらのメッセージは既にアーカイブ済みです",
     "failed": "インポート失敗",
     "failedCount": "{{count}} 件の失敗",
     "failedDetails": "失敗したアイテム",

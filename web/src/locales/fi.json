@@ -728,6 +728,7 @@
     "detectedFrom": "Tunnistettu lähteestä",
     "dropHere": "Pudota .eml / .mbox / .pst -tiedostot tähän",
     "duplicateCount": "{{count}} kaksoiskappaletta ohitettu",
+    "duplicateCountHint": "Nämä viestit on jo arkistoitu",
     "failed": "Tuonti epäonnistui",
     "failedCount": "{{count}} epäonnistui",
     "failedDetails": "Epäonnistuneet kohteet",

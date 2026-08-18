@@ -728,6 +728,7 @@
     "detectedFrom": "Registreret fra",
     "dropHere": "Slip .eml / .mbox / .pst-filer her",
     "duplicateCount": "{{count}} dubletter sprunget over",
+    "duplicateCountHint": "Disse beskeder er allerede arkiveret",
     "failed": "Import mislykkedes",
     "failedCount": "{{count}} fejlet",
     "failedDetails": "Fejlede elementer",

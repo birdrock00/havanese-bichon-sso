@@ -728,6 +728,7 @@
     "detectedFrom": "감지 대상:",
     "dropHere": "여기에 .eml / .mbox / .pst 파일 끌어놓기",
     "duplicateCount": "{{count}}개 중복 건너뜀",
+    "duplicateCountHint": "이미 아카이브된 메시지입니다",
     "failed": "가져오기 실패",
     "failedCount": "{{count}}개 실패",
     "failedDetails": "실패한 항목",
