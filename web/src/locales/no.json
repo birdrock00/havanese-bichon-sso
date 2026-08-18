@@ -727,6 +727,7 @@
     "detectedFolder": "Registrert",
     "detectedFrom": "Registrert fra",
     "dropHere": "Slipp .eml / .mbox / .pst-filer her",
+    "duplicateCount": "{{count}} duplikater hoppet over",
     "failed": "Import mislyktes",
     "failedCount": "{{count}} feilet",
     "failedDetails": "Feilede elementer",

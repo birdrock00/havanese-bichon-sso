@@ -727,6 +727,7 @@
     "detectedFolder": "Tunnistettu",
     "detectedFrom": "Tunnistettu lähteestä",
     "dropHere": "Pudota .eml / .mbox / .pst -tiedostot tähän",
+    "duplicateCount": "{{count}} kaksoiskappaletta ohitettu",
     "failed": "Tuonti epäonnistui",
     "failedCount": "{{count}} epäonnistui",
     "failedDetails": "Epäonnistuneet kohteet",

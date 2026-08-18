@@ -119,6 +119,9 @@ export default function ImportPage() {
 
   const abortRef = useRef<AbortController | null>(null);
 
+  const processedCount = progress ? progress.success + progress.failed + progress.duplicates : 0;
+  const processedPct = progress && progress.total > 0 ? (processedCount / progress.total) * 100 : 0;
+
   useEffect(() => {
     return () => { abortRef.current?.abort(); };
   }, []);
@@ -659,18 +662,11 @@ export default function ImportPage() {
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>
-                        {t('import.processed', { current: progress.success + progress.failed + progress.duplicates, total: progress.total })}
+                        {t('import.processed', { current: processedCount, total: progress.total })}
                       </span>
-                      <span>
-                        {progress.total > 0
-                          ? Math.round(((progress.success + progress.failed + progress.duplicates) / progress.total) * 100)
-                          : 0}%
-                      </span>
+                      <span>{Math.round(processedPct)}%</span>
                     </div>
-                    <Progress
-                      value={progress.total > 0 ? ((progress.success + progress.failed + progress.duplicates) / progress.total) * 100 : 0}
-                      className="h-2"
-                    />
+                    <Progress value={processedPct} className="h-2" />
                   </div>
                 )}
 

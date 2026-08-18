@@ -727,6 +727,7 @@
     "detectedFolder": "Détecté",
     "detectedFrom": "Détecté depuis",
     "dropHere": "Déposez les fichiers .eml / .mbox / .pst ici",
+    "duplicateCount": "{{count}} doublon(s) ignoré(s)",
     "failed": "Échec de l'importation",
     "failedCount": "{{count}} échoué(s)",
     "failedDetails": "Éléments en échec",

@@ -727,6 +727,7 @@
     "detectedFolder": "已識別",
     "detectedFrom": "識別自",
     "dropHere": "將 .eml / .mbox / .pst 檔案拖曳到此處",
+    "duplicateCount": "已略過 {{count}} 個重複項",
     "failed": "匯入失敗",
     "failedCount": "{{count}} 個失敗",
     "failedDetails": "失敗詳情",

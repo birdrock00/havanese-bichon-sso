@@ -727,6 +727,7 @@
     "detectedFolder": "Registreret",
     "detectedFrom": "Registreret fra",
     "dropHere": "Slip .eml / .mbox / .pst-filer her",
+    "duplicateCount": "{{count}} dubletter sprunget over",
     "failed": "Import mislykkedes",
     "failedCount": "{{count}} fejlet",
     "failedDetails": "Fejlede elementer",

@@ -727,6 +727,7 @@
     "detectedFolder": "Rilevato",
     "detectedFrom": "Rilevato da",
     "dropHere": "Trascina i file .eml / .mbox / .pst qui",
+    "duplicateCount": "{{count}} duplicati saltati",
     "failed": "Importazione fallita",
     "failedCount": "{{count}} falliti",
     "failedDetails": "Elementi falliti",

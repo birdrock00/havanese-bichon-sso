@@ -727,6 +727,7 @@
     "detectedFolder": "Detectado",
     "detectedFrom": "Detectado de",
     "dropHere": "Arrastre archivos .eml / .mbox / .pst aquí",
+    "duplicateCount": "{{count}} duplicados omitidos",
     "failed": "Error al importar",
     "failedCount": "{{count}} fallidos",
     "failedDetails": "Elementos fallidos",

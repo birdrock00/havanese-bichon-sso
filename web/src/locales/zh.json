@@ -737,6 +737,7 @@
     "detectedFolder": "已识别",
     "detectedFrom": "识别自",
     "dropHere": "将 .eml / .mbox / .pst 文件拖拽到此处",
+    "duplicateCount": "已跳过 {{count}} 个重复项",
     "failed": "导入失败",
     "failedCount": "{{count}} 个失败",
     "failedDetails": "失败详情",

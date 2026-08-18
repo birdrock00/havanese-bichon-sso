@@ -727,6 +727,7 @@
     "detectedFolder": "Обнаружено",
     "detectedFrom": "Обнаружено из",
     "dropHere": "Перетащите файлы .eml / .mbox / .pst сюда",
+    "duplicateCount": "Пропущено дубликатов: {{count}}",
     "failed": "Ошибка импорта",
     "failedCount": "Ошибок: {{count}}",
     "failedDetails": "Неудачные элементы",

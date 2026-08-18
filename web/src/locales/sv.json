@@ -727,6 +727,7 @@
     "detectedFolder": "Identifierad",
     "detectedFrom": "Identifierad från",
     "dropHere": "Släpp .eml / .mbox / .pst-filer här",
+    "duplicateCount": "{{count}} dubbletter hoppades över",
     "failed": "Import misslyckades",
     "failedCount": "{{count}} misslyckades",
     "failedDetails": "Misslyckade objekt",
