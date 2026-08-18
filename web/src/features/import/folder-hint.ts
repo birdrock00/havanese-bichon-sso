@@ -44,14 +44,14 @@ function getHeader(raw: string, name: string): string | null {
   const re = new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*(.+)$`, 'im');
   const m = raw.match(re);
   if (!m) return null;
-  // Unfold continuation lines (leading whitespace)
+  // Unfold continuation lines: only contiguous lines starting with
+  // horizontal whitespace belong to this header (RFC 5322 folding).
   let val = m[1].trim();
   const startIdx = m.index! + m[0].length;
   const rest = raw.slice(startIdx);
-  const contRe = /^\s+(.+)$/gm;
-  let cm: RegExpExecArray | null;
-  while ((cm = contRe.exec(rest)) !== null) {
-    val += ' ' + cm[1].trim();
+  for (const line of rest.split(/\r?\n/).slice(1)) {
+    if (!/^[ \t]+\S/.test(line)) break;
+    val += ' ' + line.trim();
   }
   return decodeRfc2047(val);
 }
@@ -105,6 +105,8 @@ export interface FolderHint {
   name: string;
   /** Where the hint came from. */
   source: 'gmail-labels' | 'bichon-metadata' | 'filename' | 'mbox-filename' | 'pst-filename';
+  /** Name of the file the hint was extracted from. */
+  fileName: string;
 }
 
 /**
@@ -127,26 +129,26 @@ export async function extractFolderHint(file: File): Promise<FolderHint | null> 
 
   // 1. X-Bichon-Metadata (highest priority, explicit)
   const bichonFolder = folderFromBichonMetadata(headers);
-  if (bichonFolder) return { name: bichonFolder, source: 'bichon-metadata' };
+  if (bichonFolder) return { name: bichonFolder, source: 'bichon-metadata', fileName: file.name };
 
   // 2. X-Gmail-Labels
   const gmailFolder = folderFromGmailLabels(headers);
-  if (gmailFolder) return { name: gmailFolder, source: 'gmail-labels' };
+  if (gmailFolder) return { name: gmailFolder, source: 'gmail-labels', fileName: file.name };
 
   // 3. For MBOX files, use the filename
   if (isMbox) {
     const fnFolder = folderFromFileName(file.name);
-    if (fnFolder) return { name: fnFolder, source: 'mbox-filename' };
+    if (fnFolder) return { name: fnFolder, source: 'mbox-filename', fileName: file.name };
   }
 
   // 4. For EML files, try the filename
   const fnFolder = folderFromFileName(file.name);
-  if (fnFolder) return { name: fnFolder, source: 'filename' };
+  if (fnFolder) return { name: fnFolder, source: 'filename', fileName: file.name };
 
   // 5. For PST files, try the filename
   if (isPst) {
     const fnFolder = folderFromFileName(file.name);
-    if (fnFolder) return { name: fnFolder, source: 'pst-filename' };
+    if (fnFolder) return { name: fnFolder, source: 'pst-filename', fileName: file.name };
   }
 
   return null;

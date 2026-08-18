@@ -9,7 +9,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   Upload, FileText, X, CheckCircle2, AlertTriangle,
   Sparkles, PenLine, ListTree, ChevronsUpDown, Check,
-  Clock, ChevronRight,
+  Clock, ChevronRight, Copy,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -419,7 +419,7 @@ export default function ImportPage() {
                         </Badge>
                         {folderHint && (
                           <span className="text-[10px] text-muted-foreground">
-                            ({t('import.source')}: {folderHintLabel(folderHint)})
+                            ({t('import.source')}: {folderHintLabel(folderHint)}{files.length > 1 && `, ${folderHint.fileName}`})
                           </span>
                         )}
                       </div>
@@ -659,16 +659,16 @@ export default function ImportPage() {
                   <div className="space-y-1.5">
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>
-                        {t('import.processed', { current: progress.success + progress.failed, total: progress.total })}
+                        {t('import.processed', { current: progress.success + progress.failed + progress.duplicates, total: progress.total })}
                       </span>
                       <span>
                         {progress.total > 0
-                          ? Math.round(((progress.success + progress.failed) / progress.total) * 100)
+                          ? Math.round(((progress.success + progress.failed + progress.duplicates) / progress.total) * 100)
                           : 0}%
                       </span>
                     </div>
                     <Progress
-                      value={progress.total > 0 ? ((progress.success + progress.failed) / progress.total) * 100 : 0}
+                      value={progress.total > 0 ? ((progress.success + progress.failed + progress.duplicates) / progress.total) * 100 : 0}
                       className="h-2"
                     />
                   </div>
@@ -684,6 +684,12 @@ export default function ImportPage() {
                       <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
                       {t('import.failedCount', { count: progress.failed })}
                     </span>
+                    {progress.duplicates > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                        {t('import.duplicateCount', { count: progress.duplicates })}
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -712,7 +718,7 @@ export default function ImportPage() {
             <div className="text-xs text-muted-foreground">
               {isPstSelected
                 ? t('import.pstFolders', 'PST folder structure will be preserved during import')
-                : (<>{t('import.willImportTo', 'Will import to')}: <span className="font-medium text-foreground">{effectiveFolder}</span></>)}
+                : (<>{t('import.willImportTo', 'Will import to')}: <span className="font-medium text-foreground">{effectiveFolder}</span>{files.length > 1 && <> · {t('import.fileCount', { count: files.length })}</>}</>)}
             </div>
             <Button
               onClick={() => importMutation.mutate()}
