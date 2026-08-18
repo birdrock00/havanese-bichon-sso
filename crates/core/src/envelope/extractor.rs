@@ -46,8 +46,10 @@ use crate::{
     utils::{compute_content_hash, hex_hash, html::extract_text},
 };
 
-/// The outcome of extracting an envelope: either the message was imported,
-/// or it was skipped because its content hash was already archived.
+/// The outcome of extracting an envelope. `Duplicate` means the message was
+/// skipped because its content hash was already archived. `Imported` covers
+/// every other processed message, including mail dropped by archive rules,
+/// which has always counted as a success on the import surfaces.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[must_use]
 pub enum ExtractOutcome {

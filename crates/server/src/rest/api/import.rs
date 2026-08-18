@@ -77,6 +77,7 @@ impl ImportApi {
             format: "eml".to_string(),
             total: result.total as u64,
             success: result.success as u64,
+            duplicates: result.duplicates as u64,
             failed: result.failed as u64,
         });
 
@@ -274,6 +275,7 @@ impl ImportApi {
             format: format_str.clone(),
             total: 0,
             success: 0,
+            duplicates: 0,
             failed: 0,
         });
         tokio::task::spawn_blocking(move || {
