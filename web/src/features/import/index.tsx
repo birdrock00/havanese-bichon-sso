@@ -45,6 +45,7 @@ import {
 import { get_system_configurations } from '@/api/system/api';
 import { list_mailboxes } from '@/api/mailbox/api';
 import { extractFolderHint, type FolderHint } from './folder-hint';
+import { importFiles, errorMessage } from './import-files';
 
 const MAX_EML = 100 * 1024 * 1024;   // 100 MB (hardcoded)
 const DEFAULT_MAX_MBOX = 1024 * 1024 * 1024; // 1 GB (fallback; actual limit from server settings)
@@ -104,7 +105,6 @@ export default function ImportPage() {
   const [folder, setFolder] = useState('INBOX');
   const [files, setFiles] = useState<QueuedFile[]>([]);
   const [dragging, setDragging] = useState(false);
-  // const [importId, setImportId] = useState<string | null>(null);
   const [progress, setProgress] = useState<ImportProgress | null>(null);
   const [uploadPct, setUploadPct] = useState(0);
   const [phase, setPhase] = useState<'idle' | 'uploading' | 'processing' | 'done'>('idle');
@@ -117,7 +117,11 @@ export default function ImportPage() {
   // Combobox state for account selection
   const [accountOpen, setAccountOpen] = useState(false);
 
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['nosync-accounts'],
@@ -168,33 +172,6 @@ export default function ImportPage() {
     }
   })();
 
-  const startPolling = useCallback((id: string) => {
-    if (pollRef.current) clearInterval(pollRef.current);
-    let retries = 0;
-    pollRef.current = setInterval(async () => {
-      try {
-        const p = await get_import_progress(id);
-        setProgress(p);
-        retries = 0;
-        if (p.status === 'Completed' || p.status === 'Failed') {
-          if (pollRef.current) clearInterval(pollRef.current);
-          setPhase('done');
-          refetchHistory();
-        }
-      } catch {
-        retries++;
-        if (retries > 5) {
-          if (pollRef.current) clearInterval(pollRef.current);
-          setPhase('idle');
-        }
-      }
-    }, 1000);
-  }, [refetchHistory]);
-
-  useEffect(() => {
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, []);
-
   const handleFiles = useCallback(async (newFiles: FileList | File[]) => {
     const arr = Array.from(newFiles) as File[];
     const queued: QueuedFile[] = arr.map((f) => {
@@ -209,7 +186,6 @@ export default function ImportPage() {
     setFiles(queued);
     setPhase('idle');
     setProgress(null);
-    //setImportId(null);
 
     // Extract folder hint from the first valid file.
     // PST files are binary (OLE2) — headers can't be extracted in-browser.
@@ -277,26 +253,32 @@ export default function ImportPage() {
   const importMutation = useMutation({
     mutationFn: async () => {
       if (!accountId || !files.length) return;
-      const file = files[0].file;
+      const controller = new AbortController();
+      abortRef.current = controller;
       setPhase('uploading');
       setUploadPct(0);
-      const result = await upload_import(
-        Number(accountId),
-        effectiveFolder,
-        file.name,
-        file,
-        (pct) => setUploadPct(pct),
+      setProgress(null);
+      await importFiles(
+        files.map((q) => q.file),
+        {
+          upload: (file, onPct) =>
+            upload_import(Number(accountId), effectiveFolder, file.name, file, onPct),
+          getProgress: get_import_progress,
+          onUploadPct: setUploadPct,
+          onProgress: setProgress,
+          onPhase: setPhase,
+          signal: controller.signal,
+        },
       );
-      //setImportId(result.import_id);
-      setProgress(result);
-      setPhase('processing');
-      startPolling(result.import_id);
+      setPhase('done');
+      refetchHistory();
     },
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       setPhase('idle');
+      setProgress(null);
       toast({
         title: t('common.failed'),
-        description: err?.response?.data?.message || err.message,
+        description: errorMessage(err),
         variant: 'destructive',
       });
     },
