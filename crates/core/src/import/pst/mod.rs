@@ -1,4 +1,3 @@
-//
 // Copyright (c) 2025-2026 rustmailer.com (https://rustmailer.com)
 //
 // This file is part of the Bichon Email Archiving Project
@@ -16,17 +15,24 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::base64_encode_url_safe;
-use crate::envelope::extractor::{extract_envelope_from_eml, ExtractOutcome};
-use chrono::{DateTime, TimeZone, Utc};
-use mail_send::mail_builder::headers::text::Text;
-use mail_send::mail_builder::MessageBuilder;
-use outlook_pst::ltp::prop_context::PropertyValue;
-use outlook_pst::messaging::attachment::AttachmentProperties;
-use outlook_pst::messaging::folder::Folder;
-use outlook_pst::messaging::message::{Message, MessageProperties};
-use outlook_pst::ndb::node_id::NodeId;
 use std::rc::Rc;
+
+use chrono::{DateTime, TimeZone, Utc};
+use mail_send::mail_builder::{headers::text::Text, MessageBuilder};
+use outlook_pst::{
+    ltp::prop_context::PropertyValue,
+    messaging::{
+        attachment::AttachmentProperties,
+        folder::Folder,
+        message::{Message, MessageProperties},
+    },
+    ndb::node_id::NodeId,
+};
+
+use crate::{
+    base64_encode_url_safe,
+    envelope::extractor::{extract_envelope_from_eml, ExtractOutcome},
+};
 
 mod encoding;
 
@@ -193,7 +199,9 @@ fn extract_recipients_list(message: &Rc<dyn Message>) -> (Vec<String>, Vec<Strin
 }
 
 fn extract_subject(props: &MessageProperties) -> Option<String> {
-    props.get(0x0037).and_then(|val| encoding::decode_subject(val))
+    props
+        .get(0x0037)
+        .and_then(|val| encoding::decode_subject(val))
 }
 
 fn extract_string_property(properties: &MessageProperties, prop_id: u16) -> Option<String> {
@@ -268,12 +276,15 @@ pub fn count_pst_messages(pst_path: &std::path::Path) -> crate::error::BichonRes
         )
     })?;
 
-    let ipm_sub_tree = pst_store.properties().ipm_sub_tree_entry_id().map_err(|e| {
-        crate::raise_error!(
-            format!("Could not find IPM_SUBTREE in PST: {:?}", e),
-            crate::error::code::ErrorCode::InvalidParameter
-        )
-    })?;
+    let ipm_sub_tree = pst_store
+        .properties()
+        .ipm_sub_tree_entry_id()
+        .map_err(|e| {
+            crate::raise_error!(
+                format!("Could not find IPM_SUBTREE in PST: {:?}", e),
+                crate::error::code::ErrorCode::InvalidParameter
+            )
+        })?;
 
     let ipm_subtree_folder = pst_store.open_folder(&ipm_sub_tree).map_err(|e| {
         crate::raise_error!(
@@ -438,9 +449,9 @@ fn process_folder_with_progress_inner<F>(
                             }
                         };
 
-                        match futures::executor::block_on(
-                            extract_envelope_from_eml(&decoded, account_id, mailbox_id)
-                        ) {
+                        match futures::executor::block_on(extract_envelope_from_eml(
+                            &decoded, account_id, mailbox_id,
+                        )) {
                             Ok(ExtractOutcome::Imported) => {
                                 *success_count += 1;
                             }

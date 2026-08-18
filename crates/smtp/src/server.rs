@@ -1,4 +1,3 @@
-//
 // Copyright (c) 2025-2026 rustmailer.com (https://rustmailer.com)
 //
 // This file is part of the Bichon Email Archiving Project
@@ -16,37 +15,31 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use std::io;
-use std::net::SocketAddr;
-use std::time::Duration;
+use std::{io, net::SocketAddr, time::Duration};
 
 use base64::{prelude::BASE64_STANDARD, Engine as _};
-use bichon_core::account::migration::AccountType;
-use bichon_core::cache::imap::mailbox::{Attribute, AttributeEnum};
-use bichon_core::common::signal::SIGNAL_MANAGER;
-use bichon_core::envelope::extractor::extract_envelope_from_smtp;
-use bichon_core::error::BichonResult;
-use bichon_core::settings::cli::{EncryptionMode, SETTINGS};
-use bichon_core::utils::create_hash;
 use bichon_core::{
-    account::migration::AccountModel,
-    cache::imap::mailbox::MailBox,
-    common::auth::ClientContext,
+    account::migration::{AccountModel, AccountType},
+    cache::imap::mailbox::{Attribute, AttributeEnum, MailBox},
+    common::{auth::ClientContext, signal::SIGNAL_MANAGER},
+    envelope::extractor::extract_envelope_from_smtp,
+    error::BichonResult,
+    settings::cli::{EncryptionMode, SETTINGS},
     token::AccessTokenModel,
     users::{permissions::Permission, UserModel},
+    utils::create_hash,
 };
-use tokio::time::timeout;
 use tokio::{
     io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt},
     net::{TcpListener, TcpStream},
     sync::broadcast,
+    time::timeout,
 };
 use tokio_rustls::TlsAcceptor;
 
-use crate::stream::BufStream;
-use crate::tls::create_acceptor;
+use crate::{stream::BufStream, tls::create_acceptor};
 
-const MAX_MAIL_SIZE: usize = 50 * 1024 * 1024; //50MB
+const MAX_MAIL_SIZE: usize = 50 * 1024 * 1024; // 50MB
 const SMTP_IDLE_TIMEOUT: Duration = Duration::from_secs(60);
 const GLOBAL_SESSION_TIMEOUT: Duration = Duration::from_secs(600);
 
@@ -394,7 +387,7 @@ where
                 .await?;
         } else {
             let addr = extract_address(&trimmed[8..]);
-            //println!("DEBUG: SMTP RCPT TO extracted address -> '{}'", addr);
+            // println!("DEBUG: SMTP RCPT TO extracted address -> '{}'", addr);
             let account_result = AccountModel::find_by_email(addr.as_str());
 
             match account_result {

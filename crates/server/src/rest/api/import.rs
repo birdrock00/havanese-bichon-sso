@@ -1,4 +1,3 @@
-//
 // Copyright (c) 2025-2026 rustmailer.com (https://rustmailer.com)
 //
 // This file is part of the Bichon Email Archiving Project
@@ -18,45 +17,49 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::common::auth::WrappedContext;
-use crate::rest::api::ApiTags;
-use crate::rest::ApiResult;
-use bichon_core::account::migration::AccountModel;
-use bichon_core::database::manager::DB_MANAGER;
-use bichon_core::database::MemDbModel;
-use bichon_core::ext::event_bus::{emit, Event};
-use bichon_core::import::{
-    check_temp_disk_space, get_import_progress, process_uploaded_file, update_progress,
-    BatchEmlRequest, BatchEmlResult, ImportEmls, ImportHistory, ImportProgress, ImportStatus,
-    MAX_WEB_EML_BYTES,
+use bichon_core::{
+    account::migration::AccountModel,
+    database::{manager::DB_MANAGER, MemDbModel},
+    error::code::ErrorCode,
+    ext::event_bus::{emit, Event},
+    import::{
+        check_temp_disk_space, detect_text_file, get_import_progress,
+        history::{save_import_history, MAX_HISTORY_PER_USER},
+        process_uploaded_file, update_progress, BatchEmlRequest, BatchEmlResult, FileFormat,
+        ImportEmls, ImportHistory, ImportProgress, ImportStatus, MAX_WEB_EML_BYTES,
+    },
+    raise_error,
+    settings::{cli::SETTINGS, dir::DATA_DIR_MANAGER},
+    users::permissions::Permission,
 };
-use bichon_core::import::history::{save_import_history, MAX_HISTORY_PER_USER};
-use bichon_core::raise_error;
-use bichon_core::error::code::ErrorCode;
-use bichon_core::settings::cli::SETTINGS;
-use bichon_core::settings::dir::DATA_DIR_MANAGER;
-use bichon_core::users::permissions::Permission;
-use bichon_core::import::detect_text_file;
-use bichon_core::import::FileFormat;
 use futures::StreamExt;
 use poem::Body;
-use poem_openapi::param::{Path, Query};
-use poem_openapi::payload::{Json, Binary};
-use poem_openapi::OpenApi;
+use poem_openapi::{
+    param::{Path, Query},
+    payload::{Binary, Json},
+    OpenApi,
+};
 use tokio::io::AsyncWriteExt;
+
+use crate::{
+    common::auth::WrappedContext,
+    rest::{api::ApiTags, ApiResult},
+};
 
 pub struct ImportApi;
 
 #[OpenApi(prefix_path = "/api/v1", tag = "ApiTags::Import")]
 impl ImportApi {
-    /// Batch import one or more EML files into a specified account and mail folder.
+    /// Batch import one or more EML files into a specified account and mail
+    /// folder.
     ///
     /// This endpoint accepts a JSON payload containing:
     /// - `account_id`: the target account to import emails into
     /// - `mail_folder`: the mailbox/folder name
     /// - `emls`: a list of base64-encoded .eml files
     ///
-    /// Returns a summary of the import result, including total processed, successful, and failed emails.
+    /// Returns a summary of the import result, including total processed,
+    /// successful, and failed emails.
     #[oai(path = "/import", method = "post", operation_id = "do_batch_import")]
     async fn do_batch_import(
         &self,
@@ -107,19 +110,25 @@ impl ImportApi {
 
     /// Upload an EML or MBOX file for import into a NoSync account.
     ///
-    /// The file is sent as the raw request body. Both `account_id` and `mail_folder`
-    /// must be provided as query parameters, along with the original `file_name` for
-    /// extension validation.
+    /// The file is sent as the raw request body. Both `account_id` and
+    /// `mail_folder` must be provided as query parameters, along with the
+    /// original `file_name` for extension validation.
     ///
-    /// Returns an `import_id` to poll for progress via `/import-progress/:import_id`.
-    #[oai(path = "/upload-import", method = "post", operation_id = "upload_import")]
+    /// Returns an `import_id` to poll for progress via
+    /// `/import-progress/:import_id`.
+    #[oai(
+        path = "/upload-import",
+        method = "post",
+        operation_id = "upload_import"
+    )]
     async fn upload_import(
         &self,
         /// Target account ID (must be NoSync type).
         account_id: Query<u64>,
         /// Target mail folder name.
         mail_folder: Query<String>,
-        /// Original file name, used for extension validation (e.g. "export.eml").
+        /// Original file name, used for extension validation (e.g.
+        /// "export.eml").
         file_name: Query<String>,
         /// The raw file bytes (.eml or .mbox).
         data: Binary<Body>,
@@ -197,14 +206,12 @@ impl ImportApi {
                 .unwrap_or_default()
                 .as_nanos()
         );
-        let temp_path = DATA_DIR_MANAGER.temp_dir.join(format!("import_{}.tmp", import_id));
+        let temp_path = DATA_DIR_MANAGER
+            .temp_dir
+            .join(format!("import_{}.tmp", import_id));
 
-        let (format_detected, file_len) = stream_body_to_temp(
-            data.0,
-            &temp_path,
-            is_mbox_ext,
-            is_pst_ext,
-        ).await?;
+        let (format_detected, file_len) =
+            stream_body_to_temp(data.0, &temp_path, is_mbox_ext, is_pst_ext).await?;
 
         let format = format_detected.unwrap_or_else(|| {
             if is_mbox_ext {
@@ -270,7 +277,14 @@ impl ImportApi {
             failed: 0,
         });
         tokio::task::spawn_blocking(move || {
-            process_uploaded_file(&id, &temp_path, &file_name, account_id, &folder_clone, user_id);
+            process_uploaded_file(
+                &id,
+                &temp_path,
+                &file_name,
+                account_id,
+                &folder_clone,
+                user_id,
+            );
         });
 
         Ok(Json(initial))
@@ -308,7 +322,8 @@ impl ImportApi {
         Ok(Json(free))
     }
 
-    /// List import history for the current user (latest first, up to 5 entries).
+    /// List import history for the current user (latest first, up to 5
+    /// entries).
     #[oai(
         path = "/import-history",
         method = "get",

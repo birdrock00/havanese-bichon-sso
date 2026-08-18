@@ -1,4 +1,3 @@
-//
 // Copyright (c) 2025-2026 rustmailer.com (https://rustmailer.com)
 //
 // This file is part of the Bichon Email Archiving Project
@@ -16,31 +15,36 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::account::migration::AccountModel;
-use crate::cache::imap::mailbox::MailBox;
-use crate::common::AddrVec;
-use crate::envelope::meta::parse_bichon_metadata;
-use crate::envelope::utils::normalize_subject;
-use crate::error::code::ErrorCode;
-use crate::error::BichonResult;
-use crate::imap::executor::ImapExecutor;
-use crate::message::content::AttachmentInfo;
-use crate::store::blob::{DetachedEmail, BLOB_MANAGER};
-use crate::store::tantivy::attachment::ATTACHMENT_MANAGER;
-use crate::store::tantivy::dedup_cache::DEDUP_CACHE;
-use crate::store::tantivy::envelope::ENVELOPE_MANAGER;
-use crate::store::tantivy::model::{AttachmentModel, EnvelopeWithAttachments};
-use crate::utils::html::extract_text;
-use crate::utils::{compute_content_hash, hex_hash};
-use crate::{id, store::envelope::Envelope};
-use crate::{raise_error, utc_now};
 use async_imap::types::Fetch;
 use bytes::Bytes;
 use mail_parser::{Address, HeaderName, Message, MessageParser, MimeHeaders};
-use tantivy::TantivyDocument;
-use tantivy::schema::Facet;
+use tantivy::{schema::Facet, TantivyDocument};
 use tracing::error;
 use uuid::Uuid;
+
+use crate::{
+    account::migration::AccountModel,
+    cache::imap::mailbox::MailBox,
+    common::AddrVec,
+    envelope::{meta::parse_bichon_metadata, utils::normalize_subject},
+    error::{code::ErrorCode, BichonResult},
+    id,
+    imap::executor::ImapExecutor,
+    message::content::AttachmentInfo,
+    raise_error,
+    store::{
+        blob::{DetachedEmail, BLOB_MANAGER},
+        envelope::Envelope,
+        tantivy::{
+            attachment::ATTACHMENT_MANAGER,
+            dedup_cache::DEDUP_CACHE,
+            envelope::ENVELOPE_MANAGER,
+            model::{AttachmentModel, EnvelopeWithAttachments},
+        },
+    },
+    utc_now,
+    utils::{compute_content_hash, hex_hash, html::extract_text},
+};
 
 /// The outcome of extracting an envelope: either the message was imported,
 /// or it was skipped because its content hash was already archived.
@@ -110,11 +114,11 @@ async fn extract_envelope_core(
     account_id: u64,
     mailbox_id: u64,
 ) -> BichonResult<ExtractOutcome> {
-    //The content hash of the original raw EML
+    // The content hash of the original raw EML
     let email_content_hash = compute_content_hash(body);
     if DEDUP_CACHE.contains(account_id, mailbox_id, &email_content_hash) {
         tracing::debug!("Duplicate email detected");
-        //println!("Duplicate email detected");
+        // println!("Duplicate email detected");
         return Ok(ExtractOutcome::Duplicate);
     }
     let message: Message<'_> = MessageParser::new().parse(body).ok_or_else(|| {
@@ -127,7 +131,11 @@ async fn extract_envelope_core(
     if let Ok(account) = AccountModel::get(account_id) {
         if let Some(ref rules) = account.archive_rules {
             let sender = message.from().and_then(|addr| {
-                AddrVec::from(addr).0.into_iter().next().and_then(|a| a.address)
+                AddrVec::from(addr)
+                    .0
+                    .into_iter()
+                    .next()
+                    .and_then(|a| a.address)
             });
             let subject = message.subject().map(|s| s.to_string());
 
@@ -213,11 +221,12 @@ async fn extract_envelope_core(
         .and_then(|add| add.address)
         .unwrap_or_else(|| "unknown".to_string());
     let attachment_count = message.attachment_count();
-    let attachments = detach_and_store_attachments(body, &message, &email_content_hash, account_id, mailbox_id).await;
+    let attachments =
+        detach_and_store_attachments(body, &message, &email_content_hash, account_id, mailbox_id)
+            .await;
 
     let envelope_id = Uuid::new_v4().to_string();
     let now = utc_now!();
-
 
     let mut final_tags = Vec::new();
 
@@ -226,11 +235,7 @@ async fn extract_envelope_core(
             if let Some(tags) = bmd.tags {
                 let validated_tags: Result<Vec<String>, _> = tags
                     .iter()
-                    .map(|tag| {
-                        Facet::from_text(tag)
-                            .map(|_| tag.clone()) 
-                            .map_err(|e| e)
-                    })
+                    .map(|tag| Facet::from_text(tag).map(|_| tag.clone()).map_err(|e| e))
                     .collect();
 
                 match validated_tags {
@@ -238,10 +243,7 @@ async fn extract_envelope_core(
                         final_tags = valid_list;
                     }
                     Err(e) => {
-                        eprintln!(
-                            "Tag validation failed, ignoring all tags: {:#?}",
-                            e
-                        );
+                        eprintln!("Tag validation failed, ignoring all tags: {:#?}", e);
                     }
                 }
             }
@@ -464,7 +466,8 @@ pub async fn detach_and_store_attachments(
 
     let mut stripped_eml = original_body.to_vec();
     let mut attachment_infos = Vec::new();
-    // Step 1: Collect and sort attachment ranges in reverse to maintain offset integrity
+    // Step 1: Collect and sort attachment ranges in reverse to maintain offset
+    // integrity
     let mut ranges: Vec<_> = message
         .attachments()
         .map(|att| {
@@ -584,10 +587,8 @@ pub async fn detach_and_store_attachments(
     // Run text extraction in a single spawn_blocking batch.
     if !text_candidates.is_empty() {
         if let Ok(mut extracted_map) = tokio::task::spawn_blocking(move || {
-            let mut map: std::collections::HashMap<
-                String,
-                (String, Option<u32>, bool),
-            > = std::collections::HashMap::new();
+            let mut map: std::collections::HashMap<String, (String, Option<u32>, bool)> =
+                std::collections::HashMap::new();
             for c in text_candidates {
                 if let Some(r) =
                     crate::ext::text_extractor::extract_text(&c.file_type, &c.ext, &c.bytes)
@@ -624,8 +625,7 @@ pub fn reattach_eml_content(
     envelope_id: String,
 ) -> BichonResult<(Envelope, Bytes)> {
     let e = ENVELOPE_MANAGER
-        .get_envelope_by_id(account_id, &envelope_id)
-        ?
+        .get_envelope_by_id(account_id, &envelope_id)?
         .ok_or_else(|| {
             raise_error!(
                 format!(
@@ -658,7 +658,7 @@ pub fn reattach_eml_content(
         return Err(raise_error!(
             format!(
                 "Consistency check failed: envelope.attachment_count ({}) does not match attachments.len ({})",
-                e.envelope.attachment_count, 
+                e.envelope.attachment_count,
                 actual_count
             ),
             ErrorCode::InternalError
@@ -679,11 +679,7 @@ pub fn reattach_eml_content(
             let absolute_start = search_cursor + pos;
             let absolute_end = absolute_start + pattern_len;
 
-            tasks.push((
-                absolute_start,
-                absolute_end,
-                detail.content_hash.clone(),
-            ));
+            tasks.push((absolute_start, absolute_end, detail.content_hash.clone()));
             search_cursor = absolute_end;
         }
     }
@@ -701,14 +697,15 @@ pub fn reattach_eml_content(
     Ok((e.envelope, Bytes::from(restored_eml)))
 }
 
-/// Returns the raw EML for an indexed message, self-healing a missing content blob.
+/// Returns the raw EML for an indexed message, self-healing a missing content
+/// blob.
 ///
-/// Behaves like [`reattach_eml_content`], but when the message's content blob is
-/// absent from the blob store it fetches that single message on demand from the
-/// IMAP server (`UID FETCH <uid> (BODY.PEEK[])`), persists it for future requests,
-/// and returns it. If the on-demand fetch itself fails, the original "content not
-/// found" error from [`reattach_eml_content`] is surfaced unchanged so the caller
-/// still produces its 404.
+/// Behaves like [`reattach_eml_content`], but when the message's content blob
+/// is absent from the blob store it fetches that single message on demand from
+/// the IMAP server (`UID FETCH <uid> (BODY.PEEK[])`), persists it for future
+/// requests, and returns it. If the on-demand fetch itself fails, the original
+/// "content not found" error from [`reattach_eml_content`] is surfaced
+/// unchanged so the caller still produces its 404.
 pub async fn reattach_eml_content_self_healing(
     account_id: u64,
     envelope_id: String,
@@ -757,14 +754,15 @@ pub async fn reattach_eml_content_self_healing(
 
 /// Fetches one message from IMAP and re-stores its detached blob.
 ///
-/// On success the freshly fetched raw RFC822 body is returned; it is also queued
-/// (in detached form) into the blob store so subsequent requests hit the cache.
-/// Fails if the message cannot be fetched, or if the fetched bytes do not match
-/// the archived `content_hash` (the server-side message no longer matches what
-/// Bichon archived, so it cannot be treated as a recovery of that blob).
+/// On success the freshly fetched raw RFC822 body is returned; it is also
+/// queued (in detached form) into the blob store so subsequent requests hit the
+/// cache. Fails if the message cannot be fetched, or if the fetched bytes do
+/// not match the archived `content_hash` (the server-side message no longer
+/// matches what Bichon archived, so it cannot be treated as a recovery of that
+/// blob).
 async fn recover_message_blob(envelope: &Envelope) -> BichonResult<Bytes> {
-    let mailbox = MailBox::find_mailbox(envelope.account_id, envelope.mailbox_id)?
-        .ok_or_else(|| {
+    let mailbox =
+        MailBox::find_mailbox(envelope.account_id, envelope.mailbox_id)?.ok_or_else(|| {
             raise_error!(
                 format!(
                     "Mailbox not found: account_id={} mailbox_id={}",
@@ -798,13 +796,22 @@ async fn recover_message_blob(envelope: &Envelope) -> BichonResult<Bytes> {
     // Re-create the detached blob (stripped EML + attachments) so the missing
     // blob is repopulated for future requests. The detached EML is queued under
     // `fetched_hash`, which equals `envelope.content_hash`.
-    let message = MessageParser::new().parse(raw_body.as_slice()).ok_or_else(|| {
-        raise_error!(
-            "Failed to parse fetched email content".into(),
-            ErrorCode::InternalError
-        )
-    })?;
-    detach_and_store_attachments(&raw_body, &message, &fetched_hash, envelope.account_id, envelope.mailbox_id).await;
+    let message = MessageParser::new()
+        .parse(raw_body.as_slice())
+        .ok_or_else(|| {
+            raise_error!(
+                "Failed to parse fetched email content".into(),
+                ErrorCode::InternalError
+            )
+        })?;
+    detach_and_store_attachments(
+        &raw_body,
+        &message,
+        &fetched_hash,
+        envelope.account_id,
+        envelope.mailbox_id,
+    )
+    .await;
 
     Ok(Bytes::from(raw_body))
 }
@@ -897,14 +904,9 @@ mod test {
         assert!(truncated.len() < raw.len());
 
         // Must not panic.
-        let infos = super::detach_and_store_attachments(
-            truncated,
-            &message,
-            "test_content_hash",
-            0,
-            0,
-        )
-        .await;
+        let infos =
+            super::detach_and_store_attachments(truncated, &message, "test_content_hash", 0, 0)
+                .await;
 
         // The attachment count must still match so the consistency check
         // in reattach_eml_content doesn't fail later.
