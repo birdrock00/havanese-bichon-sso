@@ -35,7 +35,6 @@ fn migrate_keyspace(
     label: &str,
     batch_size: usize,
 ) -> BichonResult<u64> {
-
     let ks = db
         .keyspace(ks_name, || {
             panic!("{ks_name} keyspace not found in fjall database")
@@ -49,8 +48,7 @@ fn migrate_keyspace(
 
     let pb = ProgressBar::new_spinner();
     pb.set_style(
-        ProgressStyle::with_template("{spinner:.cyan} {msg} [{elapsed_precise}]")
-            .unwrap(),
+        ProgressStyle::with_template("{spinner:.cyan} {msg} [{elapsed_precise}]").unwrap(),
     );
     pb.set_message(format!("Scanning {label} blobs..."));
 
@@ -86,9 +84,9 @@ fn migrate_keyspace(
         batch.push((raw_key, value.to_vec(), Codec::Zstd));
 
         if batch.len() >= batch_size {
-            engine.put_batch(&batch).map_err(|e| {
-                raise_error!(format!("{e:#?}"), ErrorCode::InternalError)
-            })?;
+            engine
+                .put_batch(&batch)
+                .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
             count += batch.len() as u64;
             pb.set_message(format!("{label}: {} blobs migrated...", count));
             batch.clear();
@@ -96,9 +94,9 @@ fn migrate_keyspace(
     }
 
     if !batch.is_empty() {
-        engine.put_batch(&batch).map_err(|e| {
-            raise_error!(format!("{e:#?}"), ErrorCode::InternalError)
-        })?;
+        engine
+            .put_batch(&batch)
+            .map_err(|e| raise_error!(format!("{e:#?}"), ErrorCode::InternalError))?;
         count += batch.len() as u64;
     }
 
@@ -115,9 +113,11 @@ pub fn handle_migrate_v1(theme: &ColorfulTheme) {
     );
     println!(
         "{}\n",
-        style("This migrates blob storage from the fjall engine to bichon-blob.\n\
-              Tantivy indexes and metadata (memdb) are NOT affected.")
-            .dim()
+        style(
+            "This migrates blob storage from the fjall engine to bichon-blob.\n\
+              Tantivy indexes and metadata (memdb) are NOT affected."
+        )
+        .dim()
     );
 
     let root_dir: String = Input::with_theme(theme)
@@ -188,7 +188,9 @@ pub fn handle_migrate_v1(theme: &ColorfulTheme) {
 
     let batch_size: usize = {
         let input: String = Input::with_theme(theme)
-            .with_prompt("Enter batch size (affects memory usage, higher = faster but uses more RAM)")
+            .with_prompt(
+                "Enter batch size (affects memory usage, higher = faster but uses more RAM)",
+            )
             .default("1000".to_string())
             .validate_with(|s: &String| match s.trim().parse::<usize>() {
                 Ok(n) if n > 0 => Ok(()),
@@ -248,29 +250,29 @@ pub fn handle_migrate_v1(theme: &ColorfulTheme) {
     };
 
     // Migrate attachment blobs
-    let attach_count =
-        match migrate_keyspace(&engine, &db, "attachments", "Attachment", batch_size) {
-            Ok(n) => n,
-            Err(e) => {
-                println!(
-                    "{}",
-                    style(format!("Attachment migration failed: {e:#?}")).red()
-                );
-                let _ = engine.shutdown();
-                return;
-            }
-        };
+    let attach_count = match migrate_keyspace(&engine, &db, "attachments", "Attachment", batch_size)
+    {
+        Ok(n) => n,
+        Err(e) => {
+            println!(
+                "{}",
+                style(format!("Attachment migration failed: {e:#?}")).red()
+            );
+            let _ = engine.shutdown();
+            return;
+        }
+    };
 
     // Flush and shutdown
-    println!("\n{}", style("Flushing and shutting down blob engine...").dim());
+    println!(
+        "\n{}",
+        style("Flushing and shutting down blob engine...").dim()
+    );
     if let Err(e) = engine.flush() {
         println!("{}", style(format!("flush warning: {e:#?}")).yellow());
     }
     if let Err(e) = engine.shutdown() {
-        println!(
-            "{}",
-            style(format!("shutdown error: {e:#?}")).red()
-        );
+        println!("{}", style(format!("shutdown error: {e:#?}")).red());
         return;
     }
 
@@ -286,13 +288,23 @@ pub fn handle_migrate_v1(theme: &ColorfulTheme) {
     println!(
         "\n{}",
         style(format!(
-            "Migration complete!\n  Email blobs: {}\n  Attachment blobs: {}\n  Total: {}\n\n\
-             The old fjall database at '{}' is no longer used.\n\
-             You may delete it to free disk space after verifying everything works.",
+            "✅ Migration complete!\n\
+         \n\
+         📊 {} email blobs, {} attachment blobs migrated\n\
+         \n\
+         📖 **Next steps:**\n\
+         Refer to the official migration guide for:\n\
+         • How to verify the new storage\n\
+         • Cleanup commands for legacy files\n\
+         • Rollback instructions if needed\n\
+         \n\
+         🔗 {}\n\
+         \n\
+         ⚠️  **Important:** Old data is preserved until you manually remove it.\n\
+         Do not delete anything until you have verified the new server works correctly.",
             email_count,
             attach_count,
-            email_count + attach_count,
-            fjall_path.display()
+            "https://github.com/rustmailer/bichon/wiki/Bichon-v2.x-Migration-Guide"
         ))
         .green()
         .bold()
