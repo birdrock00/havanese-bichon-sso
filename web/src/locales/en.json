@@ -742,6 +742,7 @@
     "failed": "Import failed",
     "failedCount": "{{count}} failed",
     "failedDetails": "Failed items",
+    "fileCount": "{{count}} files",
     "folder": "Folder",
     "folderMethod": "2. Choose folder method",
     "folderMethodDesc": "How should the target mail folder be determined?",
