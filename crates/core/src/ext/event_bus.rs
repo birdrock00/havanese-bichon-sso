@@ -209,6 +209,7 @@ pub enum Event {
         format: String,
         total: u64,
         success: u64,
+        duplicates: u64,
         failed: u64,
     },
     MailboxRemoved {

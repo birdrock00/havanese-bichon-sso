@@ -727,6 +727,8 @@
     "detectedFolder": "مكتشف",
     "detectedFrom": "مكتشف من",
     "dropHere": "أفلت ملفات .eml / .mbox / .pst هنا",
+    "duplicateCount": "تم تخطي {{count}} من التكرارات",
+    "duplicateCountHint": "هذه الرسائل مؤرشفة بالفعل",
     "failed": "فشل الاستيراد",
     "failedCount": "{{count}} فشل",
     "failedDetails": "العناصر الفاشلة",

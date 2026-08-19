@@ -1,4 +1,3 @@
-//
 // Copyright (c) 2025-2026 rustmailer.com (https://rustmailer.com)
 //
 // This file is part of the Bichon Email Archiving Project
@@ -16,45 +15,40 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
-//use poem_openapi::Object;
+// use poem_openapi::Object;
 pub mod history;
-pub mod reader;
 pub mod pst;
+pub mod reader;
+use std::{collections::HashMap, path::Path, sync::RwLock};
+
 pub use history::ImportHistory;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::HashMap,
-    path::Path,
-    sync::RwLock,
-};
 
 use crate::{
+    account::migration::{AccountModel, AccountType},
     base64_decode_url_safe,
-    {
-        account::migration::{AccountModel, AccountType},
-        cache::imap::mailbox::{Attribute, AttributeEnum, MailBox},
-        envelope::extractor::extract_envelope_from_eml,
-        error::{BichonResult, code::ErrorCode},
-        settings::dir::DATA_DIR_MANAGER,
-        utils::create_hash,
-    },
+    cache::imap::mailbox::{Attribute, AttributeEnum, MailBox},
+    envelope::extractor::{extract_envelope_from_eml, ExtractOutcome},
+    error::{code::ErrorCode, BichonResult},
     raise_error,
+    settings::dir::DATA_DIR_MANAGER,
+    utils::create_hash,
 };
 
 /// Maximum byte size of an individual email message after splitting (100 MB).
 const MAX_SINGLE_EML_BYTES: usize = 100 * 1024 * 1024;
 
 /// Max file size accepted via the web upload endpoint.
-pub const MAX_WEB_EML_BYTES: usize = 100 * 1024 * 1024;       // 100 MB
-pub const MAX_WEB_MBOX_BYTES: usize = 1024 * 1024 * 1024;     // 1 GB
+pub const MAX_WEB_EML_BYTES: usize = 100 * 1024 * 1024; // 100 MB
+pub const MAX_WEB_MBOX_BYTES: usize = 1024 * 1024 * 1024; // 1 GB
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct BatchEmlRequest {
     pub account_id: u64,
     pub mail_folder: String,
-    /// A list of emails in base64-encoded format. Each element represents one .eml file.
+    /// A list of emails in base64-encoded format. Each element represents one
+    /// .eml file.
     pub emls: Vec<String>,
 }
 
@@ -87,26 +81,31 @@ pub struct ImportEmls;
 impl ImportEmls {
     pub async fn do_import(mut request: BatchEmlRequest) -> BichonResult<BatchEmlResult> {
         let account = AccountModel::check_account_exists(request.account_id)?;
-        
+
         if !account.enabled {
-            return Err(raise_error!("The account is disabled and cannot be used for this operation.".into(), ErrorCode::InvalidParameter));
+            return Err(raise_error!(
+                "The account is disabled and cannot be used for this operation.".into(),
+                ErrorCode::InvalidParameter
+            ));
         }
 
         let mailbox_id = match account.account_type {
             AccountType::IMAP => {
                 let all_mailboxes = MailBox::list_all(account.id)?;
-                let mailbox = all_mailboxes.into_iter().find(|m| m.name == request.mail_folder);
-                
+                let mailbox = all_mailboxes
+                    .into_iter()
+                    .find(|m| m.name == request.mail_folder);
+
                 match mailbox {
                     Some(mailbox) => mailbox.id,
                     None => return Err(raise_error!(
-                        format!("Mail folder '{}' not found for account ID {}. The target folder must exist before importing.", 
-                                request.mail_folder, 
+                        format!("Mail folder '{}' not found for account ID {}. The target folder must exist before importing.",
+                                request.mail_folder,
                                 request.account_id).into(),
                         ErrorCode::ResourceNotFound
                     )),
                 }
-            },
+            }
             AccountType::NoSync => {
                 let mailbox = MailBox {
                     id: create_hash(request.account_id, &request.mail_folder),
@@ -127,11 +126,12 @@ impl ImportEmls {
                 // Upsert the mailbox, creating it if it doesn't exist
                 MailBox::batch_upsert(&[mailbox])?;
                 mailbox_id
-            },
+            }
         };
 
         let account_id = account.id;
         let mut success_count = 0;
+        let mut duplicate_count = 0;
         let mut failed_details: Vec<FailedItemDetail> = Vec::new(); // Store failure details
 
         let total = request.emls.len();
@@ -169,9 +169,12 @@ impl ImportEmls {
             }
 
             match extract_envelope_from_eml(&decoded, account_id, mailbox_id).await {
-                Ok(_) => {
+                Ok(ExtractOutcome::Imported) => {
                     success_count += 1;
-                },
+                }
+                Ok(ExtractOutcome::Duplicate) => {
+                    duplicate_count += 1;
+                }
                 Err(e) => {
                     let error_msg = format!(
                         "Failed to extract envelope from EML at index {}: {:?}",
@@ -194,7 +197,7 @@ impl ImportEmls {
         Ok(BatchEmlResult {
             total,
             success: success_count,
-            duplicates: 0,
+            duplicates: duplicate_count,
             failed: failed_count,
             failed_details, // Return the list of failure details
         })
@@ -279,8 +282,8 @@ pub fn detect_format(bytes: &[u8], file_name: &str) -> Option<FileFormat> {
             }
         }
     }
-    // EML: starts with a header line or "Return-Path:", "Received:", "From:", "Date:", etc.
-    // Or check extension
+    // EML: starts with a header line or "Return-Path:", "Received:", "From:",
+    // "Date:", etc. Or check extension
     if bytes.starts_with(b"Return-Path:")
         || bytes.starts_with(b"Received:")
         || bytes.starts_with(b"Date:")
@@ -305,11 +308,12 @@ pub fn detect_format(bytes: &[u8], file_name: &str) -> Option<FileFormat> {
 }
 
 /// Check whether `bytes` looks like a text file by inspecting the first chunk.
-/// Returns `true` if it passes, `false` if it appears to be binary (video, executable, etc.).
+/// Returns `true` if it passes, `false` if it appears to be binary (video,
+/// executable, etc.).
 ///
 /// Email files (EML/MBOX) are text-based with printable ASCII, whitespace, and
-/// optional UTF-8. Binary files like video contain null bytes and high ratios of
-/// non-printable control characters.
+/// optional UTF-8. Binary files like video contain null bytes and high ratios
+/// of non-printable control characters.
 pub fn detect_text_file(bytes: &[u8]) -> bool {
     let check_len = bytes.len().min(8192);
     if check_len == 0 {
@@ -356,7 +360,8 @@ pub fn detect_text_file(bytes: &[u8]) -> bool {
             }
             // standalone continuation byte — not printable
         }
-        // Other control characters (0x01-0x1F except whitespace/Esc) are not counted as printable
+        // Other control characters (0x01-0x1F except whitespace/Esc) are not counted as
+        // printable
 
         i += 1;
     }
@@ -376,7 +381,8 @@ fn validate_import_account(account_id: u64) -> BichonResult<AccountModel> {
     }
     if !matches!(account.account_type, AccountType::NoSync) {
         return Err(raise_error!(
-            "Import is only allowed for NoSync accounts. IMAP accounts sync from the server.".into(),
+            "Import is only allowed for NoSync accounts. IMAP accounts sync from the server."
+                .into(),
             ErrorCode::InvalidParameter
         ));
     }
@@ -428,12 +434,13 @@ pub fn resolve_mailbox_by_account_id(account_id: u64, folder: &str) -> BichonRes
     resolve_mailbox(&account, folder)
 }
 
-/// Process an uploaded file (EML or MBOX) and import into the given account/folder.
-/// This runs synchronously and should be spawned on a background thread.
+/// Process an uploaded file (EML or MBOX) and import into the given
+/// account/folder. This runs synchronously and should be spawned on a
+/// background thread.
 ///
-/// For MBOX files, the file is memory-mapped via `memmap2` and messages are yielded
-/// one at a time — the full file is never loaded into RAM. Individual messages
-/// exceeding `MAX_SINGLE_EML_BYTES` (100 MB) are skipped.
+/// For MBOX files, the file is memory-mapped via `memmap2` and messages are
+/// yielded one at a time — the full file is never loaded into RAM. Individual
+/// messages exceeding `MAX_SINGLE_EML_BYTES` (100 MB) are skipped.
 pub fn process_uploaded_file(
     import_id: &str,
     file_path: &Path,
@@ -511,9 +518,15 @@ pub fn process_uploaded_file(
     };
 
     match format {
-        FileFormat::Eml => process_eml_file(import_id, file_path, account_id, mailbox_id, user_id, folder),
-        FileFormat::Mbox => process_mbox_file(import_id, file_path, account_id, mailbox_id, user_id, folder),
-        FileFormat::Pst => process_pst_upload(import_id, file_path, account_id, mailbox_id, user_id, folder),
+        FileFormat::Eml => process_eml_file(
+            import_id, file_path, account_id, mailbox_id, user_id, folder,
+        ),
+        FileFormat::Mbox => process_mbox_file(
+            import_id, file_path, account_id, mailbox_id, user_id, folder,
+        ),
+        FileFormat::Pst => process_pst_upload(
+            import_id, file_path, account_id, mailbox_id, user_id, folder,
+        ),
     }
 }
 
@@ -521,7 +534,10 @@ pub fn process_uploaded_file(
 fn detect_format_from_file(file_path: &Path, file_name: &str) -> BichonResult<FileFormat> {
     use std::io::Read;
     let mut file = std::fs::File::open(file_path).map_err(|e| {
-        raise_error!(format!("Failed to open file: {}", e), ErrorCode::InternalError)
+        raise_error!(
+            format!("Failed to open file: {}", e),
+            ErrorCode::InternalError
+        )
     })?;
     let mut buf = vec![0u8; 8192];
     let n = file.read(&mut buf).unwrap_or(0);
@@ -548,25 +564,36 @@ fn process_eml_file(
     let file_bytes = match std::fs::read(file_path) {
         Ok(b) => b,
         Err(e) => {
-            fail_progress(import_id, "eml", &format!("Failed to read file: {}", e), user_id, account_id, folder);
+            fail_progress(
+                import_id,
+                "eml",
+                &format!("Failed to read file: {}", e),
+                user_id,
+                account_id,
+                folder,
+            );
             let _ = std::fs::remove_file(file_path);
             return;
         }
     };
 
     let total = 1;
-    update_progress(import_id, ImportProgress {
-        import_id: import_id.to_string(),
-        status: ImportStatus::Processing,
-        format: "eml".to_string(),
-        total,
-        success: 0,
-        duplicates: 0,
-        failed: 0,
-        failed_details: vec![],
-    });
+    update_progress(
+        import_id,
+        ImportProgress {
+            import_id: import_id.to_string(),
+            status: ImportStatus::Processing,
+            format: "eml".to_string(),
+            total,
+            success: 0,
+            duplicates: 0,
+            failed: 0,
+            failed_details: vec![],
+        },
+    );
 
-    let (success_count, failed_details) = process_single_eml(&file_bytes, 0, account_id, mailbox_id);
+    let (success_count, duplicate_count, failed_details) =
+        process_single_eml(&file_bytes, 0, account_id, mailbox_id);
 
     // Clean up
     let _ = std::fs::remove_file(file_path);
@@ -577,7 +604,7 @@ fn process_eml_file(
         format: "eml".to_string(),
         total,
         success: success_count,
-        duplicates: 0,
+        duplicates: duplicate_count,
         failed: failed_details.len(),
         failed_details,
     };
@@ -598,27 +625,39 @@ fn process_mbox_file(
     let mbox = match reader::MboxFile::from_file(file_path) {
         Ok(m) => m,
         Err(e) => {
-            fail_progress(import_id, "mbox", &format!("Failed to open MBOX file: {}", e), user_id, account_id, folder);
+            fail_progress(
+                import_id,
+                "mbox",
+                &format!("Failed to open MBOX file: {}", e),
+                user_id,
+                account_id,
+                folder,
+            );
             let _ = std::fs::remove_file(file_path);
             return;
         }
     };
 
-    // First pass: count total messages (MboxReader is lazy, so this is O(n) but cheap)
+    // First pass: count total messages (MboxReader is lazy, so this is O(n) but
+    // cheap)
     let total = mbox.iter().count();
 
-    update_progress(import_id, ImportProgress {
-        import_id: import_id.to_string(),
-        status: ImportStatus::Processing,
-        format: "mbox".to_string(),
-        total,
-        success: 0,
-        duplicates: 0,
-        failed: 0,
-        failed_details: vec![],
-    });
+    update_progress(
+        import_id,
+        ImportProgress {
+            import_id: import_id.to_string(),
+            status: ImportStatus::Processing,
+            format: "mbox".to_string(),
+            total,
+            success: 0,
+            duplicates: 0,
+            failed: 0,
+            failed_details: vec![],
+        },
+    );
 
     let mut success_count = 0usize;
+    let mut duplicate_count = 0usize;
     let mut failed_details: Vec<FailedItemDetail> = Vec::new();
 
     for (index, entry) in mbox.iter().enumerate() {
@@ -638,9 +677,14 @@ fn process_mbox_file(
             continue;
         }
 
-        match futures::executor::block_on(extract_envelope_from_eml(eml_bytes, account_id, mailbox_id)) {
-            Ok(_) => {
+        match futures::executor::block_on(extract_envelope_from_eml(
+            eml_bytes, account_id, mailbox_id,
+        )) {
+            Ok(ExtractOutcome::Imported) => {
                 success_count += 1;
+            }
+            Ok(ExtractOutcome::Duplicate) => {
+                duplicate_count += 1;
             }
             Err(e) => {
                 failed_details.push(FailedItemDetail {
@@ -652,16 +696,19 @@ fn process_mbox_file(
 
         // Update progress every 100 items
         if index % 100 == 0 || index == total - 1 {
-            update_progress(import_id, ImportProgress {
-                import_id: import_id.to_string(),
-                status: ImportStatus::Processing,
-                format: "mbox".to_string(),
-                total,
-                success: success_count,
-                duplicates: 0,
-                failed: failed_details.len(),
-                failed_details: failed_details.clone(),
-            });
+            update_progress(
+                import_id,
+                ImportProgress {
+                    import_id: import_id.to_string(),
+                    status: ImportStatus::Processing,
+                    format: "mbox".to_string(),
+                    total,
+                    success: success_count,
+                    duplicates: duplicate_count,
+                    failed: failed_details.len(),
+                    failed_details: failed_details.clone(),
+                },
+            );
         }
     }
 
@@ -675,7 +722,7 @@ fn process_mbox_file(
         format: "mbox".to_string(),
         total,
         success: success_count,
-        duplicates: 0,
+        duplicates: duplicate_count,
         failed: failed_details.len(),
         failed_details,
     };
@@ -683,41 +730,53 @@ fn process_mbox_file(
     update_progress(import_id, final_progress);
 }
 
-/// Process a single EML byte slice and return (success_count, failed_details).
+/// Process a single EML byte slice and return (success_count, duplicate_count,
+/// failed_details).
 fn process_single_eml(
     eml_bytes: &[u8],
     index: usize,
     account_id: u64,
     mailbox_id: u64,
-) -> (usize, Vec<FailedItemDetail>) {
+) -> (usize, usize, Vec<FailedItemDetail>) {
     if eml_bytes.len() > MAX_SINGLE_EML_BYTES {
         let size_mb = eml_bytes.len() as f64 / 1024.0 / 1024.0;
-        return (0, vec![FailedItemDetail {
-            index,
-            error_message: format!(
-                "Email is {:.1} MB (limit {} MB). Skipping.",
-                size_mb,
-                MAX_SINGLE_EML_BYTES / 1024 / 1024
-            ),
-        }]);
+        return (
+            0,
+            0,
+            vec![FailedItemDetail {
+                index,
+                error_message: format!(
+                    "Email is {:.1} MB (limit {} MB). Skipping.",
+                    size_mb,
+                    MAX_SINGLE_EML_BYTES / 1024 / 1024
+                ),
+            }],
+        );
     }
 
-    match futures::executor::block_on(extract_envelope_from_eml(eml_bytes, account_id, mailbox_id)) {
-        Ok(_) => (1, vec![]),
-        Err(e) => (0, vec![FailedItemDetail {
-            index,
-            error_message: format!("{:?}", e),
-        }]),
+    match futures::executor::block_on(extract_envelope_from_eml(eml_bytes, account_id, mailbox_id))
+    {
+        Ok(ExtractOutcome::Imported) => (1, 0, vec![]),
+        Ok(ExtractOutcome::Duplicate) => (0, 1, vec![]),
+        Err(e) => (
+            0,
+            0,
+            vec![FailedItemDetail {
+                index,
+                error_message: format!("{:?}", e),
+            }],
+        ),
     }
 }
 
 /// Process a PST file uploaded via the web UI.
-/// Two-pass approach: count messages first, then process with periodic progress updates.
+/// Two-pass approach: count messages first, then process with periodic progress
+/// updates.
 fn process_pst_upload(
     import_id: &str,
     file_path: &Path,
     account_id: u64,
-    _mailbox_id: u64,  // ignored; PST creates its own mailboxes per folder
+    _mailbox_id: u64, // ignored; PST creates its own mailboxes per folder
     user_id: u64,
     folder: &str,
 ) {
@@ -725,32 +784,50 @@ fn process_pst_upload(
     let total = match pst::count_pst_messages(file_path) {
         Ok(n) => n,
         Err(e) => {
-            fail_progress(import_id, "pst", &format!("{:?}", e), user_id, account_id, folder);
+            fail_progress(
+                import_id,
+                "pst",
+                &format!("{:?}", e),
+                user_id,
+                account_id,
+                folder,
+            );
             let _ = std::fs::remove_file(file_path);
             return;
         }
     };
 
-    update_progress(import_id, ImportProgress {
-        import_id: import_id.to_string(),
-        status: ImportStatus::Processing,
-        format: "pst".to_string(),
-        total,
-        success: 0,
-        duplicates: 0,
-        failed: 0,
-        failed_details: vec![],
-    });
+    update_progress(
+        import_id,
+        ImportProgress {
+            import_id: import_id.to_string(),
+            status: ImportStatus::Processing,
+            format: "pst".to_string(),
+            total,
+            success: 0,
+            duplicates: 0,
+            failed: 0,
+            failed_details: vec![],
+        },
+    );
 
     // Pass 2: process messages with progress updates
     let mut success_count: usize = 0;
+    let mut duplicate_count: usize = 0;
     let mut failed_details: Vec<FailedItemDetail> = Vec::new();
     let mut index: usize = 0;
 
     let pst_store = match outlook_pst::open_store(file_path) {
         Ok(s) => s,
         Err(e) => {
-            fail_progress(import_id, "pst", &format!("{:?}", e), user_id, account_id, folder);
+            fail_progress(
+                import_id,
+                "pst",
+                &format!("{:?}", e),
+                user_id,
+                account_id,
+                folder,
+            );
             let _ = std::fs::remove_file(file_path);
             return;
         }
@@ -759,7 +836,14 @@ fn process_pst_upload(
     let ipm_sub_tree = match pst_store.properties().ipm_sub_tree_entry_id() {
         Ok(id) => id,
         Err(e) => {
-            fail_progress(import_id, "pst", &format!("{:?}", e), user_id, account_id, folder);
+            fail_progress(
+                import_id,
+                "pst",
+                &format!("{:?}", e),
+                user_id,
+                account_id,
+                folder,
+            );
             let _ = std::fs::remove_file(file_path);
             return;
         }
@@ -768,7 +852,14 @@ fn process_pst_upload(
     let ipm_subtree_folder = match pst_store.open_folder(&ipm_sub_tree) {
         Ok(f) => f,
         Err(e) => {
-            fail_progress(import_id, "pst", &format!("{:?}", e), user_id, account_id, folder);
+            fail_progress(
+                import_id,
+                "pst",
+                &format!("{:?}", e),
+                user_id,
+                account_id,
+                folder,
+            );
             let _ = std::fs::remove_file(file_path);
             return;
         }
@@ -779,23 +870,27 @@ fn process_pst_upload(
     let format_str = "pst".to_string();
     pst::process_folder_with_progress(
         &ipm_subtree_folder,
-        "",  // parent_path starts empty
+        "", // parent_path starts empty
         account_id,
-        total,  // pass pre-counted total for accurate progress
+        total, // pass pre-counted total for accurate progress
         &mut success_count,
+        &mut duplicate_count,
         &mut failed_details,
         &mut index,
-        &|processed, actual_failed| {
-            update_progress(&import_id, ImportProgress {
-                import_id: import_id.clone(),
-                status: ImportStatus::Processing,
-                format: format_str.clone(),
-                total,
-                success: processed - actual_failed,
-                duplicates: 0,
-                failed: actual_failed,
-                failed_details: vec![],
-            });
+        &|success, duplicates, actual_failed| {
+            update_progress(
+                &import_id,
+                ImportProgress {
+                    import_id: import_id.clone(),
+                    status: ImportStatus::Processing,
+                    format: format_str.clone(),
+                    total,
+                    success,
+                    duplicates,
+                    failed: actual_failed,
+                    failed_details: vec![],
+                },
+            );
         },
     );
 
@@ -808,7 +903,7 @@ fn process_pst_upload(
         format: "pst".to_string(),
         total,
         success: success_count,
-        duplicates: 0,
+        duplicates: duplicate_count,
         failed: failed_details.len(),
         failed_details,
     };

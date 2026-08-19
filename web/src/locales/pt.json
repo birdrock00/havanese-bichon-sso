@@ -727,6 +727,8 @@
     "detectedFolder": "Detectado",
     "detectedFrom": "Detectado de",
     "dropHere": "Solte arquivos .eml / .mbox / .pst aqui",
+    "duplicateCount": "{{count}} duplicados ignorados",
+    "duplicateCountHint": "Estas mensagens já estão arquivadas",
     "failed": "Falha na importação",
     "failedCount": "{{count}} falharam",
     "failedDetails": "Itens com falha",

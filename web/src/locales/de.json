@@ -727,6 +727,8 @@
     "detectedFolder": "Erkannt",
     "detectedFrom": "Erkannt aus",
     "dropHere": ".eml / .mbox / .pst-Dateien hierher ziehen",
+    "duplicateCount": "{{count}} Duplikate übersprungen",
+    "duplicateCountHint": "Diese Nachrichten sind bereits archiviert",
     "failed": "Import fehlgeschlagen",
     "failedCount": "{{count}} fehlgeschlagen",
     "failedDetails": "Fehlgeschlagene Elemente",

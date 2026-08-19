@@ -727,6 +727,8 @@
     "detectedFolder": "Wykryto",
     "detectedFrom": "Wykryto z",
     "dropHere": "Upuść pliki .eml / .mbox / .pst tutaj",
+    "duplicateCount": "Pominięto duplikatów: {{count}}",
+    "duplicateCountHint": "Te wiadomości są już zarchiwizowane",
     "failed": "Import nie powiódł się",
     "failedCount": "Niepowodzenie: {{count}}",
     "failedDetails": "Nieudane elementy",

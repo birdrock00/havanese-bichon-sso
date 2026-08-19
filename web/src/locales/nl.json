@@ -727,6 +727,8 @@
     "detectedFolder": "Gedetecteerd",
     "detectedFrom": "Gedetecteerd uit",
     "dropHere": "Sleep .eml / .mbox / .pst bestanden hierheen",
+    "duplicateCount": "{{count}} duplicaten overgeslagen",
+    "duplicateCountHint": "Deze berichten zijn al gearchiveerd",
     "failed": "Import mislukt",
     "failedCount": "{{count}} mislukt",
     "failedDetails": "Mislukte items",
