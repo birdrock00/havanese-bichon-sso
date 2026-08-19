@@ -102,7 +102,7 @@ export default function ImportPage() {
 
   const [accountId, setAccountId] = useState<string>('');
   const [folderMode, setFolderMode] = useState<FolderMode>('');
-  const [folder, setFolder] = useState('INBOX');
+  const [folder, setFolder] = useState('inbox');
   const [files, setFiles] = useState<QueuedFile[]>([]);
   const [dragging, setDragging] = useState(false);
   const [progress, setProgress] = useState<ImportProgress | null>(null);
@@ -430,7 +430,7 @@ export default function ImportPage() {
                       )}
                     >
                       <FileText className="h-4 w-4 shrink-0" />
-                      <span className="flex-1 truncate">{qf.file.name}</span>
+                      <span className="text-xs flex-1 truncate">{qf.file.name}</span>
                       <span className={cn('text-xs shrink-0', qf.sizeOk && qf.typeOk ? 'text-muted-foreground' : 'font-medium')}>
                         {formatSize(qf.file.size)}
                       </span>
@@ -502,7 +502,7 @@ export default function ImportPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <Sparkles className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium">
+                        <span className="text-xs font-medium">
                           {t('import.modeHeader', 'Auto-detect from email headers')}
                         </span>
                       </div>
@@ -540,7 +540,7 @@ export default function ImportPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <ListTree className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium">
+                        <span className="text-xs font-medium">
                           {t('import.modeExisting', 'Choose from existing mailboxes')}
                         </span>
                       </div>
@@ -623,7 +623,7 @@ export default function ImportPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <PenLine className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium">
+                        <span className="text-xs font-medium">
                           {t('import.modeCustom', 'Enter a custom folder name')}
                         </span>
                       </div>
@@ -631,12 +631,12 @@ export default function ImportPage() {
                         {t('import.modeCustomDesc', 'Manually type the target mail folder name.')}
                       </p>
                       {folderMode === 'custom' && (
-                        <div className="mt-2">
+                        <div className="mt-2 text-xs">
                           <Input
                             className="h-8 text-xs max-w-xs"
                             value={folder}
                             onChange={(e) => setFolder(e.target.value)}
-                            placeholder="INBOX"
+                            placeholder="inbox"
                           />
                         </div>
                       )}
