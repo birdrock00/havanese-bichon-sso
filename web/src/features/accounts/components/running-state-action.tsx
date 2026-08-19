@@ -37,17 +37,9 @@ export function RunningStateCellAction({ row }: Props) {
   const { setOpen, setCurrentRow } = useAccountContext()
   const { require_any_permission } = useCurrentUser()
 
-  if (row.original.deleting) {
-    return <span className="text-xs text-muted-foreground italic">Deleting...</span>
-  }
-  let account_type = row.original.account_type;
-  if (account_type === "NoSync") {
-    return <span className="text-xs text-muted-foreground">n/a</span>
-  }
   const hasPermission = require_any_permission(['system:root', 'account:read_details'], row.original.id)
 
-  // Live sync status pill. While a download session is running, poll every 5s
-  // so the list always reflects progress without needing the dialog open.
+
   const { data: state } = useQuery({
     queryKey: ['running-state', row.original.id],
     queryFn: () => download_state(row.original.id),
@@ -56,6 +48,16 @@ export function RunningStateCellAction({ row }: Props) {
       return s && s.status === DownloadStatus.Running ? 5000 : false
     },
   })
+
+  if (row.original.deleting) {
+    return <span className="text-xs text-muted-foreground italic">Deleting...</span>
+  }
+
+
+  if (row.original.account_type === "NoSync") {
+    return <span className="text-xs text-muted-foreground">n/a</span>
+  }
+
   const running = state?.active_session
   const isRunning = !!running && running.status === DownloadStatus.Running
 

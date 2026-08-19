@@ -25,7 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ToastAction } from '@/components/ui/toast';
 import { AxiosError } from 'axios';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AccountModel, create_account, update_account } from '@/api/account/api';
@@ -89,19 +89,9 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
 
   const queryClient = useQueryClient();
 
-  const createMutation = useMutation({
-    mutationFn: create_account,
-    onSuccess: handleSuccess,
-    onError: handleError,
-  });
 
-  const updateMutation = useMutation({
-    mutationFn: (data: Record<string, any>) => update_account(currentRow?.id!, data),
-    onSuccess: handleSuccess,
-    onError: handleError,
-  });
 
-  function handleSuccess() {
+  const handleSuccess = useCallback(() => {
     toast({
       title: isEdit ? t('accounts.accountUpdated') : t('accounts.accountCreated'),
       description: isEdit ? t('accounts.accountUpdatedDesc') : t('accounts.accountCreatedDesc'),
@@ -111,9 +101,9 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
     queryClient.invalidateQueries({ queryKey: ['account-list'] });
     form.reset();
     onOpenChange(false);
-  }
+  }, [isEdit, t, toast, queryClient, form, onOpenChange]);
 
-  function handleError(error: AxiosError) {
+  const handleError = useCallback((error: AxiosError) => {
     const errorMessage =
       (error.response?.data as { message?: string })?.message ||
       error.message ||
@@ -126,7 +116,19 @@ export function NoSyncAccountDialog({ currentRow, open, onOpenChange }: Props) {
       action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
     });
     console.error(error);
-  }
+  }, [isEdit, t, toast]);
+
+  const createMutation = useMutation({
+    mutationFn: create_account,
+    onSuccess: handleSuccess,
+    onError: handleError,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: Record<string, any>) => update_account(currentRow?.id!, data),
+    onSuccess: handleSuccess,
+    onError: handleError,
+  });
 
   const onSubmit = React.useCallback(
     (data: NoSyncAccount) => {
