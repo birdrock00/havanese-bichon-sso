@@ -28,7 +28,7 @@ use crate::{
     raise_error,
     {
         account::migration::AccountModel,
-        cache::imap::mailbox::MailBox,
+        archive::imap::mailbox::MailBox,
         error::{code::ErrorCode, BichonResult},
         message::content::AttachmentInfo,
         store::{

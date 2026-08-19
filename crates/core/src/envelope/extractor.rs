@@ -24,7 +24,7 @@ use uuid::Uuid;
 
 use crate::{
     account::migration::AccountModel,
-    cache::imap::mailbox::MailBox,
+    archive::imap::mailbox::MailBox,
     common::AddrVec,
     envelope::{meta::parse_bichon_metadata, utils::normalize_subject},
     error::{code::ErrorCode, BichonResult},

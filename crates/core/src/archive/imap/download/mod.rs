@@ -24,7 +24,7 @@ use crate::{
             TriggerType,
         },
     },
-    cache::imap::{download::flow::FetchDirection, mailbox::MailBox},
+    archive::imap::{download::flow::FetchDirection, mailbox::MailBox},
     error::BichonResult,
     imap::executor::ImapExecutor,
 };

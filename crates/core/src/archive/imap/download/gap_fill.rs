@@ -27,7 +27,7 @@ use crate::{
         migration::AccountModel,
         state::{DownloadState, GapFillFolderStats, GapFillState},
     },
-    cache::imap::mailbox::MailBox,
+    archive::imap::mailbox::MailBox,
     error::BichonResult,
     imap::executor::{compress_uid_list, ImapExecutor, DEFAULT_BATCH_SIZE},
     store::tantivy::envelope::EnvelopeSnapshot,
@@ -378,7 +378,7 @@ pub async fn gap_fill_mailbox(
         if let Some(max_uid) = missing_uids.last().copied() {
             let mut updated = remote_mailbox.clone();
             updated.highest_uid = Some(max_uid.max(local_mailbox.highest_uid.unwrap_or(0)));
-            crate::cache::imap::mailbox::MailBox::batch_upsert(&[updated])?;
+            crate::archive::imap::mailbox::MailBox::batch_upsert(&[updated])?;
         }
     }
 

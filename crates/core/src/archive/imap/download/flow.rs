@@ -23,7 +23,7 @@ use crate::{
             migration::AccountModel,
             state::{DownloadState, DownloadStatus, FolderStatus},
         },
-        cache::{
+        archive::{
             imap::{
                 download::rebuild::{rebuild_mailbox_cache, rebuild_mailbox_cache_by_date},
                 find_intersecting_mailboxes, find_missing_mailboxes,

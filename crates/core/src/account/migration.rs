@@ -27,7 +27,7 @@ use crate::{
         since::{DateSince, RelativeDate},
         state::DownloadState,
     },
-    cache::imap::{mailbox::MailBox, task::SYNC_TASKS},
+    archive::imap::{mailbox::MailBox, task::SYNC_TASKS},
     common::paginated::DataPage,
     context::controller::DOWNLOAD_CONTROLLER,
     database::{

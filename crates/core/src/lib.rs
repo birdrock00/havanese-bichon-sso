@@ -2,7 +2,7 @@ pub mod account;
 pub mod ext;
 pub mod admin;
 pub mod autoconfig;
-pub mod cache;
+pub mod archive;
 pub mod common;
 pub mod context;
 pub mod dashboard;

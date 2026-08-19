@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{cache::imap::task::SYNC_TASKS, error::BichonResult};
+use crate::{archive::imap::task::SYNC_TASKS, error::BichonResult};
 use std::{sync::LazyLock, time::Duration};
 use tokio::sync::mpsc;
 use tracing::{error, info};

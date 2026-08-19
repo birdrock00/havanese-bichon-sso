@@ -18,7 +18,7 @@
 
 use crate::account::entity::AuthType;
 use crate::account::state::{DownloadState, TriggerType};
-use crate::cache::imap::download::process_imap_download;
+use crate::archive::imap::download::process_imap_download;
 use crate::common::periodic::{PeriodicTask, TaskHandle};
 use crate::error::code::ErrorCode;
 use crate::oauth2::token::OAuth2AccessToken;

@@ -20,7 +20,7 @@ use std::{io, net::SocketAddr, time::Duration};
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use bichon_core::{
     account::migration::{AccountModel, AccountType},
-    cache::imap::mailbox::{Attribute, AttributeEnum, MailBox},
+    archive::imap::mailbox::{Attribute, AttributeEnum, MailBox},
     common::{auth::ClientContext, signal::SIGNAL_MANAGER},
     envelope::extractor::extract_envelope_from_smtp,
     error::BichonResult,

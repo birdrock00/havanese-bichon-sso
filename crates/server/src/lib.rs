@@ -25,7 +25,7 @@ use std::sync::LazyLock;
 
 use bichon_core::{
     bichon_version,
-    cache::imap::task::SYNC_TASKS,
+    archive::imap::task::SYNC_TASKS,
     common::{rustls::BichonTls, signal::SignalManager},
     context::{executors::BichonContext, Initialize},
     database::manager::DB_MANAGER,

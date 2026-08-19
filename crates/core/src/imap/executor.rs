@@ -18,7 +18,7 @@
 
 use crate::account::migration::AccountModel;
 use crate::account::state::{DownloadState, DownloadStatus, FolderStatus};
-use crate::cache::imap::mailbox::MailBox;
+use crate::archive::imap::mailbox::MailBox;
 use crate::envelope::extractor::extract_envelope_and_store_it;
 use crate::error::code::ErrorCode;
 use crate::imap::session::SessionStream;
@@ -947,7 +947,7 @@ impl ImapExecutor {
         progress: Option<
             &(dyn Fn(u64, Option<f64>) -> BichonResult<()> + Send + Sync),
         >,
-    ) -> BichonResult<Vec<crate::cache::imap::download::gap_fill::RemoteHeader>> {
+    ) -> BichonResult<Vec<crate::archive::imap::download::gap_fill::RemoteHeader>> {
         let mut stream = session
             .uid_fetch(uid_set, "(UID RFC822.SIZE INTERNALDATE BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)])")
             .await
@@ -1008,7 +1008,7 @@ impl ImapExecutor {
                 None => &[],
             };
             let message_id = parse_message_id_header(header_bytes);
-            result.push(crate::cache::imap::download::gap_fill::RemoteHeader {
+            result.push(crate::archive::imap::download::gap_fill::RemoteHeader {
                 uid,
                 message_id,
                 size,

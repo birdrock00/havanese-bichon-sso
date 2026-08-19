@@ -27,7 +27,7 @@ use bichon_core::account::payload::{
 use bichon_core::account::state::{DownloadState, GapFillState};
 use bichon_core::account::stats::AccountStats;
 use bichon_core::account::view::AccountResp;
-use bichon_core::cache::imap::task::SYNC_TASKS;
+use bichon_core::archive::imap::task::SYNC_TASKS;
 use bichon_core::common::paginated::{paginate_vec, DataPage};
 use bichon_core::error::code::ErrorCode;
 use bichon_core::ext::event_bus::{emit, Event};

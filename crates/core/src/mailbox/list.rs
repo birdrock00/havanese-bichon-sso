@@ -17,8 +17,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::account::migration::{AccountModel, AccountType};
-use crate::cache::imap::mailbox::{Attribute, AttributeEnum, MailBox};
-use crate::cache::imap::mailbox_cache::{self, FetchStatus};
+use crate::archive::imap::mailbox::{Attribute, AttributeEnum, MailBox};
+use crate::archive::imap::mailbox_cache::{self, FetchStatus};
 use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
 use crate::imap::executor::ImapExecutor;

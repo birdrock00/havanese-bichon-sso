@@ -22,8 +22,8 @@ use crate::{
     decode_mailbox_name, raise_error,
     {
         account::migration::{AccountModel, AccountType},
-        cache::imap::mailbox::{AttributeEnum, MailBox},
-        cache::imap::mailbox_cache,
+        archive::imap::mailbox::{AttributeEnum, MailBox},
+        archive::imap::mailbox_cache,
         error::{code::ErrorCode, BichonResult},
         imap::{executor::ImapExecutor, session::SessionStream},
         mailbox::list::convert_names_to_mailboxes,

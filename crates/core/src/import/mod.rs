@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     account::migration::{AccountModel, AccountType},
     base64_decode_url_safe,
-    cache::imap::mailbox::{Attribute, AttributeEnum, MailBox},
+    archive::imap::mailbox::{Attribute, AttributeEnum, MailBox},
     envelope::extractor::{extract_envelope_from_eml, ExtractOutcome},
     error::{code::ErrorCode, BichonResult},
     raise_error,

@@ -21,7 +21,7 @@ use crate::{
         migration::AccountModel,
         state::{DownloadState, DownloadStatus, FolderStatus},
     },
-    cache::{
+    archive::{
         imap::{
             download::flow::{fetch_and_save_by_date, fetch_and_save_full_mailbox, FetchDirection},
             mailbox::MailBox,
