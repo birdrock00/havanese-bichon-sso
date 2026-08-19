@@ -151,13 +151,7 @@ impl ImapExecutor {
         match before {
             Some(date) => {
                 Self::fetch_new_mail_with_before(
-                    session,
-                    account,
-                    mailbox,
-                    start_uid,
-                    date,
-                    examined,
-                    token,
+                    session, account, mailbox, start_uid, date, examined, token,
                 )
                 .await
             }
@@ -226,7 +220,7 @@ impl ImapExecutor {
                     start_uid,
                     examined.uid_next,
                 ) {
-                    tracing::warn!(
+                    tracing::info!(
                         account_id = account.id,
                         mailbox = %mailbox.name,
                         start_uid,
@@ -234,14 +228,14 @@ impl ImapExecutor {
                         "{}",
                         msg
                     );
-                    DownloadState::append_session_error(account.id, msg)?;
+                    //DownloadState::append_session_error(account.id, msg)?;
                     DownloadState::update_folder_progress(
                         account.id,
                         mailbox.name.clone(),
                         0,
                         0,
-                        FolderStatus::Failed,
-                        Some("UID enumeration came back empty despite new mail on server. Retrying on next sync.".into()),
+                        FolderStatus::Success,
+                        Some("UID FETCH range returned empty; tail UIDs appear to have been purged. highest_uid unchanged, will retry on next sync.".into()),
                     )?;
                     return Ok(None);
                 }
@@ -373,15 +367,11 @@ impl ImapExecutor {
             })?;
         let mut entries: Vec<(u32, u64, i64)> = Vec::new();
         let mut skipped_oversized = 0u64;
-        while let Some(fetch) = uid_stream
-            .try_next()
-            .await
-            .map_err(|e| {
-                let err_msg = format!("UID FETCH stream failed in [{}]: {:#?}", mailbox.name, e);
-                let _ = DownloadState::append_session_error(account_id, err_msg);
-                raise_error!(format!("{:#?}", e), classify_imap_error(&e))
-            })?
-        {
+        while let Some(fetch) = uid_stream.try_next().await.map_err(|e| {
+            let err_msg = format!("UID FETCH stream failed in [{}]: {:#?}", mailbox.name, e);
+            let _ = DownloadState::append_session_error(account_id, err_msg);
+            raise_error!(format!("{:#?}", e), classify_imap_error(&e))
+        })? {
             if token.is_cancelled() {
                 DownloadState::update_session_status(
                     account_id,
@@ -499,7 +489,7 @@ impl ImapExecutor {
                     start_uid,
                     examined.uid_next,
                 ) {
-                    tracing::warn!(
+                    tracing::info!(
                         account_id = account.id,
                         mailbox = %mailbox.name,
                         start_uid,
@@ -507,14 +497,17 @@ impl ImapExecutor {
                         "{}",
                         msg
                     );
-                    DownloadState::append_session_error(account.id, msg)?;
+                    //The gap between highest_uid and uid_next may be caused by messages being deleted on the server side.
+                    //Reporting this as a warning/error makes users think that something is wrong with the sync.
+
+                    //DownloadState::append_session_error(account.id, msg)?;
                     DownloadState::update_folder_progress(
                         account.id,
                         mailbox.name.clone(),
                         0,
                         0,
-                        FolderStatus::Failed,
-                        Some("UID enumeration came back empty despite new mail on server. Retrying on next sync.".into()),
+                        FolderStatus::Success,
+                        Some("UID FETCH range returned empty; tail UIDs appear to have been purged. highest_uid unchanged, will retry on next sync.".into()),
                     )?;
                     return Ok(None);
                 }
@@ -760,39 +753,36 @@ impl ImapExecutor {
             // On error, report the number of emails already stored through the
             // progress callback so a partial batch is not counted as fully
             // failed by callers (gap_fill uses the last reported count).
-            let item = match tokio::time::timeout(STALL_REPORT_INTERVAL, body_stream.try_next()).await
-            {
-                Ok(Ok(item)) => Ok(item),
-                Ok(Err(e)) => Err((count, e)),
-                Err(_) => {
-                    if token.is_cancelled() {
-                        if let Some(progress) = progress {
-                            let _ = progress(count, None, None);
+            let item =
+                match tokio::time::timeout(STALL_REPORT_INTERVAL, body_stream.try_next()).await {
+                    Ok(Ok(item)) => Ok(item),
+                    Ok(Err(e)) => Err((count, e)),
+                    Err(_) => {
+                        if token.is_cancelled() {
+                            if let Some(progress) = progress {
+                                let _ = progress(count, None, None);
+                            }
+                            return Err(raise_error!(
+                                "Stream cancelled".into(),
+                                ErrorCode::InternalError
+                            ));
                         }
-                        return Err(raise_error!(
-                            "Stream cancelled".into(),
-                            ErrorCode::InternalError
-                        ));
-                    }
-                    let stall_secs = last_recv.elapsed().as_secs_f64();
-                    consecutive_stalls += 1;
+                        let stall_secs = last_recv.elapsed().as_secs_f64();
+                        consecutive_stalls += 1;
 
-                    if let Some(progress) = progress {
-                        progress(count, None, Some(stall_secs))?;
+                        if let Some(progress) = progress {
+                            progress(count, None, Some(stall_secs))?;
+                        }
+                        continue;
                     }
-                    continue;
-                }
-            };
+                };
             let item = match item {
                 Ok(item) => item,
                 Err((processed, e)) => {
                     if let Some(progress) = progress {
                         let _ = progress(processed, None, None);
                     }
-                    return Err(raise_error!(
-                        format!("{:#?}", e),
-                        classify_imap_error(&e)
-                    ));
+                    return Err(raise_error!(format!("{:#?}", e), classify_imap_error(&e)));
                 }
             };
             let Some(fetch) = item else { break };
@@ -944,12 +934,13 @@ impl ImapExecutor {
         session: &mut Session<Box<dyn SessionStream>>,
         uid_set: &str,
         token: CancellationToken,
-        progress: Option<
-            &(dyn Fn(u64, Option<f64>) -> BichonResult<()> + Send + Sync),
-        >,
+        progress: Option<&(dyn Fn(u64, Option<f64>) -> BichonResult<()> + Send + Sync)>,
     ) -> BichonResult<Vec<crate::archive::imap::download::gap_fill::RemoteHeader>> {
         let mut stream = session
-            .uid_fetch(uid_set, "(UID RFC822.SIZE INTERNALDATE BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)])")
+            .uid_fetch(
+                uid_set,
+                "(UID RFC822.SIZE INTERNALDATE BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)])",
+            )
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
 
@@ -959,32 +950,28 @@ impl ImapExecutor {
         // seconds so the UI shows the wait climbing instead of a stale state.
         const STALL_REPORT_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5);
         loop {
-            let item =
-                match tokio::time::timeout(STALL_REPORT_INTERVAL, stream.try_next()).await {
-                    Ok(Ok(item)) => Ok(item),
-                    Ok(Err(e)) => Err(raise_error!(
-                        format!("{:#?}", e),
-                        classify_imap_error(&e)
-                    )),
-                    Err(_) => {
-                        if token.is_cancelled() {
-                            return Err(raise_error!(
-                                "Stream cancelled".into(),
-                                ErrorCode::InternalError
-                            ));
-                        }
-                        let stall_secs = last_recv.elapsed().as_secs_f64();
-                        if let Some(progress) = progress {
-                            progress(result.len() as u64, Some(stall_secs))?;
-                        }
-                        tracing::warn!(
-                            stall_secs = format!("{:.0}", stall_secs),
-                            fetched = result.len(),
-                            "fetch_uid_headers: server silent, waiting"
-                        );
-                        continue;
+            let item = match tokio::time::timeout(STALL_REPORT_INTERVAL, stream.try_next()).await {
+                Ok(Ok(item)) => Ok(item),
+                Ok(Err(e)) => Err(raise_error!(format!("{:#?}", e), classify_imap_error(&e))),
+                Err(_) => {
+                    if token.is_cancelled() {
+                        return Err(raise_error!(
+                            "Stream cancelled".into(),
+                            ErrorCode::InternalError
+                        ));
                     }
-                };
+                    let stall_secs = last_recv.elapsed().as_secs_f64();
+                    if let Some(progress) = progress {
+                        progress(result.len() as u64, Some(stall_secs))?;
+                    }
+                    tracing::warn!(
+                        stall_secs = format!("{:.0}", stall_secs),
+                        fetched = result.len(),
+                        "fetch_uid_headers: server silent, waiting"
+                    );
+                    continue;
+                }
+            };
             let item = match item {
                 Ok(item) => item,
                 Err(e) => return Err(e),
@@ -1126,10 +1113,7 @@ pub fn generate_uid_sequence_hashset(
 /// Returns the matching UIDs sorted ascending. Errors if the date cannot be
 /// parsed — a silently-broken date filter would download mail the user asked
 /// to exclude.
-fn filter_before_date(
-    entries: &[(u32, u64, i64)],
-    date: &str,
-) -> BichonResult<Vec<u32>> {
+fn filter_before_date(entries: &[(u32, u64, i64)], date: &str) -> BichonResult<Vec<u32>> {
     let cutoff = chrono::NaiveDate::parse_from_str(date, "%d-%b-%Y").map_err(|e| {
         raise_error!(
             format!("Invalid BEFORE date '{date}': {e}"),
@@ -1277,10 +1261,7 @@ mod test {
     fn filter_before_date_timezone_ignored() {
         // Internal date late in the day in +1400 still counts as that day:
         // 2025-05-26 23:59:00 +1400 == 2025-05-26 09:59 UTC.
-        let entries = vec![
-            (1, 100, ms(2025, 5, 25)),
-            (2, 200, ms(2025, 5, 26)),
-        ];
+        let entries = vec![(1, 100, ms(2025, 5, 25)), (2, 200, ms(2025, 5, 26))];
         let uids = filter_before_date(&entries, "26-May-2025").unwrap();
         assert_eq!(uids, vec![1]);
     }
