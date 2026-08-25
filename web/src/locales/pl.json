@@ -796,6 +796,7 @@
     "edition": "Wersja",
     "features": "Funkcje",
     "forbidden": "Zarządzanie licencjami jest dostępne tylko w wersji Pro.",
+    "licensee": "Licencjobiorca",
     "loadFailed": "Nie udało się załadować statusu licencji.",
     "machineIdDesc": "Unikalny identyfikator tego urządzenia wymagany do wygenerowania licencji offline.",
     "machineIdTitle": "Identyfikator maszyny",

@@ -796,6 +796,7 @@
     "edition": "Versio",
     "features": "Ominaisuudet",
     "forbidden": "Lisenssien hallinta on saatavilla vain Pro-versiossa.",
+    "licensee": "Lisenssinhaltija",
     "loadFailed": "Lisenstitilan lataaminen epäonnistui.",
     "machineIdDesc": "Tämän laitteen yksilöllinen tunniste, joka vaaditaan offline-lisenssin luomiseen.",
     "machineIdTitle": "Laitetunniste",

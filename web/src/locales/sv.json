@@ -796,6 +796,7 @@
     "edition": "Utgåva",
     "features": "Funktioner",
     "forbidden": "Licenshantering är endast tillgänglig i Pro-utgåvan.",
+    "licensee": "Licenstagare",
     "loadFailed": "Det gick inte att ladda licensstatus.",
     "machineIdDesc": "Unik identifierare för denna enhet som krävs för att generera en offlinelicens.",
     "machineIdTitle": "Maskin-ID",

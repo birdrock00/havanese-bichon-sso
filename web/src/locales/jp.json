@@ -796,6 +796,7 @@
     "edition": "エディション",
     "features": "機能",
     "forbidden": "ライセンス管理は Pro 版でのみ利用可能です。",
+    "licensee": "ライセンシー",
     "loadFailed": "ライセンスステータスの読み込みに失敗しました。",
     "machineIdDesc": "オフラインライセンスを生成するために必要な、このデバイスの固有の識別子です。",
     "machineIdTitle": "マシン ID",

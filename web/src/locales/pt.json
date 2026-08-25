@@ -796,6 +796,7 @@
     "edition": "Edição",
     "features": "Recursos",
     "forbidden": "O gerenciamento de licenças está disponível apenas na edição Pro.",
+    "licensee": "Licenciado",
     "loadFailed": "Falha ao carregar o status da licença.",
     "machineIdDesc": "Identificador único para este dispositivo necessário para gerar uma licença offline.",
     "machineIdTitle": "ID da máquina",

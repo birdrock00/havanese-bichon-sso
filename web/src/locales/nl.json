@@ -796,6 +796,7 @@
     "edition": "Editie",
     "features": "Functies",
     "forbidden": "Licentiebeheer is alleen beschikbaar in de Pro-editie.",
+    "licensee": "Licentiehouder",
     "loadFailed": "Kan licentiestatus niet laden.",
     "machineIdDesc": "Unieke identificatie voor dit apparaat die nodig is om een offline licentie te genereren.",
     "machineIdTitle": "Machine-ID",

@@ -796,6 +796,7 @@
     "edition": "Edición",
     "features": "Características",
     "forbidden": "La gestión de licencias solo está disponible en la edición Pro.",
+    "licensee": "Titular de la licencia",
     "loadFailed": "Error al cargar el estado de la licencia.",
     "machineIdDesc": "Identificador único de este dispositivo necesario para generar una licencia sin conexión.",
     "machineIdTitle": "ID de la máquina",

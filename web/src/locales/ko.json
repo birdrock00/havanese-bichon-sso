@@ -796,6 +796,7 @@
     "edition": "에디션",
     "features": "기능",
     "forbidden": "라이선스 관리는 Pro 버전에서만 사용할 수 있습니다.",
+    "licensee": "라이선스 사용자",
     "loadFailed": "라이선스 상태를 불러오지 못했습니다.",
     "machineIdDesc": "오프라인 라이선스를 생성하는 데 필요한 이 기기의 고유 식별자입니다.",
     "machineIdTitle": "머신 ID",

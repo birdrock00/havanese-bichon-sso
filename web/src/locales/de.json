@@ -796,6 +796,7 @@
     "edition": "Edition",
     "features": "Funktionen",
     "forbidden": "Die Lizenzverwaltung ist nur in der Pro-Edition verfügbar.",
+    "licensee": "Lizenznehmer",
     "loadFailed": "Lizenzstatus konnte nicht geladen werden.",
     "machineIdDesc": "Eindeutige Kennung für dieses Gerät, die zum Generieren einer Offline-Lizenz erforderlich ist.",
     "machineIdTitle": "Maschinen-ID",

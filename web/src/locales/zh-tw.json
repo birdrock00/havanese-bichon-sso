@@ -787,7 +787,7 @@
   },
   "license": {
     "accounts": "帳號額度",
-    "accountsUsed": "已使用 {{{used}}} / 共 {{{limit}}} 個",
+    "accountsUsed": "已使用 {{used}} / 共 {{limit}} 個",
     "chooseFile": "選擇檔案",
     "copied": "已複製到剪貼簿",
     "copyFailed": "複製失敗",
@@ -796,6 +796,7 @@
     "edition": "版本",
     "features": "功能特性",
     "forbidden": "授權管理僅在 Pro 版本中可用。",
+    "licensee": "被授權者",
     "loadFailed": "載入授權狀態失敗。",
     "machineIdDesc": "產生離線授權所需的目前裝置唯一識別碼。",
     "machineIdTitle": "機器碼",

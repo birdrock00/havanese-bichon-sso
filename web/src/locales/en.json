@@ -796,6 +796,7 @@
     "edition": "Edition",
     "features": "Features",
     "forbidden": "License management is available in the Pro edition only.",
+    "licensee": "Licensee",
     "loadFailed": "Failed to load license status.",
     "machineIdDesc": "Unique identifier for this device required to generate an offline license.",
     "machineIdTitle": "Machine ID",

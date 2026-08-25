@@ -796,6 +796,7 @@
     "edition": "Edizione",
     "features": "Funzionalità",
     "forbidden": "La gestione delle licenze è disponibile solo nell'edizione Pro.",
+    "licensee": "Licenziatario",
     "loadFailed": "Caricamento dello stato della licenza non riuscito.",
     "machineIdDesc": "Identificativo univoco per questo dispositivo necessario per generare una licenza offline.",
     "machineIdTitle": "ID macchina",

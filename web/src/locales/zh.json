@@ -787,7 +787,7 @@
   },
   "license": {
     "accounts": "账号额度",
-    "accountsUsed": "已使用 {{{used}}} / 共 {{{limit}}} 个",
+    "accountsUsed": "已使用 {{used}} / 共 {{limit}} 个",
     "chooseFile": "选择文件",
     "copied": "已复制到剪贴板",
     "copyFailed": "复制失败",
@@ -796,6 +796,7 @@
     "edition": "版本",
     "features": "功能特性",
     "forbidden": "许可证管理仅在 Pro 版本中可用。",
+    "licensee": "被许可方",
     "loadFailed": "加载许可证状态失败。",
     "machineIdDesc": "生成离线许可证所需的当前设备唯一标识。",
     "machineIdTitle": "机器码",

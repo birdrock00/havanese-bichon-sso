@@ -50,6 +50,11 @@ function formatEpoch(ts?: string | null): string {
   return new Date(n * 1000).toLocaleDateString()
 }
 
+function formatEdition(edition?: string | null): string {
+  if (!edition) return ''
+  return edition.charAt(0).toUpperCase() + edition.slice(1)
+}
+
 function InfoRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className='flex items-start justify-between gap-4 py-2'>
@@ -179,7 +184,7 @@ export default function LicensePage() {
                   </InfoRow>
                   <InfoRow label={t('license.edition')}>
                     {data.edition ? (
-                      <Badge variant='outline'>{data.edition}</Badge>
+                      <Badge variant='outline'>{formatEdition(data.edition)}</Badge>
                     ) : (
                       t('license.notAvailable')
                     )}
@@ -202,17 +207,6 @@ export default function LicensePage() {
                           limit: data.account_limit,
                         })
                       : t('license.notAvailable')}
-                  </InfoRow>
-                  <InfoRow label={t('license.features')}>
-                    {data.features && data.features.length > 0 ? (
-                      data.features.map((f) => (
-                        <Badge key={f} variant='outline' className='normal-case'>
-                          {f}
-                        </Badge>
-                      ))
-                    ) : (
-                      t('license.notAvailable')
-                    )}
                   </InfoRow>
                 </CardContent>
               </Card>

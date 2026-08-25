@@ -796,6 +796,7 @@
     "edition": "Édition",
     "features": "Fonctionnalités",
     "forbidden": "La gestion des licences est disponible uniquement dans l'édition Pro.",
+    "licensee": "Titulaire de la licence",
     "loadFailed": "Échec du chargement de l'état de la licence.",
     "machineIdDesc": "Identifiant unique de cet appareil requis pour générer une licence hors ligne.",
     "machineIdTitle": "Identifiant de machine",
