@@ -1021,6 +1021,7 @@
   "navigation": {
     "accessTokens": "Jetons d'accès",
     "accounts": "Comptes",
+    "analytics": "Analyses",
     "apiDocs": "Documentation API",
     "attachment": "Pièces jointes",
     "auditLog": "Journal d'audit",

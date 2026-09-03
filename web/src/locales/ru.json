@@ -1021,6 +1021,7 @@
   "navigation": {
     "accessTokens": "Токены доступа",
     "accounts": "Учетные записи",
+    "analytics": "Аналитика",
     "apiDocs": "Документация API",
     "attachment": "Вложения",
     "auditLog": "Журнал аудита",

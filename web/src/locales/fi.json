@@ -1021,6 +1021,7 @@
   "navigation": {
     "accessTokens": "Kulkuavaimet",
     "accounts": "Tilit",
+    "analytics": "Analytiikka",
     "apiDocs": "API-dokumentaatio",
     "attachment": "Liitteet",
     "auditLog": "Tarkastusloki",

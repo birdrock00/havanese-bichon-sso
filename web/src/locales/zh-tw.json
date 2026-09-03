@@ -1021,6 +1021,7 @@
   "navigation": {
     "accessTokens": "存取權杖",
     "accounts": "帳號",
+    "analytics": "分析",
     "apiDocs": "API文件",
     "attachment": "附件",
     "auditLog": "稽核日誌",

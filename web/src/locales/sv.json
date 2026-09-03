@@ -1021,6 +1021,7 @@
   "navigation": {
     "accessTokens": "Åtkomsttokens",
     "accounts": "Konton",
+    "analytics": "Analys",
     "apiDocs": "API-dokumentation",
     "attachment": "Bilagor",
     "auditLog": "Granskningslogg",

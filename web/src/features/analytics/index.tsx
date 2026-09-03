@@ -1356,7 +1356,7 @@ export default function AnalyticsPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {dimensionsForLevel(level).map((dimension) => (
-                          <SelectItem key={dimension} value={dimension}>
+                          <SelectItem className='text-xs' key={dimension} value={dimension}>
                             {dimensionLabel(dimension, t)}
                           </SelectItem>
                         ))}

@@ -1021,6 +1021,7 @@
   "navigation": {
     "accessTokens": "Adgangstokens",
     "accounts": "Konti",
+    "analytics": "Analyse",
     "apiDocs": "API-dokumentation",
     "attachment": "Vedhæftede filer",
     "auditLog": "Revisjonslogg",

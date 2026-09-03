@@ -1021,6 +1021,7 @@
   "navigation": {
     "accessTokens": "접근 토큰",
     "accounts": "계정",
+    "analytics": "분석",
     "apiDocs": "API 문서",
     "attachment": "첨부파일",
     "auditLog": "감사 로그",

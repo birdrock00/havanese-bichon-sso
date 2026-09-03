@@ -1021,6 +1021,7 @@
   "navigation": {
     "accessTokens": "Toegangstokens",
     "accounts": "Accounts",
+    "analytics": "Analyses",
     "apiDocs": "API Documentatie",
     "attachment": "Bijlagen",
     "auditLog": "Auditlogboek",

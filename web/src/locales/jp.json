@@ -1021,6 +1021,7 @@
   "navigation": {
     "accessTokens": "アクセストークン",
     "accounts": "アカウント",
+    "analytics": "分析",
     "apiDocs": "APIドキュメント",
     "attachment": "添付ファイル",
     "auditLog": "監査ログ",

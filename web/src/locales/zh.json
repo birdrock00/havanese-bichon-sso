@@ -1021,6 +1021,7 @@
   "navigation": {
     "accessTokens": "访问令牌",
     "accounts": "账户",
+    "analytics": "分析",
     "apiDocs": "API 文档",
     "attachment": "附件",
     "auditLog": "审计日志",

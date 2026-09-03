@@ -1021,6 +1021,7 @@
   "navigation": {
     "accessTokens": "Token di accesso",
     "accounts": "Account",
+    "analytics": "Analisi",
     "apiDocs": "Documentazione API",
     "attachment": "Allegati",
     "auditLog": "Registro di controllo",
