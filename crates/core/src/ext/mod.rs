@@ -27,3 +27,4 @@
 
 pub mod event_bus;
 pub mod text_extractor;
+pub mod user_cleanup;

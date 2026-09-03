@@ -22,7 +22,7 @@ import {
   IconLayoutDashboard,
   IconSettings
 } from '@tabler/icons-react'
-import { BadgeCheck, IdCard, Inbox, Paperclip, Search, Upload, Users2, ScrollText } from 'lucide-react'
+import { BadgeCheck, BarChart3, IdCard, Inbox, Paperclip, Search, Upload, Users2, ScrollText } from 'lucide-react'
 import { type SidebarData } from '../types'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/use-current-user'
@@ -35,6 +35,7 @@ export function useSidebarData(): SidebarData {
   const { features } = useEdition()
   const auditEnabled = features.includes('audit_log')
   const licenseEnabled = features.includes('license')
+  const analyticsEnabled = features.includes('analytics')
 
   return {
     navGroups: [
@@ -60,6 +61,22 @@ export function useSidebarData(): SidebarData {
             title: t('common.search'),
             url: '/search',
             icon: Search,
+          },
+          {
+            title: t('navigation.analytics', 'Analytics'),
+            url: '/analytics',
+            icon: BarChart3,
+            visible:
+              analyticsEnabled &&
+              require_any_permission([
+                'system:root',
+                'user:manage',
+                'data:read:all',
+                // Account-scoped managers / readers can analyze the accounts
+                // they can read - global "manage account all" is not required.
+                'data:read',
+                'account:manage',
+              ]),
           },
           {
             title: t('import.title', 'Import'),

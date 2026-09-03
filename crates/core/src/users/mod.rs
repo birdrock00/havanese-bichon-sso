@@ -456,6 +456,9 @@ impl BichonUserV2 {
             })?;
         }
 
+        // Remove edition-specific per-user data (e.g. Pro analytics views).
+        crate::ext::user_cleanup::run_cleanups(id);
+
         Ok(())
     }
 
