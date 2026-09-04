@@ -33,7 +33,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<OAuth2Entity>[
       <DataTableColumnHeader column={column} title={t('settings.id')} />
     ),
     cell: ({ row }) => {
-      return <LongText className='max-w-[140px]'>{row.original.id}</LongText>
+      return <LongText className='text-xs max-w-[140px]'>{row.original.id}</LongText>
     },
     meta: { className: 'max-w-[140px]' },
     enableHiding: false,
@@ -68,7 +68,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<OAuth2Entity>[
       <DataTableColumnHeader column={column} title={t('settings.authUrl')} />
     ),
     cell: ({ row }) => {
-      return <LongText className='max-w-[100px]'>{row.original.auth_url}</LongText>
+      return <LongText className='text-xs max-w-[100px]'>{row.original.auth_url}</LongText>
     },
     meta: { className: 'max-w-[100px]' },
     enableHiding: false,
@@ -80,7 +80,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<OAuth2Entity>[
       <DataTableColumnHeader column={column} title={t('settings.tokenUrl')} />
     ),
     cell: ({ row }) => {
-      return <LongText className='max-w-[100px]'>{row.original.token_url}</LongText>
+      return <LongText className='text-xs max-w-[100px]'>{row.original.token_url}</LongText>
     },
     meta: { className: 'max-w-[100px]' },
     enableHiding: false,
@@ -92,7 +92,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<OAuth2Entity>[
       <DataTableColumnHeader column={column} title={t('settings.description')} />
     ),
     cell: ({ row }) => (
-      <LongText className='max-w-[180px]'>{row.original.description}</LongText>
+      <LongText className='text-xs max-w-[180px]'>{row.original.description}</LongText>
     ),
     meta: { className: 'max-w-[180px]' },
     enableHiding: true,
@@ -106,7 +106,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<OAuth2Entity>[
     cell: ({ row }) => {
       const created_at = row.original.created_at;
       const date = format(new Date(created_at), 'yyyy-MM-dd HH:mm:ss');
-      return <LongText className='max-w-36'>{date}</LongText>;
+      return <LongText className='text-xs max-w-36'>{date}</LongText>;
     },
     meta: { className: 'w-36' },
     enableHiding: false,
@@ -119,7 +119,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<OAuth2Entity>[
     cell: ({ row }) => {
       const updated_at = row.original.updated_at;
       const date = format(new Date(updated_at), 'yyyy-MM-dd HH:mm:ss');
-      return <LongText className='max-w-36'>{date}</LongText>;
+      return <LongText className='text-xs max-w-36'>{date}</LongText>;
     },
     meta: { className: 'w-36' },
     enableHiding: false,

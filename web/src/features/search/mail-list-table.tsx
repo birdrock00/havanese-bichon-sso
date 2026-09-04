@@ -94,7 +94,7 @@ export function MailListTable({
         const accountPrefix = account_name || account_email.split('@')[0];//https://github.com/rustmailer/bichon/issues/306
 
         return (
-          <div className="flex flex-col py-1.5 min-w-0 group">
+          <div className="flex flex-col py-0.5 min-w-0 group">
             <div
               className="cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5"
               onClick={(e) => {
@@ -151,7 +151,7 @@ export function MailListTable({
         };
 
         return (
-          <div className="group relative flex items-center w-full min-w-0 px-2 py-1.5 overflow-hidden">
+          <div className="group relative flex items-center w-full min-w-0 px-2 py-0.5 overflow-hidden">
             <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-primary opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="text-xs flex flex-wrap items-center gap-x-1 gap-y-0.5 min-w-0 flex-1">
               {visible.map((email, index) => (
@@ -207,7 +207,7 @@ export function MailListTable({
       cell: ({ row }) => {
         const tags = row.original.tags ?? [];
         return (
-          <div className="flex flex-col gap-1 py-1.5 min-w-0">
+          <div className="flex flex-col gap-1 py-0.5 min-w-0">
             <LongText className='text-xs font-medium truncate'>
               {row.original.subject}
             </LongText>

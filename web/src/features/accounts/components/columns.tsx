@@ -27,6 +27,7 @@ import { RunningStateCellAction } from './running-state-action'
 import { EnableAction } from './enable-action'
 import { useTranslation } from 'react-i18next'
 import { AccountModel } from '@/api/account/api'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 export function useColumns(): ColumnDef<AccountModel>[] {
   const { t } = useTranslation()
@@ -38,7 +39,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         <DataTableColumnHeader column={column} title={t('accounts.id')} />
       ),
       cell: ({ row }) => {
-        return <LongText>{row.original.id}</LongText>
+        return <LongText className='text-xs'>{row.original.id}</LongText>
       },
       enableSorting: false,
       enableHiding: false,
@@ -50,7 +51,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         <DataTableColumnHeader column={column} title={t('accounts.name')} className="justify-center" />
       ),
       cell: ({ row }) => {
-        return <LongText>{row.original.account_name ?? "n/a"}</LongText>
+        return <LongText className='text-xs'>{row.original.account_name ?? "n/a"}</LongText>
       },
       meta: { className: 'max-w-[90px] text-center' },
     },
@@ -60,7 +61,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         <DataTableColumnHeader column={column} title={t('accounts.email')} className="justify-center" />
       ),
       cell: ({ row }) => {
-        return <LongText>{row.original.email}</LongText>
+        return <LongText className='text-xs'>{row.original.email}</LongText>
       },
       enableHiding: false,
       meta: { className: 'max-w-[220px]' },
@@ -90,7 +91,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         <DataTableColumnHeader column={column} title={t('accounts.type')} />
       ),
       cell: ({ row }) => {
-        return <LongText>{row.original.account_type}</LongText>
+        return <LongText className='text-xs'>{row.original.account_type}</LongText>
       },
       meta: { className: 'text-center max-w-[60px]' },
       enableHiding: false,
@@ -104,12 +105,12 @@ export function useColumns(): ColumnDef<AccountModel>[] {
       cell: ({ row }) => {
         let account_type = row.original.account_type;
         if (account_type === "NoSync") {
-          return <LongText className="text-center">n/a</LongText>
+          return <LongText className="text-center text-xs">n/a</LongText>
         }
         if (row.original.download_schedule) {
-          return <LongText className="text-center">{row.original.download_schedule}</LongText>
+          return <LongText className="text-center  text-xs">{row.original.download_schedule}</LongText>
         }
-        return <LongText className="text-center">{row.original.download_interval_min} min</LongText>
+        return <LongText className="text-center  text-xs">{row.original.download_interval_min} min</LongText>
       },
       meta: { className: 'text-center max-w-[160px]' },
       enableHiding: false,
@@ -132,12 +133,18 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         const { created_user_name, created_user_email } = row.original;
         return (
           <div className="flex flex-col items-center leading-[1.1]">
-            <span className="text-[13px] font-medium text-foreground leading-none">
-              {created_user_name}
-            </span>
-            <span className="text-[11px] text-muted-foreground font-mono leading-none">
-              {created_user_email}
-            </span>
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="text-xs font-medium text-foreground leading-none cursor-default">
+                    {created_user_name}
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{created_user_email}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         );
       },
@@ -152,7 +159,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
       cell: ({ row }) => {
         const created_at = row.original.created_at;
         const date = format(new Date(created_at), 'yyyy-MM-dd HH:mm:ss');
-        return <LongText className='max-w-36'>{date}</LongText>;
+        return <LongText className='max-w-36 text-xs'>{date}</LongText>;
       },
       meta: { className: 'w-36' },
       enableHiding: false,
@@ -165,7 +172,7 @@ export function useColumns(): ColumnDef<AccountModel>[] {
       cell: ({ row }) => {
         const updated_at = row.original.updated_at;
         const date = format(new Date(updated_at), 'yyyy-MM-dd HH:mm:ss');
-        return <LongText className='max-w-36'>{date}</LongText>;
+        return <LongText className='max-w-36 text-xs'>{date}</LongText>;
       },
       meta: { className: 'w-36' },
       enableHiding: false,

@@ -70,10 +70,10 @@ export default function Settings() {
       <FixedHeader />
       <Main>
         <div className='space-y-0.5'>
-          <h1 className='text-2xl font-bold tracking-tight md:text-3xl'>
+          <h1 className='text-lg font-bold tracking-tight md:text-3xl'>
             {t('settings.header.title')}
           </h1>
-          <p className='text-muted-foreground'>
+          <p className='text-xs text-muted-foreground'>
             {t('settings.header.description')}
           </p>
         </div>

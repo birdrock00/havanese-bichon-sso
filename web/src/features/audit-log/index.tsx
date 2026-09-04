@@ -34,6 +34,7 @@ import { list_minimal_users } from '@/api/users/api'
 import { minimal_account_list } from '@/api/account/api'
 import { useEdition } from '@/hooks/use-edition'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { Separator } from '@/components/ui/separator'
 
 const PAGE_SIZE = 50
 
@@ -326,10 +327,10 @@ export default function AuditLog() {
       <FixedHeader />
       <Main>
         <div className='mx-auto w-full max-w-7xl px-4'>
-          <h1 className='mb-4 text-xl font-semibold'>
+          <h1 className='mb-4 text-lg font-semibold'>
             {t('audit.title', 'Audit Log')}
           </h1>
-
+          <Separator className='mt-2 mb-4 lg:mt-3 lg:mb-6' />
           {/* Filters */}
           <div className='mb-4 flex flex-wrap items-end gap-2'>
             <div className='flex flex-col gap-1'>
@@ -406,8 +407,8 @@ export default function AuditLog() {
               />
             </div>
             <div className='ms-auto flex items-end gap-2'>
-              <Button onClick={applyFilters}>{t('audit.apply', 'Apply')}</Button>
-              <Button variant='outline' onClick={resetFilters}>
+              <Button className='text-xs' onClick={applyFilters} size="sm">{t('audit.apply', 'Apply')}</Button>
+              <Button className="text-xs" variant='outline' size="sm" onClick={resetFilters}>
                 {t('audit.reset', 'Reset')}
               </Button>
             </div>
@@ -433,20 +434,20 @@ export default function AuditLog() {
                   <TableBody>
                     {data?.items?.map((rec) => (
                       <TableRow key={rec.id}>
-                        <TableCell className='whitespace-nowrap text-sm'>
+                        <TableCell className='whitespace-nowrap text-xs'>
                           {formatTime(rec.ts_ms)}
                         </TableCell>
-                        <TableCell className='text-sm'>{rec.user}</TableCell>
+                        <TableCell className='text-xs'>{rec.user}</TableCell>
                         <TableCell>
-                          <span className='rounded bg-muted px-1.5 py-0.5 text-sm'>
+                          <span className='rounded bg-muted px-1.5 py-0.5 text-xs'>
                             {eventTypeLabel(t, rec.event_type)}
                           </span>
                         </TableCell>
                         <TableCell className='max-w-md'>
-                          <div className='truncate text-sm'>{describeEvent(rec) || '—'}</div>
+                          <div className='truncate text-xs'>{describeEvent(rec) || '—'}</div>
                           <PayloadView record={rec} />
                         </TableCell>
-                        <TableCell className='text-sm'>{rec.ip ?? '—'}</TableCell>
+                        <TableCell className='text-xs'>{rec.ip ?? '—'}</TableCell>
                       </TableRow>
                     ))}
                     {data?.items?.length === 0 && (

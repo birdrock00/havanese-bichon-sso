@@ -154,8 +154,8 @@ export default function LicensePage() {
       <FixedHeader />
       <Main>
         <div className='mx-auto w-full max-w-7xl px-4'>
-          <h1 className='mb-1 text-xl font-semibold'>{t('license.title')}</h1>
-          <p className='mb-6 text-sm text-muted-foreground'>{t('license.description')}</p>
+          <h1 className='mb-1 text-lg font-semibold'>{t('license.title')}</h1>
+          <p className='mb-6 text-xs text-muted-foreground'>{t('license.description')}</p>
 
           {isLoading && (
             <div className='flex h-40 items-center justify-center'>
