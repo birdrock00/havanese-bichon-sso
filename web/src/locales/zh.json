@@ -603,6 +603,7 @@
   },
   "attachment": {
     "all_fields_desc": "匹配附件名称、邮件主题和发件人",
+    "all_fields_desc_pro": "匹配附件名称、内容、主题和发件人",
     "date": "日期",
     "download": "下载",
     "downloading": "正在下载...",

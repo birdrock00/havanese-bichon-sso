@@ -603,6 +603,7 @@
   },
   "attachment": {
     "all_fields_desc": "Matchar bilagenamn, ämne och avsändare",
+    "all_fields_desc_pro": "Matchar namn, innehåll, ämne och avsändare",
     "date": "Datum",
     "download": "Ladda ner",
     "downloading": "Laddar ner...",

@@ -603,6 +603,7 @@
   },
   "attachment": {
     "all_fields_desc": "Matches attachment name, subject, and sender",
+    "all_fields_desc_pro": "Matches attachment name, content, subject, and sender",
     "date": "Date",
     "download": "Download",
     "downloading": "Downloading...",

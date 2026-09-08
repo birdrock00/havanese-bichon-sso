@@ -603,6 +603,7 @@
   },
   "attachment": {
     "all_fields_desc": "첨부 파일 이름, 메일 제목 및 발신자 일치",
+    "all_fields_desc_pro": "첨부 파일 이름, 내용, 제목 및 보낸 사람과 일치",
     "date": "날짜",
     "download": "다운로드",
     "downloading": "다운로드 중...",

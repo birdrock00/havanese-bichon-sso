@@ -23,6 +23,7 @@ import { Search, X, Clock, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAttachmentContext } from "./context"
 import { useTranslation } from "react-i18next"
+import { useEdition } from "@/hooks/use-edition"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 const STORAGE_KEY = "bichon_attachment_search_history"
@@ -34,6 +35,7 @@ const SEARCH_FIELDS: SearchField[] = ["text", "subject", "attachment_name", "fro
 
 export function TextSearchInput() {
     const { t } = useTranslation()
+    const { features } = useEdition()
     const { filter, setFilter } = useAttachmentContext()
 
     const [value, setValue] = useState("")
@@ -142,7 +144,9 @@ export function TextSearchInput() {
                         <SelectItem value="text" className="font-medium cursor-pointer text-xs">
                             {t("search_input.all")}
                             <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-                                {t("attachment.all_fields_desc")}
+                                {features.includes("pdf_search")
+                                    ? t("attachment.all_fields_desc_pro", "Matches attachment name, content, subject, and sender")
+                                    : t("attachment.all_fields_desc")}
                             </p>
                         </SelectItem>
                         <SelectItem value="subject" className="cursor-pointer text-xs">

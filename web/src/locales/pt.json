@@ -603,6 +603,7 @@
   },
   "attachment": {
     "all_fields_desc": "Corresponde ao nome do anexo, assunto e remetente",
+    "all_fields_desc_pro": "Corresponde ao nome, conteúdo, assunto e remetente",
     "date": "Data",
     "download": "Baixar",
     "downloading": "Baixando...",

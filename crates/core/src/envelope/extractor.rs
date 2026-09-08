@@ -558,7 +558,7 @@ pub async fn detach_and_store_attachments(
         if !inline || !has_cid {
             let decoded_len = att.contents().len();
             if should_extract
-                && decoded_len <= crate::ext::text_extractor::MAX_EXTRACT_BYTES
+                && decoded_len <= crate::ext::text_extractor::max_extract_bytes()
                 && crate::ext::text_extractor::should_try_extract(&file_type, &ext)
             {
                 text_candidates.push(TextCandidate {

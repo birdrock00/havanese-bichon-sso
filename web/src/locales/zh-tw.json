@@ -603,6 +603,7 @@
   },
   "attachment": {
     "all_fields_desc": "匹配附件名稱、郵件主題和發件人",
+    "all_fields_desc_pro": "符合附件名稱、內容、主旨與寄件者",
     "date": "日期",
     "download": "下載",
     "downloading": "正在下載...",

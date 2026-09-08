@@ -603,6 +603,7 @@
   },
   "attachment": {
     "all_fields_desc": "Correspond au nom de la pièce jointe, à l'objet et à l'expéditeur",
+    "all_fields_desc_pro": "Correspond au nom, contenu, objet et expéditeur de la pièce jointe",
     "date": "Date",
     "download": "Télécharger",
     "downloading": "Téléchargement en cours...",

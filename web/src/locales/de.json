@@ -603,6 +603,7 @@
   },
   "attachment": {
     "all_fields_desc": "Gleicht Anhangsname, Betreff und Absender ab",
+    "all_fields_desc_pro": "Durchsucht Anhangname, Inhalt, Betreff und Absender",
     "date": "Datum",
     "download": "Herunterladen",
     "downloading": "Herunterladen...",

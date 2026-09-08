@@ -603,6 +603,7 @@
   },
   "attachment": {
     "all_fields_desc": "添付ファイル名、件名、送信者を照合",
+    "all_fields_desc_pro": "添付ファイル名、内容、件名、送信者に一致",
     "date": "日付",
     "download": "ダウンロード",
     "downloading": "ダウンロード中...",

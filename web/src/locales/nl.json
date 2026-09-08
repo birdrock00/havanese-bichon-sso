@@ -603,6 +603,7 @@
   },
   "attachment": {
     "all_fields_desc": "Komt overeen met bijlagennaam, onderwerp en afzender",
+    "all_fields_desc_pro": "Komt overeen met naam, inhoud, onderwerp en afzender",
     "date": "Datum",
     "download": "Downloaden",
     "downloading": "Downloaden...",

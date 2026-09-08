@@ -603,6 +603,7 @@
   },
   "attachment": {
     "all_fields_desc": "Dopasuj nazwę załącznika, temat i nadawcę",
+    "all_fields_desc_pro": "Pasuje do nazwy, treści, tematu i nadawcy",
     "date": "Data",
     "download": "Pobierz",
     "downloading": "Pobieranie...",

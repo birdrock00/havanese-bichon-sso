@@ -603,6 +603,7 @@
   },
   "attachment": {
     "all_fields_desc": "Coincide con el nombre del adjunto, asunto y remitente",
+    "all_fields_desc_pro": "Coincide con nombre, contenido, asunto y remitente",
     "date": "Fecha",
     "download": "Descargar",
     "downloading": "Descargando...",

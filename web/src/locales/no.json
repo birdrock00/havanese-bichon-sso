@@ -603,6 +603,7 @@
   },
   "attachment": {
     "all_fields_desc": "Matcher vedleggsnavn, emne og avsender",
+    "all_fields_desc_pro": "Matcher navn, innhold, emne og avsender",
     "date": "Dato",
     "download": "Last ned",
     "downloading": "Laster ned...",

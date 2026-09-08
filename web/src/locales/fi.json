@@ -603,6 +603,7 @@
   },
   "attachment": {
     "all_fields_desc": "Täsmää liitteen nimeen, aiheeseen ja lähettäjään",
+    "all_fields_desc_pro": "Hakee liitteen nimestä, sisällöstä, aiheesta ja lähettäjästä",
     "date": "Päivämäärä",
     "download": "Lataa",
     "downloading": "Ladataan...",
