@@ -191,13 +191,23 @@
       "enableFiltering": "Aktiver indholdsfiltrering",
       "enableFilteringDesc": "Når den er aktiveret, vil kun e-mails, der matcher reglerne nedenfor, blive arkiveret. Når den er deaktiveret, arkiveres alle e-mails.",
       "exclude": "Ekskluder",
+      "extraction": {
+        "attachmentNames": "Navne på vedhæftede filer",
+        "attachmentNamesHelp": "Udtræk kun vedhæftede filer, hvis navn matcher disse mønstre.",
+        "extensions": "Filtyper",
+        "extensionsHelp": "Kun tekst fra valgte filtyper udtrækkes til fuldtekstsøgning.",
+        "folders": "Mapper",
+        "foldersHelp": "Udtræk kun vedhæftede filer fra mapper, der matcher disse mønstre.",
+        "senders": "Afsendere",
+        "sendersHelp": "Udtræk kun vedhæftede filer fra afsendere, der matcher disse mønstre."
+      },
       "include": "Inkluder",
       "matchType": {
         "contains": "Indeholder",
-        "endsWith": "Ender med",
-        "isExactly": "Er præcis",
-        "regex": "Regulært udtryk (Regex)",
-        "startsWith": "Begynder med"
+        "endsWith": "Slutter med",
+        "isExactly": "Præcis",
+        "regex": "Regex",
+        "startsWith": "Starter med"
       },
       "noExcludePatterns": "Ingen ekskluderingsmønstre – intet er ekskluderet.",
       "noIncludePatterns": "Ingen inkluderingsmønstre – alt er inkluderet.",
@@ -274,6 +284,13 @@
     "refreshToken": "Opdateringstoken",
     "refreshTokenCopiedToClipboard": "Opdateringstoken kopieret til udklipsholderen",
     "relative": "Relativ",
+    "rules": {
+      "advancedSettings": "Avancerede indstillinger",
+      "archiveDesc": "Når aktiveret, arkiveres kun e-mails, der matcher reglerne. Når deaktiveret, arkiveres alle e-mails.",
+      "archiveTitle": "Arkivfiltrering",
+      "extractionDesc": "Når aktiveret, udtrækkes kun tekst fra vedhæftede filer, der matcher reglerne nedenfor. Når deaktiveret, udtrækkes tekst fra alle vedhæftede filer.",
+      "extractionTitle": "Udtræk af vedhæftede filer"
+    },
     "runGapFill": "Tjek for nye e-mails og fyld automatisk op på ældre manglende e-mails",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "Ny konto",
       "performance": "Ydeevne",
       "reset": "Nulstil indstillinger",
+      "rules": "Regler",
+      "rulesDesc": "Konfigurer regler for arkivering og vedhæftede filer.",
       "save": "Gem indstillinger",
       "saved": "Gemt",
       "savedDesc": "Kontoindstillinger er gemt.",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "Inkrementelt synkroniseringsinterval skal være et tal",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Ugyldig e-mailadresse",
+    "invalidRegex": "Ugyldigt Regex-udtryk",
     "invalidUrl": "Ugyldig URL",
     "maxEmailSizeMustBeNumber": "Maks. e-mailstørrelse skal være et tal.",
     "maxEmailSizeTooLarge": "Maks. e-mailstørrelse må ikke overstige 100 MB.",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "Adgangskode er påkrævet, når godkendelsesmetoden er Adgangskode",
     "pleaseEnterPassword": "Indtast venligst din adgangskode",
     "pleaseEnterUsernameOrEmail": "Indtast dit brugernavn eller din e-mailadresse",
+    "requireExtractionExtension": "Vælg mindst én filtype",
     "required": "Dette felt er påkrævet",
     "singleRequestBatchSizeMustBeNumber": "Batch‑størrelse skal være et tal",
     "singleRequestBatchSizeTooLarge": "Batch‑størrelse skal være højst 200",

@@ -191,12 +191,22 @@
       "enableFiltering": "Enable content filtering",
       "enableFilteringDesc": "When enabled, only emails matching the rules below will be archived. When disabled, all emails are archived.",
       "exclude": "Exclude",
+      "extraction": {
+        "attachmentNames": "Attachment Names",
+        "attachmentNamesHelp": "Only extract attachments whose filename matches these patterns.",
+        "extensions": "File Extensions",
+        "extensionsHelp": "Only attachments in the selected formats are extracted for full-text search.",
+        "folders": "Folders",
+        "foldersHelp": "Only extract attachments from emails in folders matching these patterns.",
+        "senders": "Senders",
+        "sendersHelp": "Only extract attachments from senders matching these patterns."
+      },
       "include": "Include",
       "matchType": {
         "contains": "Contains",
         "endsWith": "Ends with",
-        "isExactly": "Is exactly",
-        "regex": "Regular expression (Regex)",
+        "isExactly": "Exact",
+        "regex": "Regex",
         "startsWith": "Starts with"
       },
       "noExcludePatterns": "No exclude patterns — nothing is excluded.",
@@ -274,6 +284,13 @@
     "refreshToken": "Refresh Token",
     "refreshTokenCopiedToClipboard": "Refresh token copied to clipboard",
     "relative": "Relative",
+    "rules": {
+      "advancedSettings": "Advanced Settings",
+      "archiveDesc": "When enabled, only matching emails are archived. When disabled, all emails are archived.",
+      "archiveTitle": "Archive Filtering",
+      "extractionDesc": "When enabled, only matching attachments are extracted for full-text search. When disabled, text is extracted from all attachments.",
+      "extractionTitle": "Attachment Extraction"
+    },
     "runGapFill": "Check new emails and automatically backfill older missing emails",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "New Account",
       "performance": "Performance",
       "reset": "Reset settings",
+      "rules": "Rules",
+      "rulesDesc": "Configure archive and attachment rules.",
       "save": "Save settings",
       "saved": "Saved",
       "savedDesc": "Account settings saved successfully.",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "Incremental sync interval must be a number",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Invalid email address",
+    "invalidRegex": "Invalid regex",
     "invalidUrl": "Invalid URL",
     "maxEmailSizeMustBeNumber": "Max email size must be a number.",
     "maxEmailSizeTooLarge": "Max email size must not exceed 100 MB.",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "Password is required when auth method is Password",
     "pleaseEnterPassword": "Please enter your password",
     "pleaseEnterUsernameOrEmail": "Please enter your username or email",
+    "requireExtractionExtension": "Select at least one file extension",
     "required": "This field is required",
     "singleRequestBatchSizeMustBeNumber": "Batch size must be a number",
     "singleRequestBatchSizeTooLarge": "Batch size must be at most 200",

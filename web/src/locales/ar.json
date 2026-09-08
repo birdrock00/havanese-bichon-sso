@@ -191,12 +191,22 @@
       "enableFiltering": "تفعيل تصفية المحتوى",
       "enableFilteringDesc": "عند التفعيل، سيتم أرشفة الرسائل التي تطابق القواعد أدناه فقط. عند التعطيل، يتم أرشفة جميع الرسائل.",
       "exclude": "استبعاد",
+      "extraction": {
+        "attachmentNames": "أسماء المرفقات",
+        "attachmentNamesHelp": "يتم استخراج المرفقات التي تتطابق أسماؤها مع هذه الأنماط فقط.",
+        "extensions": "امتدادات الملفات",
+        "extensionsHelp": "يتم استخراج نص المرفقات بالتنسيقات المحددة فقط للبحث الكامل.",
+        "folders": "المجلدات",
+        "foldersHelp": "يتم استخراج المرفقات فقط من المجلدات المطابقة لهذه الأنماط.",
+        "senders": "المرسلون",
+        "sendersHelp": "يتم استخراج المرفقات فقط من المرسلين المطابقين لهذه الأنماط."
+      },
       "include": "تضمين",
       "matchType": {
         "contains": "يحتوي على",
         "endsWith": "ينتهي بـ",
-        "isExactly": "يطابق تماماً",
-        "regex": "تعبير نمطي (Regex)",
+        "isExactly": "مطابق تمامًا",
+        "regex": "Regex",
         "startsWith": "يبدأ بـ"
       },
       "noExcludePatterns": "لا توجد أنماط استبعاد — لن يتم استبعاد أي شيء.",
@@ -274,6 +284,13 @@
     "refreshToken": "رمز التحديث",
     "refreshTokenCopiedToClipboard": "تم نسخ رمز التحديث إلى الحافظة",
     "relative": "نسبي",
+    "rules": {
+      "advancedSettings": "الإعدادات المتقدمة",
+      "archiveDesc": "عند التفعيل، تتم أرشفة الرسائل المطابقة للقواعد فقط. عند التعطيل، تتم أرشفة جميع الرسائل.",
+      "archiveTitle": "تصفية الأرشيف",
+      "extractionDesc": "عند التفعيل، تُستخرج فقط المرفقات المطابقة للقواعد أدناه للبحث الكامل. عند التعطيل، تُستخرج النصوص من جميع المرفقات.",
+      "extractionTitle": "استخراج المرفقات"
+    },
     "runGapFill": "فحص البريد الجديد وتنزيله، مع ملء الرسائل القديمة المفقودة محلياً تلقائياً",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "حساب جديد",
       "performance": "الأداء",
       "reset": "إعادة ضبط الإعدادات",
+      "rules": "القواعد",
+      "rulesDesc": "تكوين قواعد الأرشفة والمرفقات.",
       "save": "حفظ الإعدادات",
       "saved": "تم الحفظ",
       "savedDesc": "تم حفظ إعدادات الحساب بنجاح.",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "يجب أن يكون فاصل المزامنة التزايدية رقمًا",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "عنوان بريد إلكتروني غير صالح",
+    "invalidRegex": "تعبير Regex غير صالح",
     "invalidUrl": "عنوان URL غير صالح",
     "maxEmailSizeMustBeNumber": "يجب أن يكون الحد الأقصى لحجم البريد رقماً.",
     "maxEmailSizeTooLarge": "يجب ألا يتجاوز الحد الأقصى لحجم البريد 100 ميجابايت.",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "كلمة المرور مطلوبة عندما تكون طريقة المصادقة هي كلمة المرور",
     "pleaseEnterPassword": "الرجاء إدخال كلمة المرور الخاصة بك",
     "pleaseEnterUsernameOrEmail": "الرجاء إدخال اسم المستخدم أو البريد الإلكتروني الخاص بك",
+    "requireExtractionExtension": "يرجى تحديد امتداد ملف واحد على الأقل",
     "required": "هذا الحقل مطلوب",
     "singleRequestBatchSizeMustBeNumber": "يجب أن يكون حجم الدُفعة رقماً",
     "singleRequestBatchSizeTooLarge": "يجب أن يكون حجم الدُفعة على الأكثر 200",

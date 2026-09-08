@@ -191,12 +191,22 @@
       "enableFiltering": "Включить фильтрацию контента",
       "enableFilteringDesc": "Если включено, будут архивироваться только письма, соответствующие правилам ниже. Если отключено — архивируются все письма.",
       "exclude": "Исключить",
+      "extraction": {
+        "attachmentNames": "Имена вложений",
+        "attachmentNamesHelp": "Извлекайте только вложения с именами, соответствующими этим шаблонам.",
+        "extensions": "Расширения",
+        "extensionsHelp": "Для поиска извлекаются только вложения выбранных форматов.",
+        "folders": "Папки",
+        "foldersHelp": "Извлекайте вложения только из папок, соответствующих этим шаблонам.",
+        "senders": "Отправители",
+        "sendersHelp": "Извлекайте вложения только от отправителей, соответствующих этим шаблонам."
+      },
       "include": "Включить",
       "matchType": {
         "contains": "Содержит",
         "endsWith": "Заканчивается на",
         "isExactly": "Точное совпадение",
-        "regex": "Регулярное выражение (Regex)",
+        "regex": "Regex",
         "startsWith": "Начинается с"
       },
       "noExcludePatterns": "Нет шаблонов исключения — ничто не исключено.",
@@ -274,6 +284,13 @@
     "refreshToken": "Refresh Token",
     "refreshTokenCopiedToClipboard": "Refresh token скопирован в буфер обмена",
     "relative": "Относительная",
+    "rules": {
+      "advancedSettings": "Расширенные настройки",
+      "archiveDesc": "При включении архивируются только письма, соответствующие правилам. При отключении архивируются все письма.",
+      "archiveTitle": "Фильтрация архива",
+      "extractionDesc": "При включении извлекаются только вложения, соответствующие правилам. При отключении текст извлекается из всех вложений.",
+      "extractionTitle": "Извлечение вложений"
+    },
     "runGapFill": "Проверять новые письма и автоматически восполнять старые недостающие сообщения",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "Новый аккаунт",
       "performance": "Производительность",
       "reset": "Сбросить настройки",
+      "rules": "Правила",
+      "rulesDesc": "Настройте правила архивации и вложений.",
       "save": "Сохранить настройки",
       "saved": "Сохранено",
       "savedDesc": "Настройки аккаунта успешно сохранены.",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "Интервал инкрементальной синхронизации должен быть числом",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Неверный адрес электронной почты",
+    "invalidRegex": "Недопустимый regex",
     "invalidUrl": "Неверный URL",
     "maxEmailSizeMustBeNumber": "Максимальный размер письма должен быть числом.",
     "maxEmailSizeTooLarge": "Максимальный размер письма не должен превышать 100 МБ.",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "Пароль обязателен, когда метод авторизации - Пароль",
     "pleaseEnterPassword": "Пожалуйста, введите ваш пароль",
     "pleaseEnterUsernameOrEmail": "Пожалуйста, введите ваше имя пользователя или адрес электронной почты",
+    "requireExtractionExtension": "Выберите хотя бы одно расширение",
     "required": "Это поле обязательно",
     "singleRequestBatchSizeMustBeNumber": "Размер пакета должен быть числом",
     "singleRequestBatchSizeTooLarge": "Размер пакета должен быть не более 200",

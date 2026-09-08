@@ -191,13 +191,23 @@
       "enableFiltering": "コンテンツフィルターを有効にする",
       "enableFilteringDesc": "有効にすると、以下のルールに一致するメールのみがアーカイブされます。無効にすると、すべてのメールがアーカイブされます。",
       "exclude": "除外する",
+      "extraction": {
+        "attachmentNames": "添付ファイル名",
+        "attachmentNamesHelp": "ファイル名がこれらのパターンに一致する添付ファイルのみ抽出します。",
+        "extensions": "ファイル拡張子",
+        "extensionsHelp": "選択した形式の添付ファイルのみ全文検索用に抽出されます。",
+        "folders": "フォルダー",
+        "foldersHelp": "これらのパターンに一致するフォルダーのメールからのみ添付ファイルを抽出します。",
+        "senders": "送信者",
+        "sendersHelp": "これらのパターンに一致する送信者からのみ添付ファイルを抽出します。"
+      },
       "include": "含める",
       "matchType": {
         "contains": "含む",
-        "endsWith": "後方一致",
+        "endsWith": "で終わる",
         "isExactly": "完全一致",
-        "regex": "正規表現 (Regex)",
-        "startsWith": "前方一致"
+        "regex": "正規表現",
+        "startsWith": "で始まる"
       },
       "noExcludePatterns": "除外するパターンがありません — 何も除外されません。",
       "noIncludePatterns": "含めるパターンがありません — すべて対象になります。",
@@ -274,6 +284,13 @@
     "refreshToken": "リフレッシュトークン",
     "refreshTokenCopiedToClipboard": "リフレッシュトークンをクリップボードにコピーしました",
     "relative": "相対",
+    "rules": {
+      "advancedSettings": "詳細設定",
+      "archiveDesc": "有効にすると、ルールに一致するメールのみがアーカイブされます。無効にすると、すべてのメールがアーカイブされます。",
+      "archiveTitle": "アーカイブフィルタリング",
+      "extractionDesc": "有効にすると、ルールに一致する添付ファイルのみが抽出されます。無効にすると、すべての添付ファイルからテキストが抽出されます。",
+      "extractionTitle": "添付ファイルの抽出"
+    },
     "runGapFill": "新着メールを確認してダウンロードし、過去の未取得メールも自動的に差分補填します",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "新規アカウント",
       "performance": "パフォーマンス",
       "reset": "設定をリセット",
+      "rules": "ルール",
+      "rulesDesc": "アーカイブと添付ファイルのルールを設定します。",
       "save": "設定を保存",
       "saved": "保存済み",
       "savedDesc": "アカウント設定が正常に保存されました。",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "増分同期間隔は数値である必要があります",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "無効なメールアドレスです",
+    "invalidRegex": "無効な正規表現",
     "invalidUrl": "無効なURLです",
     "maxEmailSizeMustBeNumber": "最大メールサイズは数値で入力してください。",
     "maxEmailSizeTooLarge": "最大メールサイズは 100 MB 以下にしてください。",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "認証方式がパスワードの場合、パスワードは必須です",
     "pleaseEnterPassword": "パスワードを入力してください",
     "pleaseEnterUsernameOrEmail": "ユーザー名またはメールアドレスを入力してください",
+    "requireExtractionExtension": "ファイル拡張子を1つ以上選択してください",
     "required": "このフィールドは必須です",
     "singleRequestBatchSizeMustBeNumber": "バッチサイズは数値でなければなりません",
     "singleRequestBatchSizeTooLarge": "バッチサイズは最大でも200でなければなりません",

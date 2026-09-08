@@ -191,13 +191,23 @@
       "enableFiltering": "콘텐츠 필터링 활성화",
       "enableFilteringDesc": "활성화하면 아래 규칙과 일치하는 이메일만 보관됩니다. 비활성화하면 모든 이메일이 보관됩니다.",
       "exclude": "제외",
+      "extraction": {
+        "attachmentNames": "첨부 파일 이름",
+        "attachmentNamesHelp": "파일 이름이 이 패턴과 일치하는 첨부 파일만 추출합니다.",
+        "extensions": "파일 확장자",
+        "extensionsHelp": "선택한 형식의 첨부 파일만 전문 검색을 위해 추출됩니다.",
+        "folders": "폴더",
+        "foldersHelp": "이 패턴과 일치하는 폴더의 이메일에서만 첨부 파일을 추출합니다.",
+        "senders": "보낸 사람",
+        "sendersHelp": "이 패턴과 일치하는 발신자의 이메일에서만 첨부 파일을 추출합니다."
+      },
       "include": "포함",
       "matchType": {
         "contains": "포함",
-        "endsWith": "끝 문자열",
+        "endsWith": "끝남",
         "isExactly": "정확히 일치",
-        "regex": "정규 표현식 (Regex)",
-        "startsWith": "시작 문자열"
+        "regex": "정규식",
+        "startsWith": "시작"
       },
       "noExcludePatterns": "제외 패턴 없음 — 제외되는 항목이 없습니다.",
       "noIncludePatterns": "포함 패턴 없음 — 모든 항목이 포함됩니다.",
@@ -274,6 +284,13 @@
     "refreshToken": "새로 고침 토큰",
     "refreshTokenCopiedToClipboard": "새로 고침 토큰이 클립보드에 복사되었습니다",
     "relative": "상대적",
+    "rules": {
+      "advancedSettings": "고급 설정",
+      "archiveDesc": "활성화하면 규칙에 일치하는 이메일만 보관됩니다. 비활성화하면 모든 이메일이 보관됩니다.",
+      "archiveTitle": "보관 필터링",
+      "extractionDesc": "활성화하면 규칙에 일치하는 첨부 파일만 추출됩니다. 비활성화하면 모든 첨부 파일에서 텍스트를 추출합니다.",
+      "extractionTitle": "첨부 파일 추출"
+    },
     "runGapFill": "새 메일을 확인하여 다운로드하고, 누락된 과거 메일도 자동으로 백필합니다",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "새 계정",
       "performance": "성능",
       "reset": "설정 초기화",
+      "rules": "규칙",
+      "rulesDesc": "보관 및 첨부 파일 규칙을 설정합니다.",
       "save": "설정 저장",
       "saved": "저장됨",
       "savedDesc": "계정 설정이 성공적으로 저장되었습니다.",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "증분 동기화 간격은 숫자여야 합니다",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "유효하지 않은 이메일 주소",
+    "invalidRegex": "잘못된 정규식",
     "invalidUrl": "유효하지 않은 URL",
     "maxEmailSizeMustBeNumber": "최대 이메일 크기는 숫자여야 합니다.",
     "maxEmailSizeTooLarge": "최대 이메일 크기는 100 MB를 초과할 수 없습니다.",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "인증 방법이 비밀번호인 경우 비밀번호는 필수입니다",
     "pleaseEnterPassword": "비밀번호를 입력하십시오",
     "pleaseEnterUsernameOrEmail": "사용자 이름 또는 이메일을 입력하세요",
+    "requireExtractionExtension": "파일 확장자를 하나 이상 선택하세요",
     "required": "이 필드는 필수입니다",
     "singleRequestBatchSizeMustBeNumber": "배치 크기는 숫자여야 합니다",
     "singleRequestBatchSizeTooLarge": "배치 크기는 최대 200이어야 합니다",

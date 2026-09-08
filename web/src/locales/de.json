@@ -191,12 +191,22 @@
       "enableFiltering": "Inhaltsfilterung aktivieren",
       "enableFilteringDesc": "Wenn aktiviert, werden nur E-Mails archiviert, die den folgenden Regeln entsprechen. Wenn deaktiviert, werden alle E-Mails archiviert.",
       "exclude": "Ausschließen",
+      "extraction": {
+        "attachmentNames": "Anhangsnamen",
+        "attachmentNamesHelp": "Nur Anhänge mit passenden Dateinamen werden extrahiert.",
+        "extensions": "Dateitypen",
+        "extensionsHelp": "Nur Text aus den ausgewählten Dateitypen wird für die Volltextsuche extrahiert.",
+        "folders": "Ordner",
+        "foldersHelp": "Anhänge werden nur aus Ordnern extrahiert, die diesen Mustern entsprechen.",
+        "senders": "Absender",
+        "sendersHelp": "Anhänge werden nur von Absendern extrahiert, die diesen Mustern entsprechen."
+      },
       "include": "Einschließen",
       "matchType": {
         "contains": "Enthält",
         "endsWith": "Endet mit",
-        "isExactly": "Ist genau",
-        "regex": "Regulärer Ausdruck (Regex)",
+        "isExactly": "Exakt",
+        "regex": "Regex",
         "startsWith": "Beginnt mit"
       },
       "noExcludePatterns": "Keine Ausschlussmuster – nichts wird ausgeschlossen.",
@@ -274,6 +284,13 @@
     "refreshToken": "Aktualisierungstoken",
     "refreshTokenCopiedToClipboard": "Aktualisierungstoken in die Zwischenablage kopiert",
     "relative": "Relativ",
+    "rules": {
+      "advancedSettings": "Erweiterte Einstellungen",
+      "archiveDesc": "Wenn aktiviert, werden nur E-Mails archiviert, die den Regeln entsprechen. Wenn deaktiviert, werden alle E-Mails archiviert.",
+      "archiveTitle": "Archivfilter",
+      "extractionDesc": "Wenn aktiviert, wird nur Text aus Anhängen extrahiert, die den folgenden Regeln entsprechen. Wenn deaktiviert, wird Text aus allen Anhängen extrahiert.",
+      "extractionTitle": "Anhangsextraktion"
+    },
     "runGapFill": "Neue Mails prüfen und ältere, lokal fehlende Mails automatisch nachladen",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "Neues Konto",
       "performance": "Leistung",
       "reset": "Einstellungen zurücksetzen",
+      "rules": "Regeln",
+      "rulesDesc": "Regeln für Archivierung und Anhänge konfigurieren.",
       "save": "Einstellungen speichern",
       "saved": "Gespeichert",
       "savedDesc": "Kontoeinstellungen wurden erfolgreich gespeichert.",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "Das inkrementelle Synchronisierungsintervall muss eine Zahl sein",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Ungültige E-Mail-Adresse",
+    "invalidRegex": "Ungültiger Regex-Ausdruck",
     "invalidUrl": "Ungültige URL",
     "maxEmailSizeMustBeNumber": "Die maximale E-Mail-Größe muss eine Zahl sein.",
     "maxEmailSizeTooLarge": "Die maximale E-Mail-Größe darf 100 MB nicht überschreiten.",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "Passwort ist erforderlich, wenn die Authentifizierungsmethode Passwort ist",
     "pleaseEnterPassword": "Bitte geben Sie Ihr Passwort ein",
     "pleaseEnterUsernameOrEmail": "Bitte geben Sie Ihren Benutzernamen oder Ihre E-Mail-Adresse ein",
+    "requireExtractionExtension": "Wählen Sie mindestens eine Dateierweiterung aus",
     "required": "Dieses Feld ist erforderlich",
     "singleRequestBatchSizeMustBeNumber": "Die Stapelgröße muss eine Zahl sein",
     "singleRequestBatchSizeTooLarge": "Die Stapelgröße darf höchstens 200 sein",

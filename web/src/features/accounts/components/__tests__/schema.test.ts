@@ -330,3 +330,130 @@ describe('Auth Config Schema (password validation)', () => {
     })
   })
 })
+
+describe('Extraction Rules Schema', () => {
+  const validExtractionRules = {
+    enabled: true,
+    extensions: { include: ['pdf', 'docx'], exclude: [] },
+    folders: { include: ['^INBOX/Invoices$'], exclude: [] },
+    attachment_names: {
+      include: ['invoice-.*\\.pdf$'],
+      exclude: ['confidential'],
+    },
+    senders: { include: ['@example\\.com$'], exclude: ['^noreply@'] },
+  }
+
+  it('accepts valid extraction rules', () => {
+    const result = getAccountSchema(false, t).safeParse({
+      ...validAccountData,
+      extraction_rules: validExtractionRules,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects invalid regex in extraction rules', () => {
+    const result = getAccountSchema(false, t).safeParse({
+      ...validAccountData,
+      extraction_rules: {
+        ...validExtractionRules,
+        folders: { include: ['['], exclude: [] },
+      },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects extraction rules enabled without any extension selected', () => {
+    const result = getAccountSchema(false, t).safeParse({
+      ...validAccountData,
+      extraction_rules: {
+        ...validExtractionRules,
+        extensions: { include: [], exclude: [] },
+      },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects empty regex pattern in extraction rules', () => {
+    const result = getAccountSchema(false, t).safeParse({
+      ...validAccountData,
+      extraction_rules: {
+        ...validExtractionRules,
+        folders: { include: [''], exclude: [] },
+      },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects whitespace-only regex pattern in extraction rules', () => {
+    const result = getAccountSchema(false, t).safeParse({
+      ...validAccountData,
+      extraction_rules: {
+        ...validExtractionRules,
+        senders: { include: [], exclude: ['   '] },
+      },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects empty extension in extraction rules', () => {
+    const result = getAccountSchema(false, t).safeParse({
+      ...validAccountData,
+      extraction_rules: {
+        ...validExtractionRules,
+        extensions: { include: ['pdf', ''], exclude: [] },
+      },
+    })
+    expect(result.success).toBe(false)
+  })
+})
+
+describe('Archive Rules Schema', () => {
+  const validArchiveRules = {
+    enabled: true,
+    senders: { include: ['@example\\.com$'], exclude: [] },
+    subjects: { include: [], exclude: ['^spam'] },
+    skip_larger_than: undefined,
+    spam_headers: [],
+  }
+
+  it('accepts valid archive rules', () => {
+    const result = getAccountSchema(false, t).safeParse({
+      ...validAccountData,
+      archive_rules: validArchiveRules,
+    })
+    expect(result.success).toBe(true)
+  })
+
+  it('rejects empty sender pattern in archive rules', () => {
+    const result = getAccountSchema(false, t).safeParse({
+      ...validAccountData,
+      archive_rules: {
+        ...validArchiveRules,
+        senders: { include: [''], exclude: [] },
+      },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects whitespace-only subject pattern in archive rules', () => {
+    const result = getAccountSchema(false, t).safeParse({
+      ...validAccountData,
+      archive_rules: {
+        ...validArchiveRules,
+        subjects: { include: [], exclude: ['  '] },
+      },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  it('rejects empty spam header in archive rules', () => {
+    const result = getAccountSchema(false, t).safeParse({
+      ...validAccountData,
+      archive_rules: {
+        ...validArchiveRules,
+        spam_headers: ['X-Spam-Flag', ''],
+      },
+    })
+    expect(result.success).toBe(false)
+  })
+})

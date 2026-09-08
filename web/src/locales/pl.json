@@ -191,12 +191,22 @@
       "enableFiltering": "Włącz filtrowanie zawartości",
       "enableFilteringDesc": "Po włączeniu archiwizowane będą tylko wiadomości spełniające poniższe reguły. Po wyłączeniu archiwizowane są wszystkie wiadomości.",
       "exclude": "Wyklucz",
+      "extraction": {
+        "attachmentNames": "Nazwy załączników",
+        "attachmentNamesHelp": "Wyodrębniaj tylko załączniki, których nazwa pasuje do tych wzorców.",
+        "extensions": "Rozszerzenia",
+        "extensionsHelp": "Tylko załączniki w wybranych formatach są wyodrębniane do wyszukiwania.",
+        "folders": "Foldery",
+        "foldersHelp": "Wyodrębniaj załączniki tylko z folderów pasujących do tych wzorców.",
+        "senders": "Nadawcy",
+        "sendersHelp": "Wyodrębniaj załączniki tylko od nadawców pasujących do tych wzorców."
+      },
       "include": "Uwzględnij",
       "matchType": {
         "contains": "Zawiera",
         "endsWith": "Kończy się na",
-        "isExactly": "Równa się",
-        "regex": "Wyrażenie regularne (Regex)",
+        "isExactly": "Dokładnie",
+        "regex": "Regex",
         "startsWith": "Zaczyna się od"
       },
       "noExcludePatterns": "Brak reguł wykluczania — nic nie zostanie wykluczone.",
@@ -274,6 +284,13 @@
     "refreshToken": "Odśwież token",
     "refreshTokenCopiedToClipboard": "Token odśwież skopiowany do schowka",
     "relative": "Wzglednie",
+    "rules": {
+      "advancedSettings": "Ustawienia zaawansowane",
+      "archiveDesc": "Po włączeniu archiwizowane są tylko wiadomości pasujące do reguł. Po wyłączeniu archiwizowane są wszystkie wiadomości.",
+      "archiveTitle": "Filtrowanie archiwum",
+      "extractionDesc": "Po włączeniu wyodrębniane są tylko załączniki pasujące do reguł. Po wyłączeniu tekst jest wyodrębniany ze wszystkich załączników.",
+      "extractionTitle": "Wyodrębnianie załączników"
+    },
     "runGapFill": "Sprawdzaj nowe e-maile i automatycznie uzupełniaj starsze, brakujące wiadomości",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "Nowe konto",
       "performance": "Wydajność",
       "reset": "Resetuj ustawienia",
+      "rules": "Reguły",
+      "rulesDesc": "Skonfiguruj reguły archiwizacji i załączników.",
       "save": "Zapisz ustawienia",
       "saved": "Zapisano",
       "savedDesc": "Ustawienia konta zostały pomyślnie zapisane.",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "Przyrostowy interwał synchronizacji musi być liczbą",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Niewłaściwy adres email",
+    "invalidRegex": "Nieprawidłowy regex",
     "invalidUrl": "Niewłaściwy URL",
     "maxEmailSizeMustBeNumber": "Maksymalny rozmiar e-maila musi być liczbą.",
     "maxEmailSizeTooLarge": "Maksymalny rozmiar e-maila nie może przekraczać 100 MB.",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "Hasło jest wymagane, gdy metodą uwierzytelniania jest hasło",
     "pleaseEnterPassword": "Proszę podać hasło",
     "pleaseEnterUsernameOrEmail": "Proszę podać nazwę użytkownika lub adres e-mail",
+    "requireExtractionExtension": "Wybierz co najmniej jedno rozszerzenie",
     "required": "To pole jest wymagane",
     "singleRequestBatchSizeMustBeNumber": "Rozmiar partii musi być liczbą",
     "singleRequestBatchSizeTooLarge": "Rozmiar partii może wynosić maksymalnie 200",

@@ -191,13 +191,23 @@
       "enableFiltering": "Ota sisällön suodatus käyttöön",
       "enableFilteringDesc": "Kun käytössä, vain alla olevia sääntöjä vastaavat sähköpostit arkistoidaan. Kun poissa käytöstä, kaikki sähköpostit arkistoidaan.",
       "exclude": "Poissulje",
+      "extraction": {
+        "attachmentNames": "Liitteiden nimet",
+        "attachmentNamesHelp": "Poimi vain liitteet, joiden nimi vastaa näitä malleja.",
+        "extensions": "Tiedostopäätteet",
+        "extensionsHelp": "Vain valittujen tiedostotyyppien liitteet käsitellään kokotekstihakua varten.",
+        "folders": "Kansiot",
+        "foldersHelp": "Poimi liitteet vain näitä malleja vastaavista kansioista.",
+        "senders": "Lähettäjät",
+        "sendersHelp": "Poimi liitteet vain näitä malleja vastaavilta lähettäjiltä."
+      },
       "include": "Sisällytä",
       "matchType": {
         "contains": "Sisältää",
-        "endsWith": "Päättyy merkkeihin",
-        "isExactly": "On täsmälleen",
-        "regex": "Säännöllinen lauseke (Regex)",
-        "startsWith": "Alkaa merkeillä"
+        "endsWith": "Päättyy",
+        "isExactly": "Täsmälleen",
+        "regex": "Regex",
+        "startsWith": "Alkaa"
       },
       "noExcludePatterns": "Ei poissulkemiskuvioita – mitään ei poissuljeta.",
       "noIncludePatterns": "Ei sisällytyskuvioita – kaikki sisällytetään.",
@@ -274,6 +284,13 @@
     "refreshToken": "Virheettömyystunnus",
     "refreshTokenCopiedToClipboard": "Virheettömyystunnus kopioitu leikepöydälle",
     "relative": "Suhteellinen",
+    "rules": {
+      "advancedSettings": "Lisäasetukset",
+      "archiveDesc": "Kun käytössä, vain sääntöjä vastaavat sähköpostit arkistoidaan. Kun pois käytöstä, kaikki sähköpostit arkistoidaan.",
+      "archiveTitle": "Arkiston suodatus",
+      "extractionDesc": "Kun käytössä, tekstiä poimitaan vain sääntöjä vastaavista liitteistä. Kun pois käytöstä, teksti poimitaan kaikista liitteistä.",
+      "extractionTitle": "Liitteiden poiminta"
+    },
     "runGapFill": "Tarkista uudet sähköpostit ja täydennä vanhat puuttuvat viestit automaattisesti",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "Uusi tili",
       "performance": "Suorituskyky",
       "reset": "Palauta asetukset",
+      "rules": "Säännöt",
+      "rulesDesc": "Määritä arkistointi- ja liitesäännöt.",
       "save": "Tallenna asetukset",
       "saved": "Tallennettu",
       "savedDesc": "Tilin asetukset tallennettu onnistuneesti.",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "Lisäävän synkronoinnin välin on oltava numero",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Virheellinen sähköpostiosoite",
+    "invalidRegex": "Virheellinen regex",
     "invalidUrl": "Virheellinen URL-osoite",
     "maxEmailSizeMustBeNumber": "Sähköpostin maksimikoon on oltava numero.",
     "maxEmailSizeTooLarge": "Sähköpostin maksimikoko ei saa ylittää 100 megatavua.",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "Salasana on pakollinen, kun todennusmenetelmä on Salasana",
     "pleaseEnterPassword": "Syötä salasanasi",
     "pleaseEnterUsernameOrEmail": "Ole hyvä ja anna käyttäjänimesi tai sähköpostiosoitteesi",
+    "requireExtractionExtension": "Valitse vähintään yksi tiedostopääte",
     "required": "Tämä kenttä on pakollinen",
     "singleRequestBatchSizeMustBeNumber": "Eräkoko tulee olla numero",
     "singleRequestBatchSizeTooLarge": "Eräkoko tulee olla enintään 200",

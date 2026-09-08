@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { isValidRegex } from '@/lib/pattern-utils'
 
 const encryptionSchema = z.union([
   z.literal('Ssl'),
@@ -6,12 +7,12 @@ const encryptionSchema = z.union([
   z.literal('None'),
 ])
 
-const authTypeSchema = z.union([
-  z.literal('Password'),
-  z.literal('OAuth2'),
-])
+const authTypeSchema = z.union([z.literal('Password'), z.literal('OAuth2')])
 
-export const getAuthConfigSchema = (isEdit: boolean, t: (key: string) => string) =>
+export const getAuthConfigSchema = (
+  isEdit: boolean,
+  t: (key: string) => string
+) =>
   z
     .object({
       auth_type: authTypeSchema,
@@ -30,7 +31,10 @@ export const getAuthConfigSchema = (isEdit: boolean, t: (key: string) => string)
       }
     )
 
-export const getImapConfigSchema = (isEdit: boolean, t: (key: string) => string) =>
+export const getImapConfigSchema = (
+  isEdit: boolean,
+  t: (key: string) => string
+) =>
   z.object({
     host: z
       .string({ required_error: t('validation.imapHostRequired') })
@@ -67,18 +71,55 @@ const dateSelectionSchema = (t: (key: string) => string) =>
     })
     .optional()
 
-const filterRuleSchema = z.object({
-  include: z.array(z.string()),
-  exclude: z.array(z.string()),
-})
+const nonEmptyRuleItem = (t: (key: string) => string) =>
+  z.string().refine((value) => value.trim() !== '', {
+    message: t('validation.required'),
+  })
 
-const archiveRulesSchema = z.object({
-  enabled: z.boolean(),
-  senders: filterRuleSchema,
-  subjects: filterRuleSchema,
-  skip_larger_than: z.number().int().positive().optional(),
-  spam_headers: z.array(z.string()),
-})
+const filterRuleSchema = (t: (key: string) => string) =>
+  z.object({
+    include: z.array(nonEmptyRuleItem(t)),
+    exclude: z.array(nonEmptyRuleItem(t)),
+  })
+
+const regexFilterRuleSchema = (t: (key: string) => string) =>
+  z.object({
+    include: z.array(
+      nonEmptyRuleItem(t).refine(isValidRegex, {
+        message: t('validation.invalidRegex'),
+      })
+    ),
+    exclude: z.array(
+      nonEmptyRuleItem(t).refine(isValidRegex, {
+        message: t('validation.invalidRegex'),
+      })
+    ),
+  })
+
+const archiveRulesSchema = (t: (key: string) => string) =>
+  z.object({
+    enabled: z.boolean(),
+    senders: filterRuleSchema(t),
+    subjects: filterRuleSchema(t),
+    skip_larger_than: z.number().int().positive().optional(),
+    spam_headers: z.array(nonEmptyRuleItem(t)),
+  })
+
+const extractionRulesSchema = (t: (key: string) => string) =>
+  z
+    .object({
+      enabled: z.boolean(),
+      // Exact match, stored verbatim - no regex validation (mirrors backend).
+      extensions: filterRuleSchema(t),
+      // Regex patterns, validated like the backend's ExtractionRules::validate().
+      folders: regexFilterRuleSchema(t),
+      attachment_names: regexFilterRuleSchema(t),
+      senders: regexFilterRuleSchema(t),
+    })
+    .refine((rules) => !rules.enabled || rules.extensions.include.length > 0, {
+      message: t('validation.requireExtractionExtension'),
+      path: ['extensions'],
+    })
 
 export const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
   z.object({
@@ -102,9 +143,7 @@ export const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
       }),
     download_batch_size: z
       .number({
-        invalid_type_error: t(
-          'validation.singleRequestBatchSizeMustBeNumber'
-        ),
+        invalid_type_error: t('validation.singleRequestBatchSizeMustBeNumber'),
       })
       .int()
       .min(10, {
@@ -119,23 +158,24 @@ export const getAccountSchema = (isEdit: boolean, t: (key: string) => string) =>
       })
       .int()
       .min(1 * 1024 * 1024, { message: t('validation.maxEmailSizeTooSmall') })
-      .max(100 * 1024 * 1024, { message: t('validation.maxEmailSizeTooLarge') }),
+      .max(100 * 1024 * 1024, {
+        message: t('validation.maxEmailSizeTooLarge'),
+      }),
     auto_download_new_mailboxes: z.boolean(),
     download_schedule: z
       .string()
       .optional()
       .refine(
         (val) => {
-          if (!val || val.trim() === '') return true;
-          const fields = val.trim().split(/\s+/);
-          if (fields.length < 6) return false;
-          return true;
+          if (!val || val.trim() === '') return true
+          const fields = val.trim().split(/\s+/)
+          if (fields.length < 6) return false
+          return true
         },
         { message: t('validation.invalidCronExpression') }
       ),
-    archive_rules: archiveRulesSchema.optional(),
+    archive_rules: archiveRulesSchema(t).optional(),
+    extraction_rules: extractionRulesSchema(t).optional(),
   })
 
-export type AccountFormValues = z.infer<
-  ReturnType<typeof getAccountSchema>
->
+export type AccountFormValues = z.infer<ReturnType<typeof getAccountSchema>>

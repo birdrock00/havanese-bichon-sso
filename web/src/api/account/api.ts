@@ -162,6 +162,14 @@ export interface ArchiveRules {
     spam_headers: string[];
 }
 
+export interface ExtractionRules {
+    enabled: boolean;
+    extensions: FilterRule;
+    folders: FilterRule;
+    attachment_names: FilterRule;
+    senders: FilterRule;
+}
+
 export interface AccountModel {
     id: number;
     account_type: AccountType;
@@ -189,6 +197,7 @@ export interface AccountModel {
     auto_download_new_mailboxes?: boolean;
     download_schedule?: string;
     archive_rules?: ArchiveRules;
+    extraction_rules?: ExtractionRules;
     deleting?: boolean;
 }
 

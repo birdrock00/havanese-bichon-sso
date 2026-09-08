@@ -191,6 +191,16 @@
       "enableFiltering": "启用內容篩選",
       "enableFilteringDesc": "開啟後，僅封存符合下方規則的郵件；關閉後，將封存所有郵件。",
       "exclude": "排除",
+      "extraction": {
+        "attachmentNames": "附件名稱",
+        "attachmentNamesHelp": "僅擷取檔案名稱符合這些模式的附件。",
+        "extensions": "檔案副檔名",
+        "extensionsHelp": "僅擷取所選格式的附件供全文搜尋。",
+        "folders": "資料夾",
+        "foldersHelp": "僅從符合這些模式的資料夾中的郵件擷取附件。",
+        "senders": "寄件者",
+        "sendersHelp": "僅從符合這些模式的寄件者郵件中擷取附件。"
+      },
       "include": "包含",
       "matchType": {
         "contains": "包含",
@@ -274,6 +284,13 @@
     "refreshToken": "更新權杖 (Refresh Token)",
     "refreshTokenCopiedToClipboard": "更新權杖已複製到剪貼簿",
     "relative": "相對",
+    "rules": {
+      "advancedSettings": "進階設定",
+      "archiveDesc": "啟用後，僅歸檔符合規則的郵件。停用後，歸檔所有郵件。",
+      "archiveTitle": "歸檔篩選",
+      "extractionDesc": "啟用後，僅擷取符合規則的附件供全文搜尋。停用後，將擷取所有附件的文字。",
+      "extractionTitle": "附件擷取"
+    },
     "runGapFill": "檢查並下載新郵件，同時自動補全本地缺失的歷史舊郵件",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "建立新帳戶",
       "performance": "效能",
       "reset": "重設設定",
+      "rules": "規則",
+      "rulesDesc": "設定歸檔與附件規則。",
       "save": "儲存設定",
       "saved": "已儲存",
       "savedDesc": "帳號設定已成功儲存。",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "增量同步間隔必須是數字",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "無效的電子郵件地址",
+    "invalidRegex": "正規表示式無效",
     "invalidUrl": "無效的網址",
     "maxEmailSizeMustBeNumber": "最大郵件大小必須是數字。",
     "maxEmailSizeTooLarge": "最大郵件大小不能超過 100 MB。",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "如果驗證方法是密碼，則密碼為必填項",
     "pleaseEnterPassword": "請輸入密碼",
     "pleaseEnterUsernameOrEmail": "請輸入您的使用者名稱或電子郵件",
+    "requireExtractionExtension": "至少選擇一個檔案副檔名",
     "required": "此欄位為必填項",
     "singleRequestBatchSizeMustBeNumber": "批次大小必須是數字",
     "singleRequestBatchSizeTooLarge": "批次大小必須最多為200",

@@ -191,12 +191,22 @@
       "enableFiltering": "Aktivera innehållsfiltrering",
       "enableFilteringDesc": "När den er aktiverad kommer endast e-postmeddelanden som matchar reglerna nedan att arkiveras. När den är inaktiverad arkiveras alla e-postmeddelanden.",
       "exclude": "Exkludera",
+      "extraction": {
+        "attachmentNames": "Bilagenamn",
+        "attachmentNamesHelp": "Extrahera endast bilagor vars namn matchar dessa mönster.",
+        "extensions": "Filtillägg",
+        "extensionsHelp": "Endast bilagor i valda format extraheras för sökning.",
+        "folders": "Mappar",
+        "foldersHelp": "Extrahera endast bilagor från mappar som matchar dessa mönster.",
+        "senders": "Avsändare",
+        "sendersHelp": "Extrahera endast bilagor från avsändare som matchar dessa mönster."
+      },
       "include": "Inkludera",
       "matchType": {
         "contains": "Innehåller",
         "endsWith": "Slutar med",
-        "isExactly": "Är exakt",
-        "regex": "Reguljärt uttryck (Regex)",
+        "isExactly": "Exakt",
+        "regex": "Regex",
         "startsWith": "Börjar med"
       },
       "noExcludePatterns": "Inga exkluderingsmönster – inget exkluderas.",
@@ -274,6 +284,13 @@
     "refreshToken": "Uppdateringstoken",
     "refreshTokenCopiedToClipboard": "Uppdateringstoken kopierad till urklipp",
     "relative": "Relativ",
+    "rules": {
+      "advancedSettings": "Avancerade inställningar",
+      "archiveDesc": "När aktiverat arkiveras endast e-postmeddelanden som matchar reglerna. När inaktiverat arkiveras alla e-postmeddelanden.",
+      "archiveTitle": "Arkivfiltrering",
+      "extractionDesc": "När aktiverat extraheras endast bilagor som matchar reglerna. När inaktiverat extraheras text från alla bilagor.",
+      "extractionTitle": "Extrahering av bilagor"
+    },
     "runGapFill": "Kontrollera nya e-postmeddelanden och komplettera automatiskt äldre saknade meddelanden",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "Nytt konto",
       "performance": "Prestanda",
       "reset": "Återställ inställningar",
+      "rules": "Regler",
+      "rulesDesc": "Konfigurera regler för arkivering och bilagor.",
       "save": "Spara inställningar",
       "saved": "Sparad",
       "savedDesc": "Kontoinställningarna har sparats.",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "Intervall för inkrementell synkronisering måste vara ett tal",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Ogiltig e-postadress",
+    "invalidRegex": "Ogiltig regex",
     "invalidUrl": "Ogiltig URL",
     "maxEmailSizeMustBeNumber": "Max e-poststorlek måste vara ett nummer.",
     "maxEmailSizeTooLarge": "Max e-poststorlek får inte överstiga 100 MB.",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "Lösenord krävs när autentiseringsmetoden är Lösenord",
     "pleaseEnterPassword": "Vänligen ange ditt lösenord",
     "pleaseEnterUsernameOrEmail": "Vänligen ange ditt användarnamn eller din e-postadress",
+    "requireExtractionExtension": "Välj minst ett filtillägg",
     "required": "Detta fält är obligatoriskt",
     "singleRequestBatchSizeMustBeNumber": "Batchstorlek måste vara ett tal",
     "singleRequestBatchSizeTooLarge": "Batchstorlek måste vara högst 200",

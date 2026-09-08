@@ -191,6 +191,16 @@
       "enableFiltering": "启用内容过滤",
       "enableFilteringDesc": "开启后，仅归档符合下方规则的邮件；关闭后，将归档所有邮件。",
       "exclude": "排除",
+      "extraction": {
+        "attachmentNames": "附件名称",
+        "attachmentNamesHelp": "仅提取文件名符合这些模式的附件。",
+        "extensions": "文件扩展名",
+        "extensionsHelp": "仅提取所选格式的附件用于全文搜索。",
+        "folders": "文件夹",
+        "foldersHelp": "仅从符合这些模式的文件夹中的邮件提取附件。",
+        "senders": "发件人",
+        "sendersHelp": "仅从符合这些模式的发件人邮件中提取附件。"
+      },
       "include": "包含",
       "matchType": {
         "contains": "包含",
@@ -274,6 +284,13 @@
     "refreshToken": "刷新令牌",
     "refreshTokenCopiedToClipboard": "刷新令牌已复制到剪贴板",
     "relative": "相对",
+    "rules": {
+      "advancedSettings": "高级设置",
+      "archiveDesc": "启用后，仅归档符合规则的邮件。禁用后，归档所有邮件。",
+      "archiveTitle": "归档过滤",
+      "extractionDesc": "启用后，仅提取符合规则的附件用于全文搜索。禁用后，将提取所有附件的文本。",
+      "extractionTitle": "附件提取"
+    },
     "runGapFill": "检查并下载新邮件，同时自动补全本地缺失的历史老邮件",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "新建账户",
       "performance": "性能",
       "reset": "重置设置",
+      "rules": "规则",
+      "rulesDesc": "配置归档和附件规则。",
       "save": "保存设置",
       "saved": "已保存",
       "savedDesc": "账号设置已成功保存。",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "增量同步间隔必须是数字",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "无效的电子邮件地址",
+    "invalidRegex": "正则表达式无效",
     "invalidUrl": "无效的 URL",
     "maxEmailSizeMustBeNumber": "最大邮件大小必须是数字。",
     "maxEmailSizeTooLarge": "最大邮件大小不能超过 100 MB。",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "当认证方法为密码时，密码为必填项",
     "pleaseEnterPassword": "请输入您的密码",
     "pleaseEnterUsernameOrEmail": "请输入您的用户名或邮箱",
+    "requireExtractionExtension": "至少选择一个文件扩展名",
     "required": "此字段为必填项",
     "singleRequestBatchSizeMustBeNumber": "批大小必须是数字",
     "singleRequestBatchSizeTooLarge": "批大小必须最多为200",

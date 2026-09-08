@@ -191,12 +191,22 @@
       "enableFiltering": "Aktiver innholdsfiltrering",
       "enableFilteringDesc": "Når aktivert, vil bare e-poster som samsvarer med reglene nedenfor bli arkivert. Når deaktivert, arkiveres alle e-poster.",
       "exclude": "Ekskluder",
+      "extraction": {
+        "attachmentNames": "Vedleggsnavn",
+        "attachmentNamesHelp": "Hent bare ut vedlegg der navnet samsvarer med disse mønstrene.",
+        "extensions": "Filtyper",
+        "extensionsHelp": "Bare vedlegg i de valgte formatene hentes ut for fulltekstsøk.",
+        "folders": "Mapper",
+        "foldersHelp": "Hent bare ut vedlegg fra mapper som samsvarer med disse mønstrene.",
+        "senders": "Avsendere",
+        "sendersHelp": "Hent bare ut vedlegg fra avsendere som samsvarer med disse mønstrene."
+      },
       "include": "Inkluder",
       "matchType": {
         "contains": "Inneholder",
-        "endsWith": "Ender med",
-        "isExactly": "Er nøyaktig",
-        "regex": "Regulært uttrykk (Regex)",
+        "endsWith": "Slutter med",
+        "isExactly": "Nøyaktig",
+        "regex": "Regex",
         "startsWith": "Starter med"
       },
       "noExcludePatterns": "Ingen ekskluderingsmønstre – ingenting er ekskludert.",
@@ -274,6 +284,13 @@
     "refreshToken": "Oppfriskningstoken",
     "refreshTokenCopiedToClipboard": "Oppfriskningstoken kopiert til utklippstavlen",
     "relative": "Relativ",
+    "rules": {
+      "advancedSettings": "Avanserte innstillinger",
+      "archiveDesc": "Når aktivert, arkiveres bare e-poster som samsvarer med reglene. Når deaktivert, arkiveres alle e-poster.",
+      "archiveTitle": "Arkivfiltrering",
+      "extractionDesc": "Når aktivert, hentes bare tekst fra vedlegg som samsvarer med reglene. Når deaktivert, hentes tekst fra alle vedlegg.",
+      "extractionTitle": "Uttrekking av vedlegg"
+    },
     "runGapFill": "Sjekk etter nye e-poster og fyll automatisk inn eldre manglende e-poster",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "Ny konto",
       "performance": "Ytelse",
       "reset": "Tilbakestill innstillinger",
+      "rules": "Regler",
+      "rulesDesc": "Konfigurer regler for arkivering og vedlegg.",
       "save": "Lagre innstillinger",
       "saved": "Lagret",
       "savedDesc": "Kontoinnstillinger ble lagret.",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "Intervall for inkrementell synkronisering må være et tall",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Ugyldig e-postadresse",
+    "invalidRegex": "Ugyldig regex",
     "invalidUrl": "Ugyldig URL",
     "maxEmailSizeMustBeNumber": "Maks. e-poststørrelse må være et tall.",
     "maxEmailSizeTooLarge": "Maks. e-poststørrelse må ikke overstige 100 MB.",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "Passord er påkrevd når autentiseringsmetoden er Passord",
     "pleaseEnterPassword": "Vennligst skriv inn passordet ditt",
     "pleaseEnterUsernameOrEmail": "Skriv inn brukernavn eller e-postadresse",
+    "requireExtractionExtension": "Velg minst én filtype",
     "required": "Dette feltet er påkrevd",
     "singleRequestBatchSizeMustBeNumber": "Batchstørrelse må være et tall",
     "singleRequestBatchSizeTooLarge": "Batchstørrelse må være maksimalt 200",

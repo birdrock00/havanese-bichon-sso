@@ -59,6 +59,7 @@ const defaultValues: AccountFormValues = {
   auto_download_new_mailboxes: true,
   download_schedule: undefined,
   archive_rules: undefined,
+  extraction_rules: undefined,
 };
 
 function SectionHeader({ title, description }: { title: string; description?: string }) {
@@ -135,6 +136,7 @@ export function AccountNewPage() {
         download_schedule: data.download_schedule || null,
         account_type: "IMAP",
         archive_rules: data.archive_rules || null,
+        extraction_rules: data.extraction_rules || null,
       });
     },
     [createMutation]
@@ -233,10 +235,10 @@ export function AccountNewPage() {
 
                   <section>
                     <SectionHeader
-                      title={t('accounts.settings.filters')}
-                      description={t('accounts.settings.filtersDesc')}
+                      title={t('accounts.settings.rules', 'Rules')}
+                      description={t('accounts.settings.rulesDesc', 'Configure archive filtering and attachment extraction rules.')}
                     />
-                    <TabFilters />
+                    <TabFilters collapsedByDefault />
                   </section>
 
                   <div className="flex items-center justify-between pt-4 border-t">

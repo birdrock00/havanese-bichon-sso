@@ -191,12 +191,22 @@
       "enableFiltering": "Ativar filtragem de conteúdo",
       "enableFilteringDesc": "Quando ativado, apenas os e-mails que correspondem às regras abaixo serão arquivados. Quando desativado, todos os e-mails são arquivados.",
       "exclude": "Excluir",
+      "extraction": {
+        "attachmentNames": "Nomes dos anexos",
+        "attachmentNamesHelp": "Extraia apenas anexos cujo nome corresponda a estes padrões.",
+        "extensions": "Extensões",
+        "extensionsHelp": "Apenas anexos nos formatos selecionados são extraídos para pesquisa.",
+        "folders": "Pastas",
+        "foldersHelp": "Extraia anexos apenas de pastas que correspondam a estes padrões.",
+        "senders": "Remetentes",
+        "sendersHelp": "Extraia anexos apenas de remetentes que correspondam a estes padrões."
+      },
       "include": "Incluir",
       "matchType": {
         "contains": "Contém",
         "endsWith": "Termina com",
-        "isExactly": "É exatamente",
-        "regex": "Expressão regular (Regex)",
+        "isExactly": "Exato",
+        "regex": "Regex",
         "startsWith": "Começa com"
       },
       "noExcludePatterns": "Sem padrões de exclusão — nada está excluído.",
@@ -274,6 +284,13 @@
     "refreshToken": "Token de Atualização",
     "refreshTokenCopiedToClipboard": "Token de atualização copiado para a área de transferência",
     "relative": "Relativo",
+    "rules": {
+      "advancedSettings": "Configurações avançadas",
+      "archiveDesc": "Quando ativado, apenas os e-mails que correspondem às regras são arquivados. Quando desativado, todos os e-mails são arquivados.",
+      "archiveTitle": "Filtragem do arquivo",
+      "extractionDesc": "Quando ativado, apenas os anexos que correspondem às regras são extraídos. Quando desativado, o texto é extraído de todos os anexos.",
+      "extractionTitle": "Extração de anexos"
+    },
     "runGapFill": "Verifique novos e-mails e preencha automaticamente e-mails antigos ausentes",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "Nova conta",
       "performance": "Desempenho",
       "reset": "Redefinir configurações",
+      "rules": "Regras",
+      "rulesDesc": "Configure as regras de arquivamento e anexos.",
       "save": "Salvar configurações",
       "saved": "Salvo",
       "savedDesc": "Configurações da conta salvas com sucesso.",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "O Intervalo de Sincronização Incremental deve ser um número",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Endereço de email inválido",
+    "invalidRegex": "Regex inválido",
     "invalidUrl": "URL inválido",
     "maxEmailSizeMustBeNumber": "O tamanho máximo do email deve ser um número.",
     "maxEmailSizeTooLarge": "O tamanho máximo do email não deve exceder 100 MB.",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "A senha é obrigatória se o método de autenticação for Senha",
     "pleaseEnterPassword": "Por favor, insira a senha",
     "pleaseEnterUsernameOrEmail": "Por favor, digite seu nome de usuário ou e-mail",
+    "requireExtractionExtension": "Selecione pelo menos uma extensão",
     "required": "Este campo é obrigatório",
     "singleRequestBatchSizeMustBeNumber": "O tamanho do lote deve ser um número",
     "singleRequestBatchSizeTooLarge": "O tamanho do lote deve ser no máximo 200",

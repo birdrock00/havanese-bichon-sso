@@ -191,12 +191,22 @@
       "enableFiltering": "Inhoudsfiltering inschakelen",
       "enableFilteringDesc": "Indien ingeschakeld, worden alleen e-mails die aan de onderstaande regels voldoen gearchiveerd. Indien uitgeschakeld, worden alle e-mails gearchiveerd.",
       "exclude": "Exclusief",
+      "extraction": {
+        "attachmentNames": "Namen van bijlagen",
+        "attachmentNamesHelp": "Extraheer alleen bijlagen waarvan de naam overeenkomt met deze patronen.",
+        "extensions": "Bestandsextensies",
+        "extensionsHelp": "Alleen bijlagen in de geselecteerde indelingen worden geëxtraheerd voor zoeken.",
+        "folders": "Mappen",
+        "foldersHelp": "Extraheer alleen bijlagen uit mappen die overeenkomen met deze patronen.",
+        "senders": "Afzenders",
+        "sendersHelp": "Extraheer alleen bijlagen van afzenders die overeenkomen met deze patronen."
+      },
       "include": "Inclusief",
       "matchType": {
         "contains": "Bevat",
         "endsWith": "Eindigt met",
-        "isExactly": "Is exact",
-        "regex": "Reguliere expressie (Regex)",
+        "isExactly": "Exact",
+        "regex": "Regex",
         "startsWith": "Begint met"
       },
       "noExcludePatterns": "Geen exclusiepatronen — niets is uitgesloten.",
@@ -274,6 +284,13 @@
     "refreshToken": "Vernieuwingstoken (Refresh Token)",
     "refreshTokenCopiedToClipboard": "Vernieuwingstoken naar klembord gekopieerd",
     "relative": "Relatief",
+    "rules": {
+      "advancedSettings": "Geavanceerde instellingen",
+      "archiveDesc": "Bij inschakelen worden alleen e-mails die aan de regels voldoen gearchiveerd. Bij uitschakelen worden alle e-mails gearchiveerd.",
+      "archiveTitle": "Archieffiltering",
+      "extractionDesc": "Bij inschakelen worden alleen bijlagen die aan de regels voldoen geëxtraheerd. Bij uitschakelen wordt tekst uit alle bijlagen geëxtraheerd.",
+      "extractionTitle": "Bijlagen extraheren"
+    },
     "runGapFill": "Controleer op nieuwe e-mails en vul oudere ontbrekende e-mails automatisch aan",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "Nieuw account",
       "performance": "Prestaties",
       "reset": "Instellingen herstellen",
+      "rules": "Regels",
+      "rulesDesc": "Configureer regels voor archivering en bijlagen.",
       "save": "Instellingen opslaan",
       "saved": "Opgeslagen",
       "savedDesc": "Accountinstellingen succesvol opgeslagen.",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "Incrementaal sync interval moet een nummer zijn",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Ongeldig e-mailadres",
+    "invalidRegex": "Ongeldige regex",
     "invalidUrl": "Ongeldige URL",
     "maxEmailSizeMustBeNumber": "Maximale e-mailgrootte moet un nummer zijn.",
     "maxEmailSizeTooLarge": "Maximale e-mailgrootte mag niet groter zijn dan 100 MB.",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "Wachtwoord is vereist wanneer de authenticatiemethode Wachtwoord is",
     "pleaseEnterPassword": "Voer uw wachtwoord in",
     "pleaseEnterUsernameOrEmail": "Voer alstublieft uw gebruikersnaam of e-mailadres in",
+    "requireExtractionExtension": "Selecteer minstens één bestandsextensie",
     "required": "Dit veld is verplicht",
     "singleRequestBatchSizeMustBeNumber": "Batch‑grootte moet een nummer zijn",
     "singleRequestBatchSizeTooLarge": "Batch‑grootte moet hoogstens 200 zijn",

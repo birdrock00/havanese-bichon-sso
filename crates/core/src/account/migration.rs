@@ -173,6 +173,8 @@ impl ExtractionRules {
     }
 
     pub fn validate(&self) -> Result<(), String> {
+        validate_non_empty(&self.extensions.include, "extensions.include")?;
+        validate_non_empty(&self.extensions.exclude, "extensions.exclude")?;
         self.folders.validate_regex("folders")?;
         self.attachment_names.validate_regex("attachment_names")?;
         self.senders.validate_regex("senders")?;
@@ -250,10 +252,11 @@ impl ArchiveRules {
         true
     }
 
-    /// Validate all regex patterns are well-formed.
+    /// Validate all regex patterns are well-formed and non-empty.
     pub fn validate(&self) -> Result<(), String> {
         self.senders.validate_regex("senders")?;
         self.subjects.validate_regex("subjects")?;
+        validate_non_empty(&self.spam_headers, "spam_headers")?;
         Ok(())
     }
 }
@@ -268,8 +271,20 @@ fn matches_any_regex(patterns: &[String], value: &str) -> bool {
 
 fn validate_patterns(patterns: &[String], field_name: &str) -> Result<(), String> {
     for p in patterns {
+        if p.trim().is_empty() {
+            return Err(format!("{field_name} pattern must not be empty"));
+        }
         regex::Regex::new(p)
             .map_err(|e| format!("{} pattern '{}' is invalid regex: {}", field_name, p, e))?;
+    }
+    Ok(())
+}
+
+fn validate_non_empty(patterns: &[String], field_name: &str) -> Result<(), String> {
+    for p in patterns {
+        if p.trim().is_empty() {
+            return Err(format!("{field_name} item must not be empty"));
+        }
     }
     Ok(())
 }
@@ -698,6 +713,12 @@ impl Account {
         if request.archive_rules.is_some() {
             new.archive_rules = request.archive_rules;
         }
+        if request.clear_archive_rules == Some(true) {
+            new.archive_rules = None;
+        }
+        if request.clear_extraction_rules == Some(true) {
+            new.extraction_rules = None;
+        }
         new.updated_at = utc_now!();
         Ok(new)
     }
@@ -977,6 +998,75 @@ mod tests {
     }
 
     #[test]
+    fn validate_extraction_rules_empty_pattern_rejected() {
+        let rules = ExtractionRules {
+            folders: FilterRule {
+                include: vec!["".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(rules.validate().is_err());
+    }
+
+    #[test]
+    fn validate_extraction_rules_whitespace_pattern_rejected() {
+        let rules = ExtractionRules {
+            senders: FilterRule {
+                exclude: vec!["   ".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(rules.validate().is_err());
+    }
+
+    #[test]
+    fn validate_extraction_rules_empty_extension_rejected() {
+        let rules = ExtractionRules {
+            extensions: FilterRule {
+                include: vec!["".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(rules.validate().is_err());
+    }
+
+    #[test]
+    fn validate_archive_rules_empty_pattern_rejected() {
+        let rules = ArchiveRules {
+            senders: FilterRule {
+                include: vec!["".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(rules.validate().is_err());
+    }
+
+    #[test]
+    fn validate_archive_rules_whitespace_subject_rejected() {
+        let rules = ArchiveRules {
+            subjects: FilterRule {
+                exclude: vec![" \t ".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert!(rules.validate().is_err());
+    }
+
+    #[test]
+    fn validate_archive_rules_empty_spam_header_rejected() {
+        let rules = ArchiveRules {
+            spam_headers: vec!["".into()],
+            ..Default::default()
+        };
+        assert!(rules.validate().is_err());
+    }
+
+    #[test]
     fn validate_archive_rules_invalid_regex() {
         let rules = ArchiveRules {
             senders: FilterRule {
@@ -986,5 +1076,77 @@ mod tests {
             ..Default::default()
         };
         assert!(rules.validate().is_err());
+    }
+
+    // ── Update: clear flags ─────────────────────────────────────────────
+
+    #[test]
+    fn update_clear_archive_rules_resets_to_none() {
+        let account = AccountModel {
+            archive_rules: Some(ArchiveRules {
+                enabled: true,
+                senders: FilterRule {
+                    include: vec![r"@ok\.com$".into()],
+                    ..Default::default()
+                },
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let updated = Account::apply_update_fields(
+            &account,
+            AccountUpdateRequest {
+                clear_archive_rules: Some(true),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert!(updated.archive_rules.is_none());
+    }
+
+    #[test]
+    fn update_clear_extraction_rules_resets_to_none() {
+        let account = AccountModel {
+            extraction_rules: Some(ExtractionRules {
+                enabled: true,
+                extensions: FilterRule {
+                    include: vec!["pdf".into()],
+                    ..Default::default()
+                },
+                ..Default::default()
+            }),
+            ..Default::default()
+        };
+        let updated = Account::apply_update_fields(
+            &account,
+            AccountUpdateRequest {
+                clear_extraction_rules: Some(true),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert!(updated.extraction_rules.is_none());
+    }
+
+    #[test]
+    fn validate_update_clear_archive_conflicts_with_archive_rules() {
+        let account = AccountModel::default();
+        let request = AccountUpdateRequest {
+            clear_archive_rules: Some(true),
+            archive_rules: Some(ArchiveRules::default()),
+            ..Default::default()
+        };
+        assert!(request.validate_update_request(&account).is_err());
+    }
+
+    #[test]
+    fn validate_update_clear_extraction_conflicts_with_extraction_rules() {
+        let account = AccountModel::default();
+        let request = AccountUpdateRequest {
+            clear_extraction_rules: Some(true),
+            extraction_rules: Some(ExtractionRules::default()),
+            ..Default::default()
+        };
+        assert!(request.validate_update_request(&account).is_err());
     }
 }

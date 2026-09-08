@@ -65,6 +65,7 @@ function mapAccountToFormValues(account: AccountModel): AccountFormValues {
     auto_download_new_mailboxes: account.auto_download_new_mailboxes ?? true,
     download_schedule: account.download_schedule ?? undefined,
     archive_rules: account.archive_rules ?? undefined,
+    extraction_rules: account.extraction_rules ?? undefined,
   };
 }
 
@@ -158,6 +159,7 @@ export function AccountSettingsPage({ accountId }: AccountSettingsPageProps) {
         auto_download_new_mailboxes: data.auto_download_new_mailboxes,
         download_schedule: data.download_schedule || null,
         archive_rules: data.archive_rules || null,
+        extraction_rules: data.extraction_rules || null,
       };
 
       if (!data.date_since && !data.date_before) {
@@ -165,6 +167,12 @@ export function AccountSettingsPage({ accountId }: AccountSettingsPageProps) {
       }
       if (!data.download_schedule && account?.download_schedule) {
         payload.clear_download_schedule = true;
+      }
+      if (!data.archive_rules && account?.archive_rules) {
+        payload.clear_archive_rules = true;
+      }
+      if (!data.extraction_rules && account?.extraction_rules) {
+        payload.clear_extraction_rules = true;
       }
 
       updateMutation.mutate(payload);
@@ -246,8 +254,8 @@ export function AccountSettingsPage({ accountId }: AccountSettingsPageProps) {
 
                   <section>
                     <SectionHeader
-                      title={t('accounts.settings.filters')}
-                      description={t('accounts.settings.filtersDesc')}
+                      title={t('accounts.settings.rules', 'Rules')}
+                      description={t('accounts.settings.rulesDesc', 'Configure archive filtering and attachment extraction rules.')}
                     />
                     <TabFilters />
                   </section>

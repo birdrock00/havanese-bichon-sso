@@ -191,12 +191,22 @@
       "enableFiltering": "Activer le filtrage du contenu",
       "enableFilteringDesc": "Lorsqu'il est activé, seuls les e-mails correspondant aux règles ci-dessous seront archivés. S'il est désactivé, tous les e-mails seront archivés.",
       "exclude": "Exclure",
+      "extraction": {
+        "attachmentNames": "Noms des pièces jointes",
+        "attachmentNamesHelp": "Seules les pièces jointes dont le nom correspond à ces modèles sont extraites.",
+        "extensions": "Extensions",
+        "extensionsHelp": "Seuls les fichiers joints dans les formats sélectionnés sont extraits pour la recherche.",
+        "folders": "Dossiers",
+        "foldersHelp": "Les pièces jointes sont extraites uniquement des dossiers correspondant à ces modèles.",
+        "senders": "Expéditeurs",
+        "sendersHelp": "Les pièces jointes sont extraites uniquement des expéditeurs correspondant à ces modèles."
+      },
       "include": "Inclure",
       "matchType": {
         "contains": "Contient",
         "endsWith": "Se termine par",
-        "isExactly": "Est exactement",
-        "regex": "Expression régulière (Regex)",
+        "isExactly": "Exact",
+        "regex": "Regex",
         "startsWith": "Commence par"
       },
       "noExcludePatterns": "Aucun motif d'exclusion — rien n'est exclu.",
@@ -274,6 +284,13 @@
     "refreshToken": "Jeton de Rafraîchissement",
     "refreshTokenCopiedToClipboard": "Jeton de rafraîchissement copié dans le presse-papiers",
     "relative": "Relative",
+    "rules": {
+      "advancedSettings": "Paramètres avancés",
+      "archiveDesc": "Lorsqu’il est activé, seuls les e-mails correspondant aux règles sont archivés. Lorsqu’il est désactivé, tous les e-mails sont archivés.",
+      "archiveTitle": "Filtrage des archives",
+      "extractionDesc": "Lorsqu’elle est activée, seuls les fichiers joints correspondant aux règles sont extraits. Lorsqu’elle est désactivée, le texte est extrait de toutes les pièces jointes.",
+      "extractionTitle": "Extraction des pièces jointes"
+    },
     "runGapFill": "Vérifier les nouveaux e-mails et rattraper automatiquement les anciens messages manquants",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "Nouveau compte",
       "performance": "Performances",
       "reset": "Réinitialiser les paramètres",
+      "rules": "Règles",
+      "rulesDesc": "Configurez les règles d’archivage et des pièces jointes.",
       "save": "Enregistrer les paramètres",
       "saved": "Enregistré",
       "savedDesc": "Paramètres du compte enregistrés avec succès.",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "L'intervalle de synchronisation incrémentielle doit être un nombre",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Adresse e-mail non valide",
+    "invalidRegex": "Regex invalide",
     "invalidUrl": "URL non valide",
     "maxEmailSizeMustBeNumber": "La taille maximale des e-mails doit être un nombre.",
     "maxEmailSizeTooLarge": "La taille maximale des e-mails ne doit pas dépasser 100 MB.",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "Le mot de passe est obligatoire lorsque la méthode d'authentification est Mot de passe",
     "pleaseEnterPassword": "Veuillez entrer votre mot de passe",
     "pleaseEnterUsernameOrEmail": "Veuillez entrer votre nom d'utilisateur ou votre courriel",
+    "requireExtractionExtension": "Sélectionnez au moins une extension",
     "required": "Ce champ est obligatoire",
     "singleRequestBatchSizeMustBeNumber": "La taille du lot doit être un nombre",
     "singleRequestBatchSizeTooLarge": "La taille du lot doit être au plus 200",

@@ -191,12 +191,22 @@
       "enableFiltering": "Attiva il filtraggio dei contenuti",
       "enableFilteringDesc": "Se attivato, verranno archiviate solo le email che soddisfano le regole sottostanti. Se disattivato, verranno archiviate tutte le email.",
       "exclude": "Escludi",
+      "extraction": {
+        "attachmentNames": "Nomi allegati",
+        "attachmentNamesHelp": "Estrai solo gli allegati il cui nome corrisponde a questi modelli.",
+        "extensions": "Estensioni",
+        "extensionsHelp": "Solo gli allegati nei formati selezionati vengono estratti per la ricerca.",
+        "folders": "Cartelle",
+        "foldersHelp": "Estrai gli allegati solo dalle cartelle che corrispondono a questi modelli.",
+        "senders": "Mittenti",
+        "sendersHelp": "Estrai gli allegati solo dai mittenti che corrispondono a questi modelli."
+      },
       "include": "Includi",
       "matchType": {
         "contains": "Contiene",
-        "endsWith": "Termina con",
-        "isExactly": "È esattamente",
-        "regex": "Espressione regolare (Regex)",
+        "endsWith": "Finisce con",
+        "isExactly": "Esatto",
+        "regex": "Regex",
         "startsWith": "Inizia con"
       },
       "noExcludePatterns": "Nessun pattern di esclusione — nulla è escluso.",
@@ -274,6 +284,13 @@
     "refreshToken": "Token di Refresh",
     "refreshTokenCopiedToClipboard": "Token di refresh copiato negli appunti",
     "relative": "Relativa",
+    "rules": {
+      "advancedSettings": "Impostazioni avanzate",
+      "archiveDesc": "Se attivato, vengono archiviate solo le email che corrispondono alle regole. Se disattivato, vengono archiviate tutte le email.",
+      "archiveTitle": "Filtro archivio",
+      "extractionDesc": "Se attivata, vengono estratti solo gli allegati che corrispondono alle regole. Se disattivata, il testo viene estratto da tutti gli allegati.",
+      "extractionTitle": "Estrazione allegati"
+    },
     "runGapFill": "Controlla le nuove email e recupera automaticamente i vecchi messaggi mancanti",
     "runningState": {
       "account": {
@@ -346,6 +363,8 @@
       "newAccount": "Nuovo account",
       "performance": "Prestazioni",
       "reset": "Ripristina impostazioni",
+      "rules": "Regole",
+      "rulesDesc": "Configura le regole di archiviazione e degli allegati.",
       "save": "Salva impostazioni",
       "saved": "Salvato",
       "savedDesc": "Impostazioni dell'account salvate con successo.",
@@ -2053,6 +2072,7 @@
     "incrementalSyncMustBeNumber": "L'intervallo di sincronizzazione incrementale deve essere un numero",
     "invalidCronExpression": "Invalid cron expression. Must be 6 fields: second minute hour day-of-month month day-of-week (e.g. '0 0 0 * * *')",
     "invalidEmail": "Indirizzo email non valido",
+    "invalidRegex": "Regex non valido",
     "invalidUrl": "URL non valido",
     "maxEmailSizeMustBeNumber": "La dimensione massima dell'email deve essere un numero.",
     "maxEmailSizeTooLarge": "La dimensione massima dell'email non deve superare i 100 MB.",
@@ -2061,6 +2081,7 @@
     "passwordRequired": "La password è obbligatoria quando il metodo di autenticazione è Password",
     "pleaseEnterPassword": "Inserisci la tua password",
     "pleaseEnterUsernameOrEmail": "Inserisci il tuo nome utente o email",
+    "requireExtractionExtension": "Seleziona almeno un'estensione",
     "required": "Questo campo è obbligatorio",
     "singleRequestBatchSizeMustBeNumber": "La dimensione del batch deve essere un numero",
     "singleRequestBatchSizeTooLarge": "La dimensione del batch deve essere al massimo 200",
