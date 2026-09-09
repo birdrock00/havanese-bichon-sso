@@ -62,7 +62,7 @@ function mapAccountToFormValues(account: AccountModel): AccountFormValues {
     download_interval_min: account.download_interval_min ?? 60,
     download_batch_size: account.download_batch_size ?? 30,
     max_email_size_bytes: account.max_email_size_bytes ?? 100 * 1024 * 1024,
-    auto_download_new_mailboxes: account.auto_download_new_mailboxes ?? true,
+    auto_download_new_mailboxes: account.auto_download_new_mailboxes ?? false,
     download_schedule: account.download_schedule ?? undefined,
     archive_rules: account.archive_rules ?? undefined,
     extraction_rules: account.extraction_rules ?? undefined,
