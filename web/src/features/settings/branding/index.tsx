@@ -134,6 +134,9 @@ export function BrandingSettings() {
       setLogoPreview(null)
       queryClient.invalidateQueries({ queryKey: ['branding'] })
       toast({ title: t('settings.branding.saved', 'Branding saved') })
+      // Refresh the page so the new branding (title, favicon, sidebar logo)
+      // is applied everywhere without a manual reload.
+      window.setTimeout(() => window.location.reload(), 800)
     } catch (err: any) {
       toast({
         variant: 'destructive',
@@ -156,6 +159,7 @@ export function BrandingSettings() {
       toast({
         title: t('settings.branding.logoReset', 'Logo reset to default'),
       })
+      window.setTimeout(() => window.location.reload(), 800)
     } catch (err: any) {
       toast({
         variant: 'destructive',

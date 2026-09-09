@@ -577,6 +577,9 @@ impl From<BichonUserV2> for bichon_core::users::BichonUserV2 {
             language: value.language,
             sso_id: None,
             sso_provider: None,
+            totp_secret: None,
+            totp_enabled: false,
+            totp_recovery_codes: Vec::new(),
         }
     }
 }

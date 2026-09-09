@@ -20,10 +20,11 @@
 import { useState } from 'react'
 import useDialogState from '@/hooks/use-dialog-state'
 import { Button } from '@/components/ui/button'
-import { UserActionDialog } from './components/action-dialog'
-import { getColumns } from './components/columns'
-import { UserDeleteDialog } from './components/delete-dialog'
-import { UsersTable } from './components/table'
+  import { UserActionDialog } from './components/action-dialog'
+  import { getColumns } from './components/columns'
+  import { UserDeleteDialog } from './components/delete-dialog'
+  import { UserMfaResetDialog } from './components/mfa-reset-dialog'
+  import { UsersTable } from './components/table'
 import UserProvider, {
   type UserDialogType,
 } from './context'
@@ -118,6 +119,16 @@ export default function Users() {
                 key={`user-delete-${currentRow.id}`}
                 currentRow={currentRow}
                 open={open === 'delete'}
+                onOpenChange={() => {
+                  setOpen(null)
+                  setTimeout(() => setCurrentRow(null), 500)
+                }}
+              />
+
+              <UserMfaResetDialog
+                key={`user-mfa-reset-${currentRow.id}`}
+                currentRow={currentRow}
+                open={open === 'mfa-reset'}
                 onOpenChange={() => {
                   setOpen(null)
                   setTimeout(() => setCurrentRow(null), 500)

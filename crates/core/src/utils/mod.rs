@@ -29,6 +29,7 @@ pub mod encrypt;
 pub mod html;
 pub mod net;
 pub mod rate_limit;
+pub mod totp;
 pub mod shutdown;
 pub mod tls;
 

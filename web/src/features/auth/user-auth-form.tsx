@@ -41,8 +41,8 @@ import { useLocation, useNavigate } from '@tanstack/react-router'
 import { Button } from '@/components/button'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
-import { Loader2, LogIn, Shield } from 'lucide-react'
-import { login } from '@/api/users/api'
+import { KeyRound, Loader2, LogIn, Shield } from 'lucide-react'
+import { login, mfaVerify, type LoginResult } from '@/api/users/api'
 import { resolveApiUrl } from '@/api/branding/api'
 import { useTheme } from '@/context/theme-context'
 import { useEdition } from '@/hooks/use-edition'
@@ -51,6 +51,7 @@ type UserAuthFormProps = HTMLAttributes<HTMLDivElement>
 
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [mfaChallenge, setMfaChallenge] = useState<string | null>(null)
   const { setTheme } = useTheme();
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -65,39 +66,66 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     defaultValues: {
       username: '',
       password: '',
+      code: '',
     },
   })
 
   const mutation = useMutation({
-    mutationFn: (data: Record<string, any>) => login(data),
+    mutationFn: (data: Record<string, any>) => {
+      if (mfaChallenge) {
+        return mfaVerify(mfaChallenge, data.code)
+      }
+      return login(data)
+    },
     retry: 0,
   });
 
+  function handleLoginSuccess(result: LoginResult) {
+    // Two-factor step: the server asks for a TOTP code before issuing a token.
+    if (result.mfa_required && result.mfa_challenge) {
+      setMfaChallenge(result.mfa_challenge)
+      return
+    }
+
+    if (result.success && result.access_token) {
+      setToken(result);
+
+      if (result.theme) {
+        setTheme(result.theme);
+      }
+
+      if (result.language) {
+        i18n.changeLanguage(result.language);
+      }
+
+      navigate({ to: redirect });
+    }
+  }
+
   async function onSubmit(data: LoginFormValues) {
+    if (mfaChallenge && (!data.code || data.code.trim().length !== 6)) {
+      toast({
+        variant: "destructive",
+        title: t('auth.mfaCodeRequired', 'Please enter the 6-digit code from your authenticator app.'),
+      })
+      return
+    }
+
     setIsLoading(true)
 
     mutation.mutate(data, {
       onSuccess: (result) => {
-        if (result.success) {
-          setToken(result);
-
-          if (result.theme) {
-            setTheme(result.theme);
-          }
-
-          if (result.language) {
-            i18n.changeLanguage(result.language);
-          }
-
-          navigate({ to: redirect });
-        } else {
+        if (!result.success) {
           toast({
             variant: "destructive",
             title: t('auth.loginFailed'),
             description: `${result.error_message!}`,
             action: <ToastAction altText={t('common.tryAgain')}>{t('common.tryAgain')}</ToastAction>,
           })
+          setIsLoading(false);
+          return
         }
+        handleLoginSuccess(result)
         setIsLoading(false);
       },
       onError: (error) => {
@@ -127,57 +155,94 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <div className='grid gap-2'>
-            <FormField
-              control={form.control}
-              name='username'
-              render={({ field }) => (
-                <FormItem className='space-y-1'>
-                  <FormLabel>{t('auth.username')}</FormLabel>
-                  <FormControl>
-                    <Input autoComplete='username' {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='password'
-              render={({ field }) => (
-                <FormItem className='space-y-1'>
-                  <div className='flex items-center justify-between'>
-                    <FormLabel>{t('auth.password')}</FormLabel>
-                  </div>
-                  <FormControl>
-                    <PasswordInput autoComplete='current-password' placeholder='********' {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button className='mt-2 w-full' disabled={isLoading}>
-              {isLoading ? <Loader2 className='animate-spin' /> : <LogIn size={16} className='mr-2' />}
-              {t('auth.login')}
-            </Button>
+            {mfaChallenge ? (
+              <>
+                <p className='text-sm text-muted-foreground'>
+                  {t('auth.mfaLoginDesc', 'Enter the 6-digit code shown in your authenticator app to finish signing in.')}
+                </p>
+                <FormField
+                  control={form.control}
+                  name='code'
+                  render={({ field }) => (
+                    <FormItem className='space-y-1'>
+                      <FormLabel>{t('auth.mfaCodePlaceholder', 'Authentication code')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          inputMode='numeric'
+                          autoComplete='off'
+                          maxLength={6}
+                          placeholder='000000'
+                          className='text-center text-lg tracking-[0.5em]'
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            ) : (
+              <>
+                <FormField
+                  control={form.control}
+                  name='username'
+                  render={({ field }) => (
+                    <FormItem className='space-y-1'>
+                      <FormLabel>{t('auth.username')}</FormLabel>
+                      <FormControl>
+                        <Input autoComplete='username' {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name='password'
+                  render={({ field }) => (
+                    <FormItem className='space-y-1'>
+                      <div className='flex items-center justify-between'>
+                        <FormLabel>{t('auth.password')}</FormLabel>
+                      </div>
+                      <FormControl>
+                        <PasswordInput autoComplete='current-password' placeholder='********' {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button className='mt-2 w-full' disabled={isLoading}>
+                  {isLoading ? <Loader2 className='animate-spin' /> : <LogIn size={16} className='mr-2' />}
+                  {t('auth.login')}
+                </Button>
 
-            {isPro && (
-              <Button
-                variant='outline'
-                className='mt-2 w-full'
-                type='button'
-                onClick={() => {
-                  if (ssoEnabled) {
-                    window.location.href = resolveApiUrl('/api/auth/oidc/login')
-                  } else {
-                    toast({
-                      title: t('auth.ssoNotEnabled'),
-                      description: t('auth.ssoNotEnabledDesc'),
-                    })
-                  }
-                }}
-              >
-                <Shield size={16} className='mr-2' />
-                {t('auth.ssoLogin')}
+                {isPro && (
+                  <Button
+                    variant='outline'
+                    className='mt-2 w-full'
+                    type='button'
+                    onClick={() => {
+                      if (ssoEnabled) {
+                        window.location.href = resolveApiUrl('/api/auth/oidc/login')
+                      } else {
+                        toast({
+                          title: t('auth.ssoNotEnabled'),
+                          description: t('auth.ssoNotEnabledDesc'),
+                        })
+                      }
+                    }}
+                  >
+                    <Shield size={16} className='mr-2' />
+                    {t('auth.ssoLogin')}
+                  </Button>
+                )}
+              </>
+            )}
+
+            {mfaChallenge && (
+              <Button className='mt-2 w-full' disabled={isLoading}>
+                {isLoading ? <Loader2 className='animate-spin' /> : <KeyRound size={16} className='mr-2' />}
+                {t('auth.mfaVerify', 'Verify')}
               </Button>
             )}
           </div>

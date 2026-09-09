@@ -60,6 +60,12 @@ pub struct LoginResult {
     pub access_token: Option<String>,
     pub theme: Option<String>,
     pub language: Option<String>,
+    /// When true, the password step succeeded and a TOTP code is required.
+    #[serde(default)]
+    pub mfa_required: bool,
+    /// One-time challenge token for the MFA verification step.
+    #[serde(default)]
+    pub mfa_challenge: Option<String>,
 }
 
 pub const DEFAULT_ADMIN_USER_ID: u64 = 100000000000000;
@@ -97,6 +103,15 @@ pub struct BichonUserV2 {
     pub sso_id: Option<String>,
     /// SSO provider identifier: `"oidc"` or future `"saml"` / `"ldap"`.
     pub sso_provider: Option<String>,
+    /// TOTP two-factor secret (AES-256-GCM encrypted at rest).
+    #[serde(default)]
+    pub totp_secret: Option<String>,
+    /// Whether TOTP two-factor authentication is enabled for this user.
+    #[serde(default)]
+    pub totp_enabled: bool,
+    /// One-time recovery codes (argon2id hashes), shown only once at enrollment.
+    #[serde(default)]
+    pub totp_recovery_codes: Vec<String>,
 }
 
 impl MemDbModel for BichonUserV2 {
@@ -240,6 +255,9 @@ impl BichonUserV2 {
                 language: None,
                 sso_id: None,
                 sso_provider: None,
+                totp_secret: None,
+                totp_enabled: false,
+                totp_recovery_codes: Vec::new(),
             };
 
             // 3. Generate and insert an initial access token for the first-time setup
@@ -288,6 +306,8 @@ impl BichonUserV2 {
                             access_token: None,
                             theme: None,
                             language: None,
+                            mfa_required: false,
+                            mfa_challenge: None,
                         });
                     }
                 }
@@ -338,6 +358,18 @@ impl BichonUserV2 {
                             }
                         }
                     }
+                    if user.totp_enabled {
+                        let challenge = AccessTokenModel::new_mfa_challenge(user.id)?;
+                        return Ok(LoginResult {
+                            success: true,
+                            error_message: None,
+                            access_token: None,
+                            theme: user.theme.clone(),
+                            language: user.language.clone(),
+                            mfa_required: true,
+                            mfa_challenge: Some(challenge),
+                        });
+                    }
                     let new_token = AccessTokenModel::reset_webui_token(user.id)?;
                     Ok(LoginResult {
                         success: true,
@@ -345,6 +377,8 @@ impl BichonUserV2 {
                         access_token: Some(new_token),
                         theme: user.theme,
                         language: user.language,
+                        mfa_required: false,
+                        mfa_challenge: None,
                     })
                 } else {
                     warn!(
@@ -357,6 +391,8 @@ impl BichonUserV2 {
                         access_token: None,
                         theme: None,
                         language: None,
+                        mfa_required: false,
+                        mfa_challenge: None,
                     })
                 }
             }
@@ -376,6 +412,8 @@ impl BichonUserV2 {
                     access_token: None,
                     theme: None,
                     language: None,
+                    mfa_required: false,
+                    mfa_challenge: None,
                 })
             }
         }
@@ -383,6 +421,100 @@ impl BichonUserV2 {
 
     pub fn find(user_id: u64) -> BichonResult<Option<UserModel>> {
         find_impl::<UserModel>(DB_MANAGER.db(), &user_id.to_string())
+    }
+
+    // ── TOTP two-factor authentication ─────────────────────────────
+
+    /// Store a new (encrypted) TOTP secret. Enrollment is only completed by
+    /// `enable_totp_with_recovery_codes` after the user proves the code works.
+    pub fn set_totp_secret(&self, secret: &str) -> BichonResult<()> {
+        let encrypted = crate::encrypt!(secret)?;
+        let id = self.id.to_string();
+        update_impl::<UserModel>(DB_MANAGER.db(), &id, move |current| {
+            let mut updated = current.clone();
+            updated.totp_secret = Some(encrypted);
+            updated.totp_enabled = false;
+            updated.updated_at = utc_now!();
+            Ok(updated)
+        })?;
+        Ok(())
+    }
+
+    /// Decrypt this user's TOTP secret (used during verification).
+    pub fn decrypted_totp_secret(&self) -> BichonResult<Option<String>> {
+        match &self.totp_secret {
+            Some(secret) => Ok(Some(decrypt!(secret)?)),
+            None => Ok(None),
+        }
+    }
+
+    /// Enable TOTP and generate a fresh set of one-time recovery codes.
+    /// Returns the plaintext recovery codes (shown to the user exactly once).
+    pub fn enable_totp_with_recovery_codes(&self) -> BichonResult<Vec<String>> {
+        let codes = crate::utils::totp::generate_recovery_codes();
+        let mut hashed = Vec::with_capacity(codes.len());
+        for code in &codes {
+            hashed.push(crate::utils::totp::hash_recovery_code(code)?);
+        }
+        let id = self.id.to_string();
+        update_impl::<UserModel>(DB_MANAGER.db(), &id, move |current| {
+            let mut updated = current.clone();
+            updated.totp_enabled = true;
+            updated.totp_recovery_codes = hashed;
+            updated.updated_at = utc_now!();
+            Ok(updated)
+        })?;
+        Ok(codes)
+    }
+
+    /// Disable TOTP and clear all MFA state.
+    pub fn disable_totp(&self) -> BichonResult<()> {
+        let id = self.id.to_string();
+        update_impl::<UserModel>(DB_MANAGER.db(), &id, move |current| {
+            let mut updated = current.clone();
+            updated.totp_enabled = false;
+            updated.totp_secret = None;
+            updated.totp_recovery_codes = Vec::new();
+            updated.updated_at = utc_now!();
+            Ok(updated)
+        })?;
+        Ok(())
+    }
+
+    /// Verify a TOTP code against this user's secret (no state change).
+    pub fn verify_totp_code(&self, code: &str, window: u8) -> BichonResult<bool> {
+        let Some(secret) = self.decrypted_totp_secret()? else {
+            return Ok(false);
+        };
+        Ok(crate::utils::totp::verify_code(&secret, code, window))
+    }
+
+    /// Verify a one-time recovery code; consumes it on success.
+    pub fn verify_recovery_code(&self, code: &str) -> BichonResult<bool> {
+        let normalized = crate::utils::totp::normalize_recovery_code(code);
+        if normalized.is_empty() {
+            return Ok(false);
+        }
+        let id = self.id.to_string();
+        for stored in &self.totp_recovery_codes {
+            if crate::utils::totp::verify_hashed_code(stored, &normalized)? {
+                let consumed = stored.clone();
+                let remaining: Vec<String> = self
+                    .totp_recovery_codes
+                    .iter()
+                    .filter(|s| **s != consumed)
+                    .cloned()
+                    .collect();
+                update_impl::<UserModel>(DB_MANAGER.db(), &id, move |current| {
+                    let mut updated = current.clone();
+                    updated.totp_recovery_codes = remaining;
+                    updated.updated_at = utc_now!();
+                    Ok(updated)
+                })?;
+                return Ok(true);
+            }
+        }
+        Ok(false)
     }
 
     pub fn check_username_conflict(username: &str) -> BichonResult<()> {
@@ -438,6 +570,9 @@ impl BichonUserV2 {
             language: request.language,
             sso_id: None,
             sso_provider: None,
+            totp_secret: None,
+            totp_enabled: false,
+            totp_recovery_codes: Vec::new(),
         };
 
         let user_clone = user.clone();

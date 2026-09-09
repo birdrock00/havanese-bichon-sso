@@ -46,7 +46,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           className='h-auto flex-col items-center gap-1 rounded-lg px-2 py-2 group-data-[collapsible=icon]:!p-0 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
         >
           <Link to="/">
-            <div className='flex size-8 shrink-0 items-center justify-center overflow-hidden'>
+            <div className='flex size-12 shrink-0 items-center justify-center overflow-hidden'>
               <img
                 src={logo}
                 alt={displayName}

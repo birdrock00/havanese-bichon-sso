@@ -19,16 +19,16 @@ export function BrandingApplier() {
     const title = branding.company_name?.trim() || DEFAULT_TITLE
     if (document.title !== title) document.title = title
 
+    const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
+    if (!link) return
+
     if (branding.logo_url) {
-      const href = resolveApiUrl(branding.logo_url)
-      let link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
-      if (!link) {
-        link = document.createElement('link')
-        link.rel = 'icon'
-        document.head.appendChild(link)
-      }
+      const href = `${resolveApiUrl(branding.logo_url)}?v=${Date.now()}`
       link.removeAttribute('type')
       link.href = href
+    } else {
+      link.type = 'image/svg+xml'
+      link.href = '/assets/favicon.svg'
     }
 
   }, [branding])

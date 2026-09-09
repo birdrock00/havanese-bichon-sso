@@ -20,7 +20,7 @@
 import { Outlet } from '@tanstack/react-router'
 import { Main } from '@/components/layout/main'
 import SidebarNav from './components/sidebar-nav'
-import { Brush, KeyRound, Palette, SettingsIcon, ShieldCheck, UserCog, Waypoints } from 'lucide-react'
+import { Brush, KeyRound, LockKeyhole, Palette, SettingsIcon, ShieldCheck, UserCog, Waypoints } from 'lucide-react'
 import { FixedHeader } from '@/components/layout/fixed-header'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useEdition } from '@/hooks/use-edition'
@@ -43,6 +43,11 @@ export default function Settings() {
       title: t('settings.sidebar.access'),
       href: '/settings/access',
       icon: <ShieldCheck size={18} />
+    },
+    {
+      title: t('settings.sidebar.mfa', 'Two-factor Auth'),
+      href: '/settings/mfa',
+      icon: <LockKeyhole size={18} />,
     },
     {
       title: t('settings.appearance.title'),

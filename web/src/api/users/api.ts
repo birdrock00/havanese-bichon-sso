@@ -116,6 +116,8 @@ export interface LoginResult {
     access_token?: string | null;
     theme?: Theme,
     language?: string,
+    mfa_required?: boolean,
+    mfa_challenge?: string | null,
 }
 
 
@@ -129,6 +131,47 @@ export interface MinimalUser {
 export const login = async (data: Record<string, any>) => {
     const response = await axiosInstance.post<LoginResult>(`api/login`, data);
     return response.data;
+};
+
+export interface MfaStatus {
+    enabled: boolean;
+    has_secret: boolean;
+}
+
+export interface MfaEnrollResult {
+    secret: string;
+    otpauth_uri: string;
+}
+
+export interface MfaConfirmResult {
+    recovery_codes: string[];
+}
+
+export const mfaVerify = async (challenge: string, code: string) => {
+    const response = await axiosInstance.post<LoginResult>(`api/auth/mfa/verify`, { challenge, code });
+    return response.data;
+};
+
+export const mfaStatus = async () => {
+    const response = await axiosInstance.get<MfaStatus>(`api/v1/mfa/status`);
+    return response.data;
+};
+
+export const mfaEnroll = async () => {
+    const response = await axiosInstance.post<MfaEnrollResult>(`api/v1/mfa/enroll`);
+    return response.data;
+};
+
+export const mfaConfirm = async (code: string) => {
+    const response = await axiosInstance.post<MfaConfirmResult>(`api/v1/mfa/confirm`, { code });
+    return response.data;
+};
+
+export const mfaDisable = async (code: string) => {
+    await axiosInstance.post(`api/v1/mfa/disable`, { code });
+};
+export const mfaAdminReset = async (userId: number) => {
+    await axiosInstance.post(`api/v1/mfa/admin-reset/${userId}`);
 };
 
 export const reset_admin_token = async () => {

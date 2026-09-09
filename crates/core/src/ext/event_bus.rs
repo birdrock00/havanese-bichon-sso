@@ -97,6 +97,23 @@ pub enum Event {
         user: String,
         ip: IpAddr,
     },
+    /// TOTP two-factor authentication was enabled for a user.
+    MfaEnabled {
+        user: String,
+        ip: Option<IpAddr>,
+    },
+    /// TOTP two-factor authentication was disabled for a user.
+    MfaDisabled {
+        user: String,
+        ip: Option<IpAddr>,
+    },
+    /// An administrator forcibly reset another user's TOTP two-factor
+    /// authentication (e.g. the user lost access to their authenticator).
+    MfaResetByAdmin {
+        admin: String,
+        target_user: String,
+        ip: Option<IpAddr>,
+    },
     UserCreated {
         created_by: String,
         new_user: String,

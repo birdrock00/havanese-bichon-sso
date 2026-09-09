@@ -73,6 +73,9 @@ const EVENT_TYPES = [
   'proxy.removed',
   'sso.login',
   'sso.logout',
+  'mfa.enabled',
+  'mfa.disabled',
+  'mfa.reset_by_admin',
   'license.uploaded',
   'branding.updated',
   'search.performed',
@@ -121,6 +124,12 @@ function eventTypeLabel(t: (key: string, defaultValue: string) => string, et: st
     'proxy.removed': t('audit.eventTypes.proxyRemoved', 'Proxy removed'),
     'sso.login': t('audit.eventTypes.ssoLogin', 'SSO login'),
     'sso.logout': t('audit.eventTypes.ssoLogout', 'SSO logout'),
+    'mfa.enabled': t('audit.eventTypes.mfaEnabled', 'Two-factor authentication enabled'),
+    'mfa.disabled': t('audit.eventTypes.mfaDisabled', 'Two-factor authentication disabled'),
+    'mfa.reset_by_admin': t(
+      'audit.eventTypes.mfaResetByAdmin',
+      'Two-factor authentication reset by admin',
+    ),
     'license.uploaded': t('audit.eventTypes.licenseUploaded', 'License uploaded'),
     'branding.updated': t('audit.eventTypes.brandingUpdated', 'Branding updated'),
     'search.performed': t('audit.eventTypes.searchPerformed', 'Search performed'),
@@ -198,6 +207,8 @@ function describeEvent(rec: AuditRecord): string {
       return typeof p.url === 'string' ? p.url : ''
     case 'license.uploaded':
       return typeof p.email === 'string' ? p.email : ''
+    case 'mfa.reset_by_admin':
+      return typeof p.target_user === 'string' ? p.target_user : ''
     default:
       return ''
   }

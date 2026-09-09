@@ -19,5 +19,6 @@
 
 pub mod features;
 pub mod login;
+pub mod mfa;
 pub mod oauth2;
 pub mod status;

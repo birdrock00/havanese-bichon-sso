@@ -21,6 +21,7 @@ use account::AccountApi;
 use auto_config::AutoConfigApi;
 use bichon_core::bichon_version;
 use mailbox::MailBoxApi;
+use mfa::MfaApi;
 use message::MessageApi;
 use oauth2::OAuth2Api;
 use poem_openapi::{OpenApiService, Tags};
@@ -34,6 +35,7 @@ pub mod auto_config;
 pub mod import;
 pub mod mailbox;
 pub mod message;
+pub mod mfa;
 pub mod oauth2;
 pub mod system;
 pub mod users;
@@ -47,6 +49,7 @@ pub enum ApiTags {
     Mailbox,
     OAuth2,
     Message,
+    Mfa,
     System,
     Import,
     Users,
@@ -61,6 +64,7 @@ type RustMailOpenApi = (
     MailBoxApi,
     OAuth2Api,
     MessageApi,
+    MfaApi,
     ImportApi,
     UsersApi,
 );
@@ -76,6 +80,7 @@ pub fn create_openapi_service() -> OpenApiService<RustMailOpenApi, ()> {
             MailBoxApi,
             OAuth2Api,
             MessageApi,
+            MfaApi,
             ImportApi,
             UsersApi,
         ),
