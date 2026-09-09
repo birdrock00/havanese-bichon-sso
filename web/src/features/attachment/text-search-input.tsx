@@ -35,7 +35,7 @@ const SEARCH_FIELDS: SearchField[] = ["text", "subject", "attachment_name", "fro
 
 export function TextSearchInput() {
     const { t } = useTranslation()
-    const { features } = useEdition()
+    const { isPro } = useEdition()
     const { filter, setFilter } = useAttachmentContext()
 
     const [value, setValue] = useState("")
@@ -144,7 +144,7 @@ export function TextSearchInput() {
                         <SelectItem value="text" className="font-medium cursor-pointer text-xs">
                             {t("search_input.all")}
                             <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-                                {features.includes("pdf_search")
+                                {isPro
                                     ? t("attachment.all_fields_desc_pro", "Matches attachment name, content, subject, and sender")
                                     : t("attachment.all_fields_desc")}
                             </p>

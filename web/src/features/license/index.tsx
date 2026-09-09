@@ -70,7 +70,7 @@ export default function LicensePage() {
   const { t } = useTranslation()
   const { toast } = useToast()
   const queryClient = useQueryClient()
-  const { isPro, features } = useEdition()
+  const { isPro } = useEdition()
   const { require_any_permission } = useCurrentUser()
   const [licenseText, setLicenseText] = useState('')
 
@@ -116,8 +116,7 @@ export default function LicensePage() {
     e.target.value = ''
   }
 
-  const licenseEnabled = features.includes('license')
-  const canView = isPro && licenseEnabled && require_any_permission(['system:root', 'user:manage'])
+  const canView = isPro && require_any_permission(['system:root', 'user:manage'])
 
   if (!canView) {
     return (

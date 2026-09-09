@@ -56,8 +56,8 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const { search } = useLocation();
   const redirect = toSearchParams(search).get('redirect') || '/';
 
-  const { isPro, features } = useEdition()
-  const ssoEnabled = isPro && features.includes('sso')
+  const { isPro } = useEdition()
+  const ssoEnabled = isPro
 
   const formSchema = getFormSchema(t)
   const form = useForm<LoginFormValues>({

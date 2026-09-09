@@ -21,7 +21,6 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 struct FeaturesResponse {
-    features: Vec<String>,
     edition: &'static str,
     version: String,
 }
@@ -29,7 +28,6 @@ struct FeaturesResponse {
 #[handler]
 pub async fn get_features() -> impl IntoResponse {
     Json(FeaturesResponse {
-        features: vec![],
         edition: "community",
         version: env!("CARGO_PKG_VERSION").to_string(),
     })

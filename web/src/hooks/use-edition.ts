@@ -2,7 +2,6 @@ import axiosInstance from '@/api/axiosInstance'
 import { useQuery } from '@tanstack/react-query'
 
 export interface EditionInfo {
-  features: string[]
   edition: 'community' | 'pro' | 'enterprise'
   version: string
 }
@@ -23,6 +22,5 @@ export function useEdition() {
   return {
     isPro: data?.edition === 'pro' || data?.edition === 'enterprise',
     edition: data?.edition ?? 'community',
-    features: data?.features ?? [],
   } as const
 }

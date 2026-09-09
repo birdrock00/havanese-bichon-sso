@@ -32,10 +32,7 @@ export function useSidebarData(): SidebarData {
   const { t } = useTranslation()
 
   const { require_any_permission } = useCurrentUser()
-  const { features } = useEdition()
-  const auditEnabled = features.includes('audit_log')
-  const licenseEnabled = features.includes('license')
-  const analyticsEnabled = features.includes('analytics')
+  const { isPro } = useEdition()
 
   return {
     navGroups: [
@@ -67,7 +64,7 @@ export function useSidebarData(): SidebarData {
             url: '/analytics',
             icon: BarChart3,
             visible:
-              analyticsEnabled &&
+              isPro &&
               require_any_permission([
                 'system:root',
                 'user:manage',
@@ -129,13 +126,13 @@ export function useSidebarData(): SidebarData {
             title: t('navigation.license'),
             url: '/license',
             icon: BadgeCheck,
-            visible: licenseEnabled && require_any_permission(['system:root', 'user:manage']),
+            visible: isPro && require_any_permission(['system:root', 'user:manage']),
           },
           {
             title: t('navigation.auditLog'),
             url: '/audit-log',
             icon: ScrollText,
-            visible: auditEnabled && require_any_permission(['system:root', 'user:manage', 'data:read:all']),
+            visible: isPro && require_any_permission(['system:root', 'user:manage', 'data:read:all']),
           },
         ],
       },
