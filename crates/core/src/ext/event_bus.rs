@@ -242,6 +242,13 @@ pub enum Event {
         email: String,
         edition: String,
     },
+    /// Pro edition: admin updated the brand identity (company name / tagline / logo).
+    BrandingUpdated {
+        user: String,
+        company_name: Option<String>,
+        tagline: Option<String>,
+        logo_changed: bool,
+    },
 }
 
 pub trait EventBus: Send + Sync {

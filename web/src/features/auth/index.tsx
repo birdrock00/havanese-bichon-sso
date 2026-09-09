@@ -19,44 +19,31 @@
 import {
   Card,
   CardContent,
-  CardFooter,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
 import { UserAuthForm } from './user-auth-form'
 import { useTranslation } from 'react-i18next'
 import { AuthLayout } from './auth-layout'
-import { useEdition } from '@/hooks/use-edition'
 
 export default function SignIn() {
   const { t } = useTranslation()
-  const { isPro } = useEdition()
+
   return (
     <AuthLayout>
-      <Card className='gap-4'>
+      <Card>
         <CardHeader>
-          <CardTitle className='text-lg tracking-tight'>{t('auth.welcome')}</CardTitle>
+          <CardTitle className='text-xl tracking-tight'>
+            {t('auth.signInTitle', 'Sign in to your account')}
+          </CardTitle>
+          <CardDescription>
+            {t('auth.signInDescription', 'Enter your credentials to continue.')}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <UserAuthForm />
         </CardContent>
-        <CardFooter>
-          <p className="text-muted-foreground px-8 text-center text-sm">
-            {isPro
-              ? t(
-                  'common.project_description_pro',
-                  'Bichon Pro is a self-hosted email archiving platform.',
-                )
-              : t('common.project_description')}
-            <a
-              href="https://github.com/rustmailer/bichon"
-              className="hover:text-primary underline underline-offset-4 ml-1"
-            >
-              {t('common.view_on_github_button')}
-            </a>
-            .
-          </p>
-        </CardFooter>
       </Card>
     </AuthLayout>
   )

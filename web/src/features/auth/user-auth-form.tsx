@@ -43,6 +43,7 @@ import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
 import { Loader2, LogIn, Shield } from 'lucide-react'
 import { login } from '@/api/users/api'
+import { resolveApiUrl } from '@/api/branding/api'
 import { useTheme } from '@/context/theme-context'
 import { useEdition } from '@/hooks/use-edition'
 
@@ -56,8 +57,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const { search } = useLocation();
   const redirect = toSearchParams(search).get('redirect') || '/';
 
-  const { isPro } = useEdition()
-  const ssoEnabled = isPro
+  const { isPro, ssoEnabled } = useEdition()
 
   const formSchema = getFormSchema(t)
   const form = useForm<LoginFormValues>({
@@ -134,7 +134,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                 <FormItem className='space-y-1'>
                   <FormLabel>{t('auth.username')}</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input autoComplete='username' {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -149,24 +149,31 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                     <FormLabel>{t('auth.password')}</FormLabel>
                   </div>
                   <FormControl>
-                    <PasswordInput placeholder='********' {...field} />
+                    <PasswordInput autoComplete='current-password' placeholder='********' {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button className='mt-2' disabled={isLoading}>
+            <Button className='mt-2 w-full' disabled={isLoading}>
               {isLoading ? <Loader2 className='animate-spin' /> : <LogIn size={16} className='mr-2' />}
               {t('auth.login')}
             </Button>
 
-            {ssoEnabled && (
+            {isPro && (
               <Button
                 variant='outline'
-                className='mt-2'
+                className='mt-2 w-full'
                 type='button'
                 onClick={() => {
-                  window.location.href = '/api/auth/oidc/login'
+                  if (ssoEnabled) {
+                    window.location.href = resolveApiUrl('/api/auth/oidc/login')
+                  } else {
+                    toast({
+                      title: t('auth.ssoNotEnabled'),
+                      description: t('auth.ssoNotEnabledDesc'),
+                    })
+                  }
                 }}
               >
                 <Shield size={16} className='mr-2' />

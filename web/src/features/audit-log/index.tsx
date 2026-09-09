@@ -74,6 +74,7 @@ const EVENT_TYPES = [
   'sso.login',
   'sso.logout',
   'license.uploaded',
+  'branding.updated',
   'search.performed',
   'settings.changed',
 ] as const
@@ -121,6 +122,7 @@ function eventTypeLabel(t: (key: string, defaultValue: string) => string, et: st
     'sso.login': t('audit.eventTypes.ssoLogin', 'SSO login'),
     'sso.logout': t('audit.eventTypes.ssoLogout', 'SSO logout'),
     'license.uploaded': t('audit.eventTypes.licenseUploaded', 'License uploaded'),
+    'branding.updated': t('audit.eventTypes.brandingUpdated', 'Branding updated'),
     'search.performed': t('audit.eventTypes.searchPerformed', 'Search performed'),
     'settings.changed': t('audit.eventTypes.settingsChanged', 'Settings changed'),
   }

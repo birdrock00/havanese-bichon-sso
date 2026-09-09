@@ -96,7 +96,7 @@ export default function SidebarNav({
                 pathname === item.href
                   ? 'bg-muted hover:bg-muted'
                   : 'hover:bg-transparent hover:underline',
-                'justify-start text-xs'
+                'justify-start'
               )}
             >
               <span className='mr-2'>{item.icon}</span>

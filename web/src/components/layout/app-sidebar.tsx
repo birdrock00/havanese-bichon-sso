@@ -22,41 +22,42 @@ import {
   SidebarContent,
   SidebarHeader,
   SidebarMenuButton,
-  useSidebar,
 } from '@/components/ui/sidebar'
 import { NavGroup } from '@/components/layout/nav-group'
 import Logo from '@/assets/logo.svg'
+import { resolveApiUrl } from '@/api/branding/api'
+import { useBranding } from '@/hooks/use-branding'
+import { AutoFitText } from '@/components/branding/auto-fit-text'
 import { useSidebarData } from './data/sidebar-data'
 import { useEdition } from '@/hooks/use-edition'
 import { Link } from '@tanstack/react-router';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { open } = useSidebar();
   const sidebarData = useSidebarData();
   const { isPro } = useEdition();
+  const { companyName, logoUrl } = useBranding();
+  const logo = logoUrl ? resolveApiUrl(logoUrl) : Logo;
+  const displayName = companyName || (isPro ? 'Bichon Pro' : 'Bichon');
   return (
     <Sidebar collapsible='icon' variant='sidebar' {...props}>
       <SidebarHeader>
         <SidebarMenuButton
-          size='lg'
           asChild
-          className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
+          className='h-auto flex-col items-center gap-1 rounded-lg px-2 py-2 group-data-[collapsible=icon]:!p-0 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
         >
           <Link to="/">
-            <div className='flex aspect-square size-16 items-center justify-center rounded-lg text-sidebar-primary-foreground'>
+            <div className='flex size-8 shrink-0 items-center justify-center overflow-hidden'>
               <img
-                className={open ? "relative ml-[12px] mr-[12px]" : "mr-[30px]"}
-                src={Logo}
-                width={open ? 60 : 40}
-                height={open ? 60 : 40}
-                alt='Logo'
+                src={logo}
+                alt={displayName}
+                className='max-h-full max-w-full object-contain'
               />
             </div>
-            <div className='grid flex-1 text-left text-lg leading-tight'>
-              <span className='truncate font-semibold'>
-                {isPro ? 'Bichon Pro' : 'Bichon'}
-              </span>
-            </div>
+            <AutoFitText
+              text={displayName}
+              title={displayName}
+              className='flex w-full justify-center'
+            />
           </Link>
         </SidebarMenuButton>
       </SidebarHeader>

@@ -20,15 +20,17 @@
 import { Outlet } from '@tanstack/react-router'
 import { Main } from '@/components/layout/main'
 import SidebarNav from './components/sidebar-nav'
-import { KeyRound, Palette, SettingsIcon, ShieldCheck, UserCog, Waypoints } from 'lucide-react'
+import { Brush, KeyRound, Palette, SettingsIcon, ShieldCheck, UserCog, Waypoints } from 'lucide-react'
 import { FixedHeader } from '@/components/layout/fixed-header'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { useEdition } from '@/hooks/use-edition'
 import { useTranslation } from 'react-i18next'
 import { Separator } from '@/components/ui/separator'
 
 export default function Settings() {
   const { t } = useTranslation()
-  const { canGlobal } = useCurrentUser()
+  const { canGlobal, require_any_permission } = useCurrentUser()
+  const { isPro } = useEdition()
 
 
   const sidebarNavItems = [
@@ -46,6 +48,12 @@ export default function Settings() {
       title: t('settings.appearance.title'),
       href: '/settings/appearance',
       icon: <Palette size={18} />,
+    },
+    {
+      title: t('settings.sidebar.branding', 'Branding'),
+      href: '/settings/branding',
+      icon: <Brush size={18} />,
+      visible: isPro && require_any_permission(['system:root', 'user:manage']),
     },
     {
       title: t('settings.sidebar.apiTokens'),

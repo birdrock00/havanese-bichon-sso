@@ -76,6 +76,9 @@ const AuthenticatedSettingsProfileLazyImport = createFileRoute(
 const AuthenticatedSettingsConfigurationsLazyImport = createFileRoute(
   '/_authenticated/settings/configurations',
 )()
+const AuthenticatedSettingsBrandingLazyImport = createFileRoute(
+  '/_authenticated/settings/branding',
+)()
 const AuthenticatedSettingsAppearanceLazyImport = createFileRoute(
   '/_authenticated/settings/appearance',
 )()
@@ -327,6 +330,17 @@ const AuthenticatedSettingsConfigurationsLazyRoute =
     ),
   )
 
+const AuthenticatedSettingsBrandingLazyRoute =
+  AuthenticatedSettingsBrandingLazyImport.update({
+    id: '/branding',
+    path: '/branding',
+    getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/settings/branding.lazy').then(
+      (d) => d.Route,
+    ),
+  )
+
 const AuthenticatedSettingsAppearanceLazyRoute =
   AuthenticatedSettingsAppearanceLazyImport.update({
     id: '/appearance',
@@ -508,6 +522,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAppearanceLazyImport
       parentRoute: typeof AuthenticatedSettingsRouteLazyImport
     }
+    '/_authenticated/settings/branding': {
+      id: '/_authenticated/settings/branding'
+      path: '/branding'
+      fullPath: '/settings/branding'
+      preLoaderRoute: typeof AuthenticatedSettingsBrandingLazyImport
+      parentRoute: typeof AuthenticatedSettingsRouteLazyImport
+    }
     '/_authenticated/settings/configurations': {
       id: '/_authenticated/settings/configurations'
       path: '/configurations'
@@ -622,6 +643,7 @@ interface AuthenticatedSettingsRouteLazyRouteChildren {
   AuthenticatedSettingsAccessLazyRoute: typeof AuthenticatedSettingsAccessLazyRoute
   AuthenticatedSettingsApiTokensLazyRoute: typeof AuthenticatedSettingsApiTokensLazyRoute
   AuthenticatedSettingsAppearanceLazyRoute: typeof AuthenticatedSettingsAppearanceLazyRoute
+  AuthenticatedSettingsBrandingLazyRoute: typeof AuthenticatedSettingsBrandingLazyRoute
   AuthenticatedSettingsConfigurationsLazyRoute: typeof AuthenticatedSettingsConfigurationsLazyRoute
   AuthenticatedSettingsProfileLazyRoute: typeof AuthenticatedSettingsProfileLazyRoute
   AuthenticatedSettingsProxyLazyRoute: typeof AuthenticatedSettingsProxyLazyRoute
@@ -635,6 +657,8 @@ const AuthenticatedSettingsRouteLazyRouteChildren: AuthenticatedSettingsRouteLaz
       AuthenticatedSettingsApiTokensLazyRoute,
     AuthenticatedSettingsAppearanceLazyRoute:
       AuthenticatedSettingsAppearanceLazyRoute,
+    AuthenticatedSettingsBrandingLazyRoute:
+      AuthenticatedSettingsBrandingLazyRoute,
     AuthenticatedSettingsConfigurationsLazyRoute:
       AuthenticatedSettingsConfigurationsLazyRoute,
     AuthenticatedSettingsProfileLazyRoute:
@@ -727,6 +751,7 @@ export interface FileRoutesByFullPath {
   '/settings/access': typeof AuthenticatedSettingsAccessLazyRoute
   '/settings/api-tokens': typeof AuthenticatedSettingsApiTokensLazyRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceLazyRoute
+  '/settings/branding': typeof AuthenticatedSettingsBrandingLazyRoute
   '/settings/configurations': typeof AuthenticatedSettingsConfigurationsLazyRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileLazyRoute
   '/settings/proxy': typeof AuthenticatedSettingsProxyLazyRoute
@@ -759,6 +784,7 @@ export interface FileRoutesByTo {
   '/settings/access': typeof AuthenticatedSettingsAccessLazyRoute
   '/settings/api-tokens': typeof AuthenticatedSettingsApiTokensLazyRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceLazyRoute
+  '/settings/branding': typeof AuthenticatedSettingsBrandingLazyRoute
   '/settings/configurations': typeof AuthenticatedSettingsConfigurationsLazyRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileLazyRoute
   '/settings/proxy': typeof AuthenticatedSettingsProxyLazyRoute
@@ -796,6 +822,7 @@ export interface FileRoutesById {
   '/_authenticated/settings/access': typeof AuthenticatedSettingsAccessLazyRoute
   '/_authenticated/settings/api-tokens': typeof AuthenticatedSettingsApiTokensLazyRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceLazyRoute
+  '/_authenticated/settings/branding': typeof AuthenticatedSettingsBrandingLazyRoute
   '/_authenticated/settings/configurations': typeof AuthenticatedSettingsConfigurationsLazyRoute
   '/_authenticated/settings/profile': typeof AuthenticatedSettingsProfileLazyRoute
   '/_authenticated/settings/proxy': typeof AuthenticatedSettingsProxyLazyRoute
@@ -833,6 +860,7 @@ export interface FileRouteTypes {
     | '/settings/access'
     | '/settings/api-tokens'
     | '/settings/appearance'
+    | '/settings/branding'
     | '/settings/configurations'
     | '/settings/profile'
     | '/settings/proxy'
@@ -864,6 +892,7 @@ export interface FileRouteTypes {
     | '/settings/access'
     | '/settings/api-tokens'
     | '/settings/appearance'
+    | '/settings/branding'
     | '/settings/configurations'
     | '/settings/profile'
     | '/settings/proxy'
@@ -899,6 +928,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings/access'
     | '/_authenticated/settings/api-tokens'
     | '/_authenticated/settings/appearance'
+    | '/_authenticated/settings/branding'
     | '/_authenticated/settings/configurations'
     | '/_authenticated/settings/profile'
     | '/_authenticated/settings/proxy'
@@ -992,6 +1022,7 @@ export const routeTree = rootRoute
         "/_authenticated/settings/access",
         "/_authenticated/settings/api-tokens",
         "/_authenticated/settings/appearance",
+        "/_authenticated/settings/branding",
         "/_authenticated/settings/configurations",
         "/_authenticated/settings/profile",
         "/_authenticated/settings/proxy",
@@ -1052,6 +1083,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/settings/appearance": {
       "filePath": "_authenticated/settings/appearance.lazy.tsx",
+      "parent": "/_authenticated/settings"
+    },
+    "/_authenticated/settings/branding": {
+      "filePath": "_authenticated/settings/branding.lazy.tsx",
       "parent": "/_authenticated/settings"
     },
     "/_authenticated/settings/configurations": {

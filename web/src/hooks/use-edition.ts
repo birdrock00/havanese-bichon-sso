@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 export interface EditionInfo {
   edition: 'community' | 'pro' | 'enterprise'
   version: string
+  sso_enabled: boolean
 }
 
 async function fetchEdition(): Promise<EditionInfo> {
@@ -22,5 +23,6 @@ export function useEdition() {
   return {
     isPro: data?.edition === 'pro' || data?.edition === 'enterprise',
     edition: data?.edition ?? 'community',
+    ssoEnabled: data?.sso_enabled ?? false,
   } as const
 }
