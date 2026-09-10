@@ -26,6 +26,9 @@ import { Route as AuthenticatedAttachmentIndexImport } from './routes/_authentic
 const AuthenticatedLicenseLazyImport = createFileRoute(
   '/_authenticated/license',
 )()
+const AuthenticatedIntegrityLazyImport = createFileRoute(
+  '/_authenticated/integrity',
+)()
 const AuthenticatedAuditLogLazyImport = createFileRoute(
   '/_authenticated/audit-log',
 )()
@@ -117,6 +120,16 @@ const AuthenticatedLicenseLazyRoute = AuthenticatedLicenseLazyImport.update({
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any).lazy(() =>
   import('./routes/_authenticated/license.lazy').then((d) => d.Route),
+)
+
+const AuthenticatedIntegrityLazyRoute = AuthenticatedIntegrityLazyImport.update(
+  {
+    id: '/integrity',
+    path: '/integrity',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any,
+).lazy(() =>
+  import('./routes/_authenticated/integrity.lazy').then((d) => d.Route),
 )
 
 const AuthenticatedAuditLogLazyRoute = AuthenticatedAuditLogLazyImport.update({
@@ -492,6 +505,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAuditLogLazyImport
       parentRoute: typeof AuthenticatedRouteImport
     }
+    '/_authenticated/integrity': {
+      id: '/_authenticated/integrity'
+      path: '/integrity'
+      fullPath: '/integrity'
+      preLoaderRoute: typeof AuthenticatedIntegrityLazyImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
     '/_authenticated/license': {
       id: '/_authenticated/license'
       path: '/license'
@@ -716,6 +736,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedUsersRouteLazyRoute: typeof AuthenticatedUsersRouteLazyRouteWithChildren
   AuthenticatedAnalyticsLazyRoute: typeof AuthenticatedAnalyticsLazyRoute
   AuthenticatedAuditLogLazyRoute: typeof AuthenticatedAuditLogLazyRoute
+  AuthenticatedIntegrityLazyRoute: typeof AuthenticatedIntegrityLazyRoute
   AuthenticatedLicenseLazyRoute: typeof AuthenticatedLicenseLazyRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAccountsNewLazyRoute: typeof AuthenticatedAccountsNewLazyRoute
@@ -736,6 +757,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedUsersRouteLazyRouteWithChildren,
   AuthenticatedAnalyticsLazyRoute: AuthenticatedAnalyticsLazyRoute,
   AuthenticatedAuditLogLazyRoute: AuthenticatedAuditLogLazyRoute,
+  AuthenticatedIntegrityLazyRoute: AuthenticatedIntegrityLazyRoute,
   AuthenticatedLicenseLazyRoute: AuthenticatedLicenseLazyRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAccountsNewLazyRoute: AuthenticatedAccountsNewLazyRoute,
@@ -766,6 +788,7 @@ export interface FileRoutesByFullPath {
   '/503': typeof errors503LazyRoute
   '/analytics': typeof AuthenticatedAnalyticsLazyRoute
   '/audit-log': typeof AuthenticatedAuditLogLazyRoute
+  '/integrity': typeof AuthenticatedIntegrityLazyRoute
   '/license': typeof AuthenticatedLicenseLazyRoute
   '/': typeof AuthenticatedIndexRoute
   '/accounts/new': typeof AuthenticatedAccountsNewLazyRoute
@@ -800,6 +823,7 @@ export interface FileRoutesByTo {
   '/503': typeof errors503LazyRoute
   '/analytics': typeof AuthenticatedAnalyticsLazyRoute
   '/audit-log': typeof AuthenticatedAuditLogLazyRoute
+  '/integrity': typeof AuthenticatedIntegrityLazyRoute
   '/license': typeof AuthenticatedLicenseLazyRoute
   '/': typeof AuthenticatedIndexRoute
   '/accounts/new': typeof AuthenticatedAccountsNewLazyRoute
@@ -839,6 +863,7 @@ export interface FileRoutesById {
   '/(errors)/503': typeof errors503LazyRoute
   '/_authenticated/analytics': typeof AuthenticatedAnalyticsLazyRoute
   '/_authenticated/audit-log': typeof AuthenticatedAuditLogLazyRoute
+  '/_authenticated/integrity': typeof AuthenticatedIntegrityLazyRoute
   '/_authenticated/license': typeof AuthenticatedLicenseLazyRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/accounts/new': typeof AuthenticatedAccountsNewLazyRoute
@@ -878,6 +903,7 @@ export interface FileRouteTypes {
     | '/503'
     | '/analytics'
     | '/audit-log'
+    | '/integrity'
     | '/license'
     | '/'
     | '/accounts/new'
@@ -911,6 +937,7 @@ export interface FileRouteTypes {
     | '/503'
     | '/analytics'
     | '/audit-log'
+    | '/integrity'
     | '/license'
     | '/'
     | '/accounts/new'
@@ -948,6 +975,7 @@ export interface FileRouteTypes {
     | '/(errors)/503'
     | '/_authenticated/analytics'
     | '/_authenticated/audit-log'
+    | '/_authenticated/integrity'
     | '/_authenticated/license'
     | '/_authenticated/'
     | '/_authenticated/accounts/new'
@@ -1023,6 +1051,7 @@ export const routeTree = rootRoute
         "/_authenticated/users",
         "/_authenticated/analytics",
         "/_authenticated/audit-log",
+        "/_authenticated/integrity",
         "/_authenticated/license",
         "/_authenticated/",
         "/_authenticated/accounts/new",
@@ -1087,6 +1116,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/audit-log": {
       "filePath": "_authenticated/audit-log.lazy.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/integrity": {
+      "filePath": "_authenticated/integrity.lazy.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/license": {
