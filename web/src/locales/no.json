@@ -1147,6 +1147,7 @@
     "noConfigurations": "Ingen OAuth2-konfigurasjoner",
     "noConfigurationsDesc": "Du har ikke lagt til noen OAuth2-konfigurasjoner ennå. Legg til en for å begynne å bruke OAuth2-funksjoner.",
     "noEmailAccountsRegistered": "Ingen e-postkontoer registrert. Vennligst opprett en.",
+    "noProxy": "Ingen proxy",
     "noProxyAvailable": "Ingen proxy tilgjengelig",
     "noStatus": "Denne siden viser resultatet av din OAuth2-autentisering. For øyeblikket er ingen spesifikk status tilgjengelig. Vennligst prøv igjen ved behov.",
     "oauth2ClientHasBeenSuccessfully": "OAuth2-klient har blitt {{action}}.",

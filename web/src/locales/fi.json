@@ -1147,6 +1147,7 @@
     "noConfigurations": "Ei OAuth2-määrityksiä",
     "noConfigurationsDesc": "Et ole vielä lisännyt OAuth2-määrityksiä. Lisää yksi aloittaaksesi OAuth2-toimintojen käytön.",
     "noEmailAccountsRegistered": "Ei rekisteröityjä sähköpostitilejä. Ole hyvä ja luo sellainen.",
+    "noProxy": "Ei välityspalvelinta",
     "noProxyAvailable": "Ei välityspalvelinta saatavilla",
     "noStatus": "Tämä sivu näyttää OAuth2-todennuksesi tuloksen. Tällä hetkellä ei ole saatavilla erityistä tilaa. Yritä uudelleen tarvittaessa.",
     "oauth2ClientHasBeenSuccessfully": "OAuth2-asiakasohjelma on {{action}} onnistuneesti.",

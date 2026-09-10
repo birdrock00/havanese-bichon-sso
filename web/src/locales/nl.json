@@ -1147,6 +1147,7 @@
     "noConfigurations": "Geen OAuth2 Configuraties",
     "noConfigurationsDesc": "U heeft nog geen OAuth2-configuraties toegevoegd. Voeg er een toe om de OAuth2-functies te gebruiken.",
     "noEmailAccountsRegistered": "Geen e-mailaccounts geregistreerd. Gelieve er een aan te maken.",
+    "noProxy": "Geen proxy",
     "noProxyAvailable": "Geen proxy beschikbaar",
     "noStatus": "Deze pagina toont het resultaat van uw OAuth2-authenticatie. Momenteel is er geen specifieke status beschikbaar. Probeer het indien nodig opnieuw.",
     "oauth2ClientHasBeenSuccessfully": "OAuth2 client is succesvol {{action}}.",

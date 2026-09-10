@@ -1147,6 +1147,7 @@
     "noConfigurations": "Nessuna Configurazione OAuth2",
     "noConfigurationsDesc": "Non hai ancora aggiunto alcuna configurazione OAuth2. Aggiungine una per iniziare a usare le funzionalità OAuth2.",
     "noEmailAccountsRegistered": "Nessun account email registrato. Per favore, creane uno.",
+    "noProxy": "Senza proxy",
     "noProxyAvailable": "Nessun proxy disponibile",
     "noStatus": "Questa pagina mostra il risultato della tua autenticazione OAuth2. Attualmente non è disponibile alcuno stato specifico. Riprova se necessario.",
     "oauth2ClientHasBeenSuccessfully": "Il client OAuth2 è stato {{action}} con successo.",

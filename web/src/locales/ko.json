@@ -1147,6 +1147,7 @@
     "noConfigurations": "OAuth2 구성 없음",
     "noConfigurationsDesc": "아직 OAuth2 구성을 추가하지 않았습니다. 기능을 사용하려면 추가하십시오.",
     "noEmailAccountsRegistered": "등록된 이메일 계정이 없습니다. 하나를 생성하십시오.",
+    "noProxy": "프록시 미사용",
     "noProxyAvailable": "사용 가능한 프록시 없음",
     "noStatus": "이 페이지에는 OAuth2 인증 결과가 표시됩니다. 현재 특정 상태를 사용할 수 없습니다. 필요한 경우 다시 시도하십시오.",
     "oauth2ClientHasBeenSuccessfully": "OAuth2 클라이언트가 성공적으로 {{action}}되었습니다.",

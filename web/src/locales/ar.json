@@ -1147,6 +1147,7 @@
     "noConfigurations": "لا توجد تكوينات OAuth2",
     "noConfigurationsDesc": "لم تقم بإضافة أي تكوينات OAuth2 بعد. أضف واحدة لبدء استخدام ميزات OAuth2.",
     "noEmailAccountsRegistered": "لا توجد حسابات بريد إلكتروني مسجلة. يرجى إنشاء واحد.",
+    "noProxy": "بدون وكيل",
     "noProxyAvailable": "لا يوجد وكيل متاح",
     "noStatus": "تعرض هذه الصفحة نتيجة مصادقة OAuth2 الخاصة بك. لا تتوفر حاليًا حالة محددة. يرجى المحاولة مرة أخرى إذا لزم الأمر.",
     "oauth2ClientHasBeenSuccessfully": "تم {{action}} عميل OAuth2 بنجاح.",

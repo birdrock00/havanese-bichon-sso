@@ -1147,6 +1147,7 @@
     "noConfigurations": "OAuth2設定がありません",
     "noConfigurationsDesc": "まだOAuth2設定を追加していません。機能を利用するには設定を追加してください。",
     "noEmailAccountsRegistered": "登録されたメールアカウントがありません。作成してください。",
+    "noProxy": "プロキシ不使用",
     "noProxyAvailable": "利用可能なプロキシはありません",
     "noStatus": "このページにはOAuth2認証の結果が表示されます。現在、特定のステータスは利用できません。必要に応じて再試行してください。",
     "oauth2ClientHasBeenSuccessfully": "OAuth2クライアントは正常に{{action}}されました。",

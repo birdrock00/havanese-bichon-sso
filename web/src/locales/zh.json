@@ -1147,6 +1147,7 @@
     "noConfigurations": "无 OAuth2 配置",
     "noConfigurationsDesc": "您尚未添加任何 OAuth2 配置。添加一个以开始使用 OAuth2 功能。",
     "noEmailAccountsRegistered": "未注册邮件账户。请创建一个。",
+    "noProxy": "不使用代理",
     "noProxyAvailable": "无可用代理",
     "noStatus": "本页面显示您 OAuth2 认证的结果。目前没有可用的具体状态。如有需要，请重试。",
     "oauth2ClientHasBeenSuccessfully": "OAuth2 客户端已成功{{action}}。",

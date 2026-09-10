@@ -1147,6 +1147,7 @@
     "noConfigurations": "沒有 OAuth2 設定",
     "noConfigurationsDesc": "您尚未新增任何 OAuth2 設定。請新增設定以使用功能。",
     "noEmailAccountsRegistered": "沒有已註冊的電子郵件帳號。請建立一個。",
+    "noProxy": "不使用代理",
     "noProxyAvailable": "無可用代理",
     "noStatus": "此頁面顯示 OAuth2 授權結果。目前沒有特定狀態可用，請根據需要重試。",
     "oauth2ClientHasBeenSuccessfully": "OAuth2 客戶端已成功{{action}}。",

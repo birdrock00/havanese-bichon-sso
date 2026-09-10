@@ -1147,6 +1147,7 @@
     "noConfigurations": "Inga OAuth2-konfigurationer",
     "noConfigurationsDesc": "Du har inte lagt till några OAuth2-konfigurationer ännu. Lägg till en för att börja använda OAuth2-funktioner.",
     "noEmailAccountsRegistered": "Inga e-postkonton registrerade. Vänligen skapa ett.",
+    "noProxy": "Ingen proxy",
     "noProxyAvailable": "Ingen proxy tillgänglig",
     "noStatus": "Denna sida visar resultatet av din OAuth2-autentisering. För närvarande finns ingen specifik status tillgänglig. Vänligen försök igen vid behov.",
     "oauth2ClientHasBeenSuccessfully": "OAuth2-klient har {{action}}.",
