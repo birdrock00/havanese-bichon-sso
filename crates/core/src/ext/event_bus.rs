@@ -266,6 +266,33 @@ pub enum Event {
         tagline: Option<String>,
         logo_changed: bool,
     },
+    /// Pro edition: admin started an integrity check (manual full verification).
+    IntegrityCheckStarted {
+        user: String,
+        run_id: String,
+        scope: String,
+        mode: String,
+    },
+    /// Pro edition: integrity check finished with a summary.
+    IntegrityCheckCompleted {
+        user: String,
+        run_id: String,
+        total: u64,
+        ok: u64,
+        failed: u64,
+    },
+    /// Pro edition: an in-flight integrity check was cancelled.
+    IntegrityCheckCancelled {
+        user: String,
+        run_id: String,
+        processed: u64,
+    },
+    /// Pro edition: an integrity report was downloaded (CSV).
+    IntegrityReportDownloaded {
+        user: String,
+        run_id: String,
+        report_type: String,
+    },
 }
 
 pub trait EventBus: Send + Sync {
