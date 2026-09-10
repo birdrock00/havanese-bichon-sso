@@ -1104,36 +1104,40 @@ impl IndexManager {
         fatal_commit(writer);
         let searcher = self.create_searcher()?;
         let fields = SchemaTools::email_fields();
-        let mut eml: HashSet<String> = HashSet::new();
-        for content_hash in eml_content_hashes {
-            // Check if any other emails still reference this content hash
-            let hash_term = Term::from_field_text(fields.f_content_hash, &content_hash);
-            let hash_query = TermQuery::new(hash_term, IndexRecordOption::Basic);
-            let count = searcher
-                .search(&hash_query, &Count)
+
+        // Email blobs and attachment blobs share one key space, so a single key
+        // can be referenced both as an email content hash and as an attachment
+        // content hash (e.g. a nested `.eml` attachment that was also archived
+        // standalone). Only delete a key when no remaining document references
+        // it in either field; otherwise the shared blob would be deleted while
+        // still in use by the other reference type.
+        let mut candidates: HashSet<String> = eml_content_hashes;
+        candidates.extend(attachments_content_hashes);
+
+        let mut to_delete: HashSet<String> = HashSet::new();
+        for content_hash in candidates {
+            // Check whether any remaining email still references this content hash.
+            let email_term = Term::from_field_text(fields.f_content_hash, &content_hash);
+            let email_query = TermQuery::new(email_term, IndexRecordOption::Basic);
+            let email_count = searcher
+                .search(&email_query, &Count)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
-            // If no references found, delete from KV store
-            if count == 0 {
-                eml.insert(content_hash);
-            }
-        }
-        let mut attachments: HashSet<String> = HashSet::new();
-        for content_hash in attachments_content_hashes {
-            // Check if any other emails still reference this content hash
-            let hash_term = Term::from_field_text(fields.f_attachment_content_hash, &content_hash);
-            let hash_query = TermQuery::new(hash_term, IndexRecordOption::Basic);
-            let count = searcher
-                .search(&hash_query, &Count)
+            // Check whether any remaining email still references it as an attachment.
+            let attachment_term =
+                Term::from_field_text(fields.f_attachment_content_hash, &content_hash);
+            let attachment_query = TermQuery::new(attachment_term, IndexRecordOption::Basic);
+            let attachment_count = searcher
+                .search(&attachment_query, &Count)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
-            // If no references found, delete from KV store
-            if count == 0 {
-                attachments.insert(content_hash);
+            // Only delete when neither reference type still uses the key.
+            if email_count == 0 && attachment_count == 0 {
+                to_delete.insert(content_hash);
             }
         }
 
-        BLOB_MANAGER.delete(&eml, &attachments)
+        BLOB_MANAGER.delete(&to_delete, &to_delete)
     }
 
     pub async fn delete_envelopes_multi_account(
