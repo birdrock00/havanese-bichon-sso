@@ -23,6 +23,7 @@ import {
 import {
   BadgeCheck,
   BarChart3,
+  Download,
   IdCard,
   Inbox,
   Paperclip,
@@ -101,6 +102,15 @@ export function useSidebarData(): SidebarData {
             url: '/import',
             icon: Upload,
             visible: require_any_permission(['data:import:batch']),
+          },
+          {
+            title: t('export_tasks.title', 'Export Tasks'),
+            url: '/exports',
+            icon: Download,
+            visible: require_any_permission([
+              'data:export:batch',
+              'data:export:batch:all',
+            ]),
           },
           {
             title: t('navigation.attachment'),

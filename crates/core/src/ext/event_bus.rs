@@ -293,6 +293,62 @@ pub enum Event {
         run_id: String,
         report_type: String,
     },
+    /// Pro edition: a user saved a search condition for reuse.
+    SavedSearchCreated {
+        user: String,
+        search_id: String,
+        kind: String,
+        name: String,
+    },
+    /// Pro edition: a saved search was renamed (conditions are immutable).
+    SavedSearchRenamed {
+        user: String,
+        search_id: String,
+        name: String,
+    },
+    /// Pro edition: a saved search was deleted.
+    SavedSearchDeleted {
+        user: String,
+        search_id: String,
+        name: String,
+    },
+    /// A batch export job was started from a saved search.
+    ExportStarted {
+        user: String,
+        export_id: String,
+        saved_search_id: String,
+        format: String,
+        account_count: u64,
+        email_count: u64,
+    },
+    /// A batch export job finished successfully.
+    ExportCompleted {
+        user: String,
+        export_id: String,
+        saved_search_id: String,
+        exported: u64,
+        failed: u64,
+        artifact_size: u64,
+    },
+    /// A batch export job failed.
+    ExportFailed {
+        user: String,
+        export_id: String,
+        saved_search_id: String,
+        error: String,
+    },
+    /// A batch export job was cancelled by its owner.
+    ExportCancelled {
+        user: String,
+        export_id: String,
+    },
+    /// An export artifact was downloaded.
+    ExportDownloaded {
+        user: String,
+        export_id: String,
+        email_count: u64,
+        artifact_size: u64,
+    },
 }
 
 pub trait EventBus: Send + Sync {

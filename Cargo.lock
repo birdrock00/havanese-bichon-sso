@@ -472,6 +472,7 @@ dependencies = [
 name = "bichon-server"
 version = "2.0.3"
 dependencies = [
+ "base64 0.23.0",
  "bichon-core",
  "bichon-smtp",
  "chrono",
@@ -486,6 +487,7 @@ dependencies = [
  "serde",
  "serde_json",
  "snafu",
+ "sysinfo",
  "tempfile",
  "timeago",
  "tokio",

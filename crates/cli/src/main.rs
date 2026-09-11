@@ -25,7 +25,7 @@ use std::fs;
 
 use crate::{
     auth::verify_user_and_get_account, eml::handle_eml_directory_import,
-    export::handle_account_export, mbox::handle_mbox_single_file_import, pst::handle_pst_import,
+    export::{handle_account_export, handle_export}, mbox::handle_mbox_single_file_import, pst::handle_pst_import,
     thunderbird::handle_thunderbird_import,
 };
 
@@ -164,8 +164,25 @@ async fn main() {
             }
         }
         1 => {
-            let target_account = verify_user_and_get_account(&final_config, &theme, false).await;
-            handle_account_export(&final_config, target_account, &theme).await;
+            let export_modes = &[
+                "1. Export by saved search (recommended)",
+                "2. Export entire account (legacy)",
+            ];
+            let export_idx = Select::with_theme(&theme)
+                .with_prompt("Select export method")
+                .items(export_modes)
+                .default(0)
+                .interact()
+                .unwrap();
+            match export_idx {
+                0 => handle_export(&final_config, &theme).await,
+                1 => {
+                    let target_account =
+                        verify_user_and_get_account(&final_config, &theme, false).await;
+                    handle_account_export(&final_config, target_account, &theme).await;
+                }
+                _ => unreachable!(),
+            }
         }
         _ => unreachable!(),
     }
