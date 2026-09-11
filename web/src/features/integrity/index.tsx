@@ -30,6 +30,7 @@ import {
   Play,
   RefreshCw,
   ShieldCheck,
+  X,
   XCircle,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -52,6 +53,16 @@ import { cn } from '@/lib/utils'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useEdition } from '@/hooks/use-edition'
 import { toast } from '@/hooks/use-toast'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -61,7 +72,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer'
 import { Progress } from '@/components/ui/progress'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
@@ -246,16 +259,16 @@ function ActiveRunCard({ active, onCancelling }: ActiveRunCardProps) {
             <StatusBadge status={active.status} />
           </Stat>
           <Stat label={t('integrity.startedBy', 'Started by')}>
-            <span className='text-sm font-medium'>{active.triggered_by}</span>
+            <span className='text-xs font-medium'>{active.triggered_by}</span>
           </Stat>
           <Stat label={t('integrity.startedAt', 'Started at')}>
-            <span className='text-sm font-medium'>
+            <span className='text-xs font-medium'>
               {formatTime(active.started_at)}
             </span>
           </Stat>
         </div>
         {active.current_account_name && (
-          <div className='text-sm text-muted-foreground'>
+          <div className='text-xs text-muted-foreground'>
             {t('integrity.currentAccount', 'Checking account')}:{' '}
             <span className='font-medium text-foreground'>
               {active.current_account_name}
@@ -263,7 +276,7 @@ function ActiveRunCard({ active, onCancelling }: ActiveRunCardProps) {
           </div>
         )}
         <div className='space-y-1'>
-          <div className='flex items-center justify-between text-sm'>
+          <div className='flex items-center justify-between text-xs'>
             <span className='text-muted-foreground'>
               {active.processed.toLocaleString()} /{' '}
               {active.total.toLocaleString()}
@@ -272,7 +285,7 @@ function ActiveRunCard({ active, onCancelling }: ActiveRunCardProps) {
           </div>
           <Progress value={pct} />
         </div>
-        <div className='flex items-center justify-between text-sm'>
+        <div className='flex items-center justify-between text-xs'>
           <div className='flex gap-4'>
             <span className='flex items-center gap-1 text-green-600'>
               <CheckCircle2 className='h-4 w-4' />
@@ -304,12 +317,19 @@ function ActiveRunCard({ active, onCancelling }: ActiveRunCardProps) {
   )
 }
 
-function RunForm({ onStarted }: { onStarted: (runId: string) => void }) {
+function RunForm({
+  onStarted,
+  hasActiveRun,
+}: {
+  onStarted: (runId: string) => void
+  hasActiveRun: boolean
+}) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [mode, setMode] = useState<IntegrityMode>('full')
   const [accountIds, setAccountIds] = useState<string[]>([])
   const [starting, setStarting] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   const { data: accounts } = useQuery({
     queryKey: ['integrity-accounts'],
@@ -357,7 +377,7 @@ function RunForm({ onStarted }: { onStarted: (runId: string) => void }) {
       <CardContent className='space-y-4'>
         <div className='grid gap-4 sm:grid-cols-2'>
           <div className='space-y-2'>
-            <label className='text-sm font-medium'>
+            <label className='text-xs font-medium'>
               {t('integrity.mode', 'Mode')}
             </label>
             <Select
@@ -378,7 +398,7 @@ function RunForm({ onStarted }: { onStarted: (runId: string) => void }) {
             </Select>
           </div>
           <div className='space-y-2'>
-            <label className='text-sm font-medium'>
+            <label className='text-xs font-medium'>
               {t('integrity.accounts', 'Accounts')}
             </label>
             <VirtualizedSelect
@@ -404,18 +424,80 @@ function RunForm({ onStarted }: { onStarted: (runId: string) => void }) {
                   }
                 )}
           </span>
-          <Button onClick={handleStart} disabled={starting}>
+          <Button onClick={() => setConfirmOpen(true)} disabled={starting}>
             <Play className='mr-1 h-4 w-4' />
             {starting
               ? t('integrity.starting', 'Starting…')
               : t('integrity.startRun', 'Start check')}
           </Button>
         </div>
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {t('integrity.confirmStartTitle', 'Start integrity check?')}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {t(
+                  'integrity.confirmStartDesc',
+                  'The check runs in the background and may take a while depending on scope and mode. You can leave this page and check the history later.'
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className='space-y-2 text-xs'>
+              <div className='flex items-center justify-between rounded-md border px-3 py-2'>
+                <span className='text-muted-foreground'>
+                  {t('integrity.mode', 'Mode')}
+                </span>
+                <span className='font-medium'>
+                  {mode === 'quick'
+                    ? t('integrity.modeQuick', 'Quick (check email blobs exist)')
+                    : t('integrity.modeFull', 'Full (recompute content hashes)')}
+                </span>
+              </div>
+              <div className='flex items-center justify-between rounded-md border px-3 py-2'>
+                <span className='text-muted-foreground'>
+                  {t('integrity.accounts', 'Accounts')}
+                </span>
+                <span className='font-medium'>
+                  {accountIds.length === 0
+                    ? t('integrity.allAccounts', 'All accounts')
+                    : t(
+                        'integrity.scopeSelectedAccounts',
+                        'Scope: {count} selected account(s)',
+                        {
+                          count: accountIds.length,
+                        }
+                      )}
+                </span>
+              </div>
+              {hasActiveRun && (
+                <div className='flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-destructive'>
+                  <AlertTriangle className='mt-0.5 h-3.5 w-3.5 shrink-0' />
+                  <span>
+                    {t(
+                      'integrity.confirmStartActive',
+                      'An integrity check is already running. Starting another one will be rejected until it finishes.'
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+              <AlertDialogAction onClick={handleStart} disabled={starting}>
+                {starting
+                  ? t('integrity.starting', 'Starting…')
+                  : t('integrity.startRun', 'Start check')}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   )
 }
-function Report({ runId }: { runId: string }) {
+function Report({ runId, onClose }: { runId: string; onClose?: () => void }) {
   const { t } = useTranslation()
   const [failuresPage, setFailuresPage] = useState(1)
 
@@ -446,14 +528,15 @@ function Report({ runId }: { runId: string }) {
   }
 
   if (!report) return null
+  const storage = report.failure_storage ?? 'db'
 
   return (
-    <div className='space-y-4'>
-      <Card>
-        <CardHeader className='flex flex-row items-center justify-between space-y-0'>
+    <div className='flex h-full min-h-0 flex-col gap-3 overflow-hidden'>
+      <Card className='flex min-h-0 flex-1 flex-col overflow-hidden'>
+        <CardHeader className='flex flex-row items-center justify-between gap-3 space-y-0 px-4 py-3'>
           <div>
             <CardTitle>{t('integrity.report', 'Report')}</CardTitle>
-            <CardDescription className='mt-1'>
+            <CardDescription className='mt-1 text-xs'>
               {t('integrity.runId', 'Run')}:{' '}
               <span className='font-mono'>{shortId(report.run_id)}</span>
             </CardDescription>
@@ -467,63 +550,75 @@ function Report({ runId }: { runId: string }) {
               <Download className='mr-1 h-4 w-4' />
               {t('integrity.downloadSummary', 'Summary CSV')}
             </Button>
-            <Button
-              variant='outline'
-              size='sm'
-              onClick={() => download_integrity_report(runId, 'failures')}
-            >
-              <Download className='mr-1 h-4 w-4' />
-              {t('integrity.downloadFailures', 'Failures CSV')}
-            </Button>
+            {storage !== 'truncated' && (
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={() => download_integrity_report(runId, 'failures')}
+              >
+                <Download className='mr-1 h-4 w-4' />
+                {t('integrity.downloadFailures', 'Failures CSV')}
+              </Button>
+            )}
+            {onClose && (
+              <Button
+                variant='ghost'
+                size='icon'
+                onClick={onClose}
+                aria-label={t('common.close', 'Close')}
+              >
+                <X className='h-4 w-4' />
+              </Button>
+            )}
           </div>
         </CardHeader>
-        <CardContent className='space-y-4'>
-          <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
+        <CardContent className='flex min-h-0 flex-1 flex-col gap-3 overflow-hidden px-4 pb-4 pt-0'>
+          <div className='grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4'>
             <Stat label={t('integrity.status', 'Status')}>
               <StatusBadge status={report.status} />
             </Stat>
             <Stat label={t('integrity.mode', 'Mode')}>
-              <span className='text-sm font-medium capitalize'>
+              <span className='text-xs font-medium capitalize'>
                 {report.mode}
               </span>
             </Stat>
             <Stat label={t('integrity.startedBy', 'Started by')}>
-              <span className='text-sm font-medium'>{report.triggered_by}</span>
+              <span className='text-xs font-medium'>{report.triggered_by}</span>
             </Stat>
             <Stat label={t('integrity.startedAt', 'Started at')}>
-              <span className='text-sm font-medium'>
+              <span className='text-xs font-medium'>
                 {formatTime(report.started_at)}
               </span>
             </Stat>
             <Stat label={t('integrity.total', 'Total')}>
-              <span className='text-sm font-medium'>
+              <span className='text-xs font-medium'>
                 {report.total.toLocaleString()}
               </span>
             </Stat>
             <Stat label={t('integrity.ok', 'OK')}>
-              <span className='flex items-center gap-1 text-sm font-medium text-green-600'>
+              <span className='flex items-center gap-1 text-xs font-medium text-green-600'>
                 <CheckCircle2 className='h-4 w-4' />
                 {report.ok.toLocaleString()}
               </span>
             </Stat>
             <Stat label={t('integrity.failed', 'Failed')}>
-              <span className='flex items-center gap-1 text-sm font-medium text-red-600'>
+              <span className='flex items-center gap-1 text-xs font-medium text-red-600'>
                 <AlertTriangle className='h-4 w-4' />
                 {report.failed.toLocaleString()}
               </span>
             </Stat>
             <Stat label={t('integrity.integrityRate', 'Integrity rate')}>
-              <span className='text-sm font-medium'>
+              <span className='text-xs font-medium'>
                 {report.integrity_pct}%
               </span>
             </Stat>
           </div>
           {report.message && (
-            <div className='rounded border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive'>
+            <div className='shrink-0 rounded border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive'>
               {report.message}
             </div>
           )}
-          <Separator />
+          <Separator className='shrink-0' />
           <AccountStats accounts={report.accounts} />
           <FailuresTable
             report={report}
@@ -540,46 +635,48 @@ function AccountStats({ accounts }: { accounts: IntegrityReport['accounts'] }) {
   const { t } = useTranslation()
   if (accounts.length === 0) return null
   return (
-    <div className='space-y-2'>
-      <h4 className='text-sm font-semibold'>
+    <div className='flex min-h-0 shrink-0 flex-col gap-2'>
+      <h4 className='text-xs font-semibold'>
         {t('integrity.perAccount', 'Per-account summary')}
       </h4>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>{t('integrity.account', 'Account')}</TableHead>
-            <TableHead className='text-right'>
-              {t('integrity.total', 'Total')}
-            </TableHead>
-            <TableHead className='text-right'>
-              {t('integrity.ok', 'OK')}
-            </TableHead>
-            <TableHead className='text-right'>
-              {t('integrity.failed', 'Failed')}
-            </TableHead>
-            <TableHead className='text-right'>
-              {t('integrity.integrityRate', 'Integrity')}
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {accounts.map((a) => (
-            <TableRow key={a.account_id}>
-              <TableCell className='font-medium'>{a.account_name}</TableCell>
-              <TableCell className='text-right'>
-                {a.total.toLocaleString()}
-              </TableCell>
-              <TableCell className='text-right text-green-600'>
-                {a.ok.toLocaleString()}
-              </TableCell>
-              <TableCell className='text-right text-red-600'>
-                {a.failed.toLocaleString()}
-              </TableCell>
-              <TableCell className='text-right'>{a.integrity_pct}%</TableCell>
+      <ScrollArea orientation='both' className='max-h-[200px]'>
+        <Table className='text-xs'>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('integrity.account', 'Account')}</TableHead>
+              <TableHead className='text-right'>
+                {t('integrity.total', 'Total')}
+              </TableHead>
+              <TableHead className='text-right'>
+                {t('integrity.ok', 'OK')}
+              </TableHead>
+              <TableHead className='text-right'>
+                {t('integrity.failed', 'Failed')}
+              </TableHead>
+              <TableHead className='text-right'>
+                {t('integrity.integrityRate', 'Integrity')}
+              </TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {accounts.map((a) => (
+              <TableRow key={a.account_id}>
+                <TableCell className='font-medium'>{a.account_name}</TableCell>
+                <TableCell className='text-right'>
+                  {a.total.toLocaleString()}
+                </TableCell>
+                <TableCell className='text-right text-green-600'>
+                  {a.ok.toLocaleString()}
+                </TableCell>
+                <TableCell className='text-right text-red-600'>
+                  {a.failed.toLocaleString()}
+                </TableCell>
+                <TableCell className='text-right'>{a.integrity_pct}%</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </ScrollArea>
     </div>
   )
 }
@@ -605,7 +702,7 @@ function FailureDetail({ f }: { f: FailureRow }) {
           <div className='text-xs font-medium text-muted-foreground'>
             {t('integrity.detail', 'Detail')}
           </div>
-          <div className='mt-0.5 whitespace-pre-wrap break-words text-sm'>
+          <div className='mt-0.5 whitespace-pre-wrap break-words text-xs'>
             {f.detail}
           </div>
         </div>
@@ -683,89 +780,120 @@ function FailuresTable({
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }))
 
   return (
-    <div className='space-y-2'>
-      <h4 className='text-sm font-semibold'>
-        {t('integrity.failures', 'Failures')} ({failures.total.toLocaleString()}
-        )
+    <div className='flex min-h-0 flex-1 flex-col gap-2'>
+      <h4 className='text-xs font-semibold'>
+        {t('integrity.failures', 'Failures')} ({report.failed.toLocaleString()})
       </h4>
+      {report.failure_storage === 'file' && (
+        <div className='flex items-start gap-2 rounded border bg-muted/50 p-3 text-xs text-muted-foreground'>
+          <Download className='mt-0.5 h-4 w-4 shrink-0' />
+          <span>
+            {t(
+              'integrity.previewFailures',
+              'Only showing the first {{preview}} of {{total}} failures. Download the full CSV for all failures.',
+              {
+                preview: failures.total.toLocaleString(),
+                total: report.failed.toLocaleString(),
+              }
+            )}
+          </span>
+        </div>
+      )}
+      {report.failure_storage === 'truncated' && (
+        <div className='flex items-start gap-2 rounded border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive'>
+          <AlertTriangle className='mt-0.5 h-4 w-4 shrink-0' />
+          <span>
+            {t(
+              'integrity.failureDetailTruncated',
+              'Failure detail truncated: {{total}} failures found, per-message detail was not recorded. Showing {{preview}} failures as a sample.',
+              {
+                total: report.failed.toLocaleString(),
+                preview: failures.total.toLocaleString(),
+              }
+            )}
+          </span>
+        </div>
+      )}
       {failures.total === 0 ? (
-        <div className='flex items-center gap-2 rounded border p-4 text-sm text-muted-foreground'>
+        <div className='flex items-center gap-2 rounded border p-4 text-xs text-muted-foreground'>
           <CheckCircle2 className='h-4 w-4 text-green-600' />
           {t('integrity.noFailures', 'No failures found.')}
         </div>
       ) : (
         <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className='w-10'>
-                  <span className='sr-only'>
-                    {t('integrity.expand', 'Expand')}
-                  </span>
-                </TableHead>
-                <TableHead>{t('integrity.account', 'Account')}</TableHead>
-                <TableHead>{t('integrity.failureType', 'Type')}</TableHead>
-                <TableHead>{t('integrity.subject', 'Subject')}</TableHead>
-                <TableHead className='text-right'>
-                  {t('integrity.size', 'Size')}
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {failures.items.map((f) => {
-                const key = `${f.envelope_id}-${f.failure_type}`
-                const isOpen = !!expanded[key]
-                return (
-                  <Fragment key={key}>
-                    <TableRow>
-                      <TableCell className='w-10'>
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-7 w-7'
-                          aria-expanded={isOpen}
-                          aria-label={
-                            isOpen
-                              ? t('integrity.collapse', 'Collapse')
-                              : t('integrity.expand', 'Expand')
-                          }
-                          onClick={() => toggle(key)}
-                        >
-                          <ChevronDown
-                            className={cn(
-                              'h-4 w-4 transition-transform',
-                              isOpen && 'rotate-180'
-                            )}
-                          />
-                        </Button>
-                      </TableCell>
-                      <TableCell className='font-medium'>
-                        {f.account_name ?? f.account_id}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant='destructive'>
-                          {failureTypeLabel(t, f.failure_type)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className='max-w-md truncate'>
-                        {failureSubject(f)}
-                      </TableCell>
-                      <TableCell className='text-right'>
-                        {formatBytes(f.size)}
-                      </TableCell>
-                    </TableRow>
-                    {isOpen && (
-                      <TableRow className='bg-muted/40'>
-                        <TableCell colSpan={5} className='p-4'>
-                          <FailureDetail f={f} />
+          <ScrollArea orientation='both' className='min-h-[120px] flex-1'>
+            <Table className='text-xs'>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className='w-10'>
+                    <span className='sr-only'>
+                      {t('integrity.expand', 'Expand')}
+                    </span>
+                  </TableHead>
+                  <TableHead>{t('integrity.account', 'Account')}</TableHead>
+                  <TableHead>{t('integrity.failureType', 'Type')}</TableHead>
+                  <TableHead>{t('integrity.subject', 'Subject')}</TableHead>
+                  <TableHead className='text-right'>
+                    {t('integrity.size', 'Size')}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {failures.items.map((f) => {
+                  const key = `${f.envelope_id}-${f.failure_type}`
+                  const isOpen = !!expanded[key]
+                  return (
+                    <Fragment key={key}>
+                      <TableRow>
+                        <TableCell className='w-10'>
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-7 w-7'
+                            aria-expanded={isOpen}
+                            aria-label={
+                              isOpen
+                                ? t('integrity.collapse', 'Collapse')
+                                : t('integrity.expand', 'Expand')
+                            }
+                            onClick={() => toggle(key)}
+                          >
+                            <ChevronDown
+                              className={cn(
+                                'h-4 w-4 transition-transform',
+                                isOpen && 'rotate-180'
+                              )}
+                            />
+                          </Button>
+                        </TableCell>
+                        <TableCell className='font-medium'>
+                          {f.account_name ?? f.account_id}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant='destructive'>
+                            {failureTypeLabel(t, f.failure_type)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className='max-w-md truncate'>
+                          {failureSubject(f)}
+                        </TableCell>
+                        <TableCell className='text-right'>
+                          {formatBytes(f.size)}
                         </TableCell>
                       </TableRow>
-                    )}
-                  </Fragment>
-                )
-              })}
-            </TableBody>
-          </Table>
+                      {isOpen && (
+                        <TableRow className='bg-muted/40'>
+                          <TableCell colSpan={5} className='p-4'>
+                            <FailureDetail f={f} />
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </ScrollArea>
           <div className='flex items-center justify-between'>
             <TablePagination
               totalItems={failures.total}
@@ -843,12 +971,12 @@ export default function IntegrityPage() {
     <>
       <FixedHeader />
       <Main>
-        <div className='mx-auto w-full max-w-7xl space-y-6'>
+        <div className='mx-auto w-full max-w-7xl space-y-6 text-xs'>
           <div>
-            <h1 className='text-2xl font-semibold'>
+            <h1 className='text-lg font-semibold'>
               {t('integrity.title', 'Integrity check')}
             </h1>
-            <p className='text-sm text-muted-foreground'>
+            <p className='text-xs text-muted-foreground'>
               {t(
                 'integrity.subtitle',
                 'Verify archived email content against the envelope index and download compliance reports.'
@@ -860,7 +988,7 @@ export default function IntegrityPage() {
             <ActiveRunCard active={activeRun} onCancelling={() => {}} />
           )}
 
-          <RunForm onStarted={setSelectedRun} />
+          <RunForm onStarted={setSelectedRun} hasActiveRun={activeRun !== null} />
 
           <Card>
             <CardHeader>
@@ -871,7 +999,7 @@ export default function IntegrityPage() {
                 <TableSkeleton rows={6} />
               ) : (
                 <>
-                  <Table>
+                  <Table className='text-xs'>
                     <TableHeader>
                       <TableRow>
                         <TableHead>{t('integrity.run', 'Run')}</TableHead>
@@ -969,7 +1097,27 @@ export default function IntegrityPage() {
             </CardContent>
           </Card>
 
-          {selectedRun && <Report runId={selectedRun} />}
+          <Drawer
+            open={selectedRun !== null}
+            onOpenChange={(open) => {
+              if (!open) setSelectedRun(null)
+            }}
+            direction='right'
+          >
+            <DrawerContent side='right'>
+              <DrawerTitle className='sr-only'>
+                {t('integrity.report', 'Report')}
+              </DrawerTitle>
+              <div className='flex h-full flex-col overflow-hidden p-3'>
+                {selectedRun && (
+                  <Report
+                    runId={selectedRun}
+                    onClose={() => setSelectedRun(null)}
+                  />
+                )}
+              </div>
+            </DrawerContent>
+          </Drawer>
         </div>
       </Main>
     </>

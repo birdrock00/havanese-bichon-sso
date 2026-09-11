@@ -25,6 +25,7 @@ import axiosInstance from '@/api/axiosInstance'
 
 export type IntegrityMode = 'full' | 'quick'
 export type IntegrityStatus = 'running' | 'finished' | 'cancelled' | 'failed'
+export type FailureStorage = 'db' | 'file' | 'truncated'
 
 export interface IntegrityRunRequest {
   account_ids?: number[]
@@ -69,6 +70,8 @@ export interface RunSummary {
   failed: number
   failed_by_type: Record<string, number>
   message?: string | null
+  failure_storage?: FailureStorage
+  failure_file?: string | null
 }
 
 export interface AccountStat {
@@ -127,6 +130,9 @@ export interface IntegrityReport {
   corruption_pct: number
   failed_by_type: Record<string, number>
   message?: string | null
+  failure_storage?: FailureStorage
+  failure_file?: string | null
+  failure_detail_truncated?: boolean
   accounts: AccountStat[]
   failures: FailurePage
 }
@@ -199,5 +205,16 @@ export async function download_integrity_report(
     { responseType: 'blob' }
   )
   const blob = new Blob([response.data])
-  saveAs(blob, `integrity-${kind}-${run_id}.csv`)
+  saveAs(
+    blob,
+    filenameFromContentDisposition(response.headers['content-disposition']) ??
+      `integrity-${kind}-${run_id}.csv`
+  )
+}
+
+/** Extracts the server-provided filename from a Content-Disposition header. */
+function filenameFromContentDisposition(header: unknown): string | undefined {
+  if (typeof header !== 'string') return undefined
+  const match = /filename="?([^";]+)"?/.exec(header)
+  return match?.[1] ?? undefined
 }
