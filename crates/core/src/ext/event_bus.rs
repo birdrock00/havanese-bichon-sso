@@ -329,6 +329,19 @@ pub enum Event {
         exported: u64,
         failed: u64,
         artifact_size: u64,
+        /// SHA-256 of the finished artifact, bound into the audit trail.
+        artifact_hash: Option<String>,
+    },
+    /// A finished export artifact was compliance-verified: the artifact's
+    /// SHA-256 was recomputed and matched, and per-message content hashes
+    /// were cross-checked against the live archive.
+    ExportVerified {
+        user: String,
+        export_id: String,
+        artifact_hash: Option<String>,
+        checked: u64,
+        matched: u64,
+        mismatched: u64,
     },
     /// A batch export job failed.
     ExportFailed {

@@ -33,6 +33,7 @@ const ATTACHMENT_METADATA: &str = "attachment_metadata";
 const STORAGE: &str = "bichon-storage";
 const TMP_DIR: &str = "tmp";
 const LOG_DIR: &str = "logs";
+const EXPORTS_DIR: &str = "exports";
 
 const TLS_CERT: &str = "cert.pem";
 const TLS_KEY: &str = "key.pem";
@@ -51,6 +52,7 @@ pub struct DataDirManager {
     pub attachment_dir: PathBuf,
     pub storage_dir: PathBuf,
     pub log_dir: PathBuf,
+    pub exports_dir: PathBuf,
 }
 
 impl Initialize for DataDirManager {
@@ -62,6 +64,8 @@ impl Initialize for DataDirManager {
         std::fs::create_dir_all(&DATA_DIR_MANAGER.temp_dir)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         std::fs::create_dir_all(&DATA_DIR_MANAGER.storage_dir)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        std::fs::create_dir_all(&DATA_DIR_MANAGER.exports_dir)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         // Write STORAGE_VERSION on fresh install (no existing data)
@@ -99,6 +103,7 @@ impl DataDirManager {
             attachment_dir: index_dir.join(ATTACHMENT_METADATA),
             temp_dir: root_dir.join(TMP_DIR),
             storage_dir,
+            exports_dir: root_dir.join(EXPORTS_DIR),
         }
     }
 }

@@ -18,8 +18,8 @@
 
 use crate::common::auth::WrappedContext;
 use crate::export::{
-    cancel_export, create_export, delete_export, download_artifact, get_export, list_exports,
-    preview,
+    cancel_export, create_download_ticket, create_export, delete_export, download_artifact,
+    get_export, list_exports, preview, resolve_download_ticket,
 };
 use crate::rest::api::ApiTags;
 use crate::rest::ApiResult;
@@ -30,13 +30,19 @@ use bichon_core::export::{
 use bichon_core::ext::event_bus::{emit, Event};
 use bichon_core::raise_error;
 use bichon_core::users::permissions::Permission;
-use poem::Body;
+use poem::{handler, Body, IntoResponse, Response};
 use poem_openapi::param::Path;
 use poem_openapi::payload::{Attachment, AttachmentType, Json};
 use poem_openapi::OpenApi;
 use std::collections::HashSet;
 
 pub struct ExportApi;
+
+/// Response carrying a short-lived, one-time download URL.
+#[derive(serde::Serialize, poem_openapi::Object)]
+struct DownloadTicketView {
+    url: String,
+}
 
 #[OpenApi(prefix_path = "/api/v1", tag = "ApiTags::Export")]
 impl ExportApi {
@@ -166,6 +172,73 @@ impl ExportApi {
             .filename(name);
         Ok(attachment)
     }
+
+    /// Returns a short-lived, one-time URL that streams the finished mbox
+    /// artifact directly to the browser (no in-memory buffering on the client).
+    #[oai(
+        path = "/exports/:job_id/download-ticket",
+        method = "post",
+        operation_id = "create_download_ticket"
+    )]
+    async fn create_download_ticket_handler(
+        &self,
+        job_id: Path<String>,
+        context: WrappedContext,
+    ) -> ApiResult<Json<DownloadTicketView>> {
+        let ticket = create_download_ticket(context.user.id, &context.user.username, &job_id.0)?;
+        Ok(Json(DownloadTicketView {
+            url: format!("api/v1/exports/download/{ticket}"),
+        }))
+    }
+}
+
+/// Streams the artifact referenced by a one-time download ticket. This route
+/// is mounted outside `ApiGuard` because a top-level navigation cannot carry
+/// the Bearer header; the ticket itself is single-use and short-lived.
+#[handler]
+pub async fn download_export_ticket_handler(
+    ticket: poem::web::Path<String>,
+) -> poem::Result<Response> {
+    let (user_id, username, job_id) = resolve_download_ticket(&ticket.0).ok_or_else(|| {
+        poem::Error::from_response(
+            Response::builder()
+                .status(http::StatusCode::NOT_FOUND)
+                .content_type("application/json")
+                .body(r#"{"message":"Download ticket is invalid or expired."}"#)
+                .into_response(),
+        )
+    })?;
+    let (path, name) = download_artifact(user_id, &job_id).map_err(|e| {
+        poem::Error::from_response(
+            Response::builder()
+                .status(http::StatusCode::NOT_FOUND)
+                .content_type("application/json")
+                .body(format!(r#"{{"message":"{}"}}"#, e))
+                .into_response(),
+        )
+    })?;
+    if let Ok(view) = get_export(user_id, &job_id) {
+        emit(Event::ExportDownloaded {
+            user: username,
+            export_id: job_id,
+            email_count: view.exported,
+            artifact_size: view.artifact_size,
+        });
+    }
+    let reader = tokio::fs::File::open(&path).await.map_err(|_| {
+        poem::Error::from_response(
+            Response::builder()
+                .status(http::StatusCode::INTERNAL_SERVER_ERROR)
+                .content_type("application/json")
+                .body(r#"{"message":"Failed to open export artifact"}"#)
+                .into_response(),
+        )
+    })?;
+    let body = Body::from_async_read(reader);
+    let attachment = Attachment::new(body)
+        .attachment_type(AttachmentType::Attachment)
+        .filename(name);
+    Ok(attachment.into_response())
 }
 
 /// Computes the account scope the caller may export: all accounts when the

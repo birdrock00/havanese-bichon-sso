@@ -36,6 +36,8 @@ http.workspace = true
 urlencoding.workspace = true
 sysinfo.workspace = true
 base64.workspace = true
+uuid.workspace = true
+sha2 = "0.10"
 
 [dev-dependencies]
 poem = { version = "3.1.12", features = ["test"] }

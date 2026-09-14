@@ -17,7 +17,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::BichonCliConfig;
-use bichon_core::export::{ExportJobView, ExportPreviewView};
+use bichon_core::export::{
+    ExportJobView, ExportPreviewView, ExportVerifyProgressView, ExportVerifyView,
+};
 use bichon_core::saved_search::SavedSearchModel;
 use reqwest::Client;
 use std::path::Path;
@@ -190,5 +192,84 @@ pub async fn download_export_to_file(
             eprintln!(" ✘ Failed to create '{}': {}", target.display(), e);
             false
         }
+    }
+}
+
+/// The verification runs in the background on the server, so this starts it
+/// and then polls the progress endpoint until it finishes.
+pub async fn verify_export_job(
+    client: &Client,
+    config: &BichonCliConfig,
+    job_id: &str,
+) -> Option<ExportVerifyView> {
+    let url = format!("{}/api/v1/exports/{}/verify", config.base_url, job_id);
+    match client
+        .post(&url)
+        .header("Authorization", format!("Bearer {}", config.api_token))
+        .send()
+        .await
+    {
+        Ok(res) if res.status().is_success() => {}
+        Ok(res) => {
+            let status = res.status();
+            let body = res.text().await.unwrap_or_default();
+            eprintln!(
+                "✘ Failed to start verification. Status: {}\n  Server error: {}",
+                status, body
+            );
+            return None;
+        }
+        Err(e) => {
+            eprintln!("✘ Network error verifying export: {}", e);
+            return None;
+        }
+    }
+
+    let mut polled: u32 = 0;
+    loop {
+        let progress: Option<ExportVerifyProgressView> = match client
+            .get(&url)
+            .header("Authorization", format!("Bearer {}", config.api_token))
+            .send()
+            .await
+        {
+            Ok(res) if res.status().is_success() => {
+                res.json::<ExportVerifyProgressView>().await.ok()
+            }
+            Ok(_) => None,
+            Err(e) => {
+                eprintln!("✘ Network error polling verification: {}", e);
+                return None;
+            }
+        };
+        let Some(progress) = progress else {
+            eprintln!("✘ Failed to read verification progress.");
+            return None;
+        };
+        match progress.status.as_str() {
+            "finished" => return progress.result,
+            "failed" => {
+                eprintln!(
+                    "✘ Verification failed: {}",
+                    progress.error.as_deref().unwrap_or("unknown error")
+                );
+                return None;
+            }
+            "running" => {
+                if polled % 10 == 0 {
+                    eprintln!(
+                        "   Verifying... {} / {} messages checked ({} matched, {} mismatched)",
+                        progress.checked, progress.total, progress.matched, progress.mismatched
+                    );
+                }
+            }
+            _ => {}
+        }
+        polled += 1;
+        if polled > 7200 {
+            eprintln!("✘ Verification timed out after 60 minutes.");
+            return None;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     }
 }

@@ -116,6 +116,10 @@ pub fn build_routes() -> impl Endpoint {
         .nest("/api/status", get(get_status))
         .nest("/api/login", post(login))
         .nest("/api/auth/mfa/verify", post(mfa_verify))
+        .at(
+            "/api/v1/exports/download/:ticket",
+            get(crate::rest::api::export::download_export_ticket_handler),
+        )
         .nest_no_strip("/api/v1", open_api_route);
 
     let app_logic = add_web_assets(app_logic);

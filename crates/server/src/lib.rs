@@ -89,6 +89,7 @@ pub async fn run() -> BichonResult<()> {
         return Err(error);
     }
 
+    export::load_persisted_exports();
     export::spawn_export_cleanup();
 
     let periodic_tasks = PeriodicTasks::setup();

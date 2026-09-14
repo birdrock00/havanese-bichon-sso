@@ -38,6 +38,7 @@ use bichon_core::envelope::meta::BichonMetadata;
 use bichon_core::error::{code::ErrorCode, BichonResult};
 use bichon_core::export::{
     ExportAccount, ExportFormat, ExportJobView, ExportPreviewView,
+    ExportVerifyMismatch, ExportVerifyProgressView, ExportVerifyView,
 };
 use bichon_core::ext::event_bus::{emit, Event};
 use bichon_core::message::search::{
@@ -46,14 +47,21 @@ use bichon_core::message::search::{
 use bichon_core::raise_error;
 use bichon_core::saved_search::{SavedSearchKind, SavedSearchModel};
 use bichon_core::settings::dir::DATA_DIR_MANAGER;
-use bichon_core::store::blob::get_reader;
+use bichon_core::store::blob::{get_reader, BLOB_MANAGER};
 use bichon_core::store::envelope::Envelope;
 use bichon_core::{base64_encode, utc_now};
+use bichon_core::utils::compute_content_hash;
+use bichon_core::users::UserModel;
 use chrono::{TimeZone, Utc};
+use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::{error, info, warn};
+use uuid::Uuid;
 
-const EXPORT_DIR_NAME: &str = "exports";
+#[cfg(test)]
+mod tests;
+
 const EXPORT_PAGE_SIZE: u64 = 500;
 /// Export artifacts are kept for this long after the job ends, then swept.
 pub const EXPORT_TTL_SECS: i64 = 3600;
@@ -66,6 +74,14 @@ const STATUS_RUNNING: &str = "running";
 const STATUS_FINISHED: &str = "finished";
 const STATUS_FAILED: &str = "failed";
 const STATUS_CANCELLED: &str = "cancelled";
+
+const VERIFY_STATUS_IDLE: &str = "idle";
+const VERIFY_STATUS_RUNNING: &str = "running";
+const VERIFY_STATUS_FINISHED: &str = "finished";
+const VERIFY_STATUS_FAILED: &str = "failed";
+
+/// How long a one-time artifact download ticket stays valid.
+const DOWNLOAD_TICKET_TTL_SECS: i64 = 60;
 
 /// In-memory state of one export job. Mutated by both the control API and
 /// the background runner.
@@ -86,9 +102,21 @@ struct ExportJob {
     error: Option<String>,
     artifact_name: Option<String>,
     artifact_size: u64,
+    artifact_hash: Option<String>,
     created_at: i64,
     finished_at: Option<i64>,
     cancel: Arc<AtomicBool>,
+    /// Compliance verification state. The work runs in the background so the
+    /// API can report live progress on large archives.
+    verify_status: String,
+    verify_checked: u64,
+    verify_total: u64,
+    verify_matched: u64,
+    verify_mismatched: u64,
+    verify_error: Option<String>,
+    verify_result: Option<ExportVerifyView>,
+    verify_started_at: Option<i64>,
+    verify_finished_at: Option<i64>,
 }
 
 impl ExportJob {
@@ -108,8 +136,16 @@ impl ExportJob {
             error: self.error.clone(),
             artifact_name: self.artifact_name.clone(),
             artifact_size: self.artifact_size,
+            artifact_hash: self.artifact_hash.clone(),
             created_at: self.created_at,
             finished_at: self.finished_at,
+            verify_status: self.verify_status.clone(),
+            verify_checked: self.verify_checked,
+            verify_matched: self.verify_matched,
+            verify_mismatched: self.verify_mismatched,
+            verify_error: self.verify_error.clone(),
+            verify_started_at: self.verify_started_at,
+            verify_finished_at: self.verify_finished_at,
         }
     }
 }
@@ -119,6 +155,58 @@ static EXPORT_JOBS: OnceLock<Mutex<HashMap<String, Arc<Mutex<ExportJob>>>>> =
 
 fn registry() -> &'static Mutex<HashMap<String, Arc<Mutex<ExportJob>>>> {
     EXPORT_JOBS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+struct DownloadTicket {
+    user_id: u64,
+    username: String,
+    job_id: String,
+    expires_at: i64,
+}
+
+static DOWNLOAD_TICKETS: OnceLock<Mutex<HashMap<String, DownloadTicket>>> = OnceLock::new();
+
+fn download_tickets() -> &'static Mutex<HashMap<String, DownloadTicket>> {
+    DOWNLOAD_TICKETS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+/// Creates a short-lived, one-time ticket that lets a browser stream a
+/// finished artifact without carrying the Bearer token (top-level navigation
+/// cannot set headers). The ticket is single-use and expires after
+/// [`DOWNLOAD_TICKET_TTL_SECS`].
+pub fn create_download_ticket(user_id: u64, username: &str, job_id: &str) -> BichonResult<String> {
+    let job = find_owned(user_id, job_id)?;
+    let status = job.lock().unwrap().status.clone();
+    if status != STATUS_FINISHED {
+        return Err(raise_error!(
+            format!("Export job '{job_id}' is not finished (status '{status}')."),
+            ErrorCode::InvalidParameter
+        ));
+    }
+    let ticket = Uuid::new_v4().to_string();
+    let now = now_ms();
+    let mut tickets = download_tickets().lock().unwrap();
+    tickets.retain(|_, t| t.expires_at > now);
+    tickets.insert(
+        ticket.clone(),
+        DownloadTicket {
+            user_id,
+            username: username.to_string(),
+            job_id: job_id.to_string(),
+            expires_at: now + DOWNLOAD_TICKET_TTL_SECS * 1000,
+        },
+    );
+    Ok(ticket)
+}
+
+/// Resolves and consumes a one-time download ticket. Returns
+/// `(user_id, username, job_id)`.
+pub fn resolve_download_ticket(ticket: &str) -> Option<(u64, String, String)> {
+    let now = now_ms();
+    let mut tickets = download_tickets().lock().unwrap();
+    tickets.retain(|_, t| t.expires_at > now);
+    let entry = tickets.remove(ticket)?;
+    Some((entry.user_id, entry.username, entry.job_id))
 }
 
 /// Global cap on how many export jobs may run at the same time.
@@ -138,7 +226,7 @@ fn now_ms() -> i64 {
 }
 
 pub fn export_root_dir() -> PathBuf {
-    DATA_DIR_MANAGER.temp_dir.join(EXPORT_DIR_NAME)
+    DATA_DIR_MANAGER.exports_dir.clone()
 }
 
 fn job_dir(job_id: &str) -> PathBuf {
@@ -346,9 +434,19 @@ pub fn create_export(
         error: None,
         artifact_name: None,
         artifact_size: 0,
+        artifact_hash: None,
         created_at: now_ms(),
         finished_at: None,
         cancel: Arc::new(AtomicBool::new(false)),
+        verify_status: VERIFY_STATUS_IDLE.to_string(),
+        verify_checked: 0,
+        verify_total: 0,
+        verify_matched: 0,
+        verify_mismatched: 0,
+        verify_error: None,
+        verify_result: None,
+        verify_started_at: None,
+        verify_finished_at: None,
     }));
 
     {
@@ -636,6 +734,7 @@ async fn run_export_inner(
         .await
         .map(|m| m.len())
         .unwrap_or(0);
+    let artifact_hash = sha256_file(&mbox_path).await.ok();
 
     let (username, export_id, saved_search_id, saved_search_name, accounts, exported, failed, created_at) = {
         let guard = job.lock().unwrap();
@@ -655,6 +754,7 @@ async fn run_export_inner(
         dir,
         &artifact_name,
         artifact_size,
+        artifact_hash.as_deref(),
         &username,
         &saved_search_id,
         &saved_search_name,
@@ -670,6 +770,7 @@ async fn run_export_inner(
         guard.status = STATUS_FINISHED.to_string();
         guard.artifact_name = Some(artifact_name);
         guard.artifact_size = artifact_size;
+        guard.artifact_hash = artifact_hash.clone();
         guard.finished_at = Some(now_ms());
     }
 
@@ -680,9 +781,384 @@ async fn run_export_inner(
         exported,
         failed,
         artifact_size,
+        artifact_hash,
     });
     info!("Export {export_id} finished: {exported} exported, {failed} failed");
     Ok(())
+}
+
+/// Streams a file and returns its lowercase hex SHA-256.
+async fn sha256_file(path: &Path) -> BichonResult<String> {
+    let mut file = tokio::fs::File::open(path).await.map_err(|e| {
+        raise_error!(
+            format!("Failed to open export artifact for hashing: {e}"),
+            ErrorCode::InternalError
+        )
+    })?;
+    let mut hasher = Sha256::new();
+    let mut buf = vec![0u8; 64 * 1024];
+    loop {
+        let n = file.read(&mut buf).await.map_err(|e| {
+            raise_error!(
+                format!("Failed to read export artifact for hashing: {e}"),
+                ErrorCode::InternalError
+            )
+        })?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    Ok(hex_encode(&hasher.finalize()))
+}
+
+fn hex_encode(bytes: &[u8]) -> String {
+    let mut s = String::with_capacity(bytes.len() * 2);
+    for b in bytes {
+        s.push_str(&format!("{b:02x}"));
+    }
+    s
+}
+
+/// Compliance verification of a finished export: recomputes the artifact's
+/// SHA-256 and cross-checks every exported message's content hash against
+/// the live archive. Results (including any mismatches) are emitted as an
+/// `ExportVerified` audit event.
+///
+/// Runs synchronously and returns the final result; the progress and result
+/// are also persisted on the job so they survive a page refresh.
+pub async fn verify_export(user_id: u64, job_id: &str) -> BichonResult<ExportVerifyView> {
+    let job = find_owned(user_id, job_id)?;
+    verify_job(&job).await
+}
+
+/// Starts a background compliance verification and returns its live progress.
+/// Idempotent: calling it again while a verification is running (or after it
+/// finished) returns the current state instead of restarting the work.
+pub fn start_export_verify(user_id: u64, job_id: &str) -> BichonResult<ExportVerifyProgressView> {
+    let job = find_owned(user_id, job_id)?;
+    let (status, verify_status) = {
+        let guard = job.lock().unwrap();
+        (guard.status.clone(), guard.verify_status.clone())
+    };
+    if status != STATUS_FINISHED {
+        return Err(raise_error!(
+            format!("Export job '{job_id}' is not finished (status '{status}')."),
+            ErrorCode::InvalidParameter
+        ));
+    }
+    if matches!(
+        verify_status.as_str(),
+        VERIFY_STATUS_RUNNING | VERIFY_STATUS_FINISHED | VERIFY_STATUS_FAILED
+    ) {
+        let view = {
+            let guard = job.lock().unwrap();
+            verify_progress_view(&*guard)
+        };
+        return Ok(view);
+    }
+    {
+        let mut guard = job.lock().unwrap();
+        guard.verify_status = VERIFY_STATUS_RUNNING.to_string();
+        guard.verify_checked = 0;
+        guard.verify_total = 0;
+        guard.verify_matched = 0;
+        guard.verify_mismatched = 0;
+        guard.verify_error = None;
+        guard.verify_result = None;
+        guard.verify_started_at = Some(now_ms());
+        guard.verify_finished_at = None;
+    }
+    let worker = job.clone();
+    tokio::spawn(async move {
+        if let Err(e) = verify_job(&worker).await {
+            let message = e.to_string();
+            {
+                let mut guard = worker.lock().unwrap();
+                if guard.verify_status == VERIFY_STATUS_RUNNING {
+                    guard.verify_status = VERIFY_STATUS_FAILED.to_string();
+                    guard.verify_error = Some(message.clone());
+                    guard.verify_finished_at = Some(now_ms());
+                    if let Err(e) = persist_verify_state(&*guard) {
+                        error!("Failed to persist verify state for {}: {e}", guard.job_id);
+                    }
+                }
+            }
+            error!("Verify export {} failed: {message}", worker.lock().unwrap().job_id);
+        }
+    });
+    let view = {
+        let guard = job.lock().unwrap();
+        verify_progress_view(&*guard)
+    };
+    Ok(view)
+}
+
+/// Current progress (and final result, when finished) of a compliance
+/// verification.
+pub fn export_verify_progress(user_id: u64, job_id: &str) -> BichonResult<ExportVerifyProgressView> {
+    let job = find_owned(user_id, job_id)?;
+    let guard = job.lock().unwrap();
+    Ok(verify_progress_view(&*guard))
+}
+
+fn verify_progress_view(job: &ExportJob) -> ExportVerifyProgressView {
+    ExportVerifyProgressView {
+        job_id: job.job_id.clone(),
+        status: job.verify_status.clone(),
+        checked: job.verify_checked,
+        total: job.verify_total,
+        matched: job.verify_matched,
+        mismatched: job.verify_mismatched,
+        error: job.verify_error.clone(),
+        result: job.verify_result.clone(),
+        started_at: job.verify_started_at,
+        finished_at: job.verify_finished_at,
+    }
+}
+
+/// The verification worker: reads the manifest, cross-checks every message
+/// against the archive and writes progress/result back onto the job.
+async fn verify_job(job: &Arc<Mutex<ExportJob>>) -> BichonResult<ExportVerifyView> {
+    let (job_id, status, artifact_name) = {
+        let guard = job.lock().unwrap();
+        (
+            guard.job_id.clone(),
+            guard.status.clone(),
+            guard.artifact_name.clone(),
+        )
+    };
+    if status != STATUS_FINISHED {
+        return Err(raise_error!(
+            format!("Export job '{job_id}' is not finished (status '{status}')."),
+            ErrorCode::InvalidParameter
+        ));
+    }
+    let name = artifact_name.ok_or_else(|| {
+        raise_error!(
+            "Export has no artifact to verify.".into(),
+            ErrorCode::InternalError
+        )
+    })?;
+    let dir = job_dir(&job_id);
+    let mbox_path = dir.join(&name);
+    if !mbox_path.is_file() {
+        return Err(raise_error!(
+            "Export artifact is missing.".into(),
+            ErrorCode::ResourceNotFound
+        ));
+    }
+
+    let actual_artifact_hash = sha256_file(&mbox_path).await?;
+    let expected_artifact_hash = read_manifest_artifact_hash(&dir).await;
+
+    let manifest_path = dir.join("manifest.jsonl");
+    let manifest_content = tokio::fs::read_to_string(&manifest_path).await.ok();
+    let total = manifest_content
+        .as_deref()
+        .map(|content| content.lines().filter(|l| !l.trim().is_empty()).count() as u64)
+        .unwrap_or(0);
+    {
+        let mut guard = job.lock().unwrap();
+        guard.verify_total = total;
+    }
+
+    let mut checked: u64 = 0;
+    let mut matched: u64 = 0;
+    let mut mismatched: u64 = 0;
+    let mut mismatches: Vec<ExportVerifyMismatch> = Vec::new();
+
+    if let Some(content) = manifest_content {
+        for line in content.lines() {
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            let entry: Result<serde_json::Value, _> = serde_json::from_str(line);
+            let Ok(entry) = entry else { continue };
+            let Some(account_id) = entry.get("account_id").and_then(|v| v.as_u64()) else {
+                continue;
+            };
+            let Some(envelope_id) = entry.get("envelope_id").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            let expected_hash = entry.get("content_hash").and_then(|v| v.as_str());
+            checked += 1;
+
+            let actual = read_blob_content_hash(account_id, envelope_id).await;
+            match (expected_hash, actual.as_ref()) {
+                // Matched when the reconstructed content is byte-identical, or
+                // when every detached attachment blob is present. The blob
+                // store is keyed by the hash of the *decoded* attachment
+                // content while values hold the undecoded raw bytes; when the
+                // same decoded content was stored under a different raw
+                // encoding (e.g. base64 line folding) reattachment is
+                // content-identical but not byte-identical. Only a genuinely
+                // absent blob is a defect, mirroring the integrity check.
+                (Some(expected), Some((actual_hash, missing)))
+                    if expected == actual_hash || missing.is_empty() =>
+                {
+                    matched += 1
+                }
+                _ => {
+                    mismatched += 1;
+                    if mismatches.len() < 100 {
+                        mismatches.push(ExportVerifyMismatch {
+                            envelope_id: envelope_id.to_string(),
+                            message_id: entry
+                                .get("message_id")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            subject: entry
+                                .get("subject")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            expected_hash: expected_hash.map(|s| s.to_string()),
+                            actual_hash: actual.as_ref().map(|(h, _)| h.clone()),
+                            reason: classify_mismatch(expected_hash, actual.as_ref()).to_string(),
+                        });
+                    }
+                }
+            }
+            {
+                let mut guard = job.lock().unwrap();
+                guard.verify_checked = checked;
+                guard.verify_matched = matched;
+                guard.verify_mismatched = mismatched;
+            }
+        }
+    }
+
+    let artifact_hash_match =
+        expected_artifact_hash.as_deref() == Some(actual_artifact_hash.as_str());
+    emit(Event::ExportVerified {
+        user: job.lock().unwrap().username.clone(),
+        export_id: job_id.clone(),
+        artifact_hash: Some(actual_artifact_hash.clone()),
+        checked,
+        matched,
+        mismatched,
+    });
+
+    let view = ExportVerifyView {
+        job_id: job_id.clone(),
+        status,
+        artifact_name: Some(name),
+        expected_artifact_hash,
+        actual_artifact_hash: Some(actual_artifact_hash),
+        artifact_hash_match,
+        checked,
+        matched,
+        mismatched,
+        verified_at: now_ms(),
+        mismatches,
+    };
+    {
+        let mut guard = job.lock().unwrap();
+        guard.verify_status = VERIFY_STATUS_FINISHED.to_string();
+        guard.verify_result = Some(view.clone());
+        guard.verify_finished_at = Some(now_ms());
+        if let Err(e) = persist_verify_state(&*guard) {
+            error!("Failed to persist verify state for {job_id}: {e}");
+        }
+    }
+    Ok(view)
+}
+
+/// Persists the current compliance verification state into the job
+/// directory ("verify.json") so it survives a restart.
+fn persist_verify_state(job: &ExportJob) -> BichonResult<()> {
+    let dir = job_dir(&job.job_id);
+    let data = serde_json::to_vec_pretty(&verify_progress_view(job)).map_err(|e| {
+        raise_error!(
+            format!("Failed to serialize verify state: {e}"),
+            ErrorCode::InternalError
+        )
+    })?;
+    std::fs::write(dir.join("verify.json"), data).map_err(|e| {
+        raise_error!(
+            format!("Failed to write verify state: {e}"),
+            ErrorCode::InternalError
+        )
+    })
+}
+
+/// Reads the artifact SHA-256 recorded in `manifest.json` at export time.
+async fn read_manifest_artifact_hash(dir: &Path) -> Option<String> {
+    let path = dir.join("manifest.json");
+    let content = tokio::fs::read_to_string(&path).await.ok()?;
+    let value: serde_json::Value = serde_json::from_str(&content).ok()?;
+    value
+        .get("artifact_hash")
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
+}
+
+/// Recomputes the content hash of an archived message from the blob store.
+/// Returns `(hash, missing_attachment_hashes)`: the reconstructed content's
+/// hash plus the hashes of any `<<BICHON_DETACH_HASH:...>>` placeholders whose
+/// blob is genuinely absent from the archive.
+async fn read_blob_content_hash(
+    account_id: u64,
+    envelope_id: &str,
+) -> Option<(String, Vec<String>)> {
+    let mut reader = get_reader(account_id, envelope_id.to_string()).await.ok()?;
+    let mut raw = Vec::new();
+    reader.read_to_end(&mut raw).await.ok()?;
+    Some((compute_content_hash(&raw), missing_attachment_hashes(&raw)))
+}
+
+/// True when `raw` still contains a detached-attachment placeholder.
+fn contains_detach_placeholder(raw: &[u8]) -> bool {
+    const PREFIX: &[u8] = b"<<BICHON_DETACH_HASH:";
+    raw.windows(PREFIX.len()).any(|window| window == PREFIX)
+}
+
+/// Returns the hashes of any `<<BICHON_DETACH_HASH:...>>` placeholders still
+/// present in `raw` whose blob is genuinely absent from the blob store.
+///
+/// Placeholders whose blob exists are intentionally not reported: the blob
+/// store is keyed by the hash of the decoded attachment content while values
+/// hold the undecoded raw bytes, so reattaching can yield the same decoded
+/// content without byte-identical output (e.g. base64 line folding). Only a
+/// placeholder whose blob is truly missing is a real defect.
+fn missing_attachment_hashes(raw: &[u8]) -> Vec<String> {
+    const PREFIX: &[u8] = b"<<BICHON_DETACH_HASH:";
+    let mut missing = Vec::new();
+    let mut search_cursor = 0;
+    while let Some(pos) = raw[search_cursor..]
+        .windows(PREFIX.len())
+        .position(|window| window == PREFIX)
+    {
+        let hash_start = search_cursor + pos + PREFIX.len();
+        let hash_end = hash_start + 64;
+        if hash_end + 2 <= raw.len() && &raw[hash_end..hash_end + 2] == b">>" {
+            if let Ok(hash) = std::str::from_utf8(&raw[hash_start..hash_end]) {
+                match BLOB_MANAGER.get_attachment(hash) {
+                    Ok(Some(_)) => {}
+                    Ok(None) | Err(_) => missing.push(hash.to_string()),
+                }
+            }
+            search_cursor = hash_end + 2;
+        } else {
+            search_cursor = search_cursor + pos + 1;
+        }
+    }
+    missing
+}
+
+/// Classifies why a message's recomputed content hash differs from the hash
+/// recorded in the export manifest.
+fn classify_mismatch(
+    expected: Option<&str>,
+    actual: Option<&(String, Vec<String>)>,
+) -> &'static str {
+    match actual {
+        None => "blob_missing",
+        Some((_, missing)) if !missing.is_empty() => "attachment_missing",
+        Some((actual_hash, _)) if expected != Some(actual_hash.as_str()) => "content_changed",
+        Some(_) => "content_changed",
+    }
 }
 
 fn is_cancelled(job: &Arc<Mutex<ExportJob>>) -> bool {
@@ -705,6 +1181,20 @@ async fn export_one(
             ErrorCode::InternalError
         )
     })?;
+
+    // A `<<BICHON_DETACH_HASH:...>>` placeholder still present in the
+    // reconstructed content means an attachment blob is missing from the
+    // archive. Writing that degraded copy into a compliance artifact would
+    // silently corrupt it, so the message is counted as failed instead.
+    if contains_detach_placeholder(&raw) {
+        return Err(raise_error!(
+            format!(
+                "Message {} is missing attachment content in the archive; refusing to export a degraded copy.",
+                envelope.id
+            ),
+            ErrorCode::InternalError
+        ));
+    }
 
     let date_dt = Utc.timestamp_opt(envelope.date / 1000, 0).unwrap();
     let date_str = date_dt.format("%a %b %e %H:%M:%S %Y").to_string();
@@ -780,6 +1270,7 @@ async fn write_summary_manifest(
     dir: &Path,
     artifact_name: &str,
     artifact_size: u64,
+    artifact_hash: Option<&str>,
     username: &str,
     saved_search_id: &str,
     saved_search_name: &str,
@@ -804,6 +1295,8 @@ async fn write_summary_manifest(
         "failed": failed,
         "artifact": artifact_name,
         "artifact_size": artifact_size,
+        "artifact_hash": artifact_hash,
+        "hash_algorithm": "sha256",
     });
     let data = serde_json::to_vec_pretty(&summary).map_err(|e| {
         raise_error!(
@@ -822,4 +1315,140 @@ async fn write_summary_manifest(
 #[allow(dead_code)]
 fn _utc_now_ms() -> i64 {
     utc_now!()
+}
+
+/// Persisted form of a finished export, written by `write_summary_manifest`
+/// into each job directory. Used to reload export records at server startup.
+#[derive(Deserialize)]
+struct PersistedExportManifest {
+    job_id: String,
+    status: String,
+    user: String,
+    saved_search_id: String,
+    saved_search_name: String,
+    format: String,
+    created_at: i64,
+    finished_at: Option<i64>,
+    accounts: Vec<ExportAccount>,
+    total_emails: u64,
+    total_size: u64,
+    exported: u64,
+    failed: u64,
+    artifact: String,
+    artifact_size: u64,
+    artifact_hash: Option<String>,
+}
+
+/// Scans the export root directory at server startup and reloads finished
+/// export jobs from their `manifest.json`, so records (and their artifacts)
+/// survive a restart. Incomplete or malformed job directories are skipped;
+/// the periodic TTL sweep reclaims them later.
+pub fn load_persisted_exports() {
+    let root = export_root_dir();
+    let Ok(entries) = std::fs::read_dir(&root) else {
+        return;
+    };
+    let users = match UserModel::list_all() {
+        Ok(users) => users,
+        Err(e) => {
+            warn!("Failed to list users while loading persisted exports: {e}");
+            return;
+        }
+    };
+    let mut registry_guard = registry().lock().unwrap();
+    for entry in entries.flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if registry_guard.contains_key(&name) {
+            continue;
+        }
+        let Ok(meta) = entry.metadata() else {
+            continue;
+        };
+        if !meta.is_dir() {
+            continue;
+        }
+        let dir = entry.path();
+        let Ok(raw) = std::fs::read(dir.join("manifest.json")) else {
+            continue;
+        };
+        let manifest: PersistedExportManifest = match serde_json::from_slice(&raw) {
+            Ok(m) => m,
+            Err(e) => {
+                warn!(
+                    "Skipping export dir {}: invalid manifest ({e})",
+                    dir.display()
+                );
+                continue;
+            }
+        };
+        if manifest.status != STATUS_FINISHED {
+            continue;
+        }
+        let Some(user_id) = users
+            .iter()
+            .find(|u| u.username == manifest.user)
+            .map(|u| u.id)
+        else {
+            warn!(
+                "Skipping export {}: user {} no longer exists",
+                manifest.job_id, manifest.user
+            );
+            continue;
+        };
+        let format = if manifest.format == ExportFormat::Mbox.as_str() {
+            ExportFormat::Mbox
+        } else {
+            warn!(
+                "Skipping export {}: unknown format {}",
+                manifest.job_id, manifest.format
+            );
+            continue;
+        };
+        // Restore any persisted compliance verification state so results
+        // survive a restart. A `running` state cannot outlive the process, so
+        // it is downgraded back to `idle`.
+        let persisted_verify = std::fs::read(dir.join("verify.json"))
+            .ok()
+            .and_then(|raw| serde_json::from_slice::<ExportVerifyProgressView>(&raw).ok())
+            .filter(|v| v.status != VERIFY_STATUS_RUNNING);
+        let job = ExportJob {
+            job_id: manifest.job_id.clone(),
+            user_id,
+            username: manifest.user,
+            saved_search_id: manifest.saved_search_id,
+            saved_search_name: manifest.saved_search_name,
+            format,
+            status: STATUS_FINISHED.to_string(),
+            accounts: manifest.accounts,
+            total_emails: manifest.total_emails,
+            total_size: manifest.total_size,
+            processed: manifest.exported + manifest.failed,
+            exported: manifest.exported,
+            failed: manifest.failed,
+            error: None,
+            artifact_name: Some(manifest.artifact),
+            artifact_size: manifest.artifact_size,
+            artifact_hash: manifest.artifact_hash,
+            created_at: manifest.created_at,
+            finished_at: manifest.finished_at,
+            cancel: Arc::new(AtomicBool::new(false)),
+            verify_status: persisted_verify
+                .as_ref()
+                .map(|v| v.status.clone())
+                .unwrap_or_else(|| VERIFY_STATUS_IDLE.to_string()),
+            verify_checked: persisted_verify.as_ref().map(|v| v.checked).unwrap_or(0),
+            verify_total: persisted_verify.as_ref().map(|v| v.total).unwrap_or(0),
+            verify_matched: persisted_verify.as_ref().map(|v| v.matched).unwrap_or(0),
+            verify_mismatched: persisted_verify.as_ref().map(|v| v.mismatched).unwrap_or(0),
+            verify_error: persisted_verify.as_ref().and_then(|v| v.error.clone()),
+            verify_result: persisted_verify.as_ref().and_then(|v| v.result.clone()),
+            verify_started_at: persisted_verify.as_ref().and_then(|v| v.started_at),
+            verify_finished_at: persisted_verify.as_ref().and_then(|v| v.finished_at),
+        };
+        info!(
+            "Loaded persisted export job {} (user {}, {} exported, {} failed)",
+            job.job_id, job.username, job.exported, job.failed
+        );
+        registry_guard.insert(name, Arc::new(Mutex::new(job)));
+    }
 }

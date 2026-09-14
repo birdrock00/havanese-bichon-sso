@@ -1,7 +1,8 @@
 use crate::api::export::{
     create_export_job, download_export_to_file, get_export_job, list_saved_searches,
-    preview_export,
+    preview_export, verify_export_job,
 };
+use bichon_core::export::ExportJobView;
 use bichon_core::saved_search::SavedSearchKind;
 use dialoguer::Select;
 use crate::api::download::download_and_export_with_json_header;
@@ -342,5 +343,101 @@ pub async fn handle_export(config: &BichonCliConfig, theme: &ColorfulTheme) {
             style("✔").green(),
             target.display()
         );
+        handle_post_export_verify(&client, config, &job, theme).await;
+    }
+}
+
+/// Optional compliance verification after a saved-search export: prints the
+/// artifact SHA-256 and, when the server supports it, cross-checks every
+/// exported message against the live archive.
+async fn handle_post_export_verify(
+    client: &Client,
+    config: &BichonCliConfig,
+    job: &ExportJobView,
+    theme: &ColorfulTheme,
+) {
+    if let Some(hash) = job.artifact_hash.as_deref() {
+        println!("  Artifact SHA-256: {}", style(hash).cyan());
+    }
+    if !Confirm::with_theme(theme)
+        .with_prompt("Run compliance verification against the archive?")
+        .default(true)
+        .interact()
+        .unwrap()
+    {
+        return;
+    }
+    let Some(view) = verify_export_job(client, config, &job.job_id).await else {
+        return;
+    };
+    println!("\n--- Compliance Verification ---");
+    println!(
+        "  Artifact hash match: {}",
+        style(if view.artifact_hash_match { "YES" } else { "NO" }).green()
+    );
+    println!(
+        "  Messages: {} checked, {} matched, {} mismatched",
+        style(view.checked).cyan(),
+        style(view.matched).green(),
+        style(view.mismatched).red()
+    );
+    for m in view.mismatches.iter().take(10) {
+        eprintln!(
+            "  ✘ Mismatch: {} (expected {}, got {})",
+            m.envelope_id,
+            m.expected_hash.as_deref().unwrap_or("-"),
+            m.actual_hash.as_deref().unwrap_or("-")
+        );
+    }
+    if view.artifact_hash_match && view.mismatched == 0 {
+        println!(" {} Verification passed.", style("✔").green());
+    } else {
+        eprintln!(" {} Verification FAILED.", style("✘").red());
+    }
+}
+
+/// Verifies an existing export job by job id (compliance).
+pub async fn handle_export_verify(config: &BichonCliConfig, theme: &ColorfulTheme) {
+    let client = Client::new();
+    let job_id: String = Input::with_theme(theme)
+        .with_prompt("Export job id (e.g. exp_...)")
+        .interact_text()
+        .unwrap();
+    let job_id = job_id.trim().to_string();
+    if job_id.is_empty() {
+        eprintln!(" {} No job id provided.", style("✘").red());
+        return;
+    }
+    println!(" {} Verifying export job '{}'...", style("✔").green(), job_id);
+    let Some(view) = verify_export_job(&client, config, &job_id).await else {
+        return;
+    };
+    println!("\n--- Compliance Verification ---");
+    println!(
+        "  Artifact: {}",
+        style(view.artifact_name.as_deref().unwrap_or("-")).cyan()
+    );
+    println!(
+        "  Artifact hash match: {}",
+        style(if view.artifact_hash_match { "YES" } else { "NO" }).green()
+    );
+    println!(
+        "  Messages: {} checked, {} matched, {} mismatched",
+        style(view.checked).cyan(),
+        style(view.matched).green(),
+        style(view.mismatched).red()
+    );
+    for m in view.mismatches.iter().take(10) {
+        eprintln!(
+            "  ✘ Mismatch: {} (expected {}, got {})",
+            m.envelope_id,
+            m.expected_hash.as_deref().unwrap_or("-"),
+            m.actual_hash.as_deref().unwrap_or("-")
+        );
+    }
+    if view.artifact_hash_match && view.mismatched == 0 {
+        println!(" {} Verification passed.", style("✔").green());
+    } else {
+        eprintln!(" {} Verification FAILED.", style("✘").red());
     }
 }

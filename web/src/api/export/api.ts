@@ -49,8 +49,56 @@ export interface ExportJobView {
   error: string | null;
   artifact_name: string | null;
   artifact_size: number;
+  artifact_hash: string | null;
   created_at: number;
   finished_at: number | null;
+  verify_status: string;
+  verify_checked: number;
+  verify_matched: number;
+  verify_mismatched: number;
+  verify_error: string | null;
+  verify_started_at: number | null;
+  verify_finished_at: number | null;
+}
+
+export interface ExportVerifyMismatch {
+  envelope_id: string;
+  message_id: string | null;
+  subject: string | null;
+  expected_hash: string | null;
+  actual_hash: string | null;
+  reason: string;
+}
+
+export interface ExportVerifyView {
+  job_id: string;
+  status: string;
+  artifact_name: string | null;
+  expected_artifact_hash: string | null;
+  actual_artifact_hash: string | null;
+  artifact_hash_match: boolean;
+  checked: number;
+  matched: number;
+  mismatched: number;
+  verified_at: number;
+  mismatches: ExportVerifyMismatch[];
+}
+
+export interface ExportVerifyProgressView {
+  job_id: string;
+  status: string;
+  checked: number;
+  total: number;
+  matched: number;
+  mismatched: number;
+  error: string | null;
+  result: ExportVerifyView | null;
+  started_at: number | null;
+  finished_at: number | null;
+}
+
+export interface DownloadTicketView {
+  url: string;
 }
 
 export const previewExport = async (savedSearchId: string) => {
@@ -87,6 +135,27 @@ export const listExports = async () => {
 export const cancelExport = async (jobId: string) => {
   const response = await axiosInstance.post<ExportJobView>(
     `api/v1/exports/${jobId}/cancel`
+  );
+  return response.data;
+};
+
+export const startExportVerify = async (jobId: string) => {
+  const response = await axiosInstance.post<ExportVerifyProgressView>(
+    `api/v1/exports/${jobId}/verify`
+  );
+  return response.data;
+};
+
+export const getExportVerifyProgress = async (jobId: string) => {
+  const response = await axiosInstance.get<ExportVerifyProgressView>(
+    `api/v1/exports/${jobId}/verify`
+  );
+  return response.data;
+};
+
+export const createDownloadTicket = async (jobId: string) => {
+  const response = await axiosInstance.post<DownloadTicketView>(
+    `api/v1/exports/${jobId}/download-ticket`
   );
   return response.data;
 };

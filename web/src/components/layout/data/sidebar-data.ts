@@ -24,6 +24,7 @@ import {
   BadgeCheck,
   BarChart3,
   Download,
+  FileCheck2,
   IdCard,
   Inbox,
   Paperclip,
@@ -95,6 +96,17 @@ export function useSidebarData(): SidebarData {
                 'system:root',
                 'account:manage:all',
                 'account:manage',
+              ]),
+          },
+          {
+            title: t('compliance_export.title', 'Compliance Export'),
+            url: '/compliance-export',
+            icon: FileCheck2,
+            visible:
+              isPro &&
+              require_any_permission([
+                'data:export:batch',
+                'data:export:batch:all',
               ]),
           },
           {
