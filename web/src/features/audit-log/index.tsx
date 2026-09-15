@@ -4,13 +4,15 @@
 // Audit log page (Pro edition) — query who did what, when.
 //
 
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { ChevronDown } from 'lucide-react'
 import { Main } from '@/components/layout/main'
 import { FixedHeader } from '@/components/layout/fixed-header'
 import { TablePagination } from '@/components/pagination'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import {
   Select,
   SelectContent,
@@ -80,6 +82,11 @@ const EVENT_TYPES = [
   'branding.updated',
   'search.performed',
   'settings.changed',
+  'timestamp.anchored',
+  'ldap.login',
+  'ldap.login_failed',
+  'siem.forward_failed',
+  'siem.config_updated',
 ] as const
 
 function eventTypeLabel(t: (key: string, defaultValue: string) => string, et: string): string {
@@ -134,6 +141,23 @@ function eventTypeLabel(t: (key: string, defaultValue: string) => string, et: st
     'branding.updated': t('audit.eventTypes.brandingUpdated', 'Branding updated'),
     'search.performed': t('audit.eventTypes.searchPerformed', 'Search performed'),
     'settings.changed': t('audit.eventTypes.settingsChanged', 'Settings changed'),
+    'timestamp.anchored': t(
+      'audit.eventTypes.timestampAnchored',
+      'Merkle root timestamped',
+    ),
+    'ldap.login': t('audit.eventTypes.ldapLogin', 'LDAP login'),
+    'ldap.login_failed': t(
+      'audit.eventTypes.ldapLoginFailed',
+      'LDAP login failed',
+    ),
+    'siem.forward_failed': t(
+      'audit.eventTypes.siemForwardFailed',
+      'SIEM forward failed',
+    ),
+    'siem.config_updated': t(
+      'audit.eventTypes.siemConfigUpdated',
+      'SIEM configuration updated',
+    ),
   }
   return labels[et] ?? et
 }
@@ -209,27 +233,19 @@ function describeEvent(rec: AuditRecord): string {
       return typeof p.email === 'string' ? p.email : ''
     case 'mfa.reset_by_admin':
       return typeof p.target_user === 'string' ? p.target_user : ''
+    case 'timestamp.anchored':
+      return typeof p.leaf_count === 'number'
+        ? `root=${typeof p.root_hash === 'string' ? p.root_hash.slice(0, 12) : ''}… leaves=${p.leaf_count}`
+        : ''
+    case 'ldap.login_failed':
+      return typeof p.reason === 'string' ? p.reason : ''
+    case 'siem.forward_failed':
+      return typeof p.url === 'string'
+        ? `${p.url} (${p.seq_from}..${p.seq_to})`
+        : `seq ${p.seq_from}..${p.seq_to}`
     default:
       return ''
   }
-}
-
-function PayloadView({ record }: { record: AuditRecord }) {
-  const { t } = useTranslation()
-  const [open, setOpen] = useState(false)
-  if (!record.payload || Object.keys(record.payload).length === 0) return null
-  return (
-    <div className='mt-2'>
-      <Button variant='ghost' size='sm' onClick={() => setOpen((v) => !v)}>
-        {open ? t('audit.hideDetails', 'Hide details') : t('audit.showDetails', 'Show details')}
-      </Button>
-      {open && (
-        <pre className='mt-2 max-h-64 overflow-auto rounded border p-2 text-xs'>
-          {JSON.stringify(record.payload, null, 2)}
-        </pre>
-      )}
-    </div>
-  )
 }
 
 export default function AuditLog() {
@@ -237,6 +253,10 @@ export default function AuditLog() {
   const { isPro } = useEdition()
   const { require_any_permission } = useCurrentUser()
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(
+    () =>
+      Number(localStorage.getItem('bichon_audit_log_page_size')) || PAGE_SIZE
+  )
   const [userFilter, setUserFilter] = useState('all')
   const [eventType, setEventType] = useState('all')
   const [accountFilter, setAccountFilter] = useState('all')
@@ -279,11 +299,11 @@ export default function AuditLog() {
   ]
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ['audit-log', page, applied],
+    queryKey: ['audit-log', page, pageSize, applied],
     queryFn: () =>
       list_audit_log({
         page,
-        page_size: PAGE_SIZE,
+        page_size: pageSize,
         user: applied.user === 'all' || !applied.user ? undefined : applied.user,
         event_type: applied.type === 'all' || !applied.type ? undefined : applied.type,
         account_id: applied.account === 'all' || !applied.account ? undefined : Number(applied.account),
@@ -319,6 +339,18 @@ export default function AuditLog() {
     setPage(1)
     setApplied({ user: 'all', type: 'all', account: 'all', start: undefined, end: undefined })
   }
+
+  const handlePageSizeChange = (size: number) => {
+    localStorage.setItem('bichon_audit_log_page_size', String(size))
+    setPage(1)
+    setPageSize(size)
+  }
+
+  // Which rows currently have their detail row expanded (keyed by record id).
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+
+  const toggleExpanded = (id: string) =>
+    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }))
 
   const canView = isPro && require_any_permission(['system:root', 'user:manage', 'data:read:all'])
 
@@ -445,24 +477,68 @@ export default function AuditLog() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data?.items?.map((rec) => (
-                      <TableRow key={rec.id}>
-                        <TableCell className='whitespace-nowrap text-xs'>
-                          {formatTime(rec.ts_ms)}
-                        </TableCell>
-                        <TableCell className='text-xs'>{rec.user}</TableCell>
-                        <TableCell>
-                          <span className='rounded bg-muted px-1.5 py-0.5 text-xs'>
-                            {eventTypeLabel(t, rec.event_type)}
-                          </span>
-                        </TableCell>
-                        <TableCell className='max-w-md'>
-                          <div className='truncate text-xs'>{describeEvent(rec) || '—'}</div>
-                          <PayloadView record={rec} />
-                        </TableCell>
-                        <TableCell className='text-xs'>{rec.ip ?? '—'}</TableCell>
-                      </TableRow>
-                    ))}
+                    {data?.items?.map((rec) => {
+                      const detail = describeEvent(rec)
+                      const hasPayload =
+                        !!rec.payload && Object.keys(rec.payload).length > 0
+                      const hasDetail = hasPayload || detail !== ''
+                      const isOpen = !!expanded[rec.id]
+                      return (
+                        <Fragment key={rec.id}>
+                          <TableRow>
+                            <TableCell className='whitespace-nowrap text-xs'>
+                              {formatTime(rec.ts_ms)}
+                            </TableCell>
+                            <TableCell className='text-xs'>{rec.user}</TableCell>
+                            <TableCell>
+                              <span className='rounded bg-muted px-1.5 py-0.5 text-xs'>
+                                {eventTypeLabel(t, rec.event_type)}
+                              </span>
+                            </TableCell>
+                            <TableCell className='max-w-md'>
+                              {hasDetail ? (
+                                <Button
+                                  variant='ghost'
+                                  size='sm'
+                                  className='h-7 px-1 text-xs font-normal'
+                                  aria-expanded={isOpen}
+                                  onClick={() => toggleExpanded(rec.id)}
+                                >
+                                  <ChevronDown
+                                    className={cn(
+                                      'h-3.5 w-3.5 text-muted-foreground transition-transform',
+                                      isOpen && 'rotate-180',
+                                    )}
+                                  />
+                                  {isOpen
+                                    ? t('audit.hideDetails', 'Hide details')
+                                    : t('audit.showDetails', 'Show details')}
+                                </Button>
+                              ) : null}
+                            </TableCell>
+                            <TableCell className='text-xs'>{rec.ip ?? '—'}</TableCell>
+                          </TableRow>
+                          {isOpen && (
+                            <TableRow className='bg-muted/40'>
+                              <TableCell colSpan={5} className='p-4'>
+                                <div className='space-y-2'>
+                                  {detail && (
+                                    <div className='text-xs font-medium'>
+                                      {detail}
+                                    </div>
+                                  )}
+                                  {hasPayload && (
+                                    <pre className='max-h-40 overflow-auto rounded border bg-background p-2 text-xs'>
+                                      {JSON.stringify(rec.payload, null, 2)}
+                                    </pre>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </Fragment>
+                      )
+                    })}
                     {data?.items?.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={5} className='py-8 text-center text-muted-foreground'>
@@ -477,10 +553,10 @@ export default function AuditLog() {
                 <TablePagination
                   totalItems={data?.total ?? 0}
                   pageIndex={page - 1}
-                  pageSize={PAGE_SIZE}
-                  hasNextPage={() => (data?.total ?? 0) > page * PAGE_SIZE}
+                  pageSize={pageSize}
+                  hasNextPage={() => (data?.total ?? 0) > page * pageSize}
                   setPageIndex={(i) => setPage(i + 1)}
-                  setPageSize={() => { }}
+                  setPageSize={handlePageSizeChange}
                 />
               </div>}
               {isFetching && (

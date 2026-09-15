@@ -362,6 +362,54 @@ pub enum Event {
         email_count: u64,
         artifact_size: u64,
     },
+    /// A legal hold was placed on an account (Enterprise). The account is
+    /// frozen: the retention sweep skips it and bulk deletion refuses.
+    LegalHoldPlaced {
+        user: String,
+        account_id: u64,
+        /// Operator-recorded reason for the hold (audit-friendly).
+        reason: Option<String>,
+    },
+    /// A legal hold was released from an account (Enterprise).
+    LegalHoldReleased {
+        user: String,
+        account_id: u64,
+        /// Operator-recorded reason at release time.
+        reason: Option<String>,
+    },
+    /// A Merkle-tree root over archived content hashes was anchored with an
+    /// external Time-Stamp Authority (RFC 3161, Enterprise).
+    TimestampAnchored {
+        user: String,
+        anchor_id: String,
+        root_hash: String,
+        /// TSA-certified time (epoch millis).
+        gen_time: i64,
+        leaf_count: u64,
+        tsa_url: Option<String>,
+    },
+    /// A user signed in with an LDAP/AD bind (Enterprise).
+    LdapLogin {
+        user: String,
+        ip: Option<IpAddr>,
+    },
+    /// An LDAP/AD bind-based sign-in attempt failed (Enterprise).
+    LdapLoginFailed {
+        username: String,
+        ip: Option<IpAddr>,
+        reason: String,
+    },
+    /// The SIEM webhook forwarder gave up on a batch after exhausting its
+    /// retries (Enterprise). The cursor is NOT advanced, so the batch is
+    /// retried on the next cycle (at-least-once delivery).
+    SiemForwardFailed {
+        url: String,
+        seq_from: i64,
+        seq_to: i64,
+        error: String,
+    },
+    /// The SIEM webhook configuration was changed by an admin (Enterprise).
+    SiemConfigUpdated { user: String },
 }
 
 pub trait EventBus: Send + Sync {

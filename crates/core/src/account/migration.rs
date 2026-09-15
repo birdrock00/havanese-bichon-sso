@@ -331,6 +331,34 @@ pub struct Account {
     /// `None` = extract everything (backward compatible).
     #[serde(default)]
     pub extraction_rules: Option<ExtractionRules>,
+    /// Account-level retention period in days (free/community feature).
+    /// `None` or `0` = disabled (archive everything, never auto-purge).
+    /// A background sweep purges envelopes whose effective date
+    /// (`min(date, internal_date)`) is older than this window. Accounts on
+    /// legal hold are always exempt.
+    #[serde(default)]
+    pub retention_days: Option<u64>,
+    /// Legal hold flag (Enterprise feature; community edition has no setter
+    /// and this stays at its default of `false` forever). While set, the
+    /// account's data is frozen: the retention sweep skips the account and
+    /// bulk deletion paths refuse to purge it.
+    #[serde(default)]
+    pub legal_hold: bool,
+    /// Reason recorded when the hold was placed (audit-friendly, required).
+    #[serde(default)]
+    pub hold_reason: Option<String>,
+    /// User id that placed the hold.
+    #[serde(default)]
+    pub hold_placed_by: Option<u64>,
+    /// Epoch millis when the hold was placed.
+    #[serde(default)]
+    pub hold_placed_at: Option<i64>,
+    /// User id that released the hold (last release).
+    #[serde(default)]
+    pub hold_released_by: Option<u64>,
+    /// Epoch millis when the hold was released.
+    #[serde(default)]
+    pub hold_released_at: Option<i64>,
 }
 
 impl MemDbModel for Account {
@@ -342,13 +370,23 @@ impl MemDbModel for Account {
     }
 }
 
+/// The account name is a display-only label: an empty or whitespace-only value
+/// means "no name". It is stored as `None`, never as an empty string, so
+/// consumers can rely on `account_name != ""` meaning a real name.
+fn normalize_optional_name(name: Option<String>) -> Option<String> {
+    match name {
+        Some(n) if n.trim().is_empty() => None,
+        other => other,
+    }
+}
+
 impl Account {
     pub fn new(user_id: u64, request: AccountCreateRequest) -> BichonResult<Self> {
         Ok(Self {
             id: id!(64),
             email: request.email,
             login_name: request.login_name,
-            account_name: request.account_name,
+            account_name: normalize_optional_name(request.account_name),
             imap: request.imap.map(|i| i.try_encrypt_password()).transpose()?,
             enabled: request.enabled,
             capabilities: None,
@@ -372,11 +410,29 @@ impl Account {
             deleting: false,
             archive_rules: request.archive_rules,
             extraction_rules: request.extraction_rules,
+            retention_days: request.retention_days,
+            legal_hold: false,
+            hold_reason: None,
+            hold_placed_by: None,
+            hold_placed_at: None,
+            hold_released_by: None,
+            hold_released_at: None,
         })
     }
 
     pub fn check_account_exists(account_id: u64) -> BichonResult<AccountModel> {
         Self::get(account_id)
+    }
+
+    /// Whether the account currently sits under a legal hold. While held, the
+    /// retention sweep must skip it and bulk deletion paths must refuse.
+    pub fn is_on_hold(&self) -> bool {
+        self.legal_hold
+    }
+
+    /// Effective retention period in days. `0` / `None` means disabled.
+    pub fn retention_days_effective(&self) -> u64 {
+        self.retention_days.unwrap_or(0)
     }
 
     pub fn get(account_id: u64) -> BichonResult<AccountModel> {
@@ -459,6 +515,21 @@ impl Account {
 
     pub async fn delete(account_id: u64) -> BichonResult<()> {
         let account = Self::get(account_id)?;
+
+        // Legal hold: an account under a hold is frozen — deleting the account
+        // would cascade-purge every message and attachment it holds, defeating
+        // the purpose of the hold. Refuse before any state is mutated. In the
+        // community edition `legal_hold` is always false, so this guard is a
+        // no-op there.
+        if account.is_on_hold() {
+            return Err(raise_error!(
+                format!(
+                    "Account {} ({}) is under a legal hold; deleting the account is disabled while the hold is active",
+                    account.id, account.email
+                ),
+                ErrorCode::Forbidden
+            ));
+        }
 
         // Immediately stop scheduling to prevent new downloads
         if matches!(account.account_type, AccountType::IMAP) {
@@ -570,6 +641,71 @@ impl Account {
         Ok(())
     }
 
+    /// Place a legal hold on an account (Enterprise feature; the community
+    /// edition has no caller for this, so the flag stays at its default of
+    /// `false` there forever). While held, the retention sweep skips the
+    /// account and bulk deletion refuses to purge it.
+    pub fn place_legal_hold(
+        account_id: u64,
+        by: u64,
+        reason: Option<String>,
+    ) -> BichonResult<AccountModel> {
+        update_impl(
+            DB_MANAGER.db(),
+            &account_id.to_string(),
+            move |current: Account| {
+                let mut updated = current.clone();
+                updated.legal_hold = true;
+                updated.hold_reason = reason;
+                updated.hold_placed_by = Some(by);
+                updated.hold_placed_at = Some(utc_now!());
+                // Re-arming a hold clears any previous release stamp so the
+                // model always shows the current hold cycle.
+                updated.hold_released_by = None;
+                updated.hold_released_at = None;
+                Ok(updated)
+            },
+        )
+    }
+
+    /// Release a legal hold (Enterprise feature; the community edition has no
+    /// caller for this). The account is immediately eligible for the retention
+    /// sweep again on its next run.
+    pub fn release_legal_hold(
+        account_id: u64,
+        by: u64,
+        reason: Option<String>,
+    ) -> BichonResult<AccountModel> {
+        update_impl(
+            DB_MANAGER.db(),
+            &account_id.to_string(),
+            move |current: Account| {
+                let mut updated = current.clone();
+                updated.legal_hold = false;
+                updated.hold_reason = reason;
+                updated.hold_released_by = Some(by);
+                updated.hold_released_at = Some(utc_now!());
+                // The model tracks one hold cycle at a time: releasing clears
+                // the placement stamps, mirroring how re-arming clears the
+                // release stamps, so a released account reads clean. The
+                // permanent placement record lives in the audit log via the
+                // LegalHoldPlaced event.
+                updated.hold_placed_by = None;
+                updated.hold_placed_at = None;
+                Ok(updated)
+            },
+        )
+    }
+
+    /// Accounts currently under a legal hold (Enterprise feature). `None` = no
+    /// accounts are held.
+    pub fn list_legal_hold_accounts() -> BichonResult<Vec<AccountModel>> {
+        Ok(Self::list_all()?
+            .into_iter()
+            .filter(|a| a.is_on_hold())
+            .collect())
+    }
+
     /// Retrieves a list of all `AccountEntity` instances.
     pub fn list_all() -> BichonResult<Vec<AccountModel>> {
         list_all_impl::<AccountModel>(DB_MANAGER.db())
@@ -637,8 +773,10 @@ impl Account {
             }
         }
 
+        // Empty / whitespace-only clears the name to `None` (the store never
+        // holds an empty string); `null` leaves it untouched.
         if let Some(account_name) = request.account_name {
-            new.account_name = Some(account_name);
+            new.account_name = normalize_optional_name(Some(account_name));
         }
 
         if matches!(old.account_type, AccountType::IMAP) {
@@ -719,6 +857,12 @@ impl Account {
         if request.clear_extraction_rules == Some(true) {
             new.extraction_rules = None;
         }
+        if request.retention_days.is_some() {
+            new.retention_days = request.retention_days;
+        }
+        if request.clear_retention_days == Some(true) {
+            new.retention_days = None;
+        }
         new.updated_at = utc_now!();
         Ok(new)
     }
@@ -727,6 +871,28 @@ impl Account {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── Account name normalization ──────────────────────────────────
+
+    #[test]
+    fn empty_or_whitespace_account_name_becomes_none() {
+        for empty in ["".to_string(), "   ".to_string(), "\t\n ".to_string()] {
+            assert_eq!(
+                normalize_optional_name(Some(empty.clone())),
+                None,
+                "name: {empty:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn real_account_name_is_kept() {
+        assert_eq!(
+            normalize_optional_name(Some("Alice Lee".to_string())),
+            Some("Alice Lee".to_string())
+        );
+        assert_eq!(normalize_optional_name(None), None);
+    }
 
     // ── FilterRule ───────────────────────────────────────────────────
 
@@ -1148,5 +1314,137 @@ mod tests {
             ..Default::default()
         };
         assert!(request.validate_update_request(&account).is_err());
+    }
+
+    // ── legal hold (Enterprise, DB-backed) ────────────────────────────
+
+    use crate::settings::cli::SETTINGS;
+    use crate::settings::dir::DATA_DIR_MANAGER;
+    use std::sync::Once;
+
+    /// Shared on-disk root for DB-backed tests. The global statics
+    /// (SETTINGS → DATA_DIR_MANAGER → DB_MANAGER) freeze on first deref, so all
+    /// tests in this test binary share this root; assertions are scoped to their
+    /// own account ids/emails rather than assuming an empty database. The root
+    /// is unique per process so a previous `cargo test` run can never leak
+    /// memdb/index state into the next one.
+    static TEST_ENV: Once = Once::new();
+    fn init_test_env() {
+        TEST_ENV.call_once(|| {
+            let root =
+                std::env::temp_dir().join(format!("bichon-core-test-{}", std::process::id()));
+            std::fs::create_dir_all(&root).unwrap();
+            std::env::set_var("BICHON_ROOT_DIR", &root);
+            std::env::set_var("BICHON_ENCRYPT_PASSWORD", "test-password");
+            let _ = &*SETTINGS;
+            let _ = &*DATA_DIR_MANAGER;
+            let _ = &*DB_MANAGER;
+        });
+    }
+
+    fn insert_account(id: u64, email: &str) -> AccountModel {
+        let request = AccountCreateRequest {
+            email: email.to_string(),
+            login_name: None,
+            account_name: None,
+            imap: None,
+            enabled: true,
+            date_since: None,
+            date_before: None,
+            account_type: AccountType::NoSync,
+            download_interval_min: None,
+            download_batch_size: None,
+            max_email_size_bytes: None,
+            use_dangerous: false,
+            pgp_key: None,
+            imap_quota_bytes: None,
+            imap_quota_window: None,
+            auto_download_new_mailboxes: None,
+            download_schedule: None,
+            archive_rules: None,
+            extraction_rules: None,
+            retention_days: None,
+        };
+        let account = AccountModel::new(id, request).unwrap();
+        insert_impl(DB_MANAGER.db(), account.clone()).unwrap();
+        account
+    }
+
+    #[tokio::test]
+    async fn create_request_preserves_retention_days() {
+        init_test_env();
+        let request = AccountCreateRequest {
+            email: "retention-create@test.example".to_string(),
+            enabled: true,
+            account_type: AccountType::NoSync,
+            retention_days: Some(90),
+            ..Default::default()
+        };
+        let account = AccountModel::new(1, request).unwrap();
+        assert_eq!(account.retention_days, Some(90));
+    }
+
+    #[tokio::test]
+    async fn legal_hold_place_sets_fields_and_persists() {
+        init_test_env();
+        let account = insert_account(9001, "hold-place@test.example");
+        assert!(!account.is_on_hold());
+
+        let placed =
+            AccountModel::place_legal_hold(account.id, 7, Some("litigation case #1".into()))
+                .unwrap();
+        assert!(placed.is_on_hold());
+        assert_eq!(placed.hold_reason.as_deref(), Some("litigation case #1"));
+        assert_eq!(placed.hold_placed_by, Some(7));
+        assert!(placed.hold_placed_at.is_some());
+
+        // Persisted — a fresh read agrees.
+        let reloaded = AccountModel::get(account.id).unwrap();
+        assert!(reloaded.is_on_hold());
+        assert_eq!(reloaded.hold_reason.as_deref(), Some("litigation case #1"));
+        assert_eq!(reloaded.hold_placed_by, Some(7));
+    }
+
+    #[tokio::test]
+    async fn legal_hold_release_clears_and_rearm_resets_release_stamps() {
+        init_test_env();
+        let account = insert_account(9002, "hold-release@test.example");
+        AccountModel::place_legal_hold(account.id, 7, Some("hold".into())).unwrap();
+
+        let released =
+            AccountModel::release_legal_hold(account.id, 8, Some("resolved".into())).unwrap();
+        assert!(!released.is_on_hold());
+        assert_eq!(released.hold_released_by, Some(8));
+        assert!(released.hold_released_at.is_some());
+        // Releasing clears the placement stamps so a released account reads
+        // clean (the placement record lives in the audit log, not the model).
+        assert!(released.hold_placed_by.is_none());
+        assert!(released.hold_placed_at.is_none());
+
+        // Re-arming a hold clears the previous release stamps (current cycle).
+        let rearmed =
+            AccountModel::place_legal_hold(account.id, 7, Some("new hold".into())).unwrap();
+        assert!(rearmed.is_on_hold());
+        assert!(rearmed.hold_released_by.is_none());
+        assert!(rearmed.hold_released_at.is_none());
+        assert_eq!(rearmed.hold_reason.as_deref(), Some("new hold"));
+    }
+
+    #[tokio::test]
+    async fn legal_hold_list_returns_only_held_accounts() {
+        init_test_env();
+        let free = insert_account(9003, "hold-free@test.example");
+        let held = insert_account(9004, "hold-held@test.example");
+        AccountModel::place_legal_hold(held.id, 7, Some("freeze".into())).unwrap();
+
+        let list = AccountModel::list_legal_hold_accounts().unwrap();
+        assert!(
+            list.iter().any(|a| a.id == held.id),
+            "held account must be listed"
+        );
+        assert!(
+            !list.iter().any(|a| a.id == free.id),
+            "free account must not be listed"
+        );
     }
 }

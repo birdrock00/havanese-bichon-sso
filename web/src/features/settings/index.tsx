@@ -20,7 +20,7 @@
 import { Outlet } from '@tanstack/react-router'
 import { Main } from '@/components/layout/main'
 import SidebarNav from './components/sidebar-nav'
-import { Brush, KeyRound, LockKeyhole, Palette, SettingsIcon, ShieldCheck, UserCog, Waypoints } from 'lucide-react'
+import { Brush, KeyRound, LockKeyhole, Palette, Radar, SettingsIcon, ShieldCheck, UserCog, Waypoints } from 'lucide-react'
 import { FixedHeader } from '@/components/layout/fixed-header'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useEdition } from '@/hooks/use-edition'
@@ -30,7 +30,7 @@ import { Separator } from '@/components/ui/separator'
 export default function Settings() {
   const { t } = useTranslation()
   const { canGlobal, require_any_permission } = useCurrentUser()
-  const { isPro } = useEdition()
+  const { isPro, isEnterprise } = useEdition()
 
 
   const sidebarNavItems = [
@@ -59,6 +59,12 @@ export default function Settings() {
       href: '/settings/branding',
       icon: <Brush size={18} />,
       visible: isPro && require_any_permission(['system:root', 'user:manage']),
+    },
+    {
+      title: t('settings.sidebar.siem', 'SIEM'),
+      href: '/settings/siem',
+      icon: <Radar size={18} />,
+      visible: isEnterprise && require_any_permission(['system:root', 'user:manage']),
     },
     {
       title: t('settings.sidebar.apiTokens'),

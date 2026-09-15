@@ -36,7 +36,12 @@ pub struct BichonContext {
 
 impl Initialize for BichonContext {
     async fn initialize() -> BichonResult<()> {
-        BICHON_CONTEXT.start_account_downloader().await
+        BICHON_CONTEXT.start_account_downloader().await?;
+        // Account-level retention sweep (free/community feature). Both the
+        // community and Pro servers initialize through this hook, so the
+        // scheduler starts exactly once per process.
+        crate::retention::start_retention_scheduler();
+        Ok(())
     }
 }
 

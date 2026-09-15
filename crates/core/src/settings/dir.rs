@@ -23,7 +23,7 @@ use crate::{
     error::{code::ErrorCode, BichonResult},
     raise_error,
 };
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 const MEMDB_DIR: &str = "memdb";
@@ -105,5 +105,117 @@ impl DataDirManager {
             storage_dir,
             exports_dir: root_dir.join(EXPORTS_DIR),
         }
+    }
+}
+
+/// Resolve the on-disk path for a feature-owned embedded database under its own
+/// subdirectory, migrating a pre-existing root-level database (plus any live
+/// sidecars) there on first use.
+///
+/// Embedded stores are not single files — SQLite in WAL mode maintains `-wal` /
+/// `-shm` sidecars and redb memory-maps its file — so dropping them straight
+/// into the data root clutters the directory and risks treating the sidecars as
+/// loose files. Every feature database gets a subdirectory instead:
+///
+///   <root>/audit/audit.db          (Pro audit log)
+///   <root>/integrity/integrity.db  (Pro integrity checker)
+///   <root>/timestamp/anchor.db     (Pro timestamp anchoring)
+///   <root>/imap-uid/imap-uid.redb  (IMAP stable-UID store)
+///
+/// Shared by the community IMAP UID store and the Pro feature databases (see
+/// `crates/bichon-pro/src/db_paths.rs`).
+pub fn feature_db_path(feature: &str, file_name: &str) -> PathBuf {
+    let root = DATA_DIR_MANAGER.root_dir.clone();
+    migrate_from_root(&root, &root.join(feature), file_name);
+    root.join(feature).join(file_name)
+}
+
+/// Move `<root>/<file>` and any live sidecars into `dir` once, when the new
+/// location does not exist yet. Idempotent and best-effort: failures are
+/// ignored so a locked or already-moved file can never block opening the
+/// database.
+fn migrate_from_root(root: &Path, dir: &Path, file_name: &str) {
+    if dir.join(file_name).exists() || !root.join(file_name).exists() {
+        return;
+    }
+    let _ = std::fs::create_dir_all(dir);
+    for suffix in ["", "-wal", "-shm", "-journal"] {
+        let old = root.join(format!("{file_name}{suffix}"));
+        if old.exists() {
+            let _ = std::fs::rename(old, dir.join(format!("{file_name}{suffix}")));
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tmp_root(suffix: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(format!(
+            "bichon-core-dbpaths-{suffix}-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        root
+    }
+
+    #[test]
+    fn migrate_from_root_moves_db_and_sidecars_once() {
+        let root = tmp_root("audit");
+        let dir = root.join("audit");
+        std::fs::write(root.join("audit.db"), "db").unwrap();
+        std::fs::write(root.join("audit.db-wal"), "wal").unwrap();
+
+        migrate_from_root(&root, &dir, "audit.db");
+
+        assert_eq!(std::fs::read_to_string(dir.join("audit.db")).unwrap(), "db");
+        assert_eq!(
+            std::fs::read_to_string(dir.join("audit.db-wal")).unwrap(),
+            "wal"
+        );
+        assert!(!root.join("audit.db").exists());
+        assert!(!root.join("audit.db-wal").exists());
+
+        // Idempotent — a second call neither errors nor duplicates.
+        migrate_from_root(&root, &dir, "audit.db");
+        assert_eq!(std::fs::read_to_string(dir.join("audit.db")).unwrap(), "db");
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn migrate_from_root_handles_redb_single_file() {
+        let root = tmp_root("uid");
+        let dir = root.join("imap-uid");
+        std::fs::write(root.join("imap-uid.redb"), "store").unwrap();
+
+        migrate_from_root(&root, &dir, "imap-uid.redb");
+
+        assert_eq!(
+            std::fs::read_to_string(dir.join("imap-uid.redb")).unwrap(),
+            "store"
+        );
+        assert!(!root.join("imap-uid.redb").exists());
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn migrate_from_root_is_noop_when_new_already_exists() {
+        let root = tmp_root("existing");
+        std::fs::create_dir_all(root.join("integrity")).unwrap();
+        std::fs::write(root.join("integrity").join("integrity.db"), "new").unwrap();
+        std::fs::write(root.join("integrity.db"), "old").unwrap();
+
+        migrate_from_root(&root, &root.join("integrity"), "integrity.db");
+
+        // The already-present new file wins; the stale root-level file is
+        // left alone so a partial previous migration is never overwritten.
+        assert_eq!(
+            std::fs::read_to_string(root.join("integrity").join("integrity.db")).unwrap(),
+            "new"
+        );
+        assert!(root.join("integrity.db").exists());
+        let _ = std::fs::remove_dir_all(&root);
     }
 }

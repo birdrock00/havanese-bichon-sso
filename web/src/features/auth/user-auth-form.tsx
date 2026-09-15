@@ -42,7 +42,7 @@ import { Button } from '@/components/button'
 import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
 import { KeyRound, Loader2, LogIn, Shield } from 'lucide-react'
-import { login, mfaVerify, type LoginResult } from '@/api/users/api'
+import { ldapLogin, login, mfaVerify, type LoginResult } from '@/api/users/api'
 import { resolveApiUrl } from '@/api/branding/api'
 import { useTheme } from '@/context/theme-context'
 import { useEdition } from '@/hooks/use-edition'
@@ -58,7 +58,12 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const { search } = useLocation();
   const redirect = toSearchParams(search).get('redirect') || '/';
 
-  const { isPro, ssoEnabled } = useEdition()
+  const { isPro, ssoEnabled, ldapEnabled } = useEdition()
+  // Enterprise LDAP: the form authenticates against the directory (default
+  // when enabled); a link lets the user fall back to their local account.
+  const [loginMode, setLoginMode] = useState<'local' | 'ldap'>(
+    ldapEnabled ? 'ldap' : 'local',
+  )
 
   const formSchema = getFormSchema(t)
   const form = useForm<LoginFormValues>({
@@ -74,6 +79,12 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     mutationFn: (data: Record<string, any>) => {
       if (mfaChallenge) {
         return mfaVerify(mfaChallenge, data.code)
+      }
+      if (loginMode === 'ldap') {
+        return ldapLogin({
+          username: data.username ?? '',
+          password: data.password ?? '',
+        })
       }
       return login(data)
     },
@@ -234,6 +245,19 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                   >
                     <Shield size={16} className='mr-2' />
                     {t('auth.ssoLogin')}
+                  </Button>
+                )}
+
+                {isPro && ldapEnabled && (
+                  <Button
+                    variant='link'
+                    className='mt-2 w-full'
+                    type='button'
+                    onClick={() => setLoginMode((m) => (m === 'ldap' ? 'local' : 'ldap'))}
+                  >
+                    {loginMode === 'ldap'
+                      ? t('auth.localLogin', 'Sign in with your local account')
+                      : t('auth.ldapLogin', 'Sign in with LDAP')}
                   </Button>
                 )}
               </>

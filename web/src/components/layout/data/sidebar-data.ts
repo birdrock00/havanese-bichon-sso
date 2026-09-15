@@ -25,8 +25,10 @@ import {
   BarChart3,
   Download,
   FileCheck2,
+  Fingerprint,
   IdCard,
   Inbox,
+  Lock,
   Paperclip,
   Search,
   ShieldCheck,
@@ -43,7 +45,7 @@ export function useSidebarData(): SidebarData {
   const { t } = useTranslation()
 
   const { require_any_permission } = useCurrentUser()
-  const { isPro } = useEdition()
+  const { isPro, isEnterprise } = useEdition()
 
   return {
     navGroups: [
@@ -183,6 +185,22 @@ export function useSidebarData(): SidebarData {
                 'user:manage',
                 'data:read:all',
               ]),
+          },
+          {
+            title: t('navigation.legalHold', 'Legal Hold'),
+            url: '/legal-hold',
+            icon: Lock,
+            visible:
+              isEnterprise &&
+              require_any_permission(['legal:hold', 'system:root']),
+          },
+          {
+            title: t('navigation.timestampAnchor', 'Timestamp anchoring'),
+            url: '/timestamp-anchor',
+            icon: Fingerprint,
+            visible:
+              isEnterprise &&
+              require_any_permission(['timestamp:manage', 'system:root']),
           },
         ],
       },

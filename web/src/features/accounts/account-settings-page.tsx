@@ -34,6 +34,7 @@ import { TabGeneral } from "./components/tab-general";
 import { TabServer } from "./components/tab-server";
 import { TabDownload } from "./components/tab-download";
 import { TabFilters } from "./components/tab-filters";
+import { TabRetention } from "./components/tab-retention";
 import { update_account, list_accounts, type AccountModel } from "@/api/account/api";
 import { getAccountSchema, type AccountFormValues } from "./components/schema";
 import type { AxiosError } from "axios";
@@ -66,6 +67,7 @@ function mapAccountToFormValues(account: AccountModel): AccountFormValues {
     download_schedule: account.download_schedule ?? undefined,
     archive_rules: account.archive_rules ?? undefined,
     extraction_rules: account.extraction_rules ?? undefined,
+    retention_days: account.retention_days ?? undefined,
   };
 }
 
@@ -137,7 +139,9 @@ export function AccountSettingsPage({ accountId }: AccountSettingsPageProps) {
       const { use_proxy, ...imapRest } = data.imap;
       const payload: Record<string, any> = {
         email: data.email,
-        account_name: data.account_name,
+        // Empty / whitespace-only CLEARS the name: send '' so the backend maps
+        // it to None (the store never holds an empty string).
+        account_name: data.account_name?.trim() ? data.account_name : '',
         login_name: data.login_name,
         imap: {
           ...imapRest,
@@ -161,6 +165,12 @@ export function AccountSettingsPage({ accountId }: AccountSettingsPageProps) {
         archive_rules: data.archive_rules || null,
         extraction_rules: data.extraction_rules || null,
       };
+
+      if (data.retention_days !== undefined) {
+        payload.retention_days = data.retention_days || 0;
+      } else if (account?.retention_days) {
+        payload.clear_retention_days = true;
+      }
 
       if (!data.date_since && !data.date_before) {
         payload.clear_date_range = true;
@@ -258,6 +268,16 @@ export function AccountSettingsPage({ accountId }: AccountSettingsPageProps) {
                       description={t('accounts.settings.rulesDesc', 'Configure archive filtering and attachment extraction rules.')}
                     />
                     <TabFilters />
+                  </section>
+
+                  <hr />
+
+                  <section>
+                    <SectionHeader
+                      title={t('accounts.settings.retention', 'Retention')}
+                      description={t('accounts.settings.retentionDesc', 'Automatically purge messages older than a configured window.')}
+                    />
+                    <TabRetention account={account} />
                   </section>
 
                   <div className="flex items-center justify-between pt-4 border-t">

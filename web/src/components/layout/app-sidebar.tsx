@@ -20,6 +20,7 @@
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarHeader,
   SidebarMenuButton,
 } from '@/components/ui/sidebar'
@@ -34,7 +35,7 @@ import { Link } from '@tanstack/react-router';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const sidebarData = useSidebarData();
-  const { isPro } = useEdition();
+  const { isPro, edition, version } = useEdition();
   const { companyName, logoUrl } = useBranding();
   const logo = logoUrl ? resolveApiUrl(logoUrl) : Logo;
   const displayName = companyName || (isPro ? 'Bichon Pro' : 'Bichon');
@@ -66,6 +67,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <NavGroup key={props.title} {...props} />
         ))}
       </SidebarContent>
+      {/* Keeps the bottom-most nav item off the sidebar's bottom edge: an
+          edition badge + version caption always reserves a few rows, and in
+          icon-collapsed mode the caption hides but the footer still pads the
+          icon rail. Edition names are the raw license values (English), no i18n. */}
+      <SidebarFooter>
+        <div className='flex h-8 items-center justify-center px-2'>
+          {version && (
+            <span className='flex min-w-0 items-center gap-2 group-data-[collapsible=icon]:hidden'>
+              <span className='shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary'>
+                {edition}
+              </span>
+              <span className='truncate text-xs text-muted-foreground'>
+                v{version}
+              </span>
+            </span>
+          )}
+        </div>
+      </SidebarFooter>
     </Sidebar>
   )
 }

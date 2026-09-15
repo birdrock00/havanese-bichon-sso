@@ -18,6 +18,7 @@ const validAccountData = {
   use_dangerous: false,
   download_interval_min: 60,
   download_batch_size: 30,
+  max_email_size_bytes: 10 * 1024 * 1024,
   auto_download_new_mailboxes: true,
 }
 

@@ -17,6 +17,7 @@ pub mod mailbox;
 pub mod message;
 pub mod migrate;
 pub mod oauth2;
+pub mod retention;
 pub mod saved_search;
 pub mod settings;
 pub mod store;

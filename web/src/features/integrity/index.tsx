@@ -500,11 +500,22 @@ function RunForm({
 function Report({ runId, onClose }: { runId: string; onClose?: () => void }) {
   const { t } = useTranslation()
   const [failuresPage, setFailuresPage] = useState(1)
+  const [failuresPageSize, setFailuresPageSize] = useState(
+    () =>
+      Number(localStorage.getItem('bichon_integrity_failures_page_size')) ||
+      FAILURES_PAGE_SIZE
+  )
+
+  const handleFailuresPageSizeChange = (size: number) => {
+    localStorage.setItem('bichon_integrity_failures_page_size', String(size))
+    setFailuresPage(1)
+    setFailuresPageSize(size)
+  }
 
   const { data: report, isLoading } = useQuery({
-    queryKey: ['integrity-report', runId, failuresPage],
+    queryKey: ['integrity-report', runId, failuresPage, failuresPageSize],
     queryFn: () =>
-      get_integrity_report(runId, failuresPage, FAILURES_PAGE_SIZE),
+      get_integrity_report(runId, failuresPage, failuresPageSize),
     placeholderData: (prev) => prev,
     // Auto-refresh while the run is still in progress so the report status,
     // counters and failure rows update without a manual refresh.
@@ -624,6 +635,8 @@ function Report({ runId, onClose }: { runId: string; onClose?: () => void }) {
             report={report}
             page={failuresPage}
             onPageChange={setFailuresPage}
+            pageSize={failuresPageSize}
+            onPageSizeChange={handleFailuresPageSizeChange}
           />
         </CardContent>
       </Card>
@@ -767,10 +780,14 @@ function FailuresTable({
   report,
   page,
   onPageChange,
+  pageSize,
+  onPageSizeChange,
 }: {
   report: IntegrityReport
   page: number
   onPageChange: (page: number) => void
+  pageSize: number
+  onPageSizeChange: (pageSize: number) => void
 }) {
   const { t } = useTranslation()
   const failures = report.failures
@@ -898,10 +915,10 @@ function FailuresTable({
             <TablePagination
               totalItems={failures.total}
               pageIndex={page - 1}
-              pageSize={FAILURES_PAGE_SIZE}
-              hasNextPage={() => failures.total > page * FAILURES_PAGE_SIZE}
+              pageSize={pageSize}
+              hasNextPage={() => failures.total > page * pageSize}
               setPageIndex={(i) => onPageChange(i + 1)}
-              setPageSize={() => {}}
+              setPageSize={onPageSizeChange}
             />
           </div>
         </>
@@ -914,6 +931,9 @@ export default function IntegrityPage() {
   const { isPro } = useEdition()
   const { require_any_permission } = useCurrentUser()
   const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(
+    () => Number(localStorage.getItem('bichon_integrity_page_size')) || PAGE_SIZE
+  )
   const [selectedRun, setSelectedRun] = useState<string | null>(null)
 
   const canManage =
@@ -939,8 +959,8 @@ export default function IntegrityPage() {
     active && 'status' in active ? (active as JobProgress) : null
 
   const { data: jobs, isLoading: jobsLoading } = useQuery({
-    queryKey: ['integrity-jobs', page],
-    queryFn: () => list_integrity_runs(page, PAGE_SIZE),
+    queryKey: ['integrity-jobs', page, pageSize],
+    queryFn: () => list_integrity_runs(page, pageSize),
     enabled: canManage,
     placeholderData: (prev) => prev,
     // Poll while the newest run is still in progress so the history status
@@ -950,6 +970,12 @@ export default function IntegrityPage() {
       return data?.items?.[0]?.status === 'running' ? 5000 : false
     },
   })
+
+  const handlePageSizeChange = (size: number) => {
+    localStorage.setItem('bichon_integrity_page_size', String(size))
+    setPage(1)
+    setPageSize(size)
+  }
 
   if (!canManage) {
     return (
@@ -1085,10 +1111,10 @@ export default function IntegrityPage() {
                       <TablePagination
                         totalItems={jobs.total}
                         pageIndex={page - 1}
-                        pageSize={PAGE_SIZE}
-                        hasNextPage={() => jobs.total > page * PAGE_SIZE}
+                        pageSize={pageSize}
+                        hasNextPage={() => jobs.total > page * pageSize}
                         setPageIndex={(i) => setPage(i + 1)}
-                        setPageSize={() => {}}
+                        setPageSize={handlePageSizeChange}
                       />
                     </div>
                   )}

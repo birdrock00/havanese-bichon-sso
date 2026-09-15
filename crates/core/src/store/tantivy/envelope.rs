@@ -29,6 +29,7 @@ use crate::{
     common::{paginated::DataPage, signal::SIGNAL_MANAGER},
     dashboard::{DashboardStats, Group, LargestEmail, TimeBucket},
     error::{code::ErrorCode, BichonResult},
+    ext::timestamp::LeafRecord,
     message::{
         search::{EmailSearchFilter, SortBy},
         tags::{TagAction, TagCount, TagsRequest},
@@ -112,7 +113,7 @@ impl IndexManager {
         &self.index_writer
     }
 
-    pub(crate) fn create_reader(&self) -> BichonResult<IndexReader> {
+    pub fn create_reader(&self) -> BichonResult<IndexReader> {
         self.index
             .reader()
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
@@ -954,7 +955,7 @@ impl IndexManager {
 
     pub async fn delete_account_envelopes(&self, account_id: u64) -> BichonResult<()> {
         let query = self.account_query(account_id);
-        let (eml_content_hashes, attachments_content_hashes) =
+        let (eml_content_hashes, attachments_content_hashes, leafs) =
             self.collect_content_hashes(query)?;
 
         let query = self.account_query(account_id);
@@ -980,6 +981,7 @@ impl IndexManager {
         }
 
         DEDUP_CACHE.remove_by_account(account_id);
+        crate::ext::timestamp::record_deletions(leafs, crate::utc_now!());
         Ok(())
     }
 
@@ -994,12 +996,15 @@ impl IndexManager {
 
         let mut eml_content_hashes: HashSet<String> = HashSet::new();
         let mut attachments_content_hashes: HashSet<String> = HashSet::new();
+        let mut leafs: Vec<LeafRecord> = Vec::new();
 
         for mailbox_id in &mailbox_ids {
             let query = self.mailbox_query(account_id, *mailbox_id);
-            let (eml_hashes, attachment_hashes) = self.collect_content_hashes(query)?;
+            let (eml_hashes, attachment_hashes, mailbox_leafs) =
+                self.collect_content_hashes(query)?;
             eml_content_hashes.extend(eml_hashes);
             attachments_content_hashes.extend(attachment_hashes);
+            leafs.extend(mailbox_leafs);
         }
 
         let mut queries: Vec<Box<dyn Query>> = Vec::with_capacity(mailbox_ids.len());
@@ -1028,14 +1033,106 @@ impl IndexManager {
             DEDUP_CACHE.remove_by_mailbox(mailbox_id);
         }
 
+        crate::ext::timestamp::record_deletions(leafs, crate::utc_now!());
         Ok(())
+    }
+
+    /// Purge every envelope of an account whose effective date
+    /// (`min(date, internal_date)`) is strictly older than `cutoff_ms`.
+    ///
+    /// Retention semantics (see `retention.rs`): a message is out of window when
+    /// the *older* of its two timestamps is before the cutoff, with `0` treated
+    /// as "unknown" (never counted as old). Messages whose timestamps are all
+    /// unknown are never purged: retention cannot know how old they are, so it
+    /// leaves them alone.
+    ///
+    /// Returns the number of envelopes purged.
+    pub async fn delete_envelopes_before(
+        &self,
+        account_id: u64,
+        cutoff_ms: i64,
+    ) -> BichonResult<u64> {
+        let count = {
+            let searcher = self.create_searcher()?;
+            searcher
+                .search(&self.retention_purge_query(account_id, cutoff_ms), &Count)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+        };
+        if count == 0 {
+            return Ok(0);
+        }
+
+        let (eml_hashes_with_mailbox, attachments_content_hashes, leafs) =
+            self.collect_content_hashes_with_mailbox(self.retention_purge_query(
+                account_id,
+                cutoff_ms,
+            ))?;
+
+        let mut writer = self.index_writer.lock().await;
+        writer
+            .delete_query(self.retention_purge_query(account_id, cutoff_ms))
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        writer
+            .commit()
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        let eml_content_hashes: HashSet<String> = eml_hashes_with_mailbox
+            .iter()
+            .map(|(hash, _)| hash.clone())
+            .collect();
+        if !eml_content_hashes.is_empty() || !attachments_content_hashes.is_empty() {
+            self.cleanup_unused_content(
+                &mut writer,
+                eml_content_hashes,
+                attachments_content_hashes,
+            )?;
+        }
+
+        for (hash, mailbox_id) in eml_hashes_with_mailbox {
+            DEDUP_CACHE.remove(account_id, mailbox_id, &hash);
+        }
+
+        crate::ext::timestamp::record_deletions(leafs, crate::utc_now!());
+        Ok(count as u64)
+    }
+
+    /// Boolean query matching envelopes of `account_id` whose effective date is
+    /// strictly older than `cutoff_ms`.
+    ///
+    /// Retention semantics (see `retention.rs`): a message is out of window when
+    /// the *older* of its two timestamps is before the cutoff, with `0` treated
+    /// as "unknown" (never counted as old). So the predicate is
+    /// `(0 < date < cutoff) OR (0 < internal_date < cutoff)` — a message whose
+    /// only known timestamp is recent is kept, and one with no timestamp at all
+    /// is kept, mirroring `retention::effective_date_ms`.
+    fn retention_purge_query(&self, account_id: u64, cutoff_ms: i64) -> Box<dyn Query> {
+        let fields = SchemaTools::email_fields();
+
+        let date_before = RangeQuery::new(
+            Bound::Excluded(Term::from_field_i64(fields.f_date, 0)),
+            Bound::Excluded(Term::from_field_i64(fields.f_date, cutoff_ms)),
+        );
+        let internal_date_before = RangeQuery::new(
+            Bound::Excluded(Term::from_field_i64(fields.f_internal_date, 0)),
+            Bound::Excluded(Term::from_field_i64(fields.f_internal_date, cutoff_ms)),
+        );
+
+        let older_than_cutoff = BooleanQuery::new(vec![
+            (Occur::Should, Box::new(date_before)),
+            (Occur::Should, Box::new(internal_date_before)),
+        ]);
+
+        Box::new(BooleanQuery::new(vec![
+            (Occur::Must, self.account_query(account_id)),
+            (Occur::Must, Box::new(older_than_cutoff)),
+        ]))
     }
 
     fn collect_content_hashes(
         &self,
         query: Box<dyn Query>,
-    ) -> BichonResult<(HashSet<String>, HashSet<String>)> {
-        let (eml_with_mailbox, attachments_content_hashes) =
+    ) -> BichonResult<(HashSet<String>, HashSet<String>, Vec<LeafRecord>)> {
+        let (eml_with_mailbox, attachments_content_hashes, leafs) =
             self.collect_content_hashes_with_mailbox(query)?;
 
         let eml_content_hashes = eml_with_mailbox
@@ -1043,15 +1140,16 @@ impl IndexManager {
             .map(|(hash, _mailbox_id)| hash)
             .collect();
 
-        Ok((eml_content_hashes, attachments_content_hashes))
+        Ok((eml_content_hashes, attachments_content_hashes, leafs))
     }
 
     fn collect_content_hashes_with_mailbox(
         &self,
         query: Box<dyn Query>,
-    ) -> BichonResult<(HashSet<(String, u64)>, HashSet<String>)> {
+    ) -> BichonResult<(HashSet<(String, u64)>, HashSet<String>, Vec<LeafRecord>)> {
         let mut eml_content_hashes = HashSet::new();
         let mut attachments_content_hashes = HashSet::new();
+        let mut leafs: Vec<LeafRecord> = Vec::new();
 
         let fields = SchemaTools::email_fields();
         let searcher = self.create_searcher()?;
@@ -1067,12 +1165,27 @@ impl IndexManager {
 
             let mailbox_id = doc.get_first(fields.f_mailbox_id).and_then(|v| v.as_u64());
 
+            // Capture the deletion-leaf identity (Enterprise anchor tree): an
+            // email removed before the watermark scan ever saw it still gets a
+            // leaf so the archive stays complete.
+            let envelope_id = doc.get_first(fields.f_id).and_then(|v| v.as_str());
+            let ingest_at = doc.get_first(fields.f_ingest_at).and_then(|v| v.as_i64());
+
             // Extract content_hash
             if let Some(content_hash_value) = doc.get_first(fields.f_content_hash) {
                 if let (Some(hash_str), Some(mailbox_id)) =
                     (content_hash_value.as_str(), mailbox_id)
                 {
                     eml_content_hashes.insert((hash_str.to_string(), mailbox_id));
+                }
+                if let (Some(hash_str), Some(envelope_id), Some(ingest_at)) =
+                    (content_hash_value.as_str(), envelope_id, ingest_at)
+                {
+                    leafs.push(LeafRecord {
+                        envelope_id: envelope_id.to_string(),
+                        content_hash: hash_str.to_string(),
+                        ingest_at,
+                    });
                 }
             }
 
@@ -1085,7 +1198,7 @@ impl IndexManager {
             }
         }
 
-        Ok((eml_content_hashes, attachments_content_hashes))
+        Ok((eml_content_hashes, attachments_content_hashes, leafs))
     }
 
     fn cleanup_unused_content(
@@ -1151,6 +1264,7 @@ impl IndexManager {
 
         let mut eml_content_hash_triples: HashSet<(u64, u64, String)> = HashSet::new();
         let mut attachments_content_hashes: HashSet<String> = HashSet::new();
+        let mut leafs: Vec<LeafRecord> = Vec::new();
 
         for (account_id, envelope_ids) in &deletes {
             let unique_ids: HashSet<&String> = envelope_ids.iter().collect();
@@ -1160,7 +1274,7 @@ impl IndexManager {
 
             for eid in unique_ids {
                 let query = self.envelope_query(*account_id, eid);
-                let (eml_hashes_with_mailbox, attachment_hashes) =
+                let (eml_hashes_with_mailbox, attachment_hashes, envelope_leafs) =
                     self.collect_content_hashes_with_mailbox(query)?;
 
                 eml_content_hash_triples.extend(
@@ -1169,6 +1283,7 @@ impl IndexManager {
                         .map(|(hash, mailbox_id)| (*account_id, mailbox_id, hash)),
                 );
                 attachments_content_hashes.extend(attachment_hashes);
+                leafs.extend(envelope_leafs);
             }
         }
 
@@ -1207,6 +1322,7 @@ impl IndexManager {
             DEDUP_CACHE.remove(aid, mid, &hash);
         }
 
+        crate::ext::timestamp::record_deletions(leafs, crate::utc_now!());
         Ok(())
     }
 
@@ -1303,6 +1419,26 @@ impl IndexManager {
             tracing::warn!("update_envelope_tags: request is empty, nothing to update");
             return Ok(());
         }
+
+        // Legal hold: tag edits rewrite the envelope index for the account.
+        // A held account's messages must stay findable and classified exactly
+        // as they were at the hold date — folder/tag filters are part of how
+        // compliance locates and produces evidence — so refuse metadata edits
+        // for any held account. In the community edition `legal_hold` is always
+        // false, so this guard is a no-op there.
+        for account_id in request.updates.keys() {
+            let account = AccountModel::get(*account_id)?;
+            if account.is_on_hold() {
+                return Err(raise_error!(
+                    format!(
+                        "Account {} ({}) is under a legal hold; editing message metadata (tags) is disabled while the hold is active",
+                        account.id, account.email
+                    ),
+                    ErrorCode::Forbidden
+                ));
+            }
+        }
+
         let searcher = self.create_searcher()?;
         let mut writer = self.index_writer.lock().await;
 
@@ -2744,5 +2880,167 @@ mod tests {
                 uid
             );
         }
+    }
+
+    // ── retention purge query ────────────────────────────────────────
+    //
+    // Replicates `retention_purge_query` against an in-RAM index to verify the
+    // Tantivy semantics: matches `account_id AND ((0 < date < cutoff) OR (0 <
+    // internal_date < cutoff))` — the older of the two known timestamps, never
+    // counting an unknown `0` as old — and never crosses account boundaries.
+
+    #[test]
+    fn retention_purge_query_matches_older_of_two_dates() {
+        let f = SchemaTools::email_fields();
+        let index = Index::create_in_ram(SchemaTools::email_schema());
+        index.tokenizers().register("euro", EuroTokenizer::new());
+
+        let cutoff = 1_700_000_000_000i64;
+        let old = cutoff - 1_000;
+        let new = cutoff + 1_000;
+
+        // (account, date, internal_date) — see assertions below.
+        let docs: Vec<(u64, i64, i64, &str)> = vec![
+            (1, old, old, "d1-old-old"),    // min old → purge
+            (1, old, new, "d2-old-new"),    // min old → purge
+            (1, new, old, "d3-new-old"),    // min old → purge
+            (1, new, new, "d4-new-new"),    // recent → keep
+            (1, 0, new, "d5-no-date"),      // effective = new → keep
+            (1, 0, old, "d6-no-date-old"),  // effective = old → purge
+            (1, 0, 0, "d7-no-timestamps"),  // unknown → keep
+            (2, old, old, "d8-other-account"), // other account → keep
+        ];
+
+        {
+            let mut writer = index
+                .writer_with_num_threads(1, 15_000_000)
+                .expect("writer");
+            for (account_id, date, internal_date, id) in &docs {
+                let mut doc = TantivyDocument::new();
+                doc.add_u64(f.f_account_id, *account_id);
+                doc.add_u64(f.f_mailbox_id, 10);
+                doc.add_text(f.f_id, *id);
+                doc.add_u64(f.f_uid, 1);
+                doc.add_text(f.f_content_hash, format!("hash-{id}"));
+                doc.add_i64(f.f_date, *date);
+                doc.add_i64(f.f_internal_date, *internal_date);
+                writer.add_document(doc).unwrap();
+            }
+            writer.commit().unwrap();
+        }
+
+        let reader = index.reader().unwrap();
+        reader.reload().unwrap();
+        let searcher = reader.searcher();
+
+        let date_before = RangeQuery::new(
+            Bound::Excluded(Term::from_field_i64(f.f_date, 0)),
+            Bound::Excluded(Term::from_field_i64(f.f_date, cutoff)),
+        );
+        let internal_date_before = RangeQuery::new(
+            Bound::Excluded(Term::from_field_i64(f.f_internal_date, 0)),
+            Bound::Excluded(Term::from_field_i64(f.f_internal_date, cutoff)),
+        );
+        let older_than_cutoff = BooleanQuery::new(vec![
+            (Occur::Should, Box::new(date_before)),
+            (Occur::Should, Box::new(internal_date_before)),
+        ]);
+        let account_query = TermQuery::new(
+            Term::from_field_u64(f.f_account_id, 1),
+            IndexRecordOption::Basic,
+        );
+        let query: Box<dyn Query> = Box::new(BooleanQuery::new(vec![
+            (Occur::Must, Box::new(account_query)),
+            (Occur::Must, Box::new(older_than_cutoff)),
+        ]));
+
+        let docs = searcher.search(&query, &DocSetCollector).unwrap();
+        let matched: HashSet<String> = docs
+            .iter()
+            .map(|addr| {
+                let doc: TantivyDocument = searcher.doc(*addr).unwrap();
+                doc.get_first(f.f_id)
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string()
+            })
+            .collect();
+
+        assert_eq!(matched.len(), 4, "expected d1,d2,d3,d6 to match");
+        for id in ["d1-old-old", "d2-old-new", "d3-new-old", "d6-no-date-old"] {
+            assert!(matched.contains(id), "{id} should be matched, got {matched:?}");
+        }
+        for id in ["d4-new-new", "d5-no-date", "d7-no-timestamps", "d8-other-account"] {
+            assert!(!matched.contains(id), "{id} should NOT be matched, got {matched:?}");
+        }
+    }
+
+    #[tokio::test]
+    async fn update_envelope_tags_guard_fires_for_held_account() {
+        use std::sync::Once;
+
+        use crate::account::migration::{AccountModel, AccountType};
+        use crate::account::payload::AccountCreateRequest;
+        use crate::database::{insert_impl, manager::DB_MANAGER};
+        use crate::message::tags::{TagAction, TagsRequest};
+        use crate::settings::cli::SETTINGS;
+        use crate::settings::dir::DATA_DIR_MANAGER;
+
+        static TEST_ENV: Once = Once::new();
+        TEST_ENV.call_once(|| {
+            let root = std::env::temp_dir().join(format!(
+                "bichon-core-test-{}",
+                std::process::id()
+            ));
+            std::fs::create_dir_all(&root).unwrap();
+            std::env::set_var("BICHON_ROOT_DIR", &root);
+            std::env::set_var("BICHON_ENCRYPT_PASSWORD", "test-password");
+            let _ = &*SETTINGS;
+            let _ = &*DATA_DIR_MANAGER;
+            let _ = &*DB_MANAGER;
+        });
+
+        let request = AccountCreateRequest {
+            email: "hold-tags@test.example".to_string(),
+            login_name: None,
+            account_name: None,
+            imap: None,
+            enabled: true,
+            date_since: None,
+            date_before: None,
+            account_type: AccountType::NoSync,
+            download_interval_min: None,
+            download_batch_size: None,
+            max_email_size_bytes: None,
+            use_dangerous: false,
+            pgp_key: None,
+            imap_quota_bytes: None,
+            imap_quota_window: None,
+            auto_download_new_mailboxes: None,
+            download_schedule: None,
+            archive_rules: None,
+            extraction_rules: None,
+            retention_days: None,
+        };
+        let account = AccountModel::new(9021, request).unwrap();
+        insert_impl(DB_MANAGER.db(), account.clone()).unwrap();
+
+        let req = TagsRequest {
+            updates: HashMap::from([(account.id, vec!["some-eid".to_string()])]),
+            tags: vec!["important".to_string()],
+            action: TagAction::Add,
+        };
+
+        // No hold: the guard passes and the call returns Ok (the envelope id
+        // simply does not exist) — proving the guard is what blocks the held case.
+        assert!(
+            ENVELOPE_MANAGER.update_envelope_tags(req.clone()).await.is_ok(),
+            "tag update for a non-held account should reach the index path"
+        );
+
+        // Under a hold: refused with Forbidden before touching the index.
+        AccountModel::place_legal_hold(account.id, 7, Some("freeze".into())).unwrap();
+        let err = ENVELOPE_MANAGER.update_envelope_tags(req).await.unwrap_err();
+        assert_eq!(err.code(), ErrorCode::Forbidden);
     }
 }

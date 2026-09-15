@@ -26,7 +26,9 @@ import { OAuth2Action } from './oauth2-action'
 import { RunningStateCellAction } from './running-state-action'
 import { EnableAction } from './enable-action'
 import { useTranslation } from 'react-i18next'
+import { Lock } from 'lucide-react'
 import { AccountModel } from '@/api/account/api'
+import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 export function useColumns(): ColumnDef<AccountModel>[] {
@@ -61,7 +63,35 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         <DataTableColumnHeader column={column} title={t('accounts.email')} className="justify-center" />
       ),
       cell: ({ row }) => {
-        return <LongText className='text-xs'>{row.original.email}</LongText>
+        const { email, legal_hold, hold_reason } = row.original
+        return (
+          <div className='flex items-center gap-1.5'>
+            {legal_hold && (
+              <TooltipProvider delayDuration={0}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className='inline-flex shrink-0'>
+                      <Badge
+                        variant='outline'
+                        className='border-amber-500/40 bg-amber-500/10 px-1 py-0 text-amber-600'
+                      >
+                        <Lock className='h-3 w-3' />
+                      </Badge>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {hold_reason
+                        ? `${t('accounts.legalHoldBadge', 'Legal hold')}: ${hold_reason}`
+                        : t('accounts.legalHoldBadge', 'Legal hold')}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            <LongText className='text-xs'>{email}</LongText>
+          </div>
+        )
       },
       enableHiding: false,
       meta: { className: 'max-w-[220px]' },
