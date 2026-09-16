@@ -99,6 +99,7 @@
     "allMailSkipped": "標準資料夾已選擇，為避免重複已跳過「所有郵件」。",
     "areYouSureYouWantTo": "你確定要{{action}}此帳戶嗎？",
     "auth": "驗證",
+    "compliance": "合規",
     "authPassword": "驗證密碼",
     "authType": "驗證類型",
     "autoConfiguring": "正在自動設定…",

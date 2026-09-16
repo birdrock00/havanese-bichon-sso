@@ -99,6 +99,7 @@
     "allMailSkipped": "已选择标准文件夹。已跳过'所有邮件'以避免重复。",
     "areYouSureYouWantTo": "你确定要{{action}}此账户吗？",
     "auth": "认证",
+    "compliance": "合规",
     "authPassword": "认证密码",
     "authType": "认证类型",
     "autoConfiguring": "正在自动配置…",

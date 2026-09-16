@@ -99,6 +99,7 @@
     "allMailSkipped": "Selected standard folders. 'All Mail' was skipped to avoid duplicates.",
     "areYouSureYouWantTo": "Are you sure you want to {{action}} this account?",
     "auth": "Auth",
+    "compliance": "Compliance",
     "authPassword": "Authentication password",
     "authType": "auth_type",
     "autoConfiguring": "Auto-configuring...",

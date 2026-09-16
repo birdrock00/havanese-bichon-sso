@@ -89,29 +89,6 @@ export function useSidebarData(): SidebarData {
               ]),
           },
           {
-            title: t('navigation.integrity', 'Integrity'),
-            url: '/integrity',
-            icon: ShieldCheck,
-            visible:
-              isPro &&
-              require_any_permission([
-                'system:root',
-                'account:manage:all',
-                'account:manage',
-              ]),
-          },
-          {
-            title: t('compliance_export.title', 'Compliance Export'),
-            url: '/compliance-export',
-            icon: FileCheck2,
-            visible:
-              isPro &&
-              require_any_permission([
-                'data:export:batch',
-                'data:export:batch:all',
-              ]),
-          },
-          {
             title: t('import.title', 'Import'),
             url: '/import',
             icon: Upload,
@@ -155,31 +132,37 @@ export function useSidebarData(): SidebarData {
         ],
       },
       {
-        title: t('navigation.other'),
+        title: t('navigation.compliance'),
         items: [
           {
-            title: t('navigation.settings'),
-            url: '/settings',
-            icon: IconSettings,
-          },
-          {
-            title: t('navigation.apiDocs'),
-            url: '/api-docs',
-            icon: IconHelp,
-          },
-          {
-            title: t('navigation.license'),
-            url: '/license',
-            icon: BadgeCheck,
+            title: t('navigation.integrity', 'Integrity'),
+            url: '/integrity',
+            icon: ShieldCheck,
             visible:
-              isPro && require_any_permission(['system:root', 'user:manage']),
+              isEnterprise &&
+              require_any_permission([
+                'system:root',
+                'account:manage:all',
+                'account:manage',
+              ]),
+          },
+          {
+            title: t('compliance_export.title', 'Compliance Export'),
+            url: '/compliance-export',
+            icon: FileCheck2,
+            visible:
+              isEnterprise &&
+              require_any_permission([
+                'data:export:batch',
+                'data:export:batch:all',
+              ]),
           },
           {
             title: t('navigation.auditLog'),
             url: '/audit-log',
             icon: ScrollText,
             visible:
-              isPro &&
+              isEnterprise &&
               require_any_permission([
                 'system:root',
                 'user:manage',
@@ -201,6 +184,28 @@ export function useSidebarData(): SidebarData {
             visible:
               isEnterprise &&
               require_any_permission(['timestamp:manage', 'system:root']),
+          },
+        ],
+      },
+      {
+        title: t('navigation.other'),
+        items: [
+          {
+            title: t('navigation.settings'),
+            url: '/settings',
+            icon: IconSettings,
+          },
+          {
+            title: t('navigation.apiDocs'),
+            url: '/api-docs',
+            icon: IconHelp,
+          },
+          {
+            title: t('navigation.license'),
+            url: '/license',
+            icon: BadgeCheck,
+            visible:
+              isPro && require_any_permission(['system:root', 'user:manage']),
           },
         ],
       },
