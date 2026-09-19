@@ -27,14 +27,19 @@ import {
   FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Plus, HelpCircle } from "lucide-react";
-import { PatternInput } from "./pattern-input";
-import type { PatternEntry } from "@/lib/pattern-utils";
-import { newPatternId, simplePatternToRegex } from "@/lib/pattern-utils";
+import { ChevronDown, HelpCircle, Plus } from "lucide-react";
 import { useState } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { useEdition } from "@/hooks/use-edition";
+import { RuleGroup } from "./rule-group";
+import { FilterRuleEditor } from "./filter-rule-editor";
+import { ExtensionPicker } from "./extension-picker";
 import { AccountFormValues } from "./schema";
 
 const SUGGESTED_SPAM_HEADERS = [
@@ -46,125 +51,25 @@ const SUGGESTED_SPAM_HEADERS = [
   'X-MS-Exchange-Organization-SCL',
 ];
 
-function toPatternEntries(patterns: string[]): PatternEntry[] {
-  return patterns.map((p) => ({
-    id: newPatternId(),
-    matchType: 'regex' as const,
-    value: p,
-  }));
+const EXTRACTION_EXTENSIONS = ['pdf', 'docx'] as const;
+
+interface TabFiltersProps {
+  /** Collapse the whole section behind an "Advanced settings" accordion (used on the create page). */
+  collapsedByDefault?: boolean;
 }
 
-function patternsToRegexList(entries: PatternEntry[]): string[] {
-  return entries
-    .filter((e) => e.value.trim() !== '')
-    .map((e) => simplePatternToRegex(e.matchType, e.value));
-}
-
-export function TabFilters() {
+export function TabFilters({ collapsedByDefault = false }: TabFiltersProps = {}) {
   const { t } = useTranslation();
   const { control, setValue } = useFormContext<AccountFormValues>();
+  const { isPro } = useEdition();
+
   const archiveRules = useWatch({ control, name: 'archive_rules' });
+  const extractionRules = useWatch({ control, name: 'extraction_rules' });
 
-  const enabled = archiveRules?.enabled ?? false;
-  const sendersInclude = archiveRules?.senders?.include ?? [];
-  const sendersExclude = archiveRules?.senders?.exclude ?? [];
-  const subjectsInclude = archiveRules?.subjects?.include ?? [];
-  const subjectsExclude = archiveRules?.subjects?.exclude ?? [];
-  const spamHeaders = archiveRules?.spam_headers ?? [];
+  const archiveEnabled = archiveRules?.enabled ?? false;
+  const extractionEnabled = extractionRules?.enabled ?? false;
 
-  const [senderIncludeEntries, setSenderIncludeEntries] = useState<PatternEntry[]>(
-    () => toPatternEntries(sendersInclude)
-  );
-  const [senderExcludeEntries, setSenderExcludeEntries] = useState<PatternEntry[]>(
-    () => toPatternEntries(sendersExclude)
-  );
-  const [subjectIncludeEntries, setSubjectIncludeEntries] = useState<PatternEntry[]>(
-    () => toPatternEntries(subjectsInclude)
-  );
-  const [subjectExcludeEntries, setSubjectExcludeEntries] = useState<PatternEntry[]>(
-    () => toPatternEntries(subjectsExclude)
-  );
-
-  // Resync local state when form values change externally (e.g. after form.reset)
-  const [lastSyncKey, setLastSyncKey] = useState<string>('');
-  const syncKey = JSON.stringify({ sendersInclude, sendersExclude, subjectsInclude, subjectsExclude });
-  if (syncKey !== lastSyncKey) {
-    setLastSyncKey(syncKey);
-    setSenderIncludeEntries(toPatternEntries(sendersInclude));
-    setSenderExcludeEntries(toPatternEntries(sendersExclude));
-    setSubjectIncludeEntries(toPatternEntries(subjectsInclude));
-    setSubjectExcludeEntries(toPatternEntries(subjectsExclude));
-  }
-
-  const syncToForm = (
-    includeEntries: PatternEntry[],
-    excludeEntries: PatternEntry[],
-    fieldPrefix: string
-  ) => {
-    const include = patternsToRegexList(includeEntries);
-    const exclude = patternsToRegexList(excludeEntries);
-    setValue(`${fieldPrefix}.include` as any, include);
-    setValue(`${fieldPrefix}.exclude` as any, exclude);
-  };
-
-  const addEntry = (
-    side: 'include' | 'exclude',
-    includeEntries: PatternEntry[],
-    excludeEntries: PatternEntry[],
-    setIncludeEntries: React.Dispatch<React.SetStateAction<PatternEntry[]>>,
-    setExcludeEntries: React.Dispatch<React.SetStateAction<PatternEntry[]>>,
-    fieldPrefix: string
-  ) => {
-    const newEntry: PatternEntry = { id: newPatternId(), matchType: 'contains', value: '' };
-    const newInclude = side === 'include' ? [...includeEntries, newEntry] : includeEntries;
-    const newExclude = side === 'exclude' ? [...excludeEntries, newEntry] : excludeEntries;
-    setIncludeEntries(newInclude);
-    setExcludeEntries(newExclude);
-    syncToForm(newInclude, newExclude, fieldPrefix);
-  };
-
-  const updateEntry = (
-    id: string,
-    partial: Partial<PatternEntry>,
-    side: 'include' | 'exclude',
-    includeEntries: PatternEntry[],
-    excludeEntries: PatternEntry[],
-    setIncludeEntries: React.Dispatch<React.SetStateAction<PatternEntry[]>>,
-    setExcludeEntries: React.Dispatch<React.SetStateAction<PatternEntry[]>>,
-    fieldPrefix: string
-  ) => {
-    if (side === 'include') {
-      const updated = includeEntries.map((e) => (e.id === id ? { ...e, ...partial } : e));
-      setIncludeEntries(updated);
-      syncToForm(updated, excludeEntries, fieldPrefix);
-    } else {
-      const updated = excludeEntries.map((e) => (e.id === id ? { ...e, ...partial } : e));
-      setExcludeEntries(updated);
-      syncToForm(includeEntries, updated, fieldPrefix);
-    }
-  };
-
-  const removeEntry = (
-    id: string,
-    side: 'include' | 'exclude',
-    includeEntries: PatternEntry[],
-    excludeEntries: PatternEntry[],
-    setIncludeEntries: React.Dispatch<React.SetStateAction<PatternEntry[]>>,
-    setExcludeEntries: React.Dispatch<React.SetStateAction<PatternEntry[]>>,
-    fieldPrefix: string
-  ) => {
-    if (side === 'include') {
-      const filtered = includeEntries.filter((e) => e.id !== id);
-      setIncludeEntries(filtered);
-      syncToForm(filtered, excludeEntries, fieldPrefix);
-    } else {
-      const filtered = excludeEntries.filter((e) => e.id !== id);
-      setExcludeEntries(filtered);
-      syncToForm(includeEntries, filtered, fieldPrefix);
-    }
-  };
-
-  const handleEnableChange = (checked: boolean) => {
+  const toggleArchive = (checked: boolean) => {
     if (checked) {
       setValue('archive_rules', {
         enabled: true,
@@ -177,6 +82,22 @@ export function TabFilters() {
       setValue('archive_rules', undefined);
     }
   };
+
+  const toggleExtraction = (checked: boolean) => {
+    if (checked) {
+      setValue('extraction_rules', {
+        enabled: true,
+        extensions: { include: [...EXTRACTION_EXTENSIONS], exclude: [] },
+        folders: { include: [], exclude: [] },
+        attachment_names: { include: [], exclude: [] },
+        senders: { include: [], exclude: [] },
+      });
+    } else {
+      setValue('extraction_rules', undefined);
+    }
+  };
+
+  const spamHeaders = archiveRules?.spam_headers ?? [];
 
   const addSpamHeader = (header: string) => {
     if (!spamHeaders.includes(header)) {
@@ -200,315 +121,210 @@ export function TabFilters() {
 
   const BYTES_PER_MB = 1024 * 1024;
 
-  return (
+  const rulesContent = (
     <div className="space-y-8">
-      {/* Master Switch */}
-      <div className="rounded-md border p-5 space-y-2 bg-muted/30">
-        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-          <FormControl>
-            <Checkbox checked={enabled} onCheckedChange={handleEnableChange} />
-          </FormControl>
-          <div className="space-y-1 leading-none">
-            <FormLabel>{t('accounts.filters.enableFiltering')}</FormLabel>
-            <FormDescription>
-              {t('accounts.filters.enableFilteringDesc')}
-            </FormDescription>
+      {/* Archive filtering */}
+      <RuleGroup
+        title={t('accounts.rules.archiveTitle', 'Archive Filtering')}
+        description={t(
+          'accounts.rules.archiveDesc',
+          'When enabled, only emails matching the rules below are archived. When disabled, all emails are archived.'
+        )}
+        enabled={archiveEnabled}
+        onToggle={toggleArchive}
+      >
+        <FilterRuleEditor
+          path="archive_rules.senders"
+          title={t('accounts.filters.senderFilter')}
+          help={t('accounts.filters.senderFilterHelp')}
+        />
+        <FilterRuleEditor
+          path="archive_rules.subjects"
+          title={t('accounts.filters.subjectFilter')}
+          help={t('accounts.filters.subjectFilterHelp')}
+        />
+
+        {/* Size Limit */}
+        <div className="space-y-4 rounded-md border p-5">
+          <div className="flex items-center gap-2">
+            <h4 className="text-sm font-semibold">{t('accounts.filters.sizeLimit')}</h4>
           </div>
-        </FormItem>
-      </div>
-
-      {enabled && (
-        <>
-          {/* Sender Filters */}
-          <div className="space-y-4 rounded-md border p-5">
-            <div className="flex items-center gap-2">
-              <h4 className="text-sm font-semibold">{t('accounts.filters.senderFilter')}</h4>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t('accounts.filters.senderFilterHelp')}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
-                  {t('accounts.filters.include')}
-                </p>
-                {senderIncludeEntries.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">
-                    {t('accounts.filters.noIncludePatterns')}
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {senderIncludeEntries.map((entry) => (
-                      <PatternInput
-                        key={entry.id}
-                        entry={entry}
-                        onChange={(id, partial) =>
-                          updateEntry(id, partial, 'include', senderIncludeEntries, senderExcludeEntries, setSenderIncludeEntries, setSenderExcludeEntries, 'archive_rules.senders')
-                        }
-                        onRemove={(id) =>
-                          removeEntry(id, 'include', senderIncludeEntries, senderExcludeEntries, setSenderIncludeEntries, setSenderExcludeEntries, 'archive_rules.senders')
-                        }
-                      />
-                    ))}
+          <FormField
+            control={control}
+            name="archive_rules.skip_larger_than"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('accounts.filters.skipLargerThan')}</FormLabel>
+                <FormControl>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder={t('accounts.filters.noLimit')}
+                      className="max-w-[160px]"
+                      value={field.value ? field.value / BYTES_PER_MB : ''}
+                      onChange={(e) => {
+                        const parsed = parseInt(e.target.value, 10);
+                        field.onChange(isNaN(parsed) ? undefined : parsed * BYTES_PER_MB);
+                      }}
+                    />
+                    <span className="text-sm text-muted-foreground">MB</span>
                   </div>
-                )}
-                <Button
-                  variant="ghost"
-                  type="button"
-                  size="sm"
-                  className="mt-2 h-8 text-xs"
-                  onClick={() => addEntry('include', senderIncludeEntries, senderExcludeEntries, setSenderIncludeEntries, setSenderExcludeEntries, 'archive_rules.senders')}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  {t('accounts.filters.addPattern')}
-                </Button>
-              </div>
+                </FormControl>
+                <FormDescription>{t('accounts.filters.sizeLimitDesc')}</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
-                  {t('accounts.filters.exclude')}
-                </p>
-                {senderExcludeEntries.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">
-                    {t('accounts.filters.noExcludePatterns')}
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {senderExcludeEntries.map((entry) => (
-                      <PatternInput
-                        key={entry.id}
-                        entry={entry}
-                        onChange={(id, partial) =>
-                          updateEntry(id, partial, 'exclude', senderIncludeEntries, senderExcludeEntries, setSenderIncludeEntries, setSenderExcludeEntries, 'archive_rules.senders')
-                        }
-                        onRemove={(id) =>
-                          removeEntry(id, 'exclude', senderIncludeEntries, senderExcludeEntries, setSenderIncludeEntries, setSenderExcludeEntries, 'archive_rules.senders')
-                        }
-                      />
-                    ))}
-                  </div>
-                )}
-                <Button
-                  variant="ghost"
-                  type="button"
-                  size="sm"
-                  className="mt-2 h-8 text-xs"
-                  onClick={() => addEntry('exclude', senderIncludeEntries, senderExcludeEntries, setSenderIncludeEntries, setSenderExcludeEntries, 'archive_rules.senders')}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  {t('accounts.filters.addPattern')}
-                </Button>
-              </div>
-            </div>
+        {/* Spam Headers */}
+        <div className="space-y-4 rounded-md border p-5">
+          <div className="flex items-center gap-2">
+            <h4 className="text-sm font-semibold">{t('accounts.filters.spamHeaders')}</h4>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent>
+                {t('accounts.filters.spamHeadersHelp')}
+              </TooltipContent>
+            </Tooltip>
           </div>
-
-          {/* Subject Filters */}
-          <div className="space-y-4 rounded-md border p-5">
-            <div className="flex items-center gap-2">
-              <h4 className="text-sm font-semibold">{t('accounts.filters.subjectFilter')}</h4>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t('accounts.filters.subjectFilterHelp')}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
-                  {t('accounts.filters.include')}
-                </p>
-                {subjectIncludeEntries.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">
-                    {t('accounts.filters.noIncludePatterns')}
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {subjectIncludeEntries.map((entry) => (
-                      <PatternInput
-                        key={entry.id}
-                        entry={entry}
-                        onChange={(id, partial) =>
-                          updateEntry(id, partial, 'include', subjectIncludeEntries, subjectExcludeEntries, setSubjectIncludeEntries, setSubjectExcludeEntries, 'archive_rules.subjects')
-                        }
-                        onRemove={(id) =>
-                          removeEntry(id, 'include', subjectIncludeEntries, subjectExcludeEntries, setSubjectIncludeEntries, setSubjectExcludeEntries, 'archive_rules.subjects')
-                        }
-                      />
-                    ))}
+          <div className="space-y-2">
+            {spamHeaders.length > 0 ? (
+              spamHeaders.map((header) => (
+                <div key={header} className="flex items-center gap-2">
+                  <div className="flex-1 rounded-md border bg-muted/50 px-3 py-1.5 text-sm font-mono">
+                    {header}
                   </div>
-                )}
-                <Button
-                  variant="ghost"
-                  type="button"
-                  size="sm"
-                  className="mt-2 h-8 text-xs"
-                  onClick={() => addEntry('include', subjectIncludeEntries, subjectExcludeEntries, setSubjectIncludeEntries, setSubjectExcludeEntries, 'archive_rules.subjects')}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  {t('accounts.filters.addPattern')}
-                </Button>
-              </div>
-
-              <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">
-                  {t('accounts.filters.exclude')}
-                </p>
-                {subjectExcludeEntries.length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">
-                    {t('accounts.filters.noExcludePatterns')}
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {subjectExcludeEntries.map((entry) => (
-                      <PatternInput
-                        key={entry.id}
-                        entry={entry}
-                        onChange={(id, partial) =>
-                          updateEntry(id, partial, 'exclude', subjectIncludeEntries, subjectExcludeEntries, setSubjectIncludeEntries, setSubjectExcludeEntries, 'archive_rules.subjects')
-                        }
-                        onRemove={(id) =>
-                          removeEntry(id, 'exclude', subjectIncludeEntries, subjectExcludeEntries, setSubjectIncludeEntries, setSubjectExcludeEntries, 'archive_rules.subjects')
-                        }
-                      />
-                    ))}
-                  </div>
-                )}
-                <Button
-                  variant="ghost"
-                  type="button"
-                  size="sm"
-                  className="mt-2 h-8 text-xs"
-                  onClick={() => addEntry('exclude', subjectIncludeEntries, subjectExcludeEntries, setSubjectIncludeEntries, setSubjectExcludeEntries, 'archive_rules.subjects')}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  {t('accounts.filters.addPattern')}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Size Limit */}
-          <div className="space-y-4 rounded-md border p-5">
-            <div className="flex items-center gap-2">
-              <h4 className="text-sm font-semibold">{t('accounts.filters.sizeLimit')}</h4>
-            </div>
-            <FormField
-              control={control}
-              name="archive_rules.skip_larger_than"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('accounts.filters.skipLargerThan')}</FormLabel>
-                  <FormControl>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        placeholder={t('accounts.filters.noLimit')}
-                        className="max-w-[160px]"
-                        value={field.value ? field.value / BYTES_PER_MB : ''}
-                        onChange={(e) => {
-                          const parsed = parseInt(e.target.value, 10);
-                          field.onChange(isNaN(parsed) ? undefined : parsed * BYTES_PER_MB);
-                        }}
-                      />
-                      <span className="text-sm text-muted-foreground">MB</span>
-                    </div>
-                  </FormControl>
-                  <FormDescription>{t('accounts.filters.sizeLimitDesc')}</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          {/* Spam Headers */}
-          <div className="space-y-4 rounded-md border p-5">
-            <div className="flex items-center gap-2">
-              <h4 className="text-sm font-semibold">{t('accounts.filters.spamHeaders')}</h4>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t('accounts.filters.spamHeadersHelp')}
-                </TooltipContent>
-              </Tooltip>
-            </div>
-            <div className="space-y-2">
-              {spamHeaders.length > 0 ? (
-                spamHeaders.map((header) => (
-                  <div key={header} className="flex items-center gap-2">
-                    <div className="flex-1 rounded-md border bg-muted/50 px-3 py-1.5 text-sm font-mono">
-                      {header}
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      onClick={() => removeSpamHeader(header)}
-                    >
-                      <span className="text-muted-foreground">&#x2715;</span>
-                    </Button>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-muted-foreground italic">
-                  {t('accounts.filters.noSpamHeaders')}
-                </p>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Input
-                className="h-8 text-sm max-w-[220px]"
-                placeholder="X-Spam-Flag"
-                value={newSpamHeader}
-                onChange={(e) => setNewSpamHeader(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddCustomSpamHeader();
-                  }
-                }}
-              />
-              <Button
-                variant="outline"
-                type="button"
-                size="sm"
-                className="h-8 text-xs"
-                onClick={handleAddCustomSpamHeader}
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                {t('accounts.filters.addHeader')}
-              </Button>
-            </div>
-
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">{t('accounts.filters.suggestions')}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {SUGGESTED_SPAM_HEADERS.filter((h) => !spamHeaders.includes(h)).map((header) => (
-                  <button
-                    key={header}
-                    type="button"
-                    className="inline-flex items-center rounded-full border bg-background px-2.5 py-0.5 text-xs font-mono text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
-                    onClick={() => addSpamHeader(header)}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0"
+                    onClick={() => removeSpamHeader(header)}
                   >
-                    + {header}
-                  </button>
-                ))}
-              </div>
+                    <span className="text-muted-foreground">&#x2715;</span>
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <p className="text-xs text-muted-foreground italic">
+                {t('accounts.filters.noSpamHeaders')}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Input
+              className="h-8 text-sm max-w-[220px]"
+              placeholder="X-Spam-Flag"
+              value={newSpamHeader}
+              onChange={(e) => setNewSpamHeader(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddCustomSpamHeader();
+                }
+              }}
+            />
+            <Button
+              variant="outline"
+              type="button"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={handleAddCustomSpamHeader}
+            >
+              <Plus className="h-3 w-3 mr-1" />
+              {t('accounts.filters.addHeader')}
+            </Button>
+          </div>
+
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">{t('accounts.filters.suggestions')}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {SUGGESTED_SPAM_HEADERS.filter((h) => !spamHeaders.includes(h)).map((header) => (
+                <button
+                  key={header}
+                  type="button"
+                  className="inline-flex items-center rounded-full border bg-background px-2.5 py-0.5 text-xs font-mono text-muted-foreground hover:text-foreground hover:border-primary/50 transition-colors"
+                  onClick={() => addSpamHeader(header)}
+                >
+                  + {header}
+                </button>
+              ))}
             </div>
           </div>
-        </>
+        </div>
+      </RuleGroup>
+
+      {/* Attachment extraction (Pro) */}
+      {isPro && (
+        <RuleGroup
+          title={t('accounts.rules.extractionTitle', 'Attachment Extraction')}
+          description={t(
+            'accounts.rules.extractionDesc',
+            'When enabled, only attachments matching the rules below are extracted for full-text search. When disabled, attachment text is extracted for all attachments (default).'
+          )}
+          enabled={extractionEnabled}
+          onToggle={toggleExtraction}
+        >
+          <ExtensionPicker
+            path="extraction_rules.extensions.include"
+            title={t('accounts.filters.extraction.extensions', 'File Extensions')}
+            help={t(
+              'accounts.filters.extraction.extensionsHelp',
+              'Only attachments in the selected formats have their text extracted for full-text search.'
+            )}
+            options={EXTRACTION_EXTENSIONS}
+          />
+          <FilterRuleEditor
+            path="extraction_rules.folders"
+            title={t('accounts.filters.extraction.folders', 'Folders')}
+            help={t(
+              'accounts.filters.extraction.foldersHelp',
+              'Only extract attachments from emails in folders matching these patterns.'
+            )}
+          />
+          <FilterRuleEditor
+            path="extraction_rules.attachment_names"
+            title={t('accounts.filters.extraction.attachmentNames', 'Attachment Names')}
+            help={t(
+              'accounts.filters.extraction.attachmentNamesHelp',
+              'Only extract attachments whose filename matches these patterns.'
+            )}
+          />
+          <FilterRuleEditor
+            path="extraction_rules.senders"
+            title={t('accounts.filters.extraction.senders', 'Senders')}
+            help={t(
+              'accounts.filters.extraction.sendersHelp',
+              'Only extract attachments from senders matching these patterns.'
+            )}
+          />
+        </RuleGroup>
       )}
     </div>
   );
+
+  if (collapsedByDefault) {
+    return (
+      <Collapsible defaultOpen={false}>
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-3 rounded-md border bg-muted/30 px-4 py-3 text-left text-sm font-medium transition-colors hover:bg-muted/50"
+          >
+            <span>{t('accounts.rules.advancedSettings', 'Advanced Settings')}</span>
+            {/* <span className="truncate text-xs font-normal text-muted-foreground">{summary}</span> */}
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-4">
+          {rulesContent}
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  }
+
+  return rulesContent;
 }

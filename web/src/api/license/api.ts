@@ -23,7 +23,6 @@ export interface LicenseStatusResponse {
   email?: string | null
   edition?: string | null
   updates_until?: string | null
-  features?: string[] | null
   days_remaining?: number | null
   build_date?: string | null
   valid_until?: string | null

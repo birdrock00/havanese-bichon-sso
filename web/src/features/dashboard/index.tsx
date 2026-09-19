@@ -281,10 +281,24 @@ export default function MailArchiveDashboard() {
                 {hasRecentActivity ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={convertRecentActivity(stats1.recent_activity, currentLocale)} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                      <XAxis dataKey="date" tick={{ fontSize: 12 }} interval="preserveStart" tickCount={10} />
-                      <YAxis tick={{ fontSize: 12 }} />
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        vertical={false}
+                        stroke="hsl(var(--border))"
+                      />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                        interval="preserveStart"
+                        tickCount={10}
+                        stroke="hsl(var(--border))"
+                      />
+                      <YAxis
+                        tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                        stroke="hsl(var(--border))"
+                      />
                       <Tooltip
+                        cursor={{ fill: 'hsla(var(--primary) / 0.08)' }}
                         formatter={(v) => formatNumber(v as number)}
                         content={({ payload }) => {
                           if (payload && payload.length) {
@@ -343,16 +357,20 @@ export default function MailArchiveDashboard() {
                       contentStyle={{
                         fontSize: '12px',
                         padding: '4px 8px',
-                        borderRadius: '6px',
+                        borderRadius: '8px',
                         backgroundColor: 'hsl(var(--background))',
                         border: '1px solid hsl(var(--border))',
                         color: 'hsl(var(--foreground))',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
                       }}
                       itemStyle={{
                         fontSize: '12px',
+                        color: 'hsl(var(--foreground))',
                       }}
                       labelStyle={{
                         fontSize: '12px',
+                        color: 'hsl(var(--foreground))',
+                        fontWeight: 600,
                       }} />
                   </PieChart>
                 </ResponsiveContainer>

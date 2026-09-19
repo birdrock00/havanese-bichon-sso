@@ -496,7 +496,7 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                     <FormLabel className="flex items-center justify-between">{t('oauth2.useProxyOptional')}</FormLabel>
                     <FormControl>
                       <Select
-                        onValueChange={(val) => field.onChange(Number(val))}
+                        onValueChange={(val) => field.onChange(val === 'none' ? undefined : Number(val))}
                         defaultValue={field.value?.toString()}
                       >
                         <FormControl>
@@ -505,6 +505,7 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
+                          <SelectItem value="none">{t('oauth2.noProxy')}</SelectItem>
                           {proxyOptions && proxyOptions.length > 0 ? (
                             proxyOptions.map((option) => (
                               <SelectItem key={option.value} value={option.value.toString()}>

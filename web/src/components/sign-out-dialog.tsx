@@ -35,14 +35,11 @@ export function SignOutDialog({ open, onOpenChange }: SignOutDialogProps) {
   const location = useLocation()
   const { t } = useTranslation()
   const { user } = useCurrentUser()
-  const { isPro, features } = useEdition()
+  const { isPro } = useEdition()
   const [isLoading, setIsLoading] = useState(false)
 
   const isSsoUser =
-    isPro &&
-    features.includes('sso') &&
-    !!user?.sso_provider &&
-    user.sso_provider !== ''
+    isPro && !!user?.sso_provider && user.sso_provider !== ''
 
   const goToSignIn = (currentPath: string) => {
     navigate({

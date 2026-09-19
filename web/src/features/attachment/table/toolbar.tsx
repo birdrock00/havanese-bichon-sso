@@ -9,6 +9,8 @@ import { MailboxPopover } from '../mailbox-popover'
 import { AccountPopover } from '../account-popover'
 import { MetadataFilter } from '../attachment-metadata-filter'
 import { FileType, Laptop, Tag } from 'lucide-react'
+import { SavedSearchesDropdown } from '../../saved-searches/saved-searches-dropdown'
+import { useAttachmentContext } from '../context'
 
 type DataTableToolbarProps<TData> = {
   table: Table<TData>
@@ -17,6 +19,7 @@ type DataTableToolbarProps<TData> = {
 export function DataTableToolbar<TData>({
   table,
 }: DataTableToolbarProps<TData>) {
+  const { filter, setFilter } = useAttachmentContext()
   return (
     <div className="flex flex-col gap-1 p-1 bg-background">
       <div className="mb-4 flex items-center justify-center w-full">
@@ -46,6 +49,11 @@ export function DataTableToolbar<TData>({
             <MoreFiltersPopover />
           </div>
           <FilterResetButton />
+          <SavedSearchesDropdown
+            kind="Attachment"
+            filter={filter}
+            onApply={(f) => setFilter(f)}
+          />
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <TimePopover />

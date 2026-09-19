@@ -20,41 +20,45 @@
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarHeader,
   SidebarMenuButton,
-  useSidebar,
 } from '@/components/ui/sidebar'
 import { NavGroup } from '@/components/layout/nav-group'
 import Logo from '@/assets/logo.svg'
+import { resolveApiUrl } from '@/api/branding/api'
+import { useBranding } from '@/hooks/use-branding'
+import { AutoFitText } from '@/components/branding/auto-fit-text'
 import { useSidebarData } from './data/sidebar-data'
+import { useEdition } from '@/hooks/use-edition'
 import { Link } from '@tanstack/react-router';
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { open } = useSidebar();
   const sidebarData = useSidebarData();
+  const { isPro, edition, version } = useEdition();
+  const { companyName, logoUrl } = useBranding();
+  const logo = logoUrl ? resolveApiUrl(logoUrl) : Logo;
+  const displayName = companyName || (isPro ? 'Bichon Pro' : 'Bichon');
   return (
     <Sidebar collapsible='icon' variant='sidebar' {...props}>
       <SidebarHeader>
         <SidebarMenuButton
-          size='lg'
           asChild
-          className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
+          className='h-auto flex-col items-center gap-1 rounded-lg px-2 py-2 group-data-[collapsible=icon]:!p-0 data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
         >
           <Link to="/">
-            <div className='flex aspect-square size-16 items-center justify-center rounded-lg text-sidebar-primary-foreground'>
+            <div className='flex size-12 shrink-0 items-center justify-center overflow-hidden'>
               <img
-                className={open ? "relative ml-[12px] mr-[12px]" : "mr-[30px]"}
-                src={Logo}
-                width={open ? 60 : 40}
-                height={open ? 60 : 40}
-                alt='Logo'
+                src={logo}
+                alt={displayName}
+                className='max-h-full max-w-full object-contain'
               />
             </div>
-            <div className='grid flex-1 text-left text-lg leading-tight'>
-              <span className='truncate font-semibold'>
-                Bichon
-              </span>
-            </div>
+            <AutoFitText
+              text={displayName}
+              title={displayName}
+              className='flex w-full justify-center'
+            />
           </Link>
         </SidebarMenuButton>
       </SidebarHeader>
@@ -63,6 +67,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <NavGroup key={props.title} {...props} />
         ))}
       </SidebarContent>
+      {/* Keeps the bottom-most nav item off the sidebar's bottom edge: an
+          edition badge + version caption always reserves a few rows, and in
+          icon-collapsed mode the caption hides but the footer still pads the
+          icon rail. Edition names are the raw license values (English), no i18n. */}
+      <SidebarFooter>
+        <div className='flex h-8 items-center justify-center px-2'>
+          {version && (
+            <span className='flex min-w-0 items-center gap-2 group-data-[collapsible=icon]:hidden'>
+              <span className='shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary'>
+                {edition}
+              </span>
+              <span className='truncate text-xs text-muted-foreground'>
+                v{version}
+              </span>
+            </span>
+          )}
+        </div>
+      </SidebarFooter>
     </Sidebar>
   )
 }

@@ -130,7 +130,8 @@ async fn extract_envelope_core(
         )
     })?;
 
-    if let Ok(account) = AccountModel::get(account_id) {
+    let account = AccountModel::get(account_id).ok();
+    if let Some(ref account) = account {
         if let Some(ref rules) = account.archive_rules {
             let sender = message.from().and_then(|addr| {
                 AddrVec::from(addr)
@@ -201,6 +202,29 @@ async fn extract_envelope_core(
     } else {
         internal_date
     };
+
+    // Retention floor: never ingest a message whose effective date is already
+    // outside the account's retention window. The sweep purges those envelopes,
+    // so without this a full UID re-sync (UIDVALIDITY change / mailbox rebuild)
+    // would treat them as missing and re-download them, fighting the sweep
+    // forever. While an account is on legal hold retention is suspended, so the
+    // floor is disabled and nothing is dropped.
+    if let Some(ref account) = account {
+        let days = account.retention_days_effective();
+        if days > 0 && !account.is_on_hold() {
+            if let Some(effective) = crate::retention::effective_date_ms(date, internal_date) {
+                if effective < crate::retention::retention_cutoff_ms(days) {
+                    tracing::debug!(
+                        account_id,
+                        uid,
+                        effective,
+                        "Email outside retention window, skipping ingest"
+                    );
+                    return Ok(ExtractOutcome::Imported);
+                }
+            }
+        }
+    }
     let parse_addrs = |addrs: Option<&Address<'_>>| {
         addrs
             .map(|addr| {
@@ -558,7 +582,7 @@ pub async fn detach_and_store_attachments(
         if !inline || !has_cid {
             let decoded_len = att.contents().len();
             if should_extract
-                && decoded_len <= crate::ext::text_extractor::MAX_EXTRACT_BYTES
+                && decoded_len <= crate::ext::text_extractor::max_extract_bytes()
                 && crate::ext::text_extractor::should_try_extract(&file_type, &ext)
             {
                 text_candidates.push(TextCandidate {

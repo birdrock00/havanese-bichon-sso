@@ -20,15 +20,31 @@ import { Route as authSignInImport } from './routes/(auth)/sign-in'
 import { Route as auth500Import } from './routes/(auth)/500'
 import { Route as AuthenticatedSearchIndexImport } from './routes/_authenticated/search/index'
 import { Route as AuthenticatedImportIndexImport } from './routes/_authenticated/import/index'
+import { Route as AuthenticatedExportsIndexImport } from './routes/_authenticated/exports/index'
 import { Route as AuthenticatedAttachmentIndexImport } from './routes/_authenticated/attachment/index'
 
 // Create Virtual Routes
 
+const AuthenticatedTimestampAnchorLazyImport = createFileRoute(
+  '/_authenticated/timestamp-anchor',
+)()
 const AuthenticatedLicenseLazyImport = createFileRoute(
   '/_authenticated/license',
 )()
+const AuthenticatedLegalHoldLazyImport = createFileRoute(
+  '/_authenticated/legal-hold',
+)()
+const AuthenticatedIntegrityLazyImport = createFileRoute(
+  '/_authenticated/integrity',
+)()
+const AuthenticatedComplianceExportLazyImport = createFileRoute(
+  '/_authenticated/compliance-export',
+)()
 const AuthenticatedAuditLogLazyImport = createFileRoute(
   '/_authenticated/audit-log',
+)()
+const AuthenticatedAnalyticsLazyImport = createFileRoute(
+  '/_authenticated/analytics',
 )()
 const errors503LazyImport = createFileRoute('/(errors)/503')()
 const errors500LazyImport = createFileRoute('/(errors)/500')()
@@ -65,14 +81,23 @@ const AuthenticatedUsersRolesLazyImport = createFileRoute(
 const AuthenticatedUsersApiTokensLazyImport = createFileRoute(
   '/_authenticated/users/api-tokens',
 )()
+const AuthenticatedSettingsSiemLazyImport = createFileRoute(
+  '/_authenticated/settings/siem',
+)()
 const AuthenticatedSettingsProxyLazyImport = createFileRoute(
   '/_authenticated/settings/proxy',
 )()
 const AuthenticatedSettingsProfileLazyImport = createFileRoute(
   '/_authenticated/settings/profile',
 )()
+const AuthenticatedSettingsMfaLazyImport = createFileRoute(
+  '/_authenticated/settings/mfa',
+)()
 const AuthenticatedSettingsConfigurationsLazyImport = createFileRoute(
   '/_authenticated/settings/configurations',
+)()
+const AuthenticatedSettingsBrandingLazyImport = createFileRoute(
+  '/_authenticated/settings/branding',
 )()
 const AuthenticatedSettingsAppearanceLazyImport = createFileRoute(
   '/_authenticated/settings/appearance',
@@ -103,6 +128,17 @@ const AuthenticatedIndexRoute = AuthenticatedIndexImport.update({
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
+const AuthenticatedTimestampAnchorLazyRoute =
+  AuthenticatedTimestampAnchorLazyImport.update({
+    id: '/timestamp-anchor',
+    path: '/timestamp-anchor',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/timestamp-anchor.lazy').then(
+      (d) => d.Route,
+    ),
+  )
+
 const AuthenticatedLicenseLazyRoute = AuthenticatedLicenseLazyImport.update({
   id: '/license',
   path: '/license',
@@ -111,12 +147,53 @@ const AuthenticatedLicenseLazyRoute = AuthenticatedLicenseLazyImport.update({
   import('./routes/_authenticated/license.lazy').then((d) => d.Route),
 )
 
+const AuthenticatedLegalHoldLazyRoute = AuthenticatedLegalHoldLazyImport.update(
+  {
+    id: '/legal-hold',
+    path: '/legal-hold',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any,
+).lazy(() =>
+  import('./routes/_authenticated/legal-hold.lazy').then((d) => d.Route),
+)
+
+const AuthenticatedIntegrityLazyRoute = AuthenticatedIntegrityLazyImport.update(
+  {
+    id: '/integrity',
+    path: '/integrity',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any,
+).lazy(() =>
+  import('./routes/_authenticated/integrity.lazy').then((d) => d.Route),
+)
+
+const AuthenticatedComplianceExportLazyRoute =
+  AuthenticatedComplianceExportLazyImport.update({
+    id: '/compliance-export',
+    path: '/compliance-export',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/compliance-export.lazy').then(
+      (d) => d.Route,
+    ),
+  )
+
 const AuthenticatedAuditLogLazyRoute = AuthenticatedAuditLogLazyImport.update({
   id: '/audit-log',
   path: '/audit-log',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any).lazy(() =>
   import('./routes/_authenticated/audit-log.lazy').then((d) => d.Route),
+)
+
+const AuthenticatedAnalyticsLazyRoute = AuthenticatedAnalyticsLazyImport.update(
+  {
+    id: '/analytics',
+    path: '/analytics',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any,
+).lazy(() =>
+  import('./routes/_authenticated/analytics.lazy').then((d) => d.Route),
 )
 
 const errors503LazyRoute = errors503LazyImport
@@ -263,6 +340,12 @@ const AuthenticatedImportIndexRoute = AuthenticatedImportIndexImport.update({
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
+const AuthenticatedExportsIndexRoute = AuthenticatedExportsIndexImport.update({
+  id: '/exports/',
+  path: '/exports/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+
 const AuthenticatedAttachmentIndexRoute =
   AuthenticatedAttachmentIndexImport.update({
     id: '/attachment/',
@@ -290,6 +373,15 @@ const AuthenticatedUsersApiTokensLazyRoute =
     ),
   )
 
+const AuthenticatedSettingsSiemLazyRoute =
+  AuthenticatedSettingsSiemLazyImport.update({
+    id: '/siem',
+    path: '/siem',
+    getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/settings/siem.lazy').then((d) => d.Route),
+  )
+
 const AuthenticatedSettingsProxyLazyRoute =
   AuthenticatedSettingsProxyLazyImport.update({
     id: '/proxy',
@@ -310,6 +402,15 @@ const AuthenticatedSettingsProfileLazyRoute =
     ),
   )
 
+const AuthenticatedSettingsMfaLazyRoute =
+  AuthenticatedSettingsMfaLazyImport.update({
+    id: '/mfa',
+    path: '/mfa',
+    getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/settings/mfa.lazy').then((d) => d.Route),
+  )
+
 const AuthenticatedSettingsConfigurationsLazyRoute =
   AuthenticatedSettingsConfigurationsLazyImport.update({
     id: '/configurations',
@@ -317,6 +418,17 @@ const AuthenticatedSettingsConfigurationsLazyRoute =
     getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
   } as any).lazy(() =>
     import('./routes/_authenticated/settings/configurations.lazy').then(
+      (d) => d.Route,
+    ),
+  )
+
+const AuthenticatedSettingsBrandingLazyRoute =
+  AuthenticatedSettingsBrandingLazyImport.update({
+    id: '/branding',
+    path: '/branding',
+    getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/settings/branding.lazy').then(
       (d) => d.Route,
     ),
   )
@@ -453,6 +565,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof errors503LazyImport
       parentRoute: typeof rootRoute
     }
+    '/_authenticated/analytics': {
+      id: '/_authenticated/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AuthenticatedAnalyticsLazyImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
     '/_authenticated/audit-log': {
       id: '/_authenticated/audit-log'
       path: '/audit-log'
@@ -460,11 +579,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAuditLogLazyImport
       parentRoute: typeof AuthenticatedRouteImport
     }
+    '/_authenticated/compliance-export': {
+      id: '/_authenticated/compliance-export'
+      path: '/compliance-export'
+      fullPath: '/compliance-export'
+      preLoaderRoute: typeof AuthenticatedComplianceExportLazyImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
+    '/_authenticated/integrity': {
+      id: '/_authenticated/integrity'
+      path: '/integrity'
+      fullPath: '/integrity'
+      preLoaderRoute: typeof AuthenticatedIntegrityLazyImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
+    '/_authenticated/legal-hold': {
+      id: '/_authenticated/legal-hold'
+      path: '/legal-hold'
+      fullPath: '/legal-hold'
+      preLoaderRoute: typeof AuthenticatedLegalHoldLazyImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
     '/_authenticated/license': {
       id: '/_authenticated/license'
       path: '/license'
       fullPath: '/license'
       preLoaderRoute: typeof AuthenticatedLicenseLazyImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
+    '/_authenticated/timestamp-anchor': {
+      id: '/_authenticated/timestamp-anchor'
+      path: '/timestamp-anchor'
+      fullPath: '/timestamp-anchor'
+      preLoaderRoute: typeof AuthenticatedTimestampAnchorLazyImport
       parentRoute: typeof AuthenticatedRouteImport
     }
     '/_authenticated/': {
@@ -502,11 +649,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAppearanceLazyImport
       parentRoute: typeof AuthenticatedSettingsRouteLazyImport
     }
+    '/_authenticated/settings/branding': {
+      id: '/_authenticated/settings/branding'
+      path: '/branding'
+      fullPath: '/settings/branding'
+      preLoaderRoute: typeof AuthenticatedSettingsBrandingLazyImport
+      parentRoute: typeof AuthenticatedSettingsRouteLazyImport
+    }
     '/_authenticated/settings/configurations': {
       id: '/_authenticated/settings/configurations'
       path: '/configurations'
       fullPath: '/settings/configurations'
       preLoaderRoute: typeof AuthenticatedSettingsConfigurationsLazyImport
+      parentRoute: typeof AuthenticatedSettingsRouteLazyImport
+    }
+    '/_authenticated/settings/mfa': {
+      id: '/_authenticated/settings/mfa'
+      path: '/mfa'
+      fullPath: '/settings/mfa'
+      preLoaderRoute: typeof AuthenticatedSettingsMfaLazyImport
       parentRoute: typeof AuthenticatedSettingsRouteLazyImport
     }
     '/_authenticated/settings/profile': {
@@ -521,6 +682,13 @@ declare module '@tanstack/react-router' {
       path: '/proxy'
       fullPath: '/settings/proxy'
       preLoaderRoute: typeof AuthenticatedSettingsProxyLazyImport
+      parentRoute: typeof AuthenticatedSettingsRouteLazyImport
+    }
+    '/_authenticated/settings/siem': {
+      id: '/_authenticated/settings/siem'
+      path: '/siem'
+      fullPath: '/settings/siem'
+      preLoaderRoute: typeof AuthenticatedSettingsSiemLazyImport
       parentRoute: typeof AuthenticatedSettingsRouteLazyImport
     }
     '/_authenticated/users/api-tokens': {
@@ -542,6 +710,13 @@ declare module '@tanstack/react-router' {
       path: '/attachment'
       fullPath: '/attachment'
       preLoaderRoute: typeof AuthenticatedAttachmentIndexImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
+    '/_authenticated/exports/': {
+      id: '/_authenticated/exports/'
+      path: '/exports'
+      fullPath: '/exports'
+      preLoaderRoute: typeof AuthenticatedExportsIndexImport
       parentRoute: typeof AuthenticatedRouteImport
     }
     '/_authenticated/import/': {
@@ -616,9 +791,12 @@ interface AuthenticatedSettingsRouteLazyRouteChildren {
   AuthenticatedSettingsAccessLazyRoute: typeof AuthenticatedSettingsAccessLazyRoute
   AuthenticatedSettingsApiTokensLazyRoute: typeof AuthenticatedSettingsApiTokensLazyRoute
   AuthenticatedSettingsAppearanceLazyRoute: typeof AuthenticatedSettingsAppearanceLazyRoute
+  AuthenticatedSettingsBrandingLazyRoute: typeof AuthenticatedSettingsBrandingLazyRoute
   AuthenticatedSettingsConfigurationsLazyRoute: typeof AuthenticatedSettingsConfigurationsLazyRoute
+  AuthenticatedSettingsMfaLazyRoute: typeof AuthenticatedSettingsMfaLazyRoute
   AuthenticatedSettingsProfileLazyRoute: typeof AuthenticatedSettingsProfileLazyRoute
   AuthenticatedSettingsProxyLazyRoute: typeof AuthenticatedSettingsProxyLazyRoute
+  AuthenticatedSettingsSiemLazyRoute: typeof AuthenticatedSettingsSiemLazyRoute
   AuthenticatedSettingsIndexLazyRoute: typeof AuthenticatedSettingsIndexLazyRoute
 }
 
@@ -629,11 +807,15 @@ const AuthenticatedSettingsRouteLazyRouteChildren: AuthenticatedSettingsRouteLaz
       AuthenticatedSettingsApiTokensLazyRoute,
     AuthenticatedSettingsAppearanceLazyRoute:
       AuthenticatedSettingsAppearanceLazyRoute,
+    AuthenticatedSettingsBrandingLazyRoute:
+      AuthenticatedSettingsBrandingLazyRoute,
     AuthenticatedSettingsConfigurationsLazyRoute:
       AuthenticatedSettingsConfigurationsLazyRoute,
+    AuthenticatedSettingsMfaLazyRoute: AuthenticatedSettingsMfaLazyRoute,
     AuthenticatedSettingsProfileLazyRoute:
       AuthenticatedSettingsProfileLazyRoute,
     AuthenticatedSettingsProxyLazyRoute: AuthenticatedSettingsProxyLazyRoute,
+    AuthenticatedSettingsSiemLazyRoute: AuthenticatedSettingsSiemLazyRoute,
     AuthenticatedSettingsIndexLazyRoute: AuthenticatedSettingsIndexLazyRoute,
   }
 
@@ -663,11 +845,17 @@ const AuthenticatedUsersRouteLazyRouteWithChildren =
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteLazyRoute: typeof AuthenticatedSettingsRouteLazyRouteWithChildren
   AuthenticatedUsersRouteLazyRoute: typeof AuthenticatedUsersRouteLazyRouteWithChildren
+  AuthenticatedAnalyticsLazyRoute: typeof AuthenticatedAnalyticsLazyRoute
   AuthenticatedAuditLogLazyRoute: typeof AuthenticatedAuditLogLazyRoute
+  AuthenticatedComplianceExportLazyRoute: typeof AuthenticatedComplianceExportLazyRoute
+  AuthenticatedIntegrityLazyRoute: typeof AuthenticatedIntegrityLazyRoute
+  AuthenticatedLegalHoldLazyRoute: typeof AuthenticatedLegalHoldLazyRoute
   AuthenticatedLicenseLazyRoute: typeof AuthenticatedLicenseLazyRoute
+  AuthenticatedTimestampAnchorLazyRoute: typeof AuthenticatedTimestampAnchorLazyRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAccountsNewLazyRoute: typeof AuthenticatedAccountsNewLazyRoute
   AuthenticatedAttachmentIndexRoute: typeof AuthenticatedAttachmentIndexRoute
+  AuthenticatedExportsIndexRoute: typeof AuthenticatedExportsIndexRoute
   AuthenticatedImportIndexRoute: typeof AuthenticatedImportIndexRoute
   AuthenticatedSearchIndexRoute: typeof AuthenticatedSearchIndexRoute
   AuthenticatedAccountsIndexLazyRoute: typeof AuthenticatedAccountsIndexLazyRoute
@@ -682,11 +870,18 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedSettingsRouteLazyRouteWithChildren,
   AuthenticatedUsersRouteLazyRoute:
     AuthenticatedUsersRouteLazyRouteWithChildren,
+  AuthenticatedAnalyticsLazyRoute: AuthenticatedAnalyticsLazyRoute,
   AuthenticatedAuditLogLazyRoute: AuthenticatedAuditLogLazyRoute,
+  AuthenticatedComplianceExportLazyRoute:
+    AuthenticatedComplianceExportLazyRoute,
+  AuthenticatedIntegrityLazyRoute: AuthenticatedIntegrityLazyRoute,
+  AuthenticatedLegalHoldLazyRoute: AuthenticatedLegalHoldLazyRoute,
   AuthenticatedLicenseLazyRoute: AuthenticatedLicenseLazyRoute,
+  AuthenticatedTimestampAnchorLazyRoute: AuthenticatedTimestampAnchorLazyRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAccountsNewLazyRoute: AuthenticatedAccountsNewLazyRoute,
   AuthenticatedAttachmentIndexRoute: AuthenticatedAttachmentIndexRoute,
+  AuthenticatedExportsIndexRoute: AuthenticatedExportsIndexRoute,
   AuthenticatedImportIndexRoute: AuthenticatedImportIndexRoute,
   AuthenticatedSearchIndexRoute: AuthenticatedSearchIndexRoute,
   AuthenticatedAccountsIndexLazyRoute: AuthenticatedAccountsIndexLazyRoute,
@@ -712,19 +907,28 @@ export interface FileRoutesByFullPath {
   '/403': typeof errors403LazyRoute
   '/404': typeof errors404LazyRoute
   '/503': typeof errors503LazyRoute
+  '/analytics': typeof AuthenticatedAnalyticsLazyRoute
   '/audit-log': typeof AuthenticatedAuditLogLazyRoute
+  '/compliance-export': typeof AuthenticatedComplianceExportLazyRoute
+  '/integrity': typeof AuthenticatedIntegrityLazyRoute
+  '/legal-hold': typeof AuthenticatedLegalHoldLazyRoute
   '/license': typeof AuthenticatedLicenseLazyRoute
+  '/timestamp-anchor': typeof AuthenticatedTimestampAnchorLazyRoute
   '/': typeof AuthenticatedIndexRoute
   '/accounts/new': typeof AuthenticatedAccountsNewLazyRoute
   '/settings/access': typeof AuthenticatedSettingsAccessLazyRoute
   '/settings/api-tokens': typeof AuthenticatedSettingsApiTokensLazyRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceLazyRoute
+  '/settings/branding': typeof AuthenticatedSettingsBrandingLazyRoute
   '/settings/configurations': typeof AuthenticatedSettingsConfigurationsLazyRoute
+  '/settings/mfa': typeof AuthenticatedSettingsMfaLazyRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileLazyRoute
   '/settings/proxy': typeof AuthenticatedSettingsProxyLazyRoute
+  '/settings/siem': typeof AuthenticatedSettingsSiemLazyRoute
   '/users/api-tokens': typeof AuthenticatedUsersApiTokensLazyRoute
   '/users/roles': typeof AuthenticatedUsersRolesLazyRoute
   '/attachment': typeof AuthenticatedAttachmentIndexRoute
+  '/exports': typeof AuthenticatedExportsIndexRoute
   '/import': typeof AuthenticatedImportIndexRoute
   '/search': typeof AuthenticatedSearchIndexRoute
   '/accounts': typeof AuthenticatedAccountsIndexLazyRoute
@@ -744,19 +948,28 @@ export interface FileRoutesByTo {
   '/403': typeof errors403LazyRoute
   '/404': typeof errors404LazyRoute
   '/503': typeof errors503LazyRoute
+  '/analytics': typeof AuthenticatedAnalyticsLazyRoute
   '/audit-log': typeof AuthenticatedAuditLogLazyRoute
+  '/compliance-export': typeof AuthenticatedComplianceExportLazyRoute
+  '/integrity': typeof AuthenticatedIntegrityLazyRoute
+  '/legal-hold': typeof AuthenticatedLegalHoldLazyRoute
   '/license': typeof AuthenticatedLicenseLazyRoute
+  '/timestamp-anchor': typeof AuthenticatedTimestampAnchorLazyRoute
   '/': typeof AuthenticatedIndexRoute
   '/accounts/new': typeof AuthenticatedAccountsNewLazyRoute
   '/settings/access': typeof AuthenticatedSettingsAccessLazyRoute
   '/settings/api-tokens': typeof AuthenticatedSettingsApiTokensLazyRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceLazyRoute
+  '/settings/branding': typeof AuthenticatedSettingsBrandingLazyRoute
   '/settings/configurations': typeof AuthenticatedSettingsConfigurationsLazyRoute
+  '/settings/mfa': typeof AuthenticatedSettingsMfaLazyRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileLazyRoute
   '/settings/proxy': typeof AuthenticatedSettingsProxyLazyRoute
+  '/settings/siem': typeof AuthenticatedSettingsSiemLazyRoute
   '/users/api-tokens': typeof AuthenticatedUsersApiTokensLazyRoute
   '/users/roles': typeof AuthenticatedUsersRolesLazyRoute
   '/attachment': typeof AuthenticatedAttachmentIndexRoute
+  '/exports': typeof AuthenticatedExportsIndexRoute
   '/import': typeof AuthenticatedImportIndexRoute
   '/search': typeof AuthenticatedSearchIndexRoute
   '/accounts': typeof AuthenticatedAccountsIndexLazyRoute
@@ -781,19 +994,28 @@ export interface FileRoutesById {
   '/(errors)/404': typeof errors404LazyRoute
   '/(errors)/500': typeof errors500LazyRoute
   '/(errors)/503': typeof errors503LazyRoute
+  '/_authenticated/analytics': typeof AuthenticatedAnalyticsLazyRoute
   '/_authenticated/audit-log': typeof AuthenticatedAuditLogLazyRoute
+  '/_authenticated/compliance-export': typeof AuthenticatedComplianceExportLazyRoute
+  '/_authenticated/integrity': typeof AuthenticatedIntegrityLazyRoute
+  '/_authenticated/legal-hold': typeof AuthenticatedLegalHoldLazyRoute
   '/_authenticated/license': typeof AuthenticatedLicenseLazyRoute
+  '/_authenticated/timestamp-anchor': typeof AuthenticatedTimestampAnchorLazyRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/accounts/new': typeof AuthenticatedAccountsNewLazyRoute
   '/_authenticated/settings/access': typeof AuthenticatedSettingsAccessLazyRoute
   '/_authenticated/settings/api-tokens': typeof AuthenticatedSettingsApiTokensLazyRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceLazyRoute
+  '/_authenticated/settings/branding': typeof AuthenticatedSettingsBrandingLazyRoute
   '/_authenticated/settings/configurations': typeof AuthenticatedSettingsConfigurationsLazyRoute
+  '/_authenticated/settings/mfa': typeof AuthenticatedSettingsMfaLazyRoute
   '/_authenticated/settings/profile': typeof AuthenticatedSettingsProfileLazyRoute
   '/_authenticated/settings/proxy': typeof AuthenticatedSettingsProxyLazyRoute
+  '/_authenticated/settings/siem': typeof AuthenticatedSettingsSiemLazyRoute
   '/_authenticated/users/api-tokens': typeof AuthenticatedUsersApiTokensLazyRoute
   '/_authenticated/users/roles': typeof AuthenticatedUsersRolesLazyRoute
   '/_authenticated/attachment/': typeof AuthenticatedAttachmentIndexRoute
+  '/_authenticated/exports/': typeof AuthenticatedExportsIndexRoute
   '/_authenticated/import/': typeof AuthenticatedImportIndexRoute
   '/_authenticated/search/': typeof AuthenticatedSearchIndexRoute
   '/_authenticated/accounts/': typeof AuthenticatedAccountsIndexLazyRoute
@@ -818,19 +1040,28 @@ export interface FileRouteTypes {
     | '/403'
     | '/404'
     | '/503'
+    | '/analytics'
     | '/audit-log'
+    | '/compliance-export'
+    | '/integrity'
+    | '/legal-hold'
     | '/license'
+    | '/timestamp-anchor'
     | '/'
     | '/accounts/new'
     | '/settings/access'
     | '/settings/api-tokens'
     | '/settings/appearance'
+    | '/settings/branding'
     | '/settings/configurations'
+    | '/settings/mfa'
     | '/settings/profile'
     | '/settings/proxy'
+    | '/settings/siem'
     | '/users/api-tokens'
     | '/users/roles'
     | '/attachment'
+    | '/exports'
     | '/import'
     | '/search'
     | '/accounts'
@@ -849,19 +1080,28 @@ export interface FileRouteTypes {
     | '/403'
     | '/404'
     | '/503'
+    | '/analytics'
     | '/audit-log'
+    | '/compliance-export'
+    | '/integrity'
+    | '/legal-hold'
     | '/license'
+    | '/timestamp-anchor'
     | '/'
     | '/accounts/new'
     | '/settings/access'
     | '/settings/api-tokens'
     | '/settings/appearance'
+    | '/settings/branding'
     | '/settings/configurations'
+    | '/settings/mfa'
     | '/settings/profile'
     | '/settings/proxy'
+    | '/settings/siem'
     | '/users/api-tokens'
     | '/users/roles'
     | '/attachment'
+    | '/exports'
     | '/import'
     | '/search'
     | '/accounts'
@@ -884,19 +1124,28 @@ export interface FileRouteTypes {
     | '/(errors)/404'
     | '/(errors)/500'
     | '/(errors)/503'
+    | '/_authenticated/analytics'
     | '/_authenticated/audit-log'
+    | '/_authenticated/compliance-export'
+    | '/_authenticated/integrity'
+    | '/_authenticated/legal-hold'
     | '/_authenticated/license'
+    | '/_authenticated/timestamp-anchor'
     | '/_authenticated/'
     | '/_authenticated/accounts/new'
     | '/_authenticated/settings/access'
     | '/_authenticated/settings/api-tokens'
     | '/_authenticated/settings/appearance'
+    | '/_authenticated/settings/branding'
     | '/_authenticated/settings/configurations'
+    | '/_authenticated/settings/mfa'
     | '/_authenticated/settings/profile'
     | '/_authenticated/settings/proxy'
+    | '/_authenticated/settings/siem'
     | '/_authenticated/users/api-tokens'
     | '/_authenticated/users/roles'
     | '/_authenticated/attachment/'
+    | '/_authenticated/exports/'
     | '/_authenticated/import/'
     | '/_authenticated/search/'
     | '/_authenticated/accounts/'
@@ -959,11 +1208,17 @@ export const routeTree = rootRoute
       "children": [
         "/_authenticated/settings",
         "/_authenticated/users",
+        "/_authenticated/analytics",
         "/_authenticated/audit-log",
+        "/_authenticated/compliance-export",
+        "/_authenticated/integrity",
+        "/_authenticated/legal-hold",
         "/_authenticated/license",
+        "/_authenticated/timestamp-anchor",
         "/_authenticated/",
         "/_authenticated/accounts/new",
         "/_authenticated/attachment/",
+        "/_authenticated/exports/",
         "/_authenticated/import/",
         "/_authenticated/search/",
         "/_authenticated/accounts/",
@@ -989,9 +1244,12 @@ export const routeTree = rootRoute
         "/_authenticated/settings/access",
         "/_authenticated/settings/api-tokens",
         "/_authenticated/settings/appearance",
+        "/_authenticated/settings/branding",
         "/_authenticated/settings/configurations",
+        "/_authenticated/settings/mfa",
         "/_authenticated/settings/profile",
         "/_authenticated/settings/proxy",
+        "/_authenticated/settings/siem",
         "/_authenticated/settings/"
       ]
     },
@@ -1019,12 +1277,32 @@ export const routeTree = rootRoute
     "/(errors)/503": {
       "filePath": "(errors)/503.lazy.tsx"
     },
+    "/_authenticated/analytics": {
+      "filePath": "_authenticated/analytics.lazy.tsx",
+      "parent": "/_authenticated"
+    },
     "/_authenticated/audit-log": {
       "filePath": "_authenticated/audit-log.lazy.tsx",
       "parent": "/_authenticated"
     },
+    "/_authenticated/compliance-export": {
+      "filePath": "_authenticated/compliance-export.lazy.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/integrity": {
+      "filePath": "_authenticated/integrity.lazy.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/legal-hold": {
+      "filePath": "_authenticated/legal-hold.lazy.tsx",
+      "parent": "/_authenticated"
+    },
     "/_authenticated/license": {
       "filePath": "_authenticated/license.lazy.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/timestamp-anchor": {
+      "filePath": "_authenticated/timestamp-anchor.lazy.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/": {
@@ -1047,8 +1325,16 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/settings/appearance.lazy.tsx",
       "parent": "/_authenticated/settings"
     },
+    "/_authenticated/settings/branding": {
+      "filePath": "_authenticated/settings/branding.lazy.tsx",
+      "parent": "/_authenticated/settings"
+    },
     "/_authenticated/settings/configurations": {
       "filePath": "_authenticated/settings/configurations.lazy.tsx",
+      "parent": "/_authenticated/settings"
+    },
+    "/_authenticated/settings/mfa": {
+      "filePath": "_authenticated/settings/mfa.lazy.tsx",
       "parent": "/_authenticated/settings"
     },
     "/_authenticated/settings/profile": {
@@ -1057,6 +1343,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/settings/proxy": {
       "filePath": "_authenticated/settings/proxy.lazy.tsx",
+      "parent": "/_authenticated/settings"
+    },
+    "/_authenticated/settings/siem": {
+      "filePath": "_authenticated/settings/siem.lazy.tsx",
       "parent": "/_authenticated/settings"
     },
     "/_authenticated/users/api-tokens": {
@@ -1069,6 +1359,10 @@ export const routeTree = rootRoute
     },
     "/_authenticated/attachment/": {
       "filePath": "_authenticated/attachment/index.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/exports/": {
+      "filePath": "_authenticated/exports/index.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/import/": {

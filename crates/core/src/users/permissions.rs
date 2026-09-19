@@ -85,6 +85,13 @@ impl Permission {
     /// Export messages in batches from all accounts.
     pub const DATA_EXPORT_BATCH_ALL: &str = "data:export:batch:all";
 
+    /// Place or release legal holds on accounts (Enterprise feature).
+    pub const LEGAL_HOLD: &str = "legal:hold";
+
+    /// Anchor the Merkle-tree root with an external TSA (RFC 3161, Enterprise
+    /// feature) and look up counter-proofs for individual emails.
+    pub const TIMESTAMP_MANAGE: &str = "timestamp:manage";
+
     // ----------------------------------------------------------------------
     // 3. Scoped/Limited Permissions (Manager & Viewer)
     //    Authorization requires checking the user's Account Access List (ACL)
@@ -159,6 +166,14 @@ impl Permission {
             (
                 Self::DATA_EXPORT_BATCH_ALL,
                 "Export bulk message data from all accounts.",
+            ),
+            (
+                Self::LEGAL_HOLD,
+                "Place or release legal holds on accounts (Enterprise).",
+            ),
+            (
+                Self::TIMESTAMP_MANAGE,
+                "Manage RFC 3161 timestamp anchoring and verify email proofs (Enterprise).",
             ),
         ]
     }

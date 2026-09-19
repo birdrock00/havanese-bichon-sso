@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 import { Link, useLocation } from '@tanstack/react-router'
 import { ChevronRight } from 'lucide-react'
 import {
@@ -34,27 +34,57 @@ export function NavGroup({ title, items }: NavGroup) {
 
   const visibleItems = items.filter(item => item.visible !== false)
 
+  // A group is "active" when any of its (sub)items matches the current route.
+  // It starts collapsed unless active, and re-opens whenever navigation lands
+  // on one of its items, so the section you are in is never hidden.
+  const isActive = visibleItems.some(item => checkIsActive(href, item, true))
+  const [open, setOpen] = useState(isActive)
+
+  useEffect(() => {
+    if (isActive) setOpen(true)
+  }, [isActive])
+
   if (visibleItems.length === 0) return null
 
+  // In icon-collapsed mode the groups render as a plain icon rail, so every
+  // group must stay expanded (collapsing is disabled) to keep all icons visible.
+  const isOpen = state === 'collapsed' ? true : open
+
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel>{title}</SidebarGroupLabel>
-      <SidebarMenu>
-        {visibleItems.map((item) => {
-          const key = `${item.title}-${item.url}`
+    <Collapsible
+      asChild
+      open={isOpen}
+      onOpenChange={(next) => {
+        if (state !== 'collapsed') setOpen(next)
+      }}
+      className='group/group'
+    >
+      <SidebarGroup>
+        <CollapsibleTrigger asChild>
+          <SidebarGroupLabel className='cursor-pointer select-none'>
+            {title}
+            <ChevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/group:rotate-90' />
+          </SidebarGroupLabel>
+        </CollapsibleTrigger>
+        <CollapsibleContent className='CollapsibleContent'>
+          <SidebarMenu>
+            {visibleItems.map((item) => {
+              const key = `${item.title}-${item.url}`
 
-          if (!item.items)
-            return <SidebarMenuLink key={key} item={item} href={href} />
+              if (!item.items)
+                return <SidebarMenuLink key={key} item={item} href={href} />
 
-          if (state === 'collapsed')
-            return (
-              <SidebarMenuCollapsedDropdown key={key} item={item} href={href} />
-            )
+              if (state === 'collapsed')
+                return (
+                  <SidebarMenuCollapsedDropdown key={key} item={item} href={href} />
+                )
 
-          return <SidebarMenuCollapsible key={key} item={item} href={href} />
-        })}
-      </SidebarMenu>
-    </SidebarGroup>
+              return <SidebarMenuCollapsible key={key} item={item} href={href} />
+            })}
+          </SidebarMenu>
+        </CollapsibleContent>
+      </SidebarGroup>
+    </Collapsible>
   )
 }
 

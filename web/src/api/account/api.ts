@@ -162,6 +162,14 @@ export interface ArchiveRules {
     spam_headers: string[];
 }
 
+export interface ExtractionRules {
+    enabled: boolean;
+    extensions: FilterRule;
+    folders: FilterRule;
+    attachment_names: FilterRule;
+    senders: FilterRule;
+}
+
 export interface AccountModel {
     id: number;
     account_type: AccountType;
@@ -189,7 +197,15 @@ export interface AccountModel {
     auto_download_new_mailboxes?: boolean;
     download_schedule?: string;
     archive_rules?: ArchiveRules;
+    extraction_rules?: ExtractionRules;
     deleting?: boolean;
+    /** Retention window in days (0 / undefined = keep everything). */
+    retention_days?: number;
+    /** Legal hold flag (Enterprise). When true the retention sweep skips this account. */
+    legal_hold?: boolean;
+    hold_reason?: string | null;
+    hold_placed_by?: number | null;
+    hold_placed_at?: number | null;
 }
 
 export const download_state = async (account_id: number) => {
