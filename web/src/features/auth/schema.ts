@@ -11,6 +11,7 @@ export const getFormSchema = (
       .string()
       .min(1, { message: t('validation.pleaseEnterPassword') })
       .min(4, { message: t('validation.passwordMinLength', { min: 4 }) }),
+    code: z.string().optional(),
   })
 
 export type LoginFormValues = z.infer<ReturnType<typeof getFormSchema>>

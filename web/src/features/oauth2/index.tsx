@@ -59,8 +59,8 @@ export default function OAuth2() {
         <div className="mx-auto max-w-[88rem] px-4">
           <div className="mb-2 flex items-start flex-wrap gap-x-4 gap-y-2">
             <div className="flex-1 min-w-[300px]">
-              <h2 className="text-2xl font-bold tracking-tight">{t('oauth2.title')}</h2>
-              <p className="text-muted-foreground">
+              <h2 className="text-lg font-bold tracking-tight">{t('oauth2.title')}</h2>
+              <p className="text-xs text-muted-foreground">
                 {t('oauth2.description')}
               </p>
             </div>

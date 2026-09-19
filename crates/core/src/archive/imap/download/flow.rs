@@ -289,24 +289,37 @@ pub async fn fetch_and_save_full_mailbox(
         }
     };
 
-    let uid_list =
-        match ImapExecutor::uid_search_all_mailbox(&mut session, &mailbox.encoded_name()).await {
-            Ok(list) => list,
-            Err(e) => {
-                let err_msg = format!("UID SEARCH failed in [{}]: {:#?}", mailbox.name, e);
-                DownloadState::update_folder_progress(
-                    account_id,
-                    mailbox.name.clone(),
-                    0,
-                    0,
-                    FolderStatus::Failed,
-                    Some(err_msg.clone()),
-                )?;
-                DownloadState::append_session_error(account_id, err_msg)?;
-                session.logout().await.ok();
-                return Err(e);
-            }
-        };
+    // When retention is active, full downloads are limited to the retention
+    // window: everything older was already purged (or is rejected at ingest),
+    // so refetching it would just waste bandwidth and get swept again.
+    let full_search = match crate::retention::retention_floor_date(account) {
+        Some(floor) => format!("SINCE {floor}"),
+        None => "ALL".to_string(),
+    };
+    let uid_list = match ImapExecutor::uid_search(&mut session, &mailbox.encoded_name(), &full_search)
+        .await
+    {
+        Ok(list) => list,
+        Err(e) => {
+            let err_msg = format!("UID SEARCH failed in [{}]: {:#?}", mailbox.name, e);
+            DownloadState::update_folder_progress(
+                account_id,
+                mailbox.name.clone(),
+                0,
+                0,
+                FolderStatus::Failed,
+                Some(err_msg.clone()),
+            )?;
+            DownloadState::append_session_error(account_id, err_msg)?;
+            session.logout().await.ok();
+            return Err(e);
+        }
+    };
+
+    // `uid_search` returns a set; the download loop below pages over UIDs in
+    // ascending order (stable while new mail only grows UIDs).
+    let mut uid_list: Vec<u32> = uid_list.into_iter().collect();
+    uid_list.sort();
 
     let planned = uid_list.len() as u64;
     if planned == 0 {
@@ -567,28 +580,31 @@ async fn reconcile_uid_validity_change(
         .await
         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
-    // Phase 2: collect remote UIDs, respecting date constraints
-    let remote_uid_list: Vec<u32> = if let Some(date_since) = &account.date_since {
-        let date = date_since.since_date()?;
+    // Phase 2: collect remote UIDs, respecting date constraints. When the
+    // account has a retention window, a `SINCE` floor is composed in so the
+    // full UID compare does not re-download mail the retention sweep already
+    // purged. The floor is conservative (INTERNALDATE based): anything the
+    // server still reports as recent is fetched, then re-checked against the
+    // exact window at ingest time.
+    let retention_floor = crate::retention::retention_floor_date(account);
+    let remote_uid_list: Vec<u32> = {
+        let mut criteria: Vec<String> = Vec::new();
+        if let Some(date_since) = &account.date_since {
+            criteria.push(format!("SINCE {}", date_since.since_date()?));
+        }
+        if let Some(date_before) = &account.date_before {
+            criteria.push(format!("BEFORE {}", date_before.calculate_date()?));
+        }
+        if let Some(floor) = retention_floor {
+            criteria.push(format!("SINCE {floor}"));
+        }
+        let query = if criteria.is_empty() {
+            "ALL".to_string()
+        } else {
+            criteria.join(" ")
+        };
         let results = session
-            .uid_search(&format!("SINCE {date}"))
-            .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        let mut v: Vec<u32> = results.into_iter().collect();
-        v.sort();
-        v
-    } else if let Some(date_before) = &account.date_before {
-        let date = date_before.calculate_date()?;
-        let results = session
-            .uid_search(&format!("BEFORE {date}"))
-            .await
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-        let mut v: Vec<u32> = results.into_iter().collect();
-        v.sort();
-        v
-    } else {
-        let results = session
-            .uid_search("ALL")
+            .uid_search(&query)
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         let mut v: Vec<u32> = results.into_iter().collect();

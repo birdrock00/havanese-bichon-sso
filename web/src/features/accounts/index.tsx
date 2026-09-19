@@ -71,8 +71,8 @@ export default function Accounts() {
         <div className="mx-auto w-full max-w-[108rem] px-4">
           <div className='mb-2 flex items-center justify-between flex-wrap gap-x-4 gap-y-2'>
             <div>
-              <h2 className='text-2xl font-bold tracking-tight'>{t('accounts.title')}</h2>
-              <p className='text-muted-foreground'>
+              <h2 className='text-lg font-bold tracking-tight'>{t('accounts.title')}</h2>
+              <p className='text-xs text-muted-foreground'>
                 {t('accounts.description')}
               </p>
             </div>
