@@ -9,6 +9,7 @@ export default defineConfig({
   base: '',
   plugins: [react(), TanStackRouterVite()],
   resolve: {
+    dedupe: ['react', 'react-dom'],
     alias: {
       '@': path.resolve(__dirname, './src'),
 

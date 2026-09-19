@@ -46,13 +46,13 @@ pub fn fatal_commit(writer: &mut IndexWriter) {
                 return;
             }
             Err(e) => match &e {
-                tantivy::TantivyError::IoError(io_error) => {
+                tantivy::TantivyError::IoError(_) | tantivy::TantivyError::OpenWriteError(_) => {
                     if attempt < MAX_RETRIES {
                         eprintln!(
                             "[WARN] Commit failed (attempt {}/{}): {:?}. Retrying in {}ms...",
                             attempt + 1,
                             MAX_RETRIES + 1,
-                            io_error,
+                            e,
                             RETRY_DELAY_MS * (attempt as u64 + 1)
                         );
                         std::thread::sleep(std::time::Duration::from_millis(
@@ -62,7 +62,7 @@ pub fn fatal_commit(writer: &mut IndexWriter) {
                         eprintln!(
                             "[FATAL] Tantivy commit failed after {} attempts: {:?}",
                             MAX_RETRIES + 1,
-                            io_error
+                            e
                         );
                         std::process::exit(1);
                     }

@@ -27,6 +27,9 @@ struct FeaturesResponse {
     version: String,
     oidc_enabled: bool,
     oidc_auto_redirect: bool,
+    sso_enabled: bool,
+    ldap_enabled: bool,
+    siem_enabled: bool,
 }
 
 #[handler]
@@ -48,5 +51,11 @@ pub async fn get_features() -> impl IntoResponse {
         version: env!("CARGO_PKG_VERSION").to_string(),
         oidc_enabled,
         oidc_auto_redirect: oidc_enabled && SETTINGS.bichon_oidc_auto_redirect,
+        // Community edition: Pro-only flags default off. Kept in the
+        // response so upstream frontend code reading sso/ldap/siem keeps
+        // working after the merge.
+        sso_enabled: oidc_enabled,
+        ldap_enabled: false,
+        siem_enabled: false,
     })
 }

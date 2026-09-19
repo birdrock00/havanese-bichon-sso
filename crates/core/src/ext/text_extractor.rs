@@ -57,6 +57,24 @@ pub fn set_extractor(extractor: Box<dyn AttachmentTextExtractor>) {
 /// and CPU cost for huge files whose text is rarely useful for search.
 pub const MAX_EXTRACT_BYTES: usize = 10 * 1024 * 1024;
 
+/// Runtime override for [`MAX_EXTRACT_BYTES`], installed by Pro/Enterprise at
+/// startup via [`set_max_extract_bytes`]. `None` keeps the default.
+static MAX_EXTRACT_BYTES_OVERRIDE: RwLock<Option<usize>> = RwLock::new(None);
+
+/// The current attachment size cap for text extraction.
+pub fn max_extract_bytes() -> usize {
+    MAX_EXTRACT_BYTES_OVERRIDE
+        .read()
+        .unwrap()
+        .unwrap_or(MAX_EXTRACT_BYTES)
+}
+
+/// Overrides the attachment size cap. Called by Pro/Enterprise at startup
+/// before the pipeline starts extracting attachment text.
+pub fn set_max_extract_bytes(limit: usize) {
+    *MAX_EXTRACT_BYTES_OVERRIDE.write().unwrap() = Some(limit.max(1));
+}
+
 /// Quick pre-filter: returns true for file types where text extraction may
 /// produce useful results. Avoids cloning attachment bytes for images, videos,
 /// archives, etc. when no registered extractor would handle them.

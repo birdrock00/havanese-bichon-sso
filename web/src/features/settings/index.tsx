@@ -20,15 +20,17 @@
 import { Outlet } from '@tanstack/react-router'
 import { Main } from '@/components/layout/main'
 import SidebarNav from './components/sidebar-nav'
-import { KeyRound, Palette, SettingsIcon, ShieldCheck, UserCog, Waypoints } from 'lucide-react'
+import { Brush, KeyRound, LockKeyhole, Palette, Radar, SettingsIcon, ShieldCheck, UserCog, Waypoints } from 'lucide-react'
 import { FixedHeader } from '@/components/layout/fixed-header'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { useEdition } from '@/hooks/use-edition'
 import { useTranslation } from 'react-i18next'
 import { Separator } from '@/components/ui/separator'
 
 export default function Settings() {
   const { t } = useTranslation()
-  const { canGlobal } = useCurrentUser()
+  const { canGlobal, require_any_permission } = useCurrentUser()
+  const { isPro, isEnterprise } = useEdition()
 
 
   const sidebarNavItems = [
@@ -43,9 +45,26 @@ export default function Settings() {
       icon: <ShieldCheck size={18} />
     },
     {
+      title: t('settings.sidebar.mfa', 'Two-factor Auth'),
+      href: '/settings/mfa',
+      icon: <LockKeyhole size={18} />,
+    },
+    {
       title: t('settings.appearance.title'),
       href: '/settings/appearance',
       icon: <Palette size={18} />,
+    },
+    {
+      title: t('settings.sidebar.branding', 'Branding'),
+      href: '/settings/branding',
+      icon: <Brush size={18} />,
+      visible: isPro && require_any_permission(['system:root', 'user:manage']),
+    },
+    {
+      title: t('settings.sidebar.siem', 'SIEM'),
+      href: '/settings/siem',
+      icon: <Radar size={18} />,
+      visible: isEnterprise && require_any_permission(['system:root', 'user:manage']),
     },
     {
       title: t('settings.sidebar.apiTokens'),
@@ -70,10 +89,10 @@ export default function Settings() {
       <FixedHeader />
       <Main>
         <div className='space-y-0.5'>
-          <h1 className='text-2xl font-bold tracking-tight md:text-3xl'>
+          <h1 className='text-lg font-bold tracking-tight md:text-3xl'>
             {t('settings.header.title')}
           </h1>
-          <p className='text-muted-foreground'>
+          <p className='text-xs text-muted-foreground'>
             {t('settings.header.description')}
           </p>
         </div>
