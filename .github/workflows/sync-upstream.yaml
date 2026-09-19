@@ -11,6 +11,13 @@ name: Sync Upstream
 # branding (scripts/rebrand-readme.py) on top of whatever upstream shipped,
 # and that's worth a quick look before it merges.
 
+# GITHUB_TOKEN cannot create or update files under .github/workflows/
+# (platform rule -- no permissions: block can grant it, there is no
+# `workflows` key for Actions). Upstream regularly touches workflow files,
+# so checkout/push/PR steps authenticate with SYNC_UPSTREAM_PAT (a PAT with
+# Contents + Workflows + Pull-requests scope) when present, falling back to
+# github.token for syncs that don't touch workflow files.
+
 on:
   schedule:
     - cron: '17 3 */14 * *'
@@ -19,7 +26,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  workflows: write
 
 concurrency:
   group: sync-upstream
@@ -36,6 +42,7 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: true
+          token: ${{ secrets.SYNC_UPSTREAM_PAT || github.token }}
 
       - name: Configure git identity
         run: |-
@@ -89,7 +96,7 @@ jobs:
       - name: Open pull request
         if: steps.changes.outputs.changed == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.SYNC_UPSTREAM_PAT || github.token }}
         run: |-
           existing="$(gh pr list --head "${{ steps.push.outputs.branch }}" --state open --json number --jq '.[0].number')"
           if [ -n "$existing" ]; then
