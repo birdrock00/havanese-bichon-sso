@@ -22,6 +22,7 @@ use crate::common::auth::WrappedContext;
 use crate::rest::api::ApiTags;
 use crate::rest::ApiResult;
 use bichon_core::ext::event_bus::{emit, Event};
+use bichon_core::saved_search::SavedSearchModel;
 use bichon_core::token::AccessTokenModel;
 use bichon_core::users::minimal::MinimalUser;
 use bichon_core::users::payload::{
@@ -151,6 +152,7 @@ impl UsersApi {
             .map(|u| u.username)
             .unwrap_or_else(|| format!("user-{id}"));
         UserModel::remove(id)?;
+        let _ = SavedSearchModel::delete_all_for_user(id);
         emit(Event::UserRemoved {
             removed_by: context.user.username.clone(),
             target_user: target_username,

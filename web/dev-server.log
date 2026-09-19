@@ -1,0 +1,17 @@
+
+> bichon-ui@1.0.0 dev E:\bichon-pro\bichon-vendor\web
+> vite
+
+failed to load config from E:\bichon-pro\bichon-vendor\web\vite.config.ts
+error when starting dev server:
+Error: spawn EPERM
+    at ChildProcess.spawn (node:internal/child_process:420:11)
+    at Object.spawn (node:child_process:753:9)
+    at ensureServiceIsRunning (E:\bichon-pro\bichon-vendor\web\node_modules\.pnpm\esbuild@0.24.2\node_modules\esbuild\lib\main.js:1981:29)
+    at build (E:\bichon-pro\bichon-vendor\web\node_modules\.pnpm\esbuild@0.24.2\node_modules\esbuild\lib\main.js:1879:26)
+    at bundleConfigFile (file:///E:/bichon-pro/bichon-vendor/web/node_modules/.pnpm/vite@6.0.11_@types+node@22._031c49868d488412c54c7bb60ff83256/node_modules/vite/dist/node/chunks/dep-M1IYMR16.js:53989:24)
+    at async loadConfigFromFile (file:///E:/bichon-pro/bichon-vendor/web/node_modules/.pnpm/vite@6.0.11_@types+node@22._031c49868d488412c54c7bb60ff83256/node_modules/vite/dist/node/chunks/dep-M1IYMR16.js:53958:21)
+    at async resolveConfig (file:///E:/bichon-pro/bichon-vendor/web/node_modules/.pnpm/vite@6.0.11_@types+node@22._031c49868d488412c54c7bb60ff83256/node_modules/vite/dist/node/chunks/dep-M1IYMR16.js:53474:24)
+    at async _createServer (file:///E:/bichon-pro/bichon-vendor/web/node_modules/.pnpm/vite@6.0.11_@types+node@22._031c49868d488412c54c7bb60ff83256/node_modules/vite/dist/node/chunks/dep-M1IYMR16.js:43702:18)
+    at async CAC.<anonymous> (file:///E:/bichon-pro/bichon-vendor/web/node_modules/.pnpm/vite@6.0.11_@types+node@22._031c49868d488412c54c7bb60ff83256/node_modules/vite/dist/node/cli.js:746:20)
+ ELIFECYCLE  Command failed with exit code 1.

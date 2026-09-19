@@ -97,6 +97,23 @@ pub enum Event {
         user: String,
         ip: IpAddr,
     },
+    /// TOTP two-factor authentication was enabled for a user.
+    MfaEnabled {
+        user: String,
+        ip: Option<IpAddr>,
+    },
+    /// TOTP two-factor authentication was disabled for a user.
+    MfaDisabled {
+        user: String,
+        ip: Option<IpAddr>,
+    },
+    /// An administrator forcibly reset another user's TOTP two-factor
+    /// authentication (e.g. the user lost access to their authenticator).
+    MfaResetByAdmin {
+        admin: String,
+        target_user: String,
+        ip: Option<IpAddr>,
+    },
     UserCreated {
         created_by: String,
         new_user: String,
@@ -242,6 +259,157 @@ pub enum Event {
         email: String,
         edition: String,
     },
+    /// Pro edition: admin updated the brand identity (company name / tagline / logo).
+    BrandingUpdated {
+        user: String,
+        company_name: Option<String>,
+        tagline: Option<String>,
+        logo_changed: bool,
+    },
+    /// Pro edition: admin started an integrity check (manual full verification).
+    IntegrityCheckStarted {
+        user: String,
+        run_id: String,
+        scope: String,
+        mode: String,
+    },
+    /// Pro edition: integrity check finished with a summary.
+    IntegrityCheckCompleted {
+        user: String,
+        run_id: String,
+        total: u64,
+        ok: u64,
+        failed: u64,
+    },
+    /// Pro edition: an in-flight integrity check was cancelled.
+    IntegrityCheckCancelled {
+        user: String,
+        run_id: String,
+        processed: u64,
+    },
+    /// Pro edition: an integrity report was downloaded (CSV).
+    IntegrityReportDownloaded {
+        user: String,
+        run_id: String,
+        report_type: String,
+    },
+    /// Pro edition: a user saved a search condition for reuse.
+    SavedSearchCreated {
+        user: String,
+        search_id: String,
+        kind: String,
+        name: String,
+    },
+    /// Pro edition: a saved search was renamed (conditions are immutable).
+    SavedSearchRenamed {
+        user: String,
+        search_id: String,
+        name: String,
+    },
+    /// Pro edition: a saved search was deleted.
+    SavedSearchDeleted {
+        user: String,
+        search_id: String,
+        name: String,
+    },
+    /// A batch export job was started from a saved search.
+    ExportStarted {
+        user: String,
+        export_id: String,
+        saved_search_id: String,
+        format: String,
+        account_count: u64,
+        email_count: u64,
+    },
+    /// A batch export job finished successfully.
+    ExportCompleted {
+        user: String,
+        export_id: String,
+        saved_search_id: String,
+        exported: u64,
+        failed: u64,
+        artifact_size: u64,
+        /// SHA-256 of the finished artifact, bound into the audit trail.
+        artifact_hash: Option<String>,
+    },
+    /// A finished export artifact was compliance-verified: the artifact's
+    /// SHA-256 was recomputed and matched, and per-message content hashes
+    /// were cross-checked against the live archive.
+    ExportVerified {
+        user: String,
+        export_id: String,
+        artifact_hash: Option<String>,
+        checked: u64,
+        matched: u64,
+        mismatched: u64,
+    },
+    /// A batch export job failed.
+    ExportFailed {
+        user: String,
+        export_id: String,
+        saved_search_id: String,
+        error: String,
+    },
+    /// A batch export job was cancelled by its owner.
+    ExportCancelled {
+        user: String,
+        export_id: String,
+    },
+    /// An export artifact was downloaded.
+    ExportDownloaded {
+        user: String,
+        export_id: String,
+        email_count: u64,
+        artifact_size: u64,
+    },
+    /// A legal hold was placed on an account (Enterprise). The account is
+    /// frozen: the retention sweep skips it and bulk deletion refuses.
+    LegalHoldPlaced {
+        user: String,
+        account_id: u64,
+        /// Operator-recorded reason for the hold (audit-friendly).
+        reason: Option<String>,
+    },
+    /// A legal hold was released from an account (Enterprise).
+    LegalHoldReleased {
+        user: String,
+        account_id: u64,
+        /// Operator-recorded reason at release time.
+        reason: Option<String>,
+    },
+    /// A Merkle-tree root over archived content hashes was anchored with an
+    /// external Time-Stamp Authority (RFC 3161, Enterprise).
+    TimestampAnchored {
+        user: String,
+        anchor_id: String,
+        root_hash: String,
+        /// TSA-certified time (epoch millis).
+        gen_time: i64,
+        leaf_count: u64,
+        tsa_url: Option<String>,
+    },
+    /// A user signed in with an LDAP/AD bind (Enterprise).
+    LdapLogin {
+        user: String,
+        ip: Option<IpAddr>,
+    },
+    /// An LDAP/AD bind-based sign-in attempt failed (Enterprise).
+    LdapLoginFailed {
+        username: String,
+        ip: Option<IpAddr>,
+        reason: String,
+    },
+    /// The SIEM webhook forwarder gave up on a batch after exhausting its
+    /// retries (Enterprise). The cursor is NOT advanced, so the batch is
+    /// retried on the next cycle (at-least-once delivery).
+    SiemForwardFailed {
+        url: String,
+        seq_from: i64,
+        seq_to: i64,
+        error: String,
+    },
+    /// The SIEM webhook configuration was changed by an admin (Enterprise).
+    SiemConfigUpdated { user: String },
 }
 
 pub trait EventBus: Send + Sync {

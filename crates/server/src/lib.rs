@@ -19,6 +19,7 @@
 
 pub mod common;
 pub mod error;
+pub mod export;
 pub mod rest;
 
 use std::sync::LazyLock;
@@ -87,6 +88,9 @@ pub async fn run() -> BichonResult<()> {
         eprintln!("{:?}", error);
         return Err(error);
     }
+
+    export::load_persisted_exports();
+    export::spawn_export_cleanup();
 
     let periodic_tasks = PeriodicTasks::setup();
     let mut smtp_service: Option<SmtpServer> = None;

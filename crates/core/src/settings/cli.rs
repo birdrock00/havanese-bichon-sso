@@ -18,11 +18,11 @@
 
 use crate::settings::io::check_dir_read_write;
 use clap::{builder::ValueParser, Parser, ValueEnum};
-use std::{collections::HashSet, env, fmt, path::PathBuf, sync::LazyLock};
+use std::{collections::HashSet, env, fmt, path::PathBuf, sync::{LazyLock, OnceLock}};
 
 pub static SETTINGS: LazyLock<Settings> = LazyLock::new(Settings::init);
 
-#[derive(Debug, Parser)]
+#[derive(Clone, Debug, Parser)]
 #[clap(
     name = "bichon",
     about = "A self-hosted email synchronization and backup tool built in Rust",
@@ -353,7 +353,7 @@ pub struct Settings {
     )]
     pub bichon_imap_encryption: EncryptionMode,
 
-    /// Enable OIDC-based Single Sign-On (Pro/Enterprise feature).
+    /// Enable OIDC-based Single Sign-On (available in community edition in this fork).
     #[clap(long, default_value = "false", env, help = "Enable OpenID Connect SSO")]
     pub bichon_oidc_enabled: bool,
 
@@ -424,28 +424,40 @@ pub struct Settings {
         help = "Maximum per-file size in MB for PST uploads via the web UI"
     )]
     pub bichon_web_pst_upload_limit_mb: u64,
-
-    /// Audit log retention period in days (default: 90). Older audit records
-    /// are purged periodically by a background task. 0 disables the cleanup.
-    /// Pro edition only.
-    #[clap(
-        long,
-        default_value = "90",
-        env,
-        help = "Audit log retention period in days (0 disables cleanup). Pro edition only."
-    )]
-    pub bichon_audit_retention_days: u64,
 }
+
+/// Overrides the settings used by the `SETTINGS` global.
+///
+/// The Pro binary parses one merged clap command (community + Pro args) and
+/// seeds this override before anything derefs `SETTINGS`, so community CLI
+/// args keep working even when Pro-only flags are present on the same command
+/// line.
+pub fn override_settings(settings: Settings) {
+    let _ = SETTINGS_OVERRIDE.set(settings);
+}
+
+static SETTINGS_OVERRIDE: OnceLock<Settings> = OnceLock::new();
 
 impl Settings {
     pub fn init() -> Self {
-        // `cargo test` passes test-filter names and flags (e.g. --nocapture)
-        // as extra positional arguments.  Try the full argv first; if clap
-        // rejects it, fall back to parsing with only the binary name so that
-        // the settings come entirely from environment variables.
-        let args: Vec<String> = std::env::args().collect();
-        let s = Self::try_parse_from(&args)
-            .unwrap_or_else(|_| Self::parse_from(std::iter::once(args[0].clone())));
+        // The Pro binary parses a single merged clap command (community +
+        // Pro args) and seeds the override below before anything derefs
+        // `SETTINGS`.  When an override is present it wins and argv is not
+        // re-parsed, so community CLI args keep working even when Pro-only
+        // flags are present on the same command line.
+        let s = match SETTINGS_OVERRIDE.get() {
+            Some(settings) => settings.clone(),
+            None => {
+                // `cargo test` passes test-filter names and flags (e.g.
+                // --nocapture) as extra positional arguments.  Try the full
+                // argv first; if clap rejects it, fall back to parsing with
+                // only the binary name so that the settings come entirely
+                // from environment variables.
+                let args: Vec<String> = std::env::args().collect();
+                Self::try_parse_from(&args)
+                    .unwrap_or_else(|_| Self::parse_from(std::iter::once(args[0].clone())))
+            }
+        };
         if s.bichon_encrypt_password.is_none() && s.bichon_encrypt_password_file.is_none() {
             panic!(
                 "One of --bichon_encrypt_password or --bichon_encrypt_password_file has to be set"
