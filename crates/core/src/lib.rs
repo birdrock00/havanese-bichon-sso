@@ -9,6 +9,7 @@ pub mod dashboard;
 pub mod database;
 pub mod envelope;
 pub mod error;
+pub mod export;
 pub mod imap;
 pub mod import;
 pub mod logger;
@@ -16,7 +17,12 @@ pub mod mailbox;
 pub mod message;
 pub mod migrate;
 pub mod oauth2;
+<<<<<<< HEAD
 pub mod oidc;
+=======
+pub mod retention;
+pub mod saved_search;
+>>>>>>> upstream/main
 pub mod settings;
 pub mod store;
 pub mod tasks;

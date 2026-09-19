@@ -22,7 +22,6 @@ use serde::Serialize;
 
 #[derive(Serialize)]
 struct FeaturesResponse {
-    features: Vec<String>,
     edition: &'static str,
     version: String,
     oidc_enabled: bool,
@@ -43,7 +42,10 @@ pub async fn get_features() -> impl IntoResponse {
     }
 
     Json(FeaturesResponse {
+<<<<<<< HEAD
         features,
+=======
+>>>>>>> upstream/main
         edition: "community",
         version: env!("CARGO_PKG_VERSION").to_string(),
         oidc_enabled,

@@ -20,6 +20,7 @@
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Row } from '@tanstack/react-table'
 import { IconEdit, IconTrash } from '@tabler/icons-react'
+import { ShieldOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -62,6 +63,18 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             {t('table.edit')}
             <DropdownMenuShortcut>
               <IconEdit size={16} />
+            </DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => {
+              setCurrentRow(row.original)
+              setOpen('mfa-reset')
+            }}
+          >
+            {t('users.actions.reset_mfa.button_confirm')}
+            <DropdownMenuShortcut>
+              <ShieldOff size={16} />
             </DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuSeparator />

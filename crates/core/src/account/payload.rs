@@ -63,6 +63,9 @@ pub struct AccountCreateRequest {
     /// Attachment text extraction rules (Pro feature).
     /// `None` = extract everything (backward compatible).
     pub extraction_rules: Option<ExtractionRules>,
+    /// Account-level retention period in days (free/community feature).
+    /// `None` or `0` = disabled (archive everything, never auto-purge).
+    pub retention_days: Option<u64>,
 }
 
 impl AccountCreateRequest {
@@ -195,12 +198,25 @@ pub struct AccountUpdateRequest {
     pub auto_download_new_mailboxes: Option<bool>,
     pub download_schedule: Option<String>,
     pub clear_download_schedule: Option<bool>,
+    /// Clear archive filtering rules back to `None` (default behavior).
+    /// Cannot be combined with `archive_rules`.
+    pub clear_archive_rules: Option<bool>,
+    /// Clear attachment extraction rules back to `None` (default behavior).
+    /// Cannot be combined with `extraction_rules`.
+    pub clear_extraction_rules: Option<bool>,
     /// Email archive filtering rules (Pro feature).
     /// `None` = no change. Use `Some(ArchiveRules { .. })` to set.
     pub archive_rules: Option<ArchiveRules>,
     /// Attachment text extraction rules (Pro feature).
     /// `None` = no change. Use `Some(ExtractionRules { .. })` to set.
     pub extraction_rules: Option<ExtractionRules>,
+    /// Account-level retention period in days (free/community feature).
+    /// `Some(0)` disables retention; `None` means no change. A background
+    /// sweep purges envelopes older than the window (held accounts exempt).
+    pub retention_days: Option<u64>,
+    /// Clear retention back to `None` (disabled). Cannot be combined with
+    /// `retention_days`.
+    pub clear_retention_days: Option<bool>,
 }
 
 impl AccountUpdateRequest {
@@ -229,6 +245,24 @@ impl AccountUpdateRequest {
             ));
         }
 
+        if self.clear_archive_rules == Some(true) && self.archive_rules.is_some() {
+            return Err(raise_error!(
+                "clear_archive_rules cannot be combined with archive_rules".into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+        if self.clear_extraction_rules == Some(true) && self.extraction_rules.is_some() {
+            return Err(raise_error!(
+                "clear_extraction_rules cannot be combined with extraction_rules".into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+        if self.clear_retention_days == Some(true) && self.retention_days.is_some() {
+            return Err(raise_error!(
+                "clear_retention_days cannot be combined with retention_days".into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
         if let Some(date_since) = self.date_since.as_ref() {
             date_since.validate()?;
         }

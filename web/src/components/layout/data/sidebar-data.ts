@@ -15,26 +15,37 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
 import {
   IconHelp,
   IconLayoutDashboard,
-  IconSettings
+  IconSettings,
 } from '@tabler/icons-react'
-import { BadgeCheck, IdCard, Inbox, Paperclip, Search, Upload, Users2, ScrollText } from 'lucide-react'
-import { type SidebarData } from '../types'
+import {
+  BadgeCheck,
+  BarChart3,
+  Download,
+  FileCheck2,
+  Fingerprint,
+  IdCard,
+  Inbox,
+  Lock,
+  Paperclip,
+  Search,
+  ShieldCheck,
+  Upload,
+  Users2,
+  ScrollText,
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useEdition } from '@/hooks/use-edition'
+import { type SidebarData } from '../types'
 
 export function useSidebarData(): SidebarData {
   const { t } = useTranslation()
 
   const { require_any_permission } = useCurrentUser()
-  const { features } = useEdition()
-  const auditEnabled = features.includes('audit_log')
-  const licenseEnabled = features.includes('license')
+  const { isPro, isEnterprise } = useEdition()
 
   return {
     navGroups: [
@@ -45,7 +56,7 @@ export function useSidebarData(): SidebarData {
             title: t('navigation.dashboard'),
             url: '/',
             icon: IconLayoutDashboard,
-          }
+          },
         ],
       },
       {
@@ -62,16 +73,41 @@ export function useSidebarData(): SidebarData {
             icon: Search,
           },
           {
+            title: t('navigation.analytics', 'Analytics'),
+            url: '/analytics',
+            icon: BarChart3,
+            visible:
+              isPro &&
+              require_any_permission([
+                'system:root',
+                'user:manage',
+                'data:read:all',
+                // Account-scoped managers / readers can analyze the accounts
+                // they can read - global "manage account all" is not required.
+                'data:read',
+                'account:manage',
+              ]),
+          },
+          {
             title: t('import.title', 'Import'),
             url: '/import',
             icon: Upload,
             visible: require_any_permission(['data:import:batch']),
           },
           {
+            title: t('export_tasks.title', 'Export Tasks'),
+            url: '/exports',
+            icon: Download,
+            visible: require_any_permission([
+              'data:export:batch',
+              'data:export:batch:all',
+            ]),
+          },
+          {
             title: t('navigation.attachment'),
             url: '/attachment',
             icon: Paperclip,
-          }
+          },
         ],
       },
       {
@@ -80,9 +116,9 @@ export function useSidebarData(): SidebarData {
           {
             title: t('navigation.oauth2'),
             url: '/oauth2',
-            icon: IdCard
-          }
-        ]
+            icon: IdCard,
+          },
+        ],
       },
       {
         title: t('navigation.users'),
@@ -92,8 +128,64 @@ export function useSidebarData(): SidebarData {
             url: '/users',
             icon: Users2,
             visible: require_any_permission(['system:root', 'user:manage']),
-          }
-        ]
+          },
+        ],
+      },
+      {
+        title: t('navigation.compliance'),
+        items: [
+          {
+            title: t('navigation.integrity', 'Integrity'),
+            url: '/integrity',
+            icon: ShieldCheck,
+            visible:
+              isEnterprise &&
+              require_any_permission([
+                'system:root',
+                'account:manage:all',
+                'account:manage',
+              ]),
+          },
+          {
+            title: t('compliance_export.title', 'Compliance Export'),
+            url: '/compliance-export',
+            icon: FileCheck2,
+            visible:
+              isEnterprise &&
+              require_any_permission([
+                'data:export:batch',
+                'data:export:batch:all',
+              ]),
+          },
+          {
+            title: t('navigation.auditLog'),
+            url: '/audit-log',
+            icon: ScrollText,
+            visible:
+              isEnterprise &&
+              require_any_permission([
+                'system:root',
+                'user:manage',
+                'data:read:all',
+              ]),
+          },
+          {
+            title: t('navigation.legalHold', 'Legal Hold'),
+            url: '/legal-hold',
+            icon: Lock,
+            visible:
+              isEnterprise &&
+              require_any_permission(['legal:hold', 'system:root']),
+          },
+          {
+            title: t('navigation.timestampAnchor', 'Timestamp anchoring'),
+            url: '/timestamp-anchor',
+            icon: Fingerprint,
+            visible:
+              isEnterprise &&
+              require_any_permission(['timestamp:manage', 'system:root']),
+          },
+        ],
       },
       {
         title: t('navigation.other'),
@@ -112,13 +204,8 @@ export function useSidebarData(): SidebarData {
             title: t('navigation.license'),
             url: '/license',
             icon: BadgeCheck,
-            visible: licenseEnabled && require_any_permission(['system:root', 'user:manage']),
-          },
-          {
-            title: t('navigation.auditLog'),
-            url: '/audit-log',
-            icon: ScrollText,
-            visible: auditEnabled && require_any_permission(['system:root', 'user:manage', 'data:read:all']),
+            visible:
+              isPro && require_any_permission(['system:root', 'user:manage']),
           },
         ],
       },

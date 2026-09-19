@@ -64,7 +64,11 @@ jobs:
           node-version: 20
 
       - name: Install pnpm
+<<<<<<< HEAD
         run: npm install -g pnpm@9.15.9
+=======
+        run: npm install -g pnpm@10.18.3
+>>>>>>> upstream/main
 
       - name: Build frontend (web)
         working-directory: ./web

@@ -276,6 +276,9 @@ export function VirtualizedSelect({
       .filter(Boolean);
 
     if (selectedLabels.length === 0) return placeholder;
+    if (selectedLabels.length > 2) {
+      return `${selectedLabels.slice(0, 2).join(', ')}, +${selectedLabels.length - 2}`;
+    }
     return selectedLabels.join(", ");
   };
 

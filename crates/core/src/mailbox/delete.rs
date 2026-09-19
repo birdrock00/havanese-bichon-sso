@@ -17,12 +17,31 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::{
+    account::migration::AccountModel,
     archive::imap::mailbox::MailBox,
+    error::code::ErrorCode,
     error::BichonResult,
+    raise_error,
     store::tantivy::{attachment::ATTACHMENT_MANAGER, envelope::ENVELOPE_MANAGER},
 };
 
 pub async fn delete_mailbox_impl(account_id: u64, mailbox_id: u64) -> BichonResult<()> {
+    let account = AccountModel::get(account_id)?;
+
+    // Legal hold: deleting a mailbox cascade-purges its envelopes and
+    // attachments, which would destroy held data. Refuse before any mutation
+    // (mailbox rows, envelopes, attachments). In the community edition
+    // `legal_hold` is always false, so this guard is a no-op there.
+    if account.is_on_hold() {
+        return Err(raise_error!(
+            format!(
+                "Account {} ({}) is under a legal hold; deleting its mailboxes is disabled while the hold is active",
+                account.id, account.email
+            ),
+            ErrorCode::Forbidden
+        ));
+    }
+
     let mailbox = MailBox::get(mailbox_id)?;
 
     let name = mailbox.name;
@@ -51,4 +70,79 @@ pub async fn delete_mailbox_impl(account_id: u64, mailbox_id: u64) -> BichonResu
         .delete_mailbox_attachments(account_id, ids_to_delete.clone())
         .await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Once;
+
+    use crate::account::migration::{AccountModel, AccountType};
+    use crate::account::payload::AccountCreateRequest;
+    use crate::database::{insert_impl, manager::DB_MANAGER};
+    use crate::error::code::ErrorCode;
+    use crate::settings::cli::SETTINGS;
+    use crate::settings::dir::DATA_DIR_MANAGER;
+
+    use super::delete_mailbox_impl;
+
+    static TEST_ENV: Once = Once::new();
+    fn init_test_env() {
+        TEST_ENV.call_once(|| {
+            let root = std::env::temp_dir().join(format!(
+                "bichon-core-test-{}",
+                std::process::id()
+            ));
+            std::fs::create_dir_all(&root).unwrap();
+            std::env::set_var("BICHON_ROOT_DIR", &root);
+            std::env::set_var("BICHON_ENCRYPT_PASSWORD", "test-password");
+            let _ = &*SETTINGS;
+            let _ = &*DATA_DIR_MANAGER;
+            let _ = &*DB_MANAGER;
+        });
+    }
+
+    fn insert_account(id: u64, email: &str) -> AccountModel {
+        let request = AccountCreateRequest {
+            email: email.to_string(),
+            login_name: None,
+            account_name: None,
+            imap: None,
+            enabled: true,
+            date_since: None,
+            date_before: None,
+            account_type: AccountType::NoSync,
+            download_interval_min: None,
+            download_batch_size: None,
+            max_email_size_bytes: None,
+            use_dangerous: false,
+            pgp_key: None,
+            imap_quota_bytes: None,
+            imap_quota_window: None,
+            auto_download_new_mailboxes: None,
+            download_schedule: None,
+            archive_rules: None,
+            extraction_rules: None,
+            retention_days: None,
+        };
+        let account = AccountModel::new(id, request).unwrap();
+        insert_impl(DB_MANAGER.db(), account.clone()).unwrap();
+        account
+    }
+
+    #[tokio::test]
+    async fn delete_mailbox_guard_fires_before_any_mutation() {
+        init_test_env();
+        let account = insert_account(9011, "hold-mailbox@test.example");
+
+        // No hold: the guard passes and the (nonexistent) mailbox lookup fails
+        // with a non-Forbidden error — proving the guard is what blocks the
+        // held case, not the mailbox lookup itself.
+        let err = delete_mailbox_impl(account.id, 12345).await.unwrap_err();
+        assert_ne!(err.code(), ErrorCode::Forbidden);
+
+        // Under a hold: refused with Forbidden before touching any mailbox row.
+        AccountModel::place_legal_hold(account.id, 7, Some("freeze".into())).unwrap();
+        let err = delete_mailbox_impl(account.id, 12345).await.unwrap_err();
+        assert_eq!(err.code(), ErrorCode::Forbidden);
+    }
 }

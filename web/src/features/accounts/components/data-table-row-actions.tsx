@@ -59,10 +59,10 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
 
   const canShowAnyAction =
     !isDeleting && (
-    (hasPermission) ||
-    (account_type === 'IMAP' && hasPermission) ||
-    (account_type === 'IMAP' && hasReadPermission)
-  );
+      (hasPermission) ||
+      (account_type === 'IMAP' && hasPermission) ||
+      (account_type === 'IMAP' && hasReadPermission)
+    );
 
   const showDownload = !isDeleting && account_type === 'IMAP' && hasPermission;
 
@@ -106,13 +106,14 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
                 setOpen("edit-nosync");
               }
             }}
+            className='text-xs'
           >
             {t('accounts.edit')}
             <DropdownMenuShortcut>
               <IconEdit size={16} />
             </DropdownMenuShortcut>
           </DropdownMenuItem>}
-          {account_type === "IMAP" && hasPermission && <DropdownMenuItem
+          {account_type === "IMAP" && hasPermission && <DropdownMenuItem className='text-xs'
             onClick={() => {
               navigate({ to: '/accounts/$id/settings', params: { id: String(row.original.id) } });
             }}
@@ -123,6 +124,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             </DropdownMenuShortcut>
           </DropdownMenuItem>}
           {account_type === "IMAP" && hasPermission && <DropdownMenuItem
+            className='text-xs'
             onClick={() => {
               setCurrentRow(row.original)
               setOpen('sync-folders')
@@ -134,6 +136,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             </DropdownMenuShortcut>
           </DropdownMenuItem>}
           {account_type === "IMAP" && hasReadPermission && <DropdownMenuItem
+            className='text-xs'
             onClick={() => {
               setCurrentRow(row.original)
               setOpen('detail')
@@ -146,6 +149,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuItem>}
           {hasPermission && <DropdownMenuSeparator />}
           {hasPermission && <DropdownMenuItem
+            className='text-xs'
             onClick={() => {
               setCurrentRow(row.original)
               setOpen('access-assign')
@@ -159,7 +163,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           {hasPermission && <DropdownMenuSeparator />}
 
           {showDownload && (
-            <DropdownMenuItem onClick={handleStartDownload}>
+            <DropdownMenuItem onClick={handleStartDownload} className='text-xs'>
               {t('accounts.startDownload')}
               <DropdownMenuShortcut>
                 <IconPlayerPlay size={16} />
@@ -169,7 +173,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
 
 
           {showDownload && (
-            <DropdownMenuItem onClick={handleCancelDownload}>
+            <DropdownMenuItem onClick={handleCancelDownload} className='text-xs'>
               {t('accounts.cancelDownload')}
               <DropdownMenuShortcut>
                 <IconPlayerStop size={16} />
@@ -183,7 +187,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
               setCurrentRow(row.original)
               setOpen('delete')
             }}
-            className='!text-red-500'
+            className='!text-red-500 text-xs'
           >
             {t('accounts.delete')}
             <DropdownMenuShortcut>
