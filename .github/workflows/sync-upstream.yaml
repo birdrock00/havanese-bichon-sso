@@ -19,6 +19,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  workflows: write
 
 concurrency:
   group: sync-upstream
@@ -56,7 +57,7 @@ jobs:
             echo "conflict=true" >> "$GITHUB_OUTPUT"
             # Merge with conflict markers left in place so the PR shows
             # reviewers exactly what needs manual resolution.
-            git merge --no-edit --no-ff -X ours upstream/main || true
+            git merge --no-edit --no-ff upstream/main || true
           fi
 
       - name: Reapply README branding
