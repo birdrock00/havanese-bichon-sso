@@ -538,6 +538,9 @@ impl BichonUserV2 {
             language: None,
             sso_id: Some(subject.to_string()),
             sso_provider: Some(provider.to_string()),
+            totp_secret: None,
+            totp_enabled: false,
+            totp_recovery_codes: Vec::new(),
         };
 
         let user_clone = new_user.clone();
@@ -546,8 +549,9 @@ impl BichonUserV2 {
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
         })?;
         Ok(user_clone)
+    }
 
-// ── TOTP two-factor authentication ─────────────────────────────
+    // ── TOTP two-factor authentication ─────────────────────────────
 
     /// Store a new (encrypted) TOTP secret. Enrollment is only completed by
     /// `enable_totp_with_recovery_codes` after the user proves the code works.
