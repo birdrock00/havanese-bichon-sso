@@ -85,8 +85,16 @@ export function useSearchMessages() {
         updateParams({ pageSize: size, page: 1 });
     };
 
-    const setSortBy = (val: "DATE" | "SIZE") => updateParams({ sortBy: val });
+    const setSortBy = (val: "DATE" | "SIZE" | "RELEVANCE") => updateParams({ sortBy: val });
     const setSortOrder = (val: "desc" | "asc") => updateParams({ sortOrder: val });
+
+    // Mirror the backend's resolve_sort_by: an explicit sort wins, except an
+    // explicit RELEVANCE with no text term (falls back to DATE); when unset,
+    // a text term (text/subject/body) defaults to RELEVANCE, otherwise DATE.
+    const hasText = !!(filter.text || filter.subject || filter.body);
+    const effectiveSort: "DATE" | "SIZE" | "RELEVANCE" =
+        sortBy === "RELEVANCE" && !hasText ? "DATE"
+        : sortBy ?? (hasText ? "RELEVANCE" : "DATE");
 
     const onSubmit = (cleaned: Record<string, any>) => {
         if ('has_attachment' in cleaned && cleaned.has_attachment === false) {
@@ -138,6 +146,7 @@ export function useSearchMessages() {
         setSortBy,
         sortOrder,
         setSortOrder,
+        effectiveSort,
         isLoading,
         isError,
         error: error as Error | null,

@@ -1738,6 +1738,20 @@ impl IndexManager {
                     .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
                 mailbox_docs = ingest_at_docs.into_iter().map(|(_, addr)| addr).collect();
             }
+            SortBy::Relevance => {
+                // BM25 relevance: Tantivy scores the whole query. Always
+                // descending (a higher score = more relevant); the `desc`
+                // flag has no meaning here.
+                let score_docs: Vec<(f32, DocAddress)> = searcher
+                    .search(
+                        &query,
+                        &TopDocs::with_limit(page_size as usize)
+                            .and_offset(offset as usize)
+                            .order_by_score(),
+                    )
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                mailbox_docs = score_docs.into_iter().map(|(_, addr)| addr).collect();
+            }
         }
 
         let mut result = Vec::new();
@@ -3073,5 +3087,118 @@ mod tests {
         AccountModel::place_legal_hold(account.id, 7, Some("freeze".into())).unwrap();
         let err = ENVELOPE_MANAGER.update_envelope_tags(req).await.unwrap_err();
         assert_eq!(err.code(), ErrorCode::Forbidden);
+    }
+
+    // ── BM25 relevance vs DATE desc ordering ──────────────────────
+    //
+    // Regression scenario from the "RELEVANCE sort" feature request: a
+    // multi-term text query is OR'ed across the default fields, and results
+    // are ordered by DATE desc (the API default), so the mail matching all
+    // terms gets buried under a newer, one-term-only hit. The BM25 score that
+    // Tantivy already computes internally ranks the both-terms match first —
+    // it is just never surfaced or used for ordering.
+    #[test]
+    fn bm25_relevance_ranks_both_terms_match_first_while_date_desc_buries_it() {
+        let f = SchemaTools::email_fields();
+        let index = Index::create_in_ram(SchemaTools::email_schema());
+        index.tokenizers().register("euro", EuroTokenizer::new());
+
+        {
+            let mut writer = index
+                .writer_with_num_threads(1, 15_000_000)
+                .expect("writer");
+
+            // The mail the user is actually looking for: 2025-01-16, subject
+            // "Bienvenue chez Primagaz !" — contains BOTH query terms.
+            let mut target = TantivyDocument::new();
+            target.add_u64(f.f_account_id, 1);
+            target.add_u64(f.f_mailbox_id, 10);
+            target.add_text(f.f_message_id, "<target@test>");
+            target.add_text(f.f_id, "id-target");
+            target.add_u64(f.f_uid, 1);
+            target.add_text(f.f_content_hash, "hash-target");
+            target.add_text(f.f_subject, "Bienvenue chez Primagaz !");
+            target.add_text(f.f_body, "Bienvenue chez Primagaz, votre compte est prêt.");
+            target.add_i64(f.f_date, 1_736_985_600_000); // 2025-01-16
+            writer.add_document(target).unwrap();
+
+            // Newer mail (2025-09-01) that only mentions "bienvenue": it
+            // matches the OR query but is irrelevant to "primagaz".
+            let mut recent = TantivyDocument::new();
+            recent.add_u64(f.f_account_id, 1);
+            recent.add_u64(f.f_mailbox_id, 10);
+            recent.add_text(f.f_message_id, "<recent@test>");
+            recent.add_text(f.f_id, "id-recent");
+            recent.add_u64(f.f_uid, 2);
+            recent.add_text(f.f_content_hash, "hash-recent");
+            recent.add_text(f.f_subject, "Welcome to our September newsletter");
+            recent.add_text(f.f_body, "bienvenue à tous nos nouveaux abonnés");
+            recent.add_i64(f.f_date, 1_755_705_600_000); // 2025-09-01
+            writer.add_document(recent).unwrap();
+
+            writer.commit().unwrap();
+        }
+
+        let reader = index.reader().unwrap();
+        reader.reload().unwrap();
+        let searcher = reader.searcher();
+
+        // The exact query the search path builds for a text filter
+        // (filter_query in this file: QueryParser over email_default_fields,
+        // default OR conjunction).
+        let query = QueryParser::for_index(&index, SchemaTools::email_default_fields())
+            .parse_query("bienvenue primagaz")
+            .unwrap();
+
+        // ── Current behaviour: DATE desc (the API default) ─────────
+        let date_top: Vec<(Option<i64>, DocAddress)> = searcher
+            .search(
+                &query,
+                &TopDocs::with_limit(2).order_by_fast_field(F_DATE, Order::Desc),
+            )
+            .unwrap();
+        let date_order: Vec<String> = date_top
+            .iter()
+            .map(|(_, addr)| {
+                let doc: TantivyDocument = searcher.doc(*addr).unwrap();
+                doc.get_first(f.f_message_id)
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string()
+            })
+            .collect();
+        assert_eq!(
+            date_order[0], "<recent@test>",
+            "DATE desc must put the newer one-term mail first, burying the best match"
+        );
+
+        // ── Desired: BM25 relevance ordering ───────────────────────
+        let score_top: Vec<(f32, DocAddress)> = searcher
+            .search(&query, &TopDocs::with_limit(2).order_by_score())
+            .unwrap();
+        let score_order: Vec<String> = score_top
+            .iter()
+            .map(|(_, addr)| {
+                let doc: TantivyDocument = searcher.doc(*addr).unwrap();
+                doc.get_first(f.f_message_id)
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string()
+            })
+            .collect();
+        assert_eq!(
+            score_order[0], "<target@test>",
+            "BM25 must rank the both-terms match first"
+        );
+
+        // The both-terms doc must genuinely outscore the one-term doc.
+        assert!(
+            score_top[0].0 > score_top[1].0,
+            "target score {:.4} should exceed recent score {:.4}",
+            score_top[0].0,
+            score_top[1].0
+        );
     }
 }

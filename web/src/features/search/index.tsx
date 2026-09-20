@@ -44,7 +44,11 @@ export default function EmailSearch() {
   const [toDelete, setToDelete] = React.useState<Map<number, Set<string>>>(new Map());
   const [selected, setSelected] = React.useState<Map<number, Set<string>>>(new Map());
   const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
-  const [sorting, setSorting] = React.useState<SortingState>([{ id: "date", desc: true }]);
+  // Start with no client-side sort: the server already orders the page
+  // (RELEVANCE when the query has a text term, DATE desc otherwise), and
+  // forcing a date sort here would write sortBy=DATE into the URL and
+  // override the backend's relevance default.
+  const [sorting, setSorting] = React.useState<SortingState>([]);
   const [deleteMailboxId, setDeleteMailboxId] = React.useState<string | undefined>(undefined);
   const [selectedAccountId, setSelectedAccountId] = React.useState<number | undefined>(undefined);
   const [editTagsOpen, setEditTagsOpen] = React.useState(false);
@@ -61,6 +65,7 @@ export default function EmailSearch() {
     setSearchPageSize,
     setSortBy,
     setSortOrder,
+    effectiveSort,
     filter,
     setFilter
   } = useSearchMessages();
@@ -97,6 +102,7 @@ export default function EmailSearch() {
             setSorting,
             filter,
             setFilter,
+            effectiveSort,
             deleteMailboxId,
             setDeleteMailboxId,
             selectedAccountId,

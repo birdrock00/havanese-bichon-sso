@@ -41,7 +41,7 @@ interface MailListProps {
   items: EmailEnvelope[]
   isLoading: boolean
   onEnvelopeChanged: (envelope: EmailEnvelope) => void
-  setSortBy: (sortBy: "DATE" | "SIZE") => void
+  setSortBy: (sortBy: "DATE" | "SIZE" | "RELEVANCE") => void
   setSortOrder: (value: "desc" | "asc") => void
 }
 

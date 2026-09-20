@@ -44,6 +44,9 @@ interface AttachmentContextType {
   setSorting: React.Dispatch<React.SetStateAction<SortingState>>
   filter: Record<string, any>
   setFilter: React.Dispatch<React.SetStateAction<Record<string, any>>>
+  /// Effective sort order actually applied by the backend (RELEVANCE when a
+  /// text term is present and no explicit sort was chosen).
+  effectiveSort: "DATE" | "SIZE" | "RELEVANCE"
   handleTagToggle: (tag: string) => void
   dateDisplay: DateDisplayMode
   setDateDisplay: (mode: DateDisplayMode) => void

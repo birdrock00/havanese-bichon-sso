@@ -38,7 +38,7 @@ import { AttachmentIcon } from "./attachment-icon"
 interface MailListProps {
   items: AttachmentModel[]
   isLoading: boolean
-  setSortBy: (sortBy: "DATE" | "SIZE") => void
+  setSortBy: (sortBy: "DATE" | "SIZE" | "RELEVANCE") => void
   setSortOrder: (value: "desc" | "asc") => void
 }
 

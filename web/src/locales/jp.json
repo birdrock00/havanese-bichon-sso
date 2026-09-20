@@ -1946,6 +1946,7 @@
     "sizeDescription": "サイズは添付ファイルを含むメール全体の容量を指します。",
     "small": "小（2 MB 未満）",
     "sort": "並べ替え",
+    "sortedByRelevance": "関連度順に並べ替え",
     "source": "ソース",
     "startDate": "開始日",
     "startSearching": "キーワード、送信者、または高度なフィルターを使用して検索を開始してください。",

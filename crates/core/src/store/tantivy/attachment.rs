@@ -895,6 +895,21 @@ impl IndexManager {
                     .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
                 attachment_docs = ingest_at_docs.into_iter().map(|(_, addr)| addr).collect();
             }
+            SortBy::Relevance => {
+                // BM25 relevance: Tantivy scores the whole query. Always
+                // descending (a higher score = more relevant); the `desc`
+                // flag has no meaning here. Attachment-content hits (f_text)
+                // score the same way as subject/name hits.
+                let score_docs: Vec<(f32, DocAddress)> = searcher
+                    .search(
+                        &query,
+                        &TopDocs::with_limit(page_size as usize)
+                            .and_offset(offset as usize)
+                            .order_by_score(),
+                    )
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                attachment_docs = score_docs.into_iter().map(|(_, addr)| addr).collect();
+            }
         }
 
         let mut result = Vec::new();

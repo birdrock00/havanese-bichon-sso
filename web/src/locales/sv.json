@@ -1946,6 +1946,7 @@
     "sizeDescription": "Storleken avser e-postens totala storlek, inklusive bilagor.",
     "small": "Liten (<2 MB)",
     "sort": "Sortera",
+    "sortedByRelevance": "Sorterat efter relevans",
     "source": "Källa",
     "startDate": "Startdatum",
     "startSearching": "Börja med att ange ett sökord, avsändare eller använd avancerade filter.",

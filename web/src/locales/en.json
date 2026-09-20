@@ -1946,6 +1946,7 @@
     "sizeDescription": "The size refers to the total email size, including attachments.",
     "small": "Small (<2 MB)",
     "sort": "Sort",
+    "sortedByRelevance": "Sorted by relevance",
     "source": "Source",
     "startDate": "Start Date",
     "startSearching": "Start by entering a keyword, sender, or using advanced filters.",

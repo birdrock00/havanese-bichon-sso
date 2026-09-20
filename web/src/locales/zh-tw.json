@@ -1946,6 +1946,7 @@
     "sizeDescription": "大小指的是整封郵件的大小，包含附件。",
     "small": "小（<2 MB）",
     "sort": "排序",
+    "sortedByRelevance": "按相關度排序",
     "source": "來源",
     "startDate": "開始日期",
     "startSearching": "開始使用關鍵字、寄件人或進階篩選條件進行搜尋。",

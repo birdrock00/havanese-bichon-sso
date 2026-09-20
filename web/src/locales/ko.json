@@ -1946,6 +1946,7 @@
     "sizeDescription": "크기는 첨부 파일을 포함한 이메일 전체 크기를 의미합니다.",
     "small": "작음 (<2 MB)",
     "sort": "정렬",
+    "sortedByRelevance": "관련성 순으로 정렬됨",
     "source": "출처",
     "startDate": "시작 날짜",
     "startSearching": "키워드, 발신자 또는 고급 필터를 사용하여 검색을 시작하십시오.",

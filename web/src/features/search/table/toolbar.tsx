@@ -10,6 +10,9 @@ import { MailboxPopover } from '../mailbox-popover'
 import { AccountPopover } from '../account-popover'
 import { SavedSearchesDropdown } from '../../saved-searches/saved-searches-dropdown'
 import { useSearchContext } from '../context'
+import { Badge } from '@/components/ui/badge'
+import { Sparkles } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 type DataTableToolbarProps<TData> = {
   table: Table<TData>
@@ -18,7 +21,8 @@ type DataTableToolbarProps<TData> = {
 export function DataTableToolbar<TData>({
   table,
 }: DataTableToolbarProps<TData>) {
-  const { filter, setFilter } = useSearchContext()
+  const { filter, setFilter, effectiveSort } = useSearchContext()
+  const { t } = useTranslation()
   return (
     <div className="flex flex-col gap-1 p-1 bg-background">
       <div className="mb-4 flex items-center justify-center w-full">
@@ -43,6 +47,16 @@ export function DataTableToolbar<TData>({
           />
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          {effectiveSort === "RELEVANCE" && (
+            <Badge
+              variant="outline"
+              className="gap-1 border-primary/40 bg-primary/10 text-primary font-medium"
+              title={t('search.sortedByRelevance')}
+            >
+              <Sparkles className="h-3 w-3" />
+              {t('search.sortedByRelevance')}
+            </Badge>
+          )}
           <TimePopover />
           <DataTableViewOptions table={table} />
         </div>

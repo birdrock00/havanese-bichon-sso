@@ -5,7 +5,10 @@ import AttachmentSearch from '@/features/attachment'
 const searchSchema = z.object({
   page: z.number().catch(1),
   pageSize: z.number().optional(),
-  sortBy: z.enum(['DATE', 'SIZE']).catch('DATE'),
+  // Optional: when absent the backend defaults to RELEVANCE when the query
+  // carries a text term, else DATE. Don't fall back to DATE here, or an unset
+  // URL param would always send an explicit sort_by and defeat the default.
+  sortBy: z.enum(['DATE', 'SIZE', 'RELEVANCE']).optional(),
   sortOrder: z.enum(['asc', 'desc']).catch('desc'),
   q: z.string().optional(),
 })

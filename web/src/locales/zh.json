@@ -1946,6 +1946,7 @@
     "sizeDescription": "大小指的是邮件整体大小，包含附件。",
     "small": "小（<2 MB）",
     "sort": "排序",
+    "sortedByRelevance": "按相关度排序",
     "source": "来源",
     "startDate": "开始日期",
     "startSearching": "请输入关键词、发件人或使用高级筛选开始搜索。",
