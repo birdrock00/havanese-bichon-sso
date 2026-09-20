@@ -13,7 +13,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "2.0.3"
+version = "2.1.0"
 edition = "2021"
 
 [workspace.dependencies]
@@ -58,8 +58,8 @@ oauth2 = { version = "5.0.0", features = ["reqwest-blocking"] }
 url = { version = "2.5.8", features = ["serde"] }
 sysinfo = "0.39"
 num_cpus = "1.17.0"
-rand = "0.10.2"
-encoding_rs = "0.8.35"
+rand = "0.10"
+encoding_rs = "0.8"
 webpki-roots = "1.0"
 rustls = { version = "0.23", default-features = false, features = ["ring"] }
 rustls-pki-types = "1.15"
