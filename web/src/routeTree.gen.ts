@@ -27,9 +27,6 @@ import { Route as AuthenticatedAttachmentIndexImport } from './routes/_authentic
 const AuthenticatedTimestampAnchorLazyImport = createFileRoute(
   '/_authenticated/timestamp-anchor',
 )()
-const AuthenticatedLicenseLazyImport = createFileRoute(
-  '/_authenticated/license',
-)()
 const AuthenticatedLegalHoldLazyImport = createFileRoute(
   '/_authenticated/legal-hold',
 )()
@@ -39,8 +36,14 @@ const AuthenticatedIntegrityLazyImport = createFileRoute(
 const AuthenticatedComplianceExportLazyImport = createFileRoute(
   '/_authenticated/compliance-export',
 )()
+const AuthenticatedComplianceDashboardLazyImport = createFileRoute(
+  '/_authenticated/compliance-dashboard',
+)()
 const AuthenticatedAuditLogLazyImport = createFileRoute(
   '/_authenticated/audit-log',
+)()
+const AuthenticatedApprovalsLazyImport = createFileRoute(
+  '/_authenticated/approvals',
 )()
 const AuthenticatedAnalyticsLazyImport = createFileRoute(
   '/_authenticated/analytics',
@@ -68,9 +71,6 @@ const AuthenticatedOauth2IndexLazyImport = createFileRoute(
 const AuthenticatedOauth2ResultIndexLazyImport = createFileRoute(
   '/_authenticated/oauth2-result/',
 )()
-const AuthenticatedApiDocsIndexLazyImport = createFileRoute(
-  '/_authenticated/api-docs/',
-)()
 const AuthenticatedAccountsIndexLazyImport = createFileRoute(
   '/_authenticated/accounts/',
 )()
@@ -92,17 +92,26 @@ const AuthenticatedSettingsProfileLazyImport = createFileRoute(
 const AuthenticatedSettingsMfaLazyImport = createFileRoute(
   '/_authenticated/settings/mfa',
 )()
+const AuthenticatedSettingsLicenseLazyImport = createFileRoute(
+  '/_authenticated/settings/license',
+)()
 const AuthenticatedSettingsConfigurationsLazyImport = createFileRoute(
   '/_authenticated/settings/configurations',
 )()
 const AuthenticatedSettingsBrandingLazyImport = createFileRoute(
   '/_authenticated/settings/branding',
 )()
+const AuthenticatedSettingsApprovalsLazyImport = createFileRoute(
+  '/_authenticated/settings/approvals',
+)()
 const AuthenticatedSettingsAppearanceLazyImport = createFileRoute(
   '/_authenticated/settings/appearance',
 )()
 const AuthenticatedSettingsApiTokensLazyImport = createFileRoute(
   '/_authenticated/settings/api-tokens',
+)()
+const AuthenticatedSettingsApiDocsLazyImport = createFileRoute(
+  '/_authenticated/settings/api-docs',
 )()
 const AuthenticatedSettingsAccessLazyImport = createFileRoute(
   '/_authenticated/settings/access',
@@ -138,14 +147,6 @@ const AuthenticatedTimestampAnchorLazyRoute =
     ),
   )
 
-const AuthenticatedLicenseLazyRoute = AuthenticatedLicenseLazyImport.update({
-  id: '/license',
-  path: '/license',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any).lazy(() =>
-  import('./routes/_authenticated/license.lazy').then((d) => d.Route),
-)
-
 const AuthenticatedLegalHoldLazyRoute = AuthenticatedLegalHoldLazyImport.update(
   {
     id: '/legal-hold',
@@ -177,12 +178,33 @@ const AuthenticatedComplianceExportLazyRoute =
     ),
   )
 
+const AuthenticatedComplianceDashboardLazyRoute =
+  AuthenticatedComplianceDashboardLazyImport.update({
+    id: '/compliance-dashboard',
+    path: '/compliance-dashboard',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/compliance-dashboard.lazy').then(
+      (d) => d.Route,
+    ),
+  )
+
 const AuthenticatedAuditLogLazyRoute = AuthenticatedAuditLogLazyImport.update({
   id: '/audit-log',
   path: '/audit-log',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any).lazy(() =>
   import('./routes/_authenticated/audit-log.lazy').then((d) => d.Route),
+)
+
+const AuthenticatedApprovalsLazyRoute = AuthenticatedApprovalsLazyImport.update(
+  {
+    id: '/approvals',
+    path: '/approvals',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any,
+).lazy(() =>
+  import('./routes/_authenticated/approvals.lazy').then((d) => d.Route),
 )
 
 const AuthenticatedAnalyticsLazyRoute = AuthenticatedAnalyticsLazyImport.update(
@@ -303,15 +325,6 @@ const AuthenticatedOauth2ResultIndexLazyRoute =
     ),
   )
 
-const AuthenticatedApiDocsIndexLazyRoute =
-  AuthenticatedApiDocsIndexLazyImport.update({
-    id: '/api-docs/',
-    path: '/api-docs/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any).lazy(() =>
-    import('./routes/_authenticated/api-docs/index.lazy').then((d) => d.Route),
-  )
-
 const AuthenticatedAccountsIndexLazyRoute =
   AuthenticatedAccountsIndexLazyImport.update({
     id: '/accounts/',
@@ -404,6 +417,17 @@ const AuthenticatedSettingsMfaLazyRoute =
     import('./routes/_authenticated/settings/mfa.lazy').then((d) => d.Route),
   )
 
+const AuthenticatedSettingsLicenseLazyRoute =
+  AuthenticatedSettingsLicenseLazyImport.update({
+    id: '/license',
+    path: '/license',
+    getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/settings/license.lazy').then(
+      (d) => d.Route,
+    ),
+  )
+
 const AuthenticatedSettingsConfigurationsLazyRoute =
   AuthenticatedSettingsConfigurationsLazyImport.update({
     id: '/configurations',
@@ -426,6 +450,17 @@ const AuthenticatedSettingsBrandingLazyRoute =
     ),
   )
 
+const AuthenticatedSettingsApprovalsLazyRoute =
+  AuthenticatedSettingsApprovalsLazyImport.update({
+    id: '/approvals',
+    path: '/approvals',
+    getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/settings/approvals.lazy').then(
+      (d) => d.Route,
+    ),
+  )
+
 const AuthenticatedSettingsAppearanceLazyRoute =
   AuthenticatedSettingsAppearanceLazyImport.update({
     id: '/appearance',
@@ -444,6 +479,17 @@ const AuthenticatedSettingsApiTokensLazyRoute =
     getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
   } as any).lazy(() =>
     import('./routes/_authenticated/settings/api-tokens.lazy').then(
+      (d) => d.Route,
+    ),
+  )
+
+const AuthenticatedSettingsApiDocsLazyRoute =
+  AuthenticatedSettingsApiDocsLazyImport.update({
+    id: '/api-docs',
+    path: '/api-docs',
+    getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/settings/api-docs.lazy').then(
       (d) => d.Route,
     ),
   )
@@ -558,11 +604,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAnalyticsLazyImport
       parentRoute: typeof AuthenticatedRouteImport
     }
+    '/_authenticated/approvals': {
+      id: '/_authenticated/approvals'
+      path: '/approvals'
+      fullPath: '/approvals'
+      preLoaderRoute: typeof AuthenticatedApprovalsLazyImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
     '/_authenticated/audit-log': {
       id: '/_authenticated/audit-log'
       path: '/audit-log'
       fullPath: '/audit-log'
       preLoaderRoute: typeof AuthenticatedAuditLogLazyImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
+    '/_authenticated/compliance-dashboard': {
+      id: '/_authenticated/compliance-dashboard'
+      path: '/compliance-dashboard'
+      fullPath: '/compliance-dashboard'
+      preLoaderRoute: typeof AuthenticatedComplianceDashboardLazyImport
       parentRoute: typeof AuthenticatedRouteImport
     }
     '/_authenticated/compliance-export': {
@@ -584,13 +644,6 @@ declare module '@tanstack/react-router' {
       path: '/legal-hold'
       fullPath: '/legal-hold'
       preLoaderRoute: typeof AuthenticatedLegalHoldLazyImport
-      parentRoute: typeof AuthenticatedRouteImport
-    }
-    '/_authenticated/license': {
-      id: '/_authenticated/license'
-      path: '/license'
-      fullPath: '/license'
-      preLoaderRoute: typeof AuthenticatedLicenseLazyImport
       parentRoute: typeof AuthenticatedRouteImport
     }
     '/_authenticated/timestamp-anchor': {
@@ -621,6 +674,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAccessLazyImport
       parentRoute: typeof AuthenticatedSettingsRouteLazyImport
     }
+    '/_authenticated/settings/api-docs': {
+      id: '/_authenticated/settings/api-docs'
+      path: '/api-docs'
+      fullPath: '/settings/api-docs'
+      preLoaderRoute: typeof AuthenticatedSettingsApiDocsLazyImport
+      parentRoute: typeof AuthenticatedSettingsRouteLazyImport
+    }
     '/_authenticated/settings/api-tokens': {
       id: '/_authenticated/settings/api-tokens'
       path: '/api-tokens'
@@ -635,6 +695,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsAppearanceLazyImport
       parentRoute: typeof AuthenticatedSettingsRouteLazyImport
     }
+    '/_authenticated/settings/approvals': {
+      id: '/_authenticated/settings/approvals'
+      path: '/approvals'
+      fullPath: '/settings/approvals'
+      preLoaderRoute: typeof AuthenticatedSettingsApprovalsLazyImport
+      parentRoute: typeof AuthenticatedSettingsRouteLazyImport
+    }
     '/_authenticated/settings/branding': {
       id: '/_authenticated/settings/branding'
       path: '/branding'
@@ -647,6 +714,13 @@ declare module '@tanstack/react-router' {
       path: '/configurations'
       fullPath: '/settings/configurations'
       preLoaderRoute: typeof AuthenticatedSettingsConfigurationsLazyImport
+      parentRoute: typeof AuthenticatedSettingsRouteLazyImport
+    }
+    '/_authenticated/settings/license': {
+      id: '/_authenticated/settings/license'
+      path: '/license'
+      fullPath: '/settings/license'
+      preLoaderRoute: typeof AuthenticatedSettingsLicenseLazyImport
       parentRoute: typeof AuthenticatedSettingsRouteLazyImport
     }
     '/_authenticated/settings/mfa': {
@@ -726,13 +800,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAccountsIndexLazyImport
       parentRoute: typeof AuthenticatedRouteImport
     }
-    '/_authenticated/api-docs/': {
-      id: '/_authenticated/api-docs/'
-      path: '/api-docs'
-      fullPath: '/api-docs'
-      preLoaderRoute: typeof AuthenticatedApiDocsIndexLazyImport
-      parentRoute: typeof AuthenticatedRouteImport
-    }
     '/_authenticated/oauth2-result/': {
       id: '/_authenticated/oauth2-result/'
       path: '/oauth2-result'
@@ -775,10 +842,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedSettingsRouteLazyRouteChildren {
   AuthenticatedSettingsAccessLazyRoute: typeof AuthenticatedSettingsAccessLazyRoute
+  AuthenticatedSettingsApiDocsLazyRoute: typeof AuthenticatedSettingsApiDocsLazyRoute
   AuthenticatedSettingsApiTokensLazyRoute: typeof AuthenticatedSettingsApiTokensLazyRoute
   AuthenticatedSettingsAppearanceLazyRoute: typeof AuthenticatedSettingsAppearanceLazyRoute
+  AuthenticatedSettingsApprovalsLazyRoute: typeof AuthenticatedSettingsApprovalsLazyRoute
   AuthenticatedSettingsBrandingLazyRoute: typeof AuthenticatedSettingsBrandingLazyRoute
   AuthenticatedSettingsConfigurationsLazyRoute: typeof AuthenticatedSettingsConfigurationsLazyRoute
+  AuthenticatedSettingsLicenseLazyRoute: typeof AuthenticatedSettingsLicenseLazyRoute
   AuthenticatedSettingsMfaLazyRoute: typeof AuthenticatedSettingsMfaLazyRoute
   AuthenticatedSettingsProfileLazyRoute: typeof AuthenticatedSettingsProfileLazyRoute
   AuthenticatedSettingsProxyLazyRoute: typeof AuthenticatedSettingsProxyLazyRoute
@@ -789,14 +859,20 @@ interface AuthenticatedSettingsRouteLazyRouteChildren {
 const AuthenticatedSettingsRouteLazyRouteChildren: AuthenticatedSettingsRouteLazyRouteChildren =
   {
     AuthenticatedSettingsAccessLazyRoute: AuthenticatedSettingsAccessLazyRoute,
+    AuthenticatedSettingsApiDocsLazyRoute:
+      AuthenticatedSettingsApiDocsLazyRoute,
     AuthenticatedSettingsApiTokensLazyRoute:
       AuthenticatedSettingsApiTokensLazyRoute,
     AuthenticatedSettingsAppearanceLazyRoute:
       AuthenticatedSettingsAppearanceLazyRoute,
+    AuthenticatedSettingsApprovalsLazyRoute:
+      AuthenticatedSettingsApprovalsLazyRoute,
     AuthenticatedSettingsBrandingLazyRoute:
       AuthenticatedSettingsBrandingLazyRoute,
     AuthenticatedSettingsConfigurationsLazyRoute:
       AuthenticatedSettingsConfigurationsLazyRoute,
+    AuthenticatedSettingsLicenseLazyRoute:
+      AuthenticatedSettingsLicenseLazyRoute,
     AuthenticatedSettingsMfaLazyRoute: AuthenticatedSettingsMfaLazyRoute,
     AuthenticatedSettingsProfileLazyRoute:
       AuthenticatedSettingsProfileLazyRoute,
@@ -832,11 +908,12 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSettingsRouteLazyRoute: typeof AuthenticatedSettingsRouteLazyRouteWithChildren
   AuthenticatedUsersRouteLazyRoute: typeof AuthenticatedUsersRouteLazyRouteWithChildren
   AuthenticatedAnalyticsLazyRoute: typeof AuthenticatedAnalyticsLazyRoute
+  AuthenticatedApprovalsLazyRoute: typeof AuthenticatedApprovalsLazyRoute
   AuthenticatedAuditLogLazyRoute: typeof AuthenticatedAuditLogLazyRoute
+  AuthenticatedComplianceDashboardLazyRoute: typeof AuthenticatedComplianceDashboardLazyRoute
   AuthenticatedComplianceExportLazyRoute: typeof AuthenticatedComplianceExportLazyRoute
   AuthenticatedIntegrityLazyRoute: typeof AuthenticatedIntegrityLazyRoute
   AuthenticatedLegalHoldLazyRoute: typeof AuthenticatedLegalHoldLazyRoute
-  AuthenticatedLicenseLazyRoute: typeof AuthenticatedLicenseLazyRoute
   AuthenticatedTimestampAnchorLazyRoute: typeof AuthenticatedTimestampAnchorLazyRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAccountsNewLazyRoute: typeof AuthenticatedAccountsNewLazyRoute
@@ -845,7 +922,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedImportIndexRoute: typeof AuthenticatedImportIndexRoute
   AuthenticatedSearchIndexRoute: typeof AuthenticatedSearchIndexRoute
   AuthenticatedAccountsIndexLazyRoute: typeof AuthenticatedAccountsIndexLazyRoute
-  AuthenticatedApiDocsIndexLazyRoute: typeof AuthenticatedApiDocsIndexLazyRoute
   AuthenticatedOauth2ResultIndexLazyRoute: typeof AuthenticatedOauth2ResultIndexLazyRoute
   AuthenticatedOauth2IndexLazyRoute: typeof AuthenticatedOauth2IndexLazyRoute
   AuthenticatedAccountsIdSettingsLazyRoute: typeof AuthenticatedAccountsIdSettingsLazyRoute
@@ -857,12 +933,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedUsersRouteLazyRoute:
     AuthenticatedUsersRouteLazyRouteWithChildren,
   AuthenticatedAnalyticsLazyRoute: AuthenticatedAnalyticsLazyRoute,
+  AuthenticatedApprovalsLazyRoute: AuthenticatedApprovalsLazyRoute,
   AuthenticatedAuditLogLazyRoute: AuthenticatedAuditLogLazyRoute,
+  AuthenticatedComplianceDashboardLazyRoute:
+    AuthenticatedComplianceDashboardLazyRoute,
   AuthenticatedComplianceExportLazyRoute:
     AuthenticatedComplianceExportLazyRoute,
   AuthenticatedIntegrityLazyRoute: AuthenticatedIntegrityLazyRoute,
   AuthenticatedLegalHoldLazyRoute: AuthenticatedLegalHoldLazyRoute,
-  AuthenticatedLicenseLazyRoute: AuthenticatedLicenseLazyRoute,
   AuthenticatedTimestampAnchorLazyRoute: AuthenticatedTimestampAnchorLazyRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAccountsNewLazyRoute: AuthenticatedAccountsNewLazyRoute,
@@ -871,7 +949,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedImportIndexRoute: AuthenticatedImportIndexRoute,
   AuthenticatedSearchIndexRoute: AuthenticatedSearchIndexRoute,
   AuthenticatedAccountsIndexLazyRoute: AuthenticatedAccountsIndexLazyRoute,
-  AuthenticatedApiDocsIndexLazyRoute: AuthenticatedApiDocsIndexLazyRoute,
   AuthenticatedOauth2ResultIndexLazyRoute:
     AuthenticatedOauth2ResultIndexLazyRoute,
   AuthenticatedOauth2IndexLazyRoute: AuthenticatedOauth2IndexLazyRoute,
@@ -893,19 +970,23 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404LazyRoute
   '/503': typeof errors503LazyRoute
   '/analytics': typeof AuthenticatedAnalyticsLazyRoute
+  '/approvals': typeof AuthenticatedApprovalsLazyRoute
   '/audit-log': typeof AuthenticatedAuditLogLazyRoute
+  '/compliance-dashboard': typeof AuthenticatedComplianceDashboardLazyRoute
   '/compliance-export': typeof AuthenticatedComplianceExportLazyRoute
   '/integrity': typeof AuthenticatedIntegrityLazyRoute
   '/legal-hold': typeof AuthenticatedLegalHoldLazyRoute
-  '/license': typeof AuthenticatedLicenseLazyRoute
   '/timestamp-anchor': typeof AuthenticatedTimestampAnchorLazyRoute
   '/': typeof AuthenticatedIndexRoute
   '/accounts/new': typeof AuthenticatedAccountsNewLazyRoute
   '/settings/access': typeof AuthenticatedSettingsAccessLazyRoute
+  '/settings/api-docs': typeof AuthenticatedSettingsApiDocsLazyRoute
   '/settings/api-tokens': typeof AuthenticatedSettingsApiTokensLazyRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceLazyRoute
+  '/settings/approvals': typeof AuthenticatedSettingsApprovalsLazyRoute
   '/settings/branding': typeof AuthenticatedSettingsBrandingLazyRoute
   '/settings/configurations': typeof AuthenticatedSettingsConfigurationsLazyRoute
+  '/settings/license': typeof AuthenticatedSettingsLicenseLazyRoute
   '/settings/mfa': typeof AuthenticatedSettingsMfaLazyRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileLazyRoute
   '/settings/proxy': typeof AuthenticatedSettingsProxyLazyRoute
@@ -917,7 +998,6 @@ export interface FileRoutesByFullPath {
   '/import': typeof AuthenticatedImportIndexRoute
   '/search': typeof AuthenticatedSearchIndexRoute
   '/accounts': typeof AuthenticatedAccountsIndexLazyRoute
-  '/api-docs': typeof AuthenticatedApiDocsIndexLazyRoute
   '/oauth2-result': typeof AuthenticatedOauth2ResultIndexLazyRoute
   '/oauth2': typeof AuthenticatedOauth2IndexLazyRoute
   '/settings/': typeof AuthenticatedSettingsIndexLazyRoute
@@ -933,19 +1013,23 @@ export interface FileRoutesByTo {
   '/404': typeof errors404LazyRoute
   '/503': typeof errors503LazyRoute
   '/analytics': typeof AuthenticatedAnalyticsLazyRoute
+  '/approvals': typeof AuthenticatedApprovalsLazyRoute
   '/audit-log': typeof AuthenticatedAuditLogLazyRoute
+  '/compliance-dashboard': typeof AuthenticatedComplianceDashboardLazyRoute
   '/compliance-export': typeof AuthenticatedComplianceExportLazyRoute
   '/integrity': typeof AuthenticatedIntegrityLazyRoute
   '/legal-hold': typeof AuthenticatedLegalHoldLazyRoute
-  '/license': typeof AuthenticatedLicenseLazyRoute
   '/timestamp-anchor': typeof AuthenticatedTimestampAnchorLazyRoute
   '/': typeof AuthenticatedIndexRoute
   '/accounts/new': typeof AuthenticatedAccountsNewLazyRoute
   '/settings/access': typeof AuthenticatedSettingsAccessLazyRoute
+  '/settings/api-docs': typeof AuthenticatedSettingsApiDocsLazyRoute
   '/settings/api-tokens': typeof AuthenticatedSettingsApiTokensLazyRoute
   '/settings/appearance': typeof AuthenticatedSettingsAppearanceLazyRoute
+  '/settings/approvals': typeof AuthenticatedSettingsApprovalsLazyRoute
   '/settings/branding': typeof AuthenticatedSettingsBrandingLazyRoute
   '/settings/configurations': typeof AuthenticatedSettingsConfigurationsLazyRoute
+  '/settings/license': typeof AuthenticatedSettingsLicenseLazyRoute
   '/settings/mfa': typeof AuthenticatedSettingsMfaLazyRoute
   '/settings/profile': typeof AuthenticatedSettingsProfileLazyRoute
   '/settings/proxy': typeof AuthenticatedSettingsProxyLazyRoute
@@ -957,7 +1041,6 @@ export interface FileRoutesByTo {
   '/import': typeof AuthenticatedImportIndexRoute
   '/search': typeof AuthenticatedSearchIndexRoute
   '/accounts': typeof AuthenticatedAccountsIndexLazyRoute
-  '/api-docs': typeof AuthenticatedApiDocsIndexLazyRoute
   '/oauth2-result': typeof AuthenticatedOauth2ResultIndexLazyRoute
   '/oauth2': typeof AuthenticatedOauth2IndexLazyRoute
   '/settings': typeof AuthenticatedSettingsIndexLazyRoute
@@ -978,19 +1061,23 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500LazyRoute
   '/(errors)/503': typeof errors503LazyRoute
   '/_authenticated/analytics': typeof AuthenticatedAnalyticsLazyRoute
+  '/_authenticated/approvals': typeof AuthenticatedApprovalsLazyRoute
   '/_authenticated/audit-log': typeof AuthenticatedAuditLogLazyRoute
+  '/_authenticated/compliance-dashboard': typeof AuthenticatedComplianceDashboardLazyRoute
   '/_authenticated/compliance-export': typeof AuthenticatedComplianceExportLazyRoute
   '/_authenticated/integrity': typeof AuthenticatedIntegrityLazyRoute
   '/_authenticated/legal-hold': typeof AuthenticatedLegalHoldLazyRoute
-  '/_authenticated/license': typeof AuthenticatedLicenseLazyRoute
   '/_authenticated/timestamp-anchor': typeof AuthenticatedTimestampAnchorLazyRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/accounts/new': typeof AuthenticatedAccountsNewLazyRoute
   '/_authenticated/settings/access': typeof AuthenticatedSettingsAccessLazyRoute
+  '/_authenticated/settings/api-docs': typeof AuthenticatedSettingsApiDocsLazyRoute
   '/_authenticated/settings/api-tokens': typeof AuthenticatedSettingsApiTokensLazyRoute
   '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceLazyRoute
+  '/_authenticated/settings/approvals': typeof AuthenticatedSettingsApprovalsLazyRoute
   '/_authenticated/settings/branding': typeof AuthenticatedSettingsBrandingLazyRoute
   '/_authenticated/settings/configurations': typeof AuthenticatedSettingsConfigurationsLazyRoute
+  '/_authenticated/settings/license': typeof AuthenticatedSettingsLicenseLazyRoute
   '/_authenticated/settings/mfa': typeof AuthenticatedSettingsMfaLazyRoute
   '/_authenticated/settings/profile': typeof AuthenticatedSettingsProfileLazyRoute
   '/_authenticated/settings/proxy': typeof AuthenticatedSettingsProxyLazyRoute
@@ -1002,7 +1089,6 @@ export interface FileRoutesById {
   '/_authenticated/import/': typeof AuthenticatedImportIndexRoute
   '/_authenticated/search/': typeof AuthenticatedSearchIndexRoute
   '/_authenticated/accounts/': typeof AuthenticatedAccountsIndexLazyRoute
-  '/_authenticated/api-docs/': typeof AuthenticatedApiDocsIndexLazyRoute
   '/_authenticated/oauth2-result/': typeof AuthenticatedOauth2ResultIndexLazyRoute
   '/_authenticated/oauth2/': typeof AuthenticatedOauth2IndexLazyRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexLazyRoute
@@ -1023,19 +1109,23 @@ export interface FileRouteTypes {
     | '/404'
     | '/503'
     | '/analytics'
+    | '/approvals'
     | '/audit-log'
+    | '/compliance-dashboard'
     | '/compliance-export'
     | '/integrity'
     | '/legal-hold'
-    | '/license'
     | '/timestamp-anchor'
     | '/'
     | '/accounts/new'
     | '/settings/access'
+    | '/settings/api-docs'
     | '/settings/api-tokens'
     | '/settings/appearance'
+    | '/settings/approvals'
     | '/settings/branding'
     | '/settings/configurations'
+    | '/settings/license'
     | '/settings/mfa'
     | '/settings/profile'
     | '/settings/proxy'
@@ -1047,7 +1137,6 @@ export interface FileRouteTypes {
     | '/import'
     | '/search'
     | '/accounts'
-    | '/api-docs'
     | '/oauth2-result'
     | '/oauth2'
     | '/settings/'
@@ -1062,19 +1151,23 @@ export interface FileRouteTypes {
     | '/404'
     | '/503'
     | '/analytics'
+    | '/approvals'
     | '/audit-log'
+    | '/compliance-dashboard'
     | '/compliance-export'
     | '/integrity'
     | '/legal-hold'
-    | '/license'
     | '/timestamp-anchor'
     | '/'
     | '/accounts/new'
     | '/settings/access'
+    | '/settings/api-docs'
     | '/settings/api-tokens'
     | '/settings/appearance'
+    | '/settings/approvals'
     | '/settings/branding'
     | '/settings/configurations'
+    | '/settings/license'
     | '/settings/mfa'
     | '/settings/profile'
     | '/settings/proxy'
@@ -1086,7 +1179,6 @@ export interface FileRouteTypes {
     | '/import'
     | '/search'
     | '/accounts'
-    | '/api-docs'
     | '/oauth2-result'
     | '/oauth2'
     | '/settings'
@@ -1105,19 +1197,23 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/analytics'
+    | '/_authenticated/approvals'
     | '/_authenticated/audit-log'
+    | '/_authenticated/compliance-dashboard'
     | '/_authenticated/compliance-export'
     | '/_authenticated/integrity'
     | '/_authenticated/legal-hold'
-    | '/_authenticated/license'
     | '/_authenticated/timestamp-anchor'
     | '/_authenticated/'
     | '/_authenticated/accounts/new'
     | '/_authenticated/settings/access'
+    | '/_authenticated/settings/api-docs'
     | '/_authenticated/settings/api-tokens'
     | '/_authenticated/settings/appearance'
+    | '/_authenticated/settings/approvals'
     | '/_authenticated/settings/branding'
     | '/_authenticated/settings/configurations'
+    | '/_authenticated/settings/license'
     | '/_authenticated/settings/mfa'
     | '/_authenticated/settings/profile'
     | '/_authenticated/settings/proxy'
@@ -1129,7 +1225,6 @@ export interface FileRouteTypes {
     | '/_authenticated/import/'
     | '/_authenticated/search/'
     | '/_authenticated/accounts/'
-    | '/_authenticated/api-docs/'
     | '/_authenticated/oauth2-result/'
     | '/_authenticated/oauth2/'
     | '/_authenticated/settings/'
@@ -1186,11 +1281,12 @@ export const routeTree = rootRoute
         "/_authenticated/settings",
         "/_authenticated/users",
         "/_authenticated/analytics",
+        "/_authenticated/approvals",
         "/_authenticated/audit-log",
+        "/_authenticated/compliance-dashboard",
         "/_authenticated/compliance-export",
         "/_authenticated/integrity",
         "/_authenticated/legal-hold",
-        "/_authenticated/license",
         "/_authenticated/timestamp-anchor",
         "/_authenticated/",
         "/_authenticated/accounts/new",
@@ -1199,7 +1295,6 @@ export const routeTree = rootRoute
         "/_authenticated/import/",
         "/_authenticated/search/",
         "/_authenticated/accounts/",
-        "/_authenticated/api-docs/",
         "/_authenticated/oauth2-result/",
         "/_authenticated/oauth2/",
         "/_authenticated/accounts/$id/settings"
@@ -1216,10 +1311,13 @@ export const routeTree = rootRoute
       "parent": "/_authenticated",
       "children": [
         "/_authenticated/settings/access",
+        "/_authenticated/settings/api-docs",
         "/_authenticated/settings/api-tokens",
         "/_authenticated/settings/appearance",
+        "/_authenticated/settings/approvals",
         "/_authenticated/settings/branding",
         "/_authenticated/settings/configurations",
+        "/_authenticated/settings/license",
         "/_authenticated/settings/mfa",
         "/_authenticated/settings/profile",
         "/_authenticated/settings/proxy",
@@ -1255,8 +1353,16 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/analytics.lazy.tsx",
       "parent": "/_authenticated"
     },
+    "/_authenticated/approvals": {
+      "filePath": "_authenticated/approvals.lazy.tsx",
+      "parent": "/_authenticated"
+    },
     "/_authenticated/audit-log": {
       "filePath": "_authenticated/audit-log.lazy.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/compliance-dashboard": {
+      "filePath": "_authenticated/compliance-dashboard.lazy.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/compliance-export": {
@@ -1269,10 +1375,6 @@ export const routeTree = rootRoute
     },
     "/_authenticated/legal-hold": {
       "filePath": "_authenticated/legal-hold.lazy.tsx",
-      "parent": "/_authenticated"
-    },
-    "/_authenticated/license": {
-      "filePath": "_authenticated/license.lazy.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/timestamp-anchor": {
@@ -1291,6 +1393,10 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/settings/access.lazy.tsx",
       "parent": "/_authenticated/settings"
     },
+    "/_authenticated/settings/api-docs": {
+      "filePath": "_authenticated/settings/api-docs.lazy.tsx",
+      "parent": "/_authenticated/settings"
+    },
     "/_authenticated/settings/api-tokens": {
       "filePath": "_authenticated/settings/api-tokens.lazy.tsx",
       "parent": "/_authenticated/settings"
@@ -1299,12 +1405,20 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/settings/appearance.lazy.tsx",
       "parent": "/_authenticated/settings"
     },
+    "/_authenticated/settings/approvals": {
+      "filePath": "_authenticated/settings/approvals.lazy.tsx",
+      "parent": "/_authenticated/settings"
+    },
     "/_authenticated/settings/branding": {
       "filePath": "_authenticated/settings/branding.lazy.tsx",
       "parent": "/_authenticated/settings"
     },
     "/_authenticated/settings/configurations": {
       "filePath": "_authenticated/settings/configurations.lazy.tsx",
+      "parent": "/_authenticated/settings"
+    },
+    "/_authenticated/settings/license": {
+      "filePath": "_authenticated/settings/license.lazy.tsx",
       "parent": "/_authenticated/settings"
     },
     "/_authenticated/settings/mfa": {
@@ -1349,10 +1463,6 @@ export const routeTree = rootRoute
     },
     "/_authenticated/accounts/": {
       "filePath": "_authenticated/accounts/index.lazy.tsx",
-      "parent": "/_authenticated"
-    },
-    "/_authenticated/api-docs/": {
-      "filePath": "_authenticated/api-docs/index.lazy.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/oauth2-result/": {

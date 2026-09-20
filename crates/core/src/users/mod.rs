@@ -90,6 +90,31 @@ pub struct BichonUserV2 {
     /// (e.g., system settings, creating new users).
     pub global_roles: Vec<u64>,
 
+    /// Expiry (unix **milliseconds**, matching `utc_now!()`) for a *global*
+    /// role assignment, keyed by role id.
+    ///
+    /// A role id present here with a timestamp in the past is expired: the
+    /// assignment in `global_roles` is retained (so the delegation can be
+    /// listed and renewed) but confers nothing.
+    ///
+    /// The expiry lives on the *assignment*, not on `UserRole`, because a role
+    /// is shared: putting `expires_at` on the role would expire the grant for
+    /// every holder at once, and could not express "grant Manager to Zhang for
+    /// 30 days" while Li, holding the same role, is unaffected.
+    ///
+    /// `#[serde(default)]` keeps rows written before this field existed
+    /// loading as "no expiries" — i.e. every existing assignment is permanent,
+    /// which is exactly the old behaviour.
+    #[serde(default)]
+    pub global_role_expiries: BTreeMap<u64, i64>,
+
+    /// Expiry (unix **milliseconds**) for a *scoped* role assignment, keyed by
+    /// account id — the same shape as `account_access_map`, which is the
+    /// assignment it expires. See `global_role_expiries` for why this is not
+    /// on the role.
+    #[serde(default)]
+    pub account_role_expiries: BTreeMap<u64, i64>,
+
     pub avatar: Option<String>,
     pub created_at: i64,
     pub updated_at: i64,
@@ -139,10 +164,47 @@ impl BichonUserV2 {
         Ok(list_all_impl::<UserModel>(DB_MANAGER.db())?)
     }
 
+    /// Whether a global role assignment has passed its expiry.
+    ///
+    /// An assignment with no entry in `global_role_expiries` is permanent.
+    /// The comparison is strict (`now >= expiry`), so a delegation set to
+    /// expire at time T confers nothing from T onward.
+    pub fn global_role_expired(&self, role_id: u64, now: i64) -> bool {
+        self.global_role_expiries
+            .get(&role_id)
+            .is_some_and(|&expires_at| now >= expires_at)
+    }
+
+    /// Whether a scoped (per-account) role assignment has passed its expiry.
+    pub fn account_role_expired(&self, account_id: u64, now: i64) -> bool {
+        self.account_role_expiries
+            .get(&account_id)
+            .is_some_and(|&expires_at| now >= expires_at)
+    }
+
+    /// Effective global role ids: every assignment that has not expired.
+    ///
+    /// Use this rather than reading `global_roles` directly when the question
+    /// is "what may this user do". `global_roles` is the *grant record* and
+    /// deliberately keeps expired entries so a delegation stays visible and
+    /// renewable; this is the *authority*.
+    pub fn effective_global_roles(&self) -> Vec<u64> {
+        let now = utc_now!();
+        self.global_roles
+            .iter()
+            .copied()
+            .filter(|&rid| !self.global_role_expired(rid, now))
+            .collect()
+    }
+
     fn get_all_permissions(&self) -> HashSet<String> {
         let mut all_perms = HashSet::new();
 
-        for &role_id in &self.global_roles {
+        // Effective roles only. This function backs `is_admin()`, which is the
+        // ROOT bypass every permission check short-circuits through — a role
+        // that still contributed here after expiring would keep granting full
+        // administrative access past its end date, silently.
+        for &role_id in &self.effective_global_roles() {
             if let Ok(Some(role)) = UserRole::find(role_id) {
                 for perm in role.permissions {
                     all_perms.insert(perm);
@@ -173,10 +235,36 @@ impl BichonUserV2 {
             })
             .collect();
 
+        // Deadlines are computed once and used by three things below: which
+        // roles still count, what the UI displays, and what is dropped from
+        // the view's expiry maps.
+        let now = utc_now!();
+        let live_global: BTreeMap<u64, i64> = self
+            .global_role_expiries
+            .iter()
+            .filter(|(&rid, &expires_at)| {
+                now < expires_at && self.global_roles.contains(&rid)
+            })
+            .map(|(&rid, &expires_at)| (rid, expires_at))
+            .collect();
+        let live_scoped: BTreeMap<u64, i64> = self
+            .account_role_expiries
+            .iter()
+            .filter(|(acc_id, &expires_at)| {
+                now < expires_at && self.account_access_map.contains_key(acc_id)
+            })
+            .map(|(&acc_id, &expires_at)| (acc_id, expires_at))
+            .collect();
+
         let global_permissions = {
             let mut perms = BTreeSet::new();
 
-            for role_id in &self.global_roles {
+            // Effective roles only. Listing the permissions of a lapsed
+            // delegation here would show an administrator that the user holds
+            // access the enforcement path has already stopped granting — the
+            // view would disagree with the system, in the permissive
+            // direction, which is the worst way for them to disagree.
+            for role_id in &self.effective_global_roles() {
                 if let Some(role) = role_lookup.get(role_id) {
                     perms.extend(role.permissions.iter().cloned());
                 }
@@ -189,6 +277,9 @@ impl BichonUserV2 {
             let mut map: BTreeMap<u64, BTreeSet<String>> = BTreeMap::new();
 
             for (account_id, role_id) in &self.account_access_map {
+                if self.account_role_expired(*account_id, now) {
+                    continue;
+                }
                 if let Some(role) = role_lookup.get(role_id) {
                     let entry = map.entry(*account_id).or_default();
                     entry.extend(role.permissions.iter().cloned());
@@ -209,6 +300,8 @@ impl BichonUserV2 {
             description: self.description,
             global_roles: self.global_roles,
             global_roles_names,
+            global_role_expiries: live_global,
+            account_role_expiries: live_scoped,
             avatar: self.avatar,
             created_at: self.created_at,
             updated_at: self.updated_at,
@@ -242,6 +335,8 @@ impl BichonUserV2 {
 
                 // Use global_roles as defined in our new schema
                 global_roles: vec![DEFAULT_ADMIN_ROLE_ID],
+                global_role_expiries: BTreeMap::new(),
+                account_role_expiries: BTreeMap::new(),
 
                 // Admin usually doesn't need specific scoped access
                 account_access_map: BTreeMap::new(),
@@ -566,6 +661,10 @@ impl BichonUserV2 {
             created_at: now,
             updated_at: now,
             account_access_map: request.account_access_map,
+            // A freshly created user's assignments are permanent until an
+            // administrator delegates with a deadline.
+            global_role_expiries: BTreeMap::new(),
+            account_role_expiries: BTreeMap::new(),
             theme: request.theme,
             language: request.language,
             sso_id: None,
@@ -714,6 +813,15 @@ impl BichonUserV2 {
 
             if let Some(global_roles) = request.global_roles {
                 updated.global_roles = global_roles;
+                // Drop expiries for roles that are no longer assigned. Leaving
+                // them would make a *later* permanent re-grant inherit the old
+                // deadline: the admin re-adds the role, sees it in the list,
+                // and the user still has nothing — with no expiry visible on
+                // the assignment they just made.
+                let assigned = updated.global_roles.clone();
+                updated
+                    .global_role_expiries
+                    .retain(|role_id, _| assigned.contains(role_id));
             }
 
             if let Some(acl) = request.acl {
@@ -722,6 +830,11 @@ impl BichonUserV2 {
 
             if let Some(account_access_map) = request.account_access_map {
                 updated.account_access_map = account_access_map;
+                // Same reasoning as the global case above, keyed by account.
+                let scoped = updated.account_access_map.clone();
+                updated
+                    .account_role_expiries
+                    .retain(|account_id, _| scoped.contains_key(account_id));
             }
 
             if let Some(avatar_base64) = request.avatar_base64 {
@@ -790,4 +903,124 @@ fn hash_login_password(password: &str) -> BichonResult<String> {
                 ErrorCode::InternalError
             )
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::after_n_days_timestamp;
+
+    const NOW: i64 = 1_700_000_000_000;
+
+    fn user(global_roles: Vec<u64>) -> UserModel {
+        UserModel {
+            global_roles,
+            ..Default::default()
+        }
+    }
+
+    /// The trap this field invites: `utc_now!()` is *milliseconds*, so an
+    /// expiry written as `now + 30 * 86_400` (seconds, a common slip) lands in
+    /// 1970 and every delegated role is born dead. Pinning the helper's unit
+    /// against `utc_now!()` catches the mismatch at the source.
+    #[test]
+    fn expiry_helper_produces_milliseconds_like_utc_now() {
+        let now = utc_now!();
+        let in_a_day = after_n_days_timestamp!(now, 1);
+        assert_eq!(
+            in_a_day - now,
+            86_400_000,
+            "expiry must be milliseconds to compare against utc_now!()"
+        );
+    }
+
+    #[test]
+    fn an_assignment_without_an_expiry_is_permanent() {
+        let u = user(vec![7]);
+        assert!(!u.global_role_expired(7, NOW));
+        assert!(!u.global_role_expired(7, i64::MAX));
+    }
+
+    #[test]
+    fn an_assignment_expires_at_its_deadline_not_after() {
+        let mut u = user(vec![7]);
+        u.global_role_expiries.insert(7, NOW + 1_000);
+        assert!(!u.global_role_expired(7, NOW));
+        assert!(
+            !u.global_role_expired(7, NOW + 999),
+            "must still be live one millisecond before the deadline"
+        );
+        assert!(
+            u.global_role_expired(7, NOW + 1_000),
+            "the deadline itself is expired"
+        );
+        assert!(u.global_role_expired(7, NOW + 1_001));
+    }
+
+    /// A bare `Default::default()` user has no roles, so a missing map entry
+    /// and an empty map must both mean "permanent" — otherwise every existing
+    /// install loses its assignments on upgrade.
+    #[test]
+    fn an_empty_expiry_map_leaves_every_role_permanent() {
+        let u = user(vec![1, 2, 3]);
+        assert!(u.global_role_expiries.is_empty());
+        assert_eq!(u.effective_global_roles(), vec![1, 2, 3]);
+    }
+
+    /// The grant record must survive expiry, so a lapsed delegation stays
+    /// visible (and renewable) instead of vanishing from the admin's view.
+    #[test]
+    fn an_expired_assignment_is_dropped_from_authority_but_kept_as_a_record() {
+        let mut u = user(vec![1, 2]);
+        u.global_role_expiries.insert(2, NOW - 1);
+        assert_eq!(
+            u.effective_global_roles(),
+            vec![1],
+            "an expired role must not confer authority"
+        );
+        assert!(
+            u.global_roles.contains(&2),
+            "the grant itself is retained so it can be listed and renewed"
+        );
+        assert_eq!(u.global_role_expiries.get(&2), Some(&(NOW - 1)));
+    }
+
+    /// Re-granting a role that was previously delegated must be permanent
+    /// again, not silently dead. `UserModel::update` retains only the expiries
+    /// of roles still assigned, which is what makes the second grant work; if
+    /// that retain is ever removed this test fails rather than shipping a
+    /// feature that quietly grants nothing.
+    #[test]
+    fn reassigning_a_role_does_not_inherit_its_old_expiry() {
+        let mut u = user(vec![1, 2]);
+        u.global_role_expiries.insert(2, NOW - 1);
+        assert_eq!(u.effective_global_roles(), vec![1]);
+
+        // Simulate the retain `update()` performs when global_roles becomes
+        // `[1]`, then a later re-grant of 2.
+        let assigned = vec![1u64];
+        u.global_role_expiries.retain(|rid, _| assigned.contains(rid));
+        u.global_roles = vec![1, 2];
+
+        assert_eq!(
+            u.effective_global_roles(),
+            vec![1, 2],
+            "the re-granted role must be live, not carrying its previous deadline"
+        );
+    }
+
+    /// Scoped assignments expire by *account*, not by role id — the map is
+    /// keyed like `account_access_map`, and a role id accidentally used as a
+    /// key here would silently never match.
+    #[test]
+    fn scoped_expiry_is_keyed_by_account() {
+        let mut u = user(vec![]);
+        u.account_access_map.insert(42, 5);
+        u.account_role_expiries.insert(42, NOW - 1);
+        assert!(u.account_role_expired(42, NOW));
+        assert!(
+            !u.account_role_expired(5, NOW),
+            "the role id must not be what is looked up"
+        );
+    }
 }

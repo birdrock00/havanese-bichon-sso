@@ -248,7 +248,10 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                   </Button>
                 )}
 
-                {isPro && ldapEnabled && (
+                {/* `ldapEnabled` already means "Enterprise + flag set" — the
+                    server folds the license into it so the form can never
+                    offer a mode the login endpoint would refuse. */}
+                {ldapEnabled && (
                   <Button
                     variant='link'
                     className='mt-2 w-full'

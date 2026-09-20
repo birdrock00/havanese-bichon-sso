@@ -155,6 +155,9 @@ impl BuiltinRole {
 pub const DEFAULT_ADMIN_ROLE_ID: u64 = 100_000_000_000_000; // System Admin
 pub const DEFAULT_MANAGER_ROLE_ID: u64 = 100_100_000_000_000; // System Manager
 pub const DEFAULT_MEMBER_ROLE_ID: u64 = 100_200_000_000_000; // Regular Member (system:access)
+// Compliance Officer (Enterprise, seeded by the Pro crate only — the
+// community edition never inserts this role).
+pub const DEFAULT_COMPLIANCE_OFFICER_ROLE_ID: u64 = 100_300_000_000_000;
 
 // Account-specific Roles (Starting with 2)
 pub const DEFAULT_ACCOUNT_MANAGER_ROLE_ID: u64 = 200_100_000_000_000;
@@ -166,6 +169,7 @@ fn is_builtin(id: u64) -> bool {
         DEFAULT_ADMIN_ROLE_ID
             | DEFAULT_MANAGER_ROLE_ID
             | DEFAULT_MEMBER_ROLE_ID
+            | DEFAULT_COMPLIANCE_OFFICER_ROLE_ID
             | DEFAULT_ACCOUNT_MANAGER_ROLE_ID
             | DEFAULT_ACCOUNT_VIEWER_ROLE_ID
     )

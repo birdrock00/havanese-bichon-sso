@@ -7,6 +7,7 @@ export interface EditionInfo {
   sso_enabled: boolean
   ldap_enabled: boolean
   siem_enabled: boolean
+  approval_enabled: boolean
 }
 
 async function fetchEdition(): Promise<EditionInfo> {
@@ -30,5 +31,6 @@ export function useEdition() {
     ssoEnabled: data?.sso_enabled ?? false,
     ldapEnabled: data?.ldap_enabled ?? false,
     siemEnabled: data?.siem_enabled ?? false,
+    approvalEnabled: data?.approval_enabled ?? false,
   } as const
 }

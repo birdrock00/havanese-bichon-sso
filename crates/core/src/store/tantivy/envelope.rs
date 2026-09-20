@@ -844,6 +844,37 @@ impl IndexManager {
         Ok(result)
     }
 
+    /// How many messages live in these mailboxes of this account.
+    ///
+    /// Used to tell an approver the blast radius of a mailbox deletion before
+    /// they sign off on it. Takes the whole subtree at once rather than one
+    /// mailbox at a time because the delete is recursive: counting only the
+    /// named mailbox would understate a folder with subfolders by however much
+    /// they hold, and the approver would be approving a number that is wrong
+    /// in the direction that matters.
+    pub fn count_mailbox_envelopes(
+        &self,
+        account_id: u64,
+        mailbox_ids: &[u64],
+    ) -> BichonResult<u64> {
+        if mailbox_ids.is_empty() {
+            return Ok(0);
+        }
+        let mut subqueries: Vec<(Occur, Box<dyn Query>)> = Vec::with_capacity(mailbox_ids.len());
+        for mailbox_id in mailbox_ids {
+            subqueries.push((
+                Occur::Should,
+                Box::new(self.mailbox_query(account_id, *mailbox_id)),
+            ));
+        }
+        let query = Box::new(BooleanQuery::new(subqueries)) as Box<dyn Query>;
+        let searcher = self.create_searcher()?;
+        let count = searcher
+            .search(&query, &Count)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        Ok(count as u64)
+    }
+
     pub fn total_emails(&self, accounts: &Option<HashSet<u64>>) -> BichonResult<u64> {
         let searcher = self.create_searcher()?;
 

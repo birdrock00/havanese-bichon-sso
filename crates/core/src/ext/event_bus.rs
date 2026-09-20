@@ -56,6 +56,27 @@ pub enum Event {
         /// Snapshot of the deleted message (attachment names, from/to, ...).
         snapshot: Option<EventPayload>,
     },
+    /// A large delete batch whose per-message detail was externalized to a
+    /// detail file instead of N `email.deleted` records. The row carries the
+    /// file reference (relative path, size, SHA-256) plus the counts; the
+    /// file itself is fetched on demand through the audit detail endpoint and
+    /// is never shipped to SIEM.
+    EmailBatchDeleted {
+        user: String,
+        /// Accounts spanned by the batch. One account lands in the indexed
+        /// `account_id` column; many stay in the payload (see
+        /// `single_account_id` in the Pro audit store).
+        account_ids: Vec<u64>,
+        /// Total messages deleted in the batch.
+        count: u64,
+        /// Correlation id; also the detail file name (`detail/<id>.jsonl`).
+        batch_id: String,
+        /// Relative path of the detail file, resolved against the audit dir.
+        detail_file: String,
+        detail_size: u64,
+        /// SHA-256 of the detail file, bound into the audit hash chain.
+        detail_sha256: String,
+    },
     /// Raw EML file downloaded (export).
     EmailExported {
         email_id: String,
@@ -199,6 +220,32 @@ pub enum Event {
         user: String,
         token_user: String,
         name: Option<String>,
+    },
+    /// A role assignment was given an end date (Enterprise).
+    ///
+    /// `expires_at` is always `Some` here — clearing a deadline is
+    /// `RoleDelegationRemoved`, a separate event, so the log distinguishes
+    /// "delegated until 31 Dec" from "delegation cleared" by event type alone
+    /// rather than by inspecting a nullable field.
+    RoleDelegated {
+        user: String,
+        target_user: String,
+        target_user_id: u64,
+        role_id: u64,
+        role_name: String,
+        expires_at: Option<i64>,
+    },
+    /// A role assignment's end date was removed, leaving the role in place.
+    ///
+    /// Distinct from `RoleDelegated` with `expires_at: None` so that "the
+    /// deadline was cleared" and "a deadline was set and then cleared" are
+    /// distinguishable in the log by the pair of records they leave.
+    RoleDelegationRemoved {
+        user: String,
+        target_user: String,
+        target_user_id: u64,
+        role_id: u64,
+        role_name: String,
     },
     OAuth2ConfigCreated {
         user: String,
@@ -410,6 +457,91 @@ pub enum Event {
     },
     /// The SIEM webhook configuration was changed by an admin (Enterprise).
     SiemConfigUpdated { user: String },
+    /// A dual-control approval request was created and awaits a second
+    /// person's decision (Enterprise). Nothing has happened to the target yet
+    /// — this is the "first person" half of the two-person rule.
+    ApprovalRequested {
+        /// The requester (first person).
+        user: String,
+        request_id: String,
+        /// The gated operation, e.g. `legal_hold.release`.
+        op: String,
+        account_ids: Vec<u64>,
+        reason: Option<String>,
+    },
+    /// A dual-control request was approved by a second person (Enterprise).
+    ///
+    /// This records the *decision*, not the outcome. For an operation that runs
+    /// in the background the outcome is not known yet when this is emitted —
+    /// which is why the counts are optional and omitted rather than written as
+    /// `0/0`: a fabricated "nothing succeeded, nothing failed" reads as a real
+    /// result to anything consuming the trail. `approval.executed` carries the
+    /// outcome.
+    ApprovalApproved {
+        /// The approver (second person).
+        user: String,
+        request_id: String,
+        op: String,
+        /// The requester, carried so the pair is legible in one record.
+        requested_by: String,
+        account_ids: Vec<u64>,
+        /// Per-item outcome, when the approval executed synchronously.
+        /// `None` means the outcome is not yet known.
+        succeeded: Option<usize>,
+        failed: Option<usize>,
+        /// Whether this decision was taken through the break-glass override —
+        /// one administrator acting alone, after the request had waited out
+        /// the configured minimum.
+        ///
+        /// Carried on the event rather than left to be inferred from
+        /// `user == requested_by`: the two are different facts. A normal
+        /// approval by a third party and an override by a third party look
+        /// identical on the user fields, and only one of them means the second
+        /// signature was waived.
+        break_glass: bool,
+        /// How long the request had been pending when it was overridden.
+        /// `None` for the normal path.
+        pending_for_hours: Option<i64>,
+    },
+    /// A dual-control request finished executing (Enterprise). Emitted for both
+    /// inline and background operations, so a consumer has one place to read
+    /// the outcome from regardless of how the operation ran.
+    ApprovalExecuted {
+        request_id: String,
+        op: String,
+        /// The approver — the person who took the action and owns it.
+        user: String,
+        succeeded: usize,
+        failed: usize,
+    },
+    /// A dual-control request failed to execute (Enterprise). Distinct from
+    /// `ApprovalExecuted` with a nonzero failure count: this is the whole
+    /// operation failing to reach its target at all (the executor refused up
+    /// front, or panicked).
+    ApprovalExecutionFailed {
+        request_id: String,
+        op: String,
+        user: String,
+        error: String,
+    },
+    /// A dual-control request was rejected by a second person (Enterprise).
+    /// The target is untouched.
+    ApprovalRejected {
+        /// The rejecter (second person).
+        user: String,
+        request_id: String,
+        op: String,
+        requested_by: String,
+        account_ids: Vec<u64>,
+        note: Option<String>,
+    },
+    /// A pending dual-control request expired without a decision (Enterprise).
+    /// Recorded so a request that quietly lapses leaves a trace.
+    ApprovalExpired {
+        request_id: String,
+        op: String,
+        requested_by: String,
+    },
 }
 
 pub trait EventBus: Send + Sync {

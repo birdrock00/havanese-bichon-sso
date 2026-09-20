@@ -295,6 +295,15 @@ export default function TimestampAnchorPage() {
   const { isEnterprise } = useEdition()
   const { require_any_permission } = useCurrentUser()
 
+  // Read access includes compliance officers (`compliance:audit`,
+  // separation of duties); anchoring/verifying stays manage-only.
+  const canView =
+    isEnterprise &&
+    require_any_permission([
+      'timestamp:manage',
+      'system:root',
+      'compliance:audit',
+    ])
   const canManage =
     isEnterprise &&
     require_any_permission(['timestamp:manage', 'system:root'])
@@ -302,7 +311,7 @@ export default function TimestampAnchorPage() {
   const { data: anchors, isLoading } = useQuery({
     queryKey: ['timestamps'],
     queryFn: list_timestamps,
-    enabled: canManage,
+    enabled: canView,
   })
 
   const anchorMutation = useMutation({
@@ -346,7 +355,7 @@ export default function TimestampAnchorPage() {
 
   const latest = useMemo(() => anchors?.[0] ?? null, [anchors])
 
-  if (!canManage) {
+  if (!canView) {
     return (
       <>
         <FixedHeader />
@@ -380,19 +389,21 @@ export default function TimestampAnchorPage() {
                 )}
               </p>
             </div>
-            <Button
-              onClick={() => anchorMutation.mutate()}
-              disabled={anchorMutation.isPending}
-            >
-              {anchorMutation.isPending ? (
-                <Loader2 className='mr-1 h-4 w-4 animate-spin' />
-              ) : (
-                <Fingerprint className='mr-1 h-4 w-4' />
-              )}
-              {anchorMutation.isPending
-                ? t('timestampAnchor.anchoring', 'Anchoring…')
-                : t('timestampAnchor.anchorNow', 'Anchor now')}
-            </Button>
+            {canManage && (
+              <Button
+                onClick={() => anchorMutation.mutate()}
+                disabled={anchorMutation.isPending}
+              >
+                {anchorMutation.isPending ? (
+                  <Loader2 className='mr-1 h-4 w-4 animate-spin' />
+                ) : (
+                  <Fingerprint className='mr-1 h-4 w-4' />
+                )}
+                {anchorMutation.isPending
+                  ? t('timestampAnchor.anchoring', 'Anchoring…')
+                  : t('timestampAnchor.anchorNow', 'Anchor now')}
+              </Button>
+            )}
           </div>
 
           <Card>
@@ -457,6 +468,7 @@ export default function TimestampAnchorPage() {
             </CardContent>
           </Card>
 
+          {canManage && (
           <Card>
             <CardHeader>
               <CardTitle className='flex items-center gap-2'>
@@ -500,6 +512,7 @@ export default function TimestampAnchorPage() {
               {proof && <ProofPanel proof={proof} />}
             </CardContent>
           </Card>
+          )}
         </div>
       </Main>
     </>
