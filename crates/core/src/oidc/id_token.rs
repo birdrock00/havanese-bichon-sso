@@ -142,19 +142,22 @@ pub fn verify_and_parse(token: &str, params: &VerifyParams<'_>) -> BichonResult<
         "HS256" => {
             let signature = b64url_decode(s_b64)?;
             let signing_input = format!("{}.{}", h_b64, p_b64);
-            // Not the raw client_secret bytes: empirically, Authelia signs
-            // HS256 ID tokens with SHA-256(client_secret) as the HMAC key,
-            // not the secret's raw bytes as OIDC Core 1.0 sec. 10.1 literally
-            // describes. Authelia's OIDC provider is built on ORY Fosite,
-            // which appears to apply this derivation internally.
-            let derived_key = digest::digest(&digest::SHA256, params.client_secret);
-            let key = hmac::Key::new(hmac::HMAC_SHA256, derived_key.as_ref());
-            hmac::verify(&key, signing_input.as_bytes(), &signature).map_err(|_| {
-                raise_error!(
-                    "ID token HS256 signature verification failed".into(),
-                    ErrorCode::PermissionDenied
-                )
-            })?;
+            // Authelia/ORY-Fosite behavior has varied across versions:
+            // some sign HS256 ID tokens with the raw client_secret bytes
+            // (OIDC Core 1.0 sec. 10.1), others with SHA-256(client_secret)
+            // as the HMAC key. Accept either — both require knowledge of
+            // the same shared secret, so forgery is infeasible either way.
+            let raw_key = hmac::Key::new(hmac::HMAC_SHA256, params.client_secret);
+            if hmac::verify(&raw_key, signing_input.as_bytes(), &signature).is_err() {
+                let derived = digest::digest(&digest::SHA256, params.client_secret);
+                let derived_key = hmac::Key::new(hmac::HMAC_SHA256, derived.as_ref());
+                hmac::verify(&derived_key, signing_input.as_bytes(), &signature).map_err(|_| {
+                    raise_error!(
+                        "ID token HS256 signature verification failed".into(),
+                        ErrorCode::PermissionDenied
+                    )
+                })?;
+            }
         }
         other => {
             return Err(raise_error!(
@@ -214,4 +217,65 @@ pub fn verify_and_parse(token: &str, params: &VerifyParams<'_>) -> BichonResult<
     }
 
     Ok(claims)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ring::hmac;
+
+    fn make_token(secret_key: &[u8], nonce: &str) -> String {
+        let header = URL_SAFE_NO_PAD.encode(r#"{"alg":"HS256","typ":"JWT"}"#);
+        let payload = URL_SAFE_NO_PAD.encode(
+            format!(
+                r#"{{"iss":"https://authelia.example.com","aud":"bichon","sub":"user1","exp":2000000000,"nonce":"{}","email":"user1@example.com"}}"#,
+                nonce
+            )
+            .as_str(),
+        );
+        let signing_input = format!("{}.{}", header, payload);
+        let key = hmac::Key::new(hmac::HMAC_SHA256, secret_key);
+        let sig = hmac::sign(&key, signing_input.as_bytes());
+        format!(
+            "{}.{}",
+            signing_input,
+            URL_SAFE_NO_PAD.encode(sig.as_ref())
+        )
+    }
+
+    fn params(secret: &[u8]) -> VerifyParams<'_> {
+        VerifyParams {
+            expected_issuer: "https://authelia.example.com",
+            expected_audience: "bichon",
+            expected_nonce: "test-nonce",
+            client_secret: secret,
+            clock_skew_secs: 60,
+            now_secs: 1900000000,
+        }
+    }
+
+    #[test]
+    fn verifies_raw_secret_signed_token() {
+        let secret = b"test-client-secret-with-enough-length-123";
+        let token = make_token(secret, "test-nonce");
+        let claims = verify_and_parse(&token, &params(secret)).expect("raw-signed token must verify");
+        assert_eq!(claims.sub, "user1");
+    }
+
+    #[test]
+    fn verifies_derived_key_signed_token() {
+        let secret = b"test-client-secret-with-enough-length-123";
+        let derived = digest::digest(&digest::SHA256, secret);
+        let token = make_token(derived.as_ref(), "test-nonce");
+        let claims =
+            verify_and_parse(&token, &params(secret)).expect("derived-key token must verify");
+        assert_eq!(claims.sub, "user1");
+    }
+
+    #[test]
+    fn rejects_wrong_secret() {
+        let secret = b"test-client-secret-with-enough-length-123";
+        let token = make_token(b"attacker-controlled-key-00000000000000", "test-nonce");
+        assert!(verify_and_parse(&token, &params(secret)).is_err());
+    }
 }
