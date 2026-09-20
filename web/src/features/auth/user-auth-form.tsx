@@ -43,7 +43,6 @@ import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
 import { KeyRound, Loader2, LogIn, Shield } from 'lucide-react'
 import { ldapLogin, login, mfaVerify, type LoginResult } from '@/api/users/api'
-import { resolveApiUrl } from '@/api/branding/api'
 import { useTheme } from '@/context/theme-context'
 import { useEdition } from '@/hooks/use-edition'
 
