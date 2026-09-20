@@ -2055,8 +2055,11 @@
     "tooltip": "Poista kaikki suodattimet"
   },
   "search_view": {
+    "absolute": "Absoluuttinen",
     "button_label": "Näkymä",
-    "menu_title": "Sarakeasetukset"
+    "date_display": "Päivämäärän näyttö",
+    "menu_title": "Sarakeasetukset",
+    "relative": "Suhteellinen"
   },
   "settings": {
     "accounts": "Tilit",

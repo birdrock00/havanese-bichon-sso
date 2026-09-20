@@ -20,6 +20,9 @@
 import React from 'react'
 import { SortingState } from '@tanstack/react-table'
 import { AttachmentModel } from '@/api/attachment/api'
+import type { DateDisplayMode } from '@/hooks/use-date-display'
+
+export type { DateDisplayMode }
 
 export type AttachmentDialogType = 'mailbox' | 'display' | 'delete' | 'filters' | 'tags' | 'edit-tags' | 'update-tags' | 'restore' | 'delete-mailbox' | 'nested-eml'
 
@@ -42,6 +45,8 @@ interface AttachmentContextType {
   filter: Record<string, any>
   setFilter: React.Dispatch<React.SetStateAction<Record<string, any>>>
   handleTagToggle: (tag: string) => void
+  dateDisplay: DateDisplayMode
+  setDateDisplay: (mode: DateDisplayMode) => void
 }
 
 const AttachmentContext = React.createContext<AttachmentContextType | null>(null)

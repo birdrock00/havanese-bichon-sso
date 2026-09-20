@@ -27,6 +27,7 @@ import { EmailEnvelope } from '@/api';
 import { MailDisplayDrawer } from './mail-display-dialog';
 import { EnvelopeDeleteDialog } from './delete-dialog';
 import SearchProvider, { SearchDialogType } from './context';
+import { useDateDisplay } from '@/hooks/use-date-display';
 import useDialogState from '@/hooks/use-dialog-state';
 import { EditTagsDialog } from './edit-tag-dialog';
 import { useTranslation } from 'react-i18next';
@@ -47,6 +48,7 @@ export default function EmailSearch() {
   const [deleteMailboxId, setDeleteMailboxId] = React.useState<string | undefined>(undefined);
   const [selectedAccountId, setSelectedAccountId] = React.useState<number | undefined>(undefined);
   const [editTagsOpen, setEditTagsOpen] = React.useState(false);
+  const { dateDisplay, setDateDisplay: handleSetDateDisplay } = useDateDisplay();
 
   const {
     emails,
@@ -102,6 +104,8 @@ export default function EmailSearch() {
             handleTagToggle,
             editTagsOpen,
             setEditTagsOpen,
+            dateDisplay,
+            setDateDisplay: handleSetDateDisplay,
           }}
         >
           <div className="mx-auto w-full px-4">

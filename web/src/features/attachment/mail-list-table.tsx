@@ -51,7 +51,7 @@ export function AttachmentListTable({
   const { t, i18n } = useTranslation()
 
   const locale = dateFnsLocaleMap[i18n.language.toLowerCase()] ?? enUS
-  const { selected, setSelected, setOpen, setCurrentAttachment } = useAttachmentContext()
+  const { selected, setSelected, setOpen, setCurrentAttachment, dateDisplay } = useAttachmentContext()
 
   const columns: ColumnDef<AttachmentModel>[] = [
     {
@@ -231,15 +231,18 @@ export function AttachmentListTable({
       ),
       cell: ({ row }) => {
         const date = new Date(row.original.date)
-        const title = format(date, 'yyyy-MM-dd HH:mm:ss')
+        const absolute = format(date, 'yyyy-MM-dd HH:mm')
+        const relative = formatDistanceToNow(date, { addSuffix: true, locale })
         return (
           <Tooltip>
             <TooltipTrigger asChild>
               <span className='text-xs whitespace-nowrap'>
-                {formatDistanceToNow(date, { addSuffix: true, locale })}
+                {dateDisplay === 'absolute' ? absolute : relative}
               </span>
             </TooltipTrigger>
-            <TooltipContent>{title}</TooltipContent>
+            <TooltipContent>
+              {dateDisplay === 'absolute' ? relative : format(date, 'yyyy-MM-dd HH:mm:ss')}
+            </TooltipContent>
           </Tooltip>
         )
       },

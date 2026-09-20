@@ -2055,8 +2055,11 @@
     "tooltip": "Eliminar todos los filtros"
   },
   "search_view": {
+    "absolute": "Absoluto",
     "button_label": "Vista",
-    "menu_title": "Configuración de columnas"
+    "date_display": "Visualización de fecha",
+    "menu_title": "Configuración de columnas",
+    "relative": "Relativa"
   },
   "settings": {
     "accounts": "Cuentas",

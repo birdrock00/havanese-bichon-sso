@@ -2055,8 +2055,11 @@
     "tooltip": "清除所有篩選條件"
   },
   "search_view": {
+    "absolute": "絕對",
     "button_label": "檢視",
-    "menu_title": "顯示欄位設定"
+    "date_display": "日期顯示",
+    "menu_title": "顯示欄位設定",
+    "relative": "相對"
   },
   "settings": {
     "accounts": "帳號",

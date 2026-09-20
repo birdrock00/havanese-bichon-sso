@@ -2055,8 +2055,11 @@
     "tooltip": "清除所有筛选条件"
   },
   "search_view": {
+    "absolute": "绝对",
     "button_label": "视图",
-    "menu_title": "显示列设置"
+    "date_display": "日期显示",
+    "menu_title": "显示列设置",
+    "relative": "相对"
   },
   "settings": {
     "accounts": "账户",

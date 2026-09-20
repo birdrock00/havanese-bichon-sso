@@ -23,6 +23,7 @@ import { Main } from '@/components/layout/main';
 import { TablePagination } from '@/components/pagination';
 import React from 'react';
 import AttachmentProvider, { AttachmentDialogType } from './context';
+import { useDateDisplay } from '@/hooks/use-date-display';
 import useDialogState from '@/hooks/use-dialog-state';
 import { useTranslation } from 'react-i18next';
 import { AttachmentListTable } from './mail-list-table';
@@ -44,6 +45,7 @@ export default function AttachmentSearch() {
   const [sorting, setSorting] = React.useState<SortingState>([{ id: "date", desc: true }]);
   const [deleteMailboxId, setDeleteMailboxId] = React.useState<string | undefined>(undefined);
   const [selectedAccountId, setSelectedAccountId] = React.useState<number | undefined>(undefined);
+  const { dateDisplay, setDateDisplay: handleSetDateDisplay } = useDateDisplay();
 
   const {
     attachments,
@@ -96,7 +98,9 @@ export default function AttachmentSearch() {
             setDeleteMailboxId,
             selectedAccountId,
             setSelectedAccountId,
-            handleTagToggle
+            handleTagToggle,
+            dateDisplay,
+            setDateDisplay: handleSetDateDisplay
           }}
         >
           <div className="mx-auto w-full px-4">

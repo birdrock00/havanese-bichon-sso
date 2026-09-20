@@ -2055,8 +2055,11 @@
     "tooltip": "Cancella tutti i filtri"
   },
   "search_view": {
+    "absolute": "Assoluto",
     "button_label": "Vista",
-    "menu_title": "Impostazioni colonne"
+    "date_display": "Visualizzazione data",
+    "menu_title": "Impostazioni colonne",
+    "relative": "Relativa"
   },
   "settings": {
     "accounts": "Account",

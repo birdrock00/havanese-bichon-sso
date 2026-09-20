@@ -2055,8 +2055,11 @@
     "tooltip": "Alle Filter entfernen"
   },
   "search_view": {
+    "absolute": "Absolut",
     "button_label": "Ansicht",
-    "menu_title": "Spalteneinstellungen"
+    "date_display": "Datumsanzeige",
+    "menu_title": "Spalteneinstellungen",
+    "relative": "Relativ"
   },
   "settings": {
     "accounts": "Konten",

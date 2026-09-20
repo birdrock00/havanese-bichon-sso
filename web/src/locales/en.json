@@ -2055,8 +2055,11 @@
     "tooltip": "Clear all filters"
   },
   "search_view": {
+    "absolute": "Absolute",
     "button_label": "View",
-    "menu_title": "Column settings"
+    "date_display": "Date display",
+    "menu_title": "Column settings",
+    "relative": "Relative"
   },
   "settings": {
     "accounts": "Accounts",

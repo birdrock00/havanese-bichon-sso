@@ -2055,8 +2055,11 @@
     "tooltip": "모든 필터 조건 지우기"
   },
   "search_view": {
+    "absolute": "절대 날짜",
     "button_label": "보기",
-    "menu_title": "표시 열 설정"
+    "date_display": "날짜 표시",
+    "menu_title": "표시 열 설정",
+    "relative": "상대적"
   },
   "settings": {
     "accounts": "계정",

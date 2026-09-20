@@ -2055,8 +2055,11 @@
     "tooltip": "Alle filters wissen"
   },
   "search_view": {
+    "absolute": "Absoluut",
     "button_label": "Weergave",
-    "menu_title": "Kolominstellingen"
+    "date_display": "Dateweergave",
+    "menu_title": "Kolominstellingen",
+    "relative": "Relatief"
   },
   "settings": {
     "accounts": "Accounts",

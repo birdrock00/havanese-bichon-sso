@@ -20,8 +20,11 @@
 import React from 'react'
 import { EmailEnvelope } from '@/api'
 import { SortingState } from '@tanstack/react-table'
+import type { DateDisplayMode } from '@/hooks/use-date-display'
 
 export type SearchDialogType = 'mailbox' | 'display' | 'delete' | 'filters' | 'tags' | 'edit-tags' | 'update-tags' | 'restore' | 'delete-mailbox'
+
+export type { DateDisplayMode }
 
 interface SearchContextType {
   open: SearchDialogType | null
@@ -44,6 +47,8 @@ interface SearchContextType {
   handleTagToggle: (tag: string) => void
   editTagsOpen: boolean
   setEditTagsOpen: (open: boolean) => void
+  dateDisplay: DateDisplayMode
+  setDateDisplay: (mode: DateDisplayMode) => void
 }
 
 const SearchContext = React.createContext<SearchContextType | null>(null)

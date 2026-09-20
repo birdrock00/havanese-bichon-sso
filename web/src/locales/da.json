@@ -2055,8 +2055,11 @@
     "tooltip": "Ryd alle filtre"
   },
   "search_view": {
+    "absolute": "Absolut",
     "button_label": "Visning",
-    "menu_title": "Indstillinger for kolonner"
+    "date_display": "Datovisning",
+    "menu_title": "Indstillinger for kolonner",
+    "relative": "Relativ"
   },
   "settings": {
     "accounts": "Konti",

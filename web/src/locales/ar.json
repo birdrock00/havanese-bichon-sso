@@ -2055,8 +2055,11 @@
     "tooltip": "مسح جميع شروط التصفية"
   },
   "search_view": {
+    "absolute": "تاريخ مطلق",
     "button_label": "العرض",
-    "menu_title": "إعدادات الأعمدة"
+    "date_display": "عرض التاريخ",
+    "menu_title": "إعدادات الأعمدة",
+    "relative": "نسبي"
   },
   "settings": {
     "accounts": "الحسابات",

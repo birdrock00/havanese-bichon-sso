@@ -2055,8 +2055,11 @@
     "tooltip": "すべての条件をクリア"
   },
   "search_view": {
+    "absolute": "絶対日付",
     "button_label": "表示",
-    "menu_title": "列の設定"
+    "date_display": "日付表示",
+    "menu_title": "列の設定",
+    "relative": "相対"
   },
   "settings": {
     "accounts": "アカウント",
