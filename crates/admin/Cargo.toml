@@ -3,6 +3,15 @@ name = "bichon-admin"
 version.workspace = true
 edition.workspace = true
 
+# The CLI, menus and restore flow live in the library so the Pro build can
+# ship its own `bichon-admin` binary on top of the exact same code.
+[lib]
+name = "bichon_admin"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bichon-admin"
+path = "src/main.rs"
 
 [dependencies]
 bichon-core = { path = "../core" }

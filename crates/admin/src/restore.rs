@@ -52,11 +52,12 @@ use console::style;
 use dialoguer::{theme::ColorfulTheme, Confirm, Input};
 
 /// Run a restore from parsed CLI arguments (`bichon-admin restore …`).
-/// Returns the process exit code.
-pub async fn run_cli(args: RestoreArgs) -> i32 {
+/// `verify_only` turns the run into the Pro verify-only drill (the community
+/// binary always passes `false`). Returns the process exit code.
+pub async fn run_cli(args: RestoreArgs, verify_only: bool) -> i32 {
     init_tracing();
 
-    let opts = match restore_options_from_cli(&args, false) {
+    let opts = match restore_options_from_cli(&args, verify_only) {
         Ok(opts) => opts,
         Err(e) => {
             eprintln!("{} Restore failed: {e:?}", style("ERROR:").red().bold());
@@ -87,7 +88,10 @@ pub async fn run_cli(args: RestoreArgs) -> i32 {
 ///    layout under the target root) — re-prompted until R7-clean;
 /// 4. free-space check per mount point;
 /// 5. confirmation, then the restore runs.
-pub async fn run_interactive(theme: &ColorfulTheme) -> i32 {
+///
+/// `verify_only` turns the run into the Pro verify-only drill (the community
+/// binary always passes `false`).
+pub async fn run_interactive(theme: &ColorfulTheme, verify_only: bool) -> i32 {
     println!(
         "\n{}",
         style("Restore a backup point from S3 into an empty directory.").bold()
@@ -122,7 +126,7 @@ pub async fn run_interactive(theme: &ColorfulTheme) -> i32 {
             into: Default::default(),
             index_dir: None,
             data_dir: None,
-            verify_only: false,
+            verify_only,
             access_key: cfg.s3_access_key.clone(),
             secret_key: cfg.s3_secret_key.clone(),
             region: cfg.s3_region.clone(),
