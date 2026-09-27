@@ -1,9 +1,32 @@
+use std::io::Read;
+use std::path::Path;
+
 use crc32fast::Hasher;
+
+use crate::error::Result;
 
 pub fn crc32(data: &[u8]) -> u32 {
     let mut h = Hasher::new();
     h.update(data);
     h.finalize()
+}
+
+/// SHA-256 of a file, streamed in 1 MiB chunks so a multi-hundred-MB segment
+/// never sits in memory. Called at seal time and after GC compaction, when
+/// the file was just written and is page-cache warm (design doc §7).
+pub fn sha256_file(path: &Path) -> Result<[u8; 32]> {
+    use sha2::{Digest, Sha256};
+    let mut file = std::fs::File::open(path)?;
+    let mut hasher = Sha256::new();
+    let mut buf = vec![0u8; 1 << 20];
+    loop {
+        let n = file.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    Ok(hasher.finalize().into())
 }
 
 pub struct CrcWriter {

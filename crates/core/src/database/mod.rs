@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::backup::gate::WRITE_GATE;
 use crate::common::paginated::Paginated;
 use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
@@ -26,17 +27,38 @@ use serde::Serialize;
 
 pub mod manager;
 
+/// Hold the write gate for a memdb write unless the model is exempt (see
+/// [`MemDbModel::BACKUP_GATE_EXEMPT`]).
+fn gate_guard<M: MemDbModel>() -> BichonResult<Option<crate::backup::gate::WriteGuard<'static>>> {
+    if M::BACKUP_GATE_EXEMPT {
+        Ok(None)
+    } else {
+        WRITE_GATE.check().map(Some)
+    }
+}
+
 /// Trait for models that can be stored in MemDb collections.
 pub trait MemDbModel: Serialize + DeserializeOwned + Clone + Send + 'static {
     /// The collection name this model is stored under.
     fn collection() -> &'static str;
     /// The primary key as a string for MemDb storage.
     fn key(&self) -> String;
+    /// Writes to this model may proceed while a backup capture window is
+    /// open. Exempt models must touch *only* memdb — no blob, tantivy or
+    /// redb coupling — so a mid-window write cannot break the cross-store
+    /// snapshot consistency the write gate exists for: memdb serializes
+    /// writes against `dump_to` internally, so the dump simply sees the
+    /// state before or after the write. Tokens and other ephemeral
+    /// credentials qualify: worst case a restored archive is missing a
+    /// session and the user logs in again. Login itself must not fail just
+    /// because a backup is running.
+    const BACKUP_GATE_EXEMPT: bool = false;
 }
 
 // ─── Insert ───────────────────────────────────────────────────────────────
 
 pub fn insert_impl<M: MemDbModel>(db: &MemDb, item: M) -> BichonResult<()> {
+    let _write_guard = gate_guard::<M>()?;
     let coll = db.collection(M::collection());
     let key = item.key();
     coll.insert(key, &item)
@@ -44,6 +66,7 @@ pub fn insert_impl<M: MemDbModel>(db: &MemDb, item: M) -> BichonResult<()> {
 }
 
 pub fn batch_insert_impl<M: MemDbModel>(db: &MemDb, items: Vec<M>) -> BichonResult<()> {
+    let _write_guard = gate_guard::<M>()?;
     let txn = db.transaction();
     let mut txn = txn;
     for item in &items {
@@ -58,12 +81,14 @@ pub fn batch_insert_impl<M: MemDbModel>(db: &MemDb, items: Vec<M>) -> BichonResu
 // ─── Upsert ────────────────────────────────────────────────────────────────
 
 pub fn upsert_impl<M: MemDbModel>(db: &MemDb, item: M) -> BichonResult<()> {
+    let _write_guard = gate_guard::<M>()?;
     let coll = db.collection(M::collection());
     coll.upsert(item.key(), &item)
         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
 }
 
 pub fn batch_upsert_impl<M: MemDbModel>(db: &MemDb, items: Vec<M>) -> BichonResult<()> {
+    let _write_guard = gate_guard::<M>()?;
     let txn = db.transaction();
     let mut txn = txn;
     for item in &items {
@@ -102,6 +127,7 @@ pub fn update_impl<M: MemDbModel>(
     key: &str,
     update_fn: impl FnOnce(M) -> BichonResult<M> + Send + 'static,
 ) -> BichonResult<M> {
+    let _write_guard = gate_guard::<M>()?;
     let coll = db.collection(M::collection());
     let current: M = coll
         .get_required(key)
@@ -115,6 +141,7 @@ pub fn update_impl<M: MemDbModel>(
 // ─── Delete ────────────────────────────────────────────────────────────────
 
 pub fn delete_impl<M: MemDbModel>(db: &MemDb, key: &str) -> BichonResult<()> {
+    let _write_guard = gate_guard::<M>()?;
     let coll = db.collection(M::collection());
     let existed = coll
         .delete(key)
@@ -129,6 +156,7 @@ pub fn delete_impl<M: MemDbModel>(db: &MemDb, key: &str) -> BichonResult<()> {
 }
 
 pub fn batch_delete_impl<M: MemDbModel>(db: &MemDb, keys: Vec<String>) -> BichonResult<usize> {
+    let _write_guard = gate_guard::<M>()?;
     let txn = db.transaction();
     let mut txn = txn;
     let mut count = 0usize;
@@ -215,6 +243,20 @@ pub fn paginate_impl<M: MemDbModel>(
 
 /// Execute operations within a single atomic transaction (one WAL entry).
 pub fn with_transaction(
+    db: &MemDb,
+    f: impl FnOnce(Transaction) -> BichonResult<Transaction> + Send + 'static,
+) -> BichonResult<()> {
+    let _write_guard = WRITE_GATE.check()?;
+    let txn = db.transaction();
+    let txn = f(txn)?;
+    txn.commit()
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
+}
+
+/// [`with_transaction`] for callers that only touch collections whose model
+/// is [`MemDbModel::BACKUP_GATE_EXEMPT`] — the write also proceeds while a
+/// backup capture window is open (safe: memdb-only, no cross-store coupling).
+pub fn with_transaction_exempt(
     db: &MemDb,
     f: impl FnOnce(Transaction) -> BichonResult<Transaction> + Send + 'static,
 ) -> BichonResult<()> {

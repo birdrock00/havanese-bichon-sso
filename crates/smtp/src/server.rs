@@ -21,6 +21,7 @@ use base64::{prelude::BASE64_STANDARD, Engine as _};
 use bichon_core::{
     account::migration::{AccountModel, AccountType},
     archive::imap::mailbox::{Attribute, AttributeEnum, MailBox},
+    backup::gate::WRITE_GATE,
     common::{auth::ClientContext, signal::SIGNAL_MANAGER},
     envelope::extractor::extract_envelope_from_smtp,
     error::BichonResult,
@@ -612,6 +613,17 @@ async fn read_data<R: AsyncBufReadExt + Unpin>(reader: &mut R) -> io::Result<Vec
 }
 
 async fn parse_email(data: &[u8], session: &Session) -> BichonResult<()> {
+    // During a backup window the write gate is closed. Reject immediately with
+    // a transient error (mapped to "451 try again later" by the caller) so the
+    // client retries after the window instead of blocking on the extractor
+    // gate for up to the acquire timeout.
+    if WRITE_GATE.is_paused() {
+        return Err(bichon_core::raise_error!(
+            "server is currently backing up, mail delivery temporarily unavailable".to_string(),
+            bichon_core::error::code::ErrorCode::TooManyRequest
+        ));
+    }
+
     let rcpt = match session.rcpt_to.first() {
         Some(r) => r,
         None => {

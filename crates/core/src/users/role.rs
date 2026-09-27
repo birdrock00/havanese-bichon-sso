@@ -111,6 +111,8 @@ impl BuiltinRole {
             Permission::DATA_RAW_DOWNLOAD_ALL,
             Permission::DATA_DELETE_ALL,
             Permission::DATA_EXPORT_BATCH_ALL,
+            // Backup / Restore
+            Permission::BACKUP_MANAGE,
         ]
         .into_iter()
         .collect()

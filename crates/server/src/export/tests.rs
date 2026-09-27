@@ -33,7 +33,19 @@ static SETUP: OnceCell<()> = OnceCell::const_new();
 async fn setup() {
     SETUP
         .get_or_init(|| async {
-            let root = PathBuf::from(&SETTINGS.bichon_root_dir);
+            // Unit tests never pass CLI flags; give the settings parser a
+            // throwaway data root + encryption password before first use.
+            if std::env::var("BICHON_ROOT_DIR").is_err() {
+                std::env::set_var(
+                    "BICHON_ROOT_DIR",
+                    std::env::temp_dir()
+                        .join(format!("bichon-server-export-test-{}", std::process::id())),
+                );
+            }
+            if std::env::var("BICHON_ENCRYPT_PASSWORD").is_err() {
+                std::env::set_var("BICHON_ENCRYPT_PASSWORD", "test-password");
+            }
+            let root = PathBuf::from(SETTINGS.root_dir());
             if root.exists() {
                 let _ = std::fs::remove_dir_all(&root);
             }

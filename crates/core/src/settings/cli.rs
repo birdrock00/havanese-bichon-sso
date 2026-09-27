@@ -17,8 +17,13 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::settings::io::check_dir_read_write;
-use clap::{builder::ValueParser, Parser, ValueEnum};
-use std::{collections::HashSet, env, fmt, path::PathBuf, sync::{LazyLock, OnceLock}};
+use clap::{builder::ValueParser, Args, Parser, ValueEnum};
+use std::{
+    collections::HashSet,
+    env, fmt,
+    path::PathBuf,
+    sync::{LazyLock, OnceLock},
+};
 
 pub static SETTINGS: LazyLock<Settings> = LazyLock::new(Settings::init);
 
@@ -348,6 +353,78 @@ pub struct Settings {
     pub bichon_web_pst_upload_limit_mb: u64,
 }
 
+/// Arguments for the one-shot disaster-recovery restore (`bichon-admin
+/// restore`). Restore lives in the admin tool, not the server binary: a
+/// fresh box has no data root yet, and the server CLI requires one at the
+/// clap level. The S3 backend connection details come from a JSON config
+/// file (`--config`) — restore deliberately does not read the local
+/// install's metadata store, so it runs unchanged on a fresh box.
+#[derive(Clone, Debug, Args)]
+pub struct RestoreArgs {
+    /// JSON config file with the S3 backup backend settings (`s3_endpoint`,
+    /// `s3_bucket`, `prefix`, `s3_region`, `s3_access_key`,
+    /// `s3_secret_key`; only endpoint and bucket are mandatory).
+    #[clap(
+        long,
+        short = 'c',
+        required = true,
+        value_parser = ValueParser::new(|s: &str| {
+            let path = PathBuf::from(s);
+            if !path.is_file() {
+                return Err(format!("restore: config file not found: {s}"));
+            }
+            Ok(s.to_string())
+        }),
+        help = "JSON config file with the S3 backup backend settings (s3_endpoint, s3_bucket, prefix, s3_region, s3_access_key, s3_secret_key)"
+    )]
+    pub config: String,
+
+    /// Empty target directory the restore writes into (required). Refused if
+    /// it is not empty or touches the live data root (R7).
+    #[clap(
+        long,
+        env = "BICHON_RESTORE_INTO",
+        help = "Empty target directory to restore into (required; R7: must be empty, never the live data root)"
+    )]
+    pub into: String,
+
+    /// Restore a specific point (`m-<id>`); default = LATEST.
+    #[clap(
+        long,
+        env = "BICHON_RESTORE_POINT",
+        help = "Restore point to use (default: LATEST)"
+    )]
+    pub point: Option<String>,
+
+    /// Target index parent dir (mirrors `bichon-index-dir`). Default = the
+    /// index lives under the target root (`<into>/bichon-indices`).
+    #[clap(
+        long,
+        env = "BICHON_RESTORE_INDEX_DIR",
+        help = "Target index parent directory (default: <into>/bichon-indices; R7: must be empty, never the live data root)"
+    )]
+    pub index_dir: Option<String>,
+
+    /// Target blob data parent dir (mirrors `bichon-data-dir`). Default = the
+    /// blob store lives under the target root (`<into>/bichon-storage`).
+    #[clap(
+        long,
+        env = "BICHON_RESTORE_DATA_DIR",
+        help = "Target blob data parent directory (default: <into>/bichon-storage; R7: must be empty, never the live data root)"
+    )]
+    pub data_dir: Option<String>,
+
+    /// The live data root of an existing install (if the box being recovered
+    /// still has one). Restore targets that touch it are refused (R7). Leave
+    /// unset on a fresh disaster-recovery box.
+    #[clap(
+        long,
+        env = "BICHON_ROOT_DIR",
+        help = "Path of the existing bichon data root (R7: restore targets must be disjoint from it); omit on a fresh box"
+    )]
+    pub root_dir: Option<String>,
+}
+
 /// Overrides the settings used by the `SETTINGS` global.
 ///
 /// The Pro binary parses one merged clap command (community + Pro args) and
@@ -361,6 +438,14 @@ pub fn override_settings(settings: Settings) {
 static SETTINGS_OVERRIDE: OnceLock<Settings> = OnceLock::new();
 
 impl Settings {
+    /// The data root for this process. Always present: clap requires
+    /// `--bichon-root-dir`/`BICHON_ROOT_DIR` (the field is non-optional, so
+    /// the parser rejects a bare server run). The one-shot disaster-recovery
+    /// restore lives in `bichon-admin`, which never parses `Settings`.
+    pub fn root_dir(&self) -> &str {
+        self.bichon_root_dir.as_str()
+    }
+
     pub fn init() -> Self {
         // The Pro binary parses a single merged clap command (community +
         // Pro args) and seeds the override below before anything derefs
@@ -376,10 +461,27 @@ impl Settings {
                 // only the binary name so that the settings come entirely
                 // from environment variables.
                 let args: Vec<String> = std::env::args().collect();
-                Self::try_parse_from(&args)
-                    .unwrap_or_else(|_| Self::parse_from(std::iter::once(args[0].clone())))
+                match Self::try_parse_from(&args) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        // `--help` / `--version` short-circuit clap; print and
+                        // exit cleanly instead of falling through to the
+                        // env-only re-parse (which would then trip the
+                        // data-root requirement below on a server run).
+                        if matches!(
+                            e.kind(),
+                            clap::error::ErrorKind::DisplayHelp
+                                | clap::error::ErrorKind::DisplayVersion
+                        ) {
+                            e.exit();
+                        }
+                        Self::parse_from(std::iter::once(args[0].clone()))
+                    }
+                }
             }
         };
+        // The data-root requirement lives entirely in clap (the non-optional
+        // `bichon_root_dir` field), so nothing to check here for it.
         if s.bichon_encrypt_password.is_none() && s.bichon_encrypt_password_file.is_none() {
             panic!(
                 "One of --bichon_encrypt_password or --bichon_encrypt_password_file has to be set"
@@ -444,5 +546,98 @@ impl fmt::Display for EncryptionMode {
             EncryptionMode::Starttls => write!(f, "starttls"),
             EncryptionMode::Tls => write!(f, "tls"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The flat server flags parse as before; `--bichon-root-dir` is required
+    /// (non-optional field), enforced by clap itself.
+    #[test]
+    fn flat_server_flags_parse() {
+        let root = std::env::temp_dir().join("bichon-cli-test-root");
+        let s = Settings::try_parse_from([
+            "bichon",
+            "--bichon-root-dir",
+            root.to_str().unwrap(),
+            "--bichon-http-port",
+            "9999",
+        ])
+        .expect("flat flags should parse");
+        assert_eq!(s.bichon_http_port, 9999);
+        assert_eq!(s.root_dir(), root.to_str().unwrap());
+    }
+
+    /// A server run without `--bichon-root-dir` must fail at the clap level —
+    /// the requirement is enforced by the parser, not by a manual runtime
+    /// check. The env binding is lifted for the parse (other tests in this
+    /// binary legitimately set `BICHON_ROOT_DIR` to bootstrap `SETTINGS`) and
+    /// restored afterwards.
+    #[test]
+    fn server_run_without_root_dir_is_clap_error() {
+        let saved = std::env::var("BICHON_ROOT_DIR").ok();
+        std::env::remove_var("BICHON_ROOT_DIR");
+        let parsed = Settings::try_parse_from(["bichon", "--bichon-http-port", "9999"]);
+        match saved {
+            Some(v) => std::env::set_var("BICHON_ROOT_DIR", v),
+            None => std::env::remove_var("BICHON_ROOT_DIR"),
+        }
+        let err = parsed.expect_err("missing --bichon-root-dir must be rejected");
+        assert_eq!(err.kind(), clap::error::ErrorKind::MissingRequiredArgument);
+    }
+
+    /// `RestoreArgs` (the `bichon-admin restore` flags) parse standalone:
+    /// `--config` and `--into` are required, the S3 details live in the
+    /// config file.
+    #[test]
+    fn restore_args_parse_standalone() {
+        use clap::{Command as ClapCommand, FromArgMatches};
+
+        let cfg = std::env::temp_dir().join("bichon-restore-cfg-test.json");
+        std::fs::write(
+            &cfg,
+            r#"{"s3_endpoint":"http://localhost:9000","s3_bucket":"bichon","prefix":"pfx","s3_region":"us-west-2","s3_access_key":"ak","s3_secret_key":"sk"}"#,
+        )
+        .unwrap();
+
+        let matches = RestoreArgs::augment_args(ClapCommand::new("restore"))
+            .try_get_matches_from([
+                "restore",
+                "--config",
+                cfg.to_str().unwrap(),
+                "--into",
+                "/tmp/restore",
+            ])
+            .expect("restore args should parse");
+        let args = RestoreArgs::from_arg_matches(&matches).unwrap();
+        assert_eq!(args.into, "/tmp/restore");
+        assert!(args.point.is_none());
+        // `root_dir` binds `BICHON_ROOT_DIR`; other tests in this binary set
+        // that env concurrently, so only assert absence on a clean env.
+        if std::env::var("BICHON_ROOT_DIR").is_err() {
+            assert!(args.root_dir.is_none());
+        }
+
+        // `--config` and `--into` are required; a missing file is rejected by
+        // the value parser.
+        let err = RestoreArgs::augment_args(ClapCommand::new("restore"))
+            .try_get_matches_from(["restore", "--into", "/tmp/restore"])
+            .expect_err("missing --config must be rejected");
+        assert_eq!(err.kind(), clap::error::ErrorKind::MissingRequiredArgument);
+
+        let err = RestoreArgs::augment_args(ClapCommand::new("restore"))
+            .try_get_matches_from([
+                "restore",
+                "--config",
+                "/definitely/not/a/real/file.json",
+                "--into",
+                "/tmp/restore",
+            ])
+            .expect_err("missing config file must be rejected");
+        assert_eq!(err.kind(), clap::error::ErrorKind::ValueValidation);
+
+        let _ = std::fs::remove_file(&cfg);
     }
 }

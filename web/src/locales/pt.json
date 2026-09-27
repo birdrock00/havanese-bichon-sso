@@ -837,6 +837,44 @@
     "welcome": "Bem-vindo ao Bichon",
     "youWillNeedToLogInAgain": "Você precisará fazer login novamente para acessar sua conta."
   },
+  "backup": {
+    "title": "Backup",
+    "statusCard": "Backup status",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "statusFailed": "Failed",
+    "phase": "Phase",
+    "schedule": "Schedule",
+    "nextRun": "Next run",
+    "lastSuccess": "Last success",
+    "lastSnapshot": "Last snapshot",
+    "lastError": "Last error",
+    "none": "None",
+    "never": "Never",
+    "runNow": "Run backup now",
+    "trigger": "Trigger",
+    "status": "Status",
+    "snapshot": "Snapshot",
+    "error": "Error",
+    "time": "Time",
+    "filesLabel": "files",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "loadFailed": "Failed to load backup data",
+    "triggerStarted": "Backup started",
+    "triggerFailed": "Failed to start backup",
+    "refresh": "Refresh",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "previewHint": "Select a file to preview it",
+    "previewFailed": "Failed to load preview",
+    "download": "Download",
+    "downloadFailed": "Failed to download file"
+  },
   "command": {
     "dark": "Escuro",
     "light": "Claro",
@@ -1511,7 +1549,8 @@
     "other": "Outro",
     "settings": "Configurações",
     "timestampAnchor": "Ancoragem de carimbo de tempo",
-    "users": "Usuários do sistema"
+    "users": "Usuários do sistema",
+    "backup": "Backup"
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "Uma chave secreta fornecida pelo provedor OAuth para autenticar sua aplicação.",
@@ -1931,6 +1970,7 @@
     "pleaseSelectAtLeastOne": "Por favor, selecione pelo menos um critério de pesquisa",
     "preview": "Prévia",
     "recipient": "Destinatário",
+    "refresh": "Atualizar",
     "searchArchivedEmails": "Pesquisar Emails Arquivados",
     "searchButton": "Pesquisar",
     "searchInSubjectBody": "Pesquisar no assunto, corpo e anexos...",
@@ -2365,7 +2405,9 @@
     "title": "Sair"
   },
   "system": {
-    "notifications": "Notificações do sistema"
+    "notifications": "Notificações do sistema",
+    "alertError": "Error",
+    "alertWarning": "Warning"
   },
   "systemConfig": {
     "pageDescription": "Estes parâmetros são inicializados via flags CLI ou variáveis de ambiente. Estão em modo somente leitura.",

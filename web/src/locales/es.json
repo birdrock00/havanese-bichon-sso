@@ -837,6 +837,44 @@
     "welcome": "Bienvenido a Bichon",
     "youWillNeedToLogInAgain": "Necesitarás iniciar sesión de nuevo para acceder a tu cuenta."
   },
+  "backup": {
+    "title": "Backup",
+    "statusCard": "Backup status",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "statusFailed": "Failed",
+    "phase": "Phase",
+    "schedule": "Schedule",
+    "nextRun": "Next run",
+    "lastSuccess": "Last success",
+    "lastSnapshot": "Last snapshot",
+    "lastError": "Last error",
+    "none": "None",
+    "never": "Never",
+    "runNow": "Run backup now",
+    "trigger": "Trigger",
+    "status": "Status",
+    "snapshot": "Snapshot",
+    "error": "Error",
+    "time": "Time",
+    "filesLabel": "files",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "loadFailed": "Failed to load backup data",
+    "triggerStarted": "Backup started",
+    "triggerFailed": "Failed to start backup",
+    "refresh": "Refresh",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "previewHint": "Select a file to preview it",
+    "previewFailed": "Failed to load preview",
+    "download": "Download",
+    "downloadFailed": "Failed to download file"
+  },
   "command": {
     "dark": "Oscuro",
     "light": "Claro",
@@ -1511,7 +1549,8 @@
     "other": "Otro",
     "settings": "Configuración",
     "timestampAnchor": "Anclaje de marca de tiempo",
-    "users": "Usuarios del sistema"
+    "users": "Usuarios del sistema",
+    "backup": "Backup"
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "Una clave secreta proporcionada por el proveedor OAuth para autenticar tu aplicación.",
@@ -1931,6 +1970,7 @@
     "pleaseSelectAtLeastOne": "Por favor, selecciona al menos un criterio de búsqueda",
     "preview": "Vista previa",
     "recipient": "Destinatario",
+    "refresh": "Actualizar",
     "searchArchivedEmails": "Buscar en correos archivados",
     "searchButton": "Buscar",
     "searchInSubjectBody": "Buscar en asunto, cuerpo, adjuntos...",
@@ -2365,7 +2405,9 @@
     "title": "Cerrar sesión"
   },
   "system": {
-    "notifications": "Notificaciones del sistema"
+    "notifications": "Notificaciones del sistema",
+    "alertError": "Error",
+    "alertWarning": "Warning"
   },
   "systemConfig": {
     "pageDescription": "Estos parámetros se inicializan mediante indicadores CLI o variables de entorno. Actualmente son de solo lectura.",

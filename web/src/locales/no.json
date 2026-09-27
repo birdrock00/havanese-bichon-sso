@@ -837,6 +837,44 @@
     "welcome": "Velkommen til Bichon",
     "youWillNeedToLogInAgain": "Du må logge inn på nytt for å få tilgang til kontoen din."
   },
+  "backup": {
+    "title": "Backup",
+    "statusCard": "Backup status",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "statusFailed": "Failed",
+    "phase": "Phase",
+    "schedule": "Schedule",
+    "nextRun": "Next run",
+    "lastSuccess": "Last success",
+    "lastSnapshot": "Last snapshot",
+    "lastError": "Last error",
+    "none": "None",
+    "never": "Never",
+    "runNow": "Run backup now",
+    "trigger": "Trigger",
+    "status": "Status",
+    "snapshot": "Snapshot",
+    "error": "Error",
+    "time": "Time",
+    "filesLabel": "files",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "loadFailed": "Failed to load backup data",
+    "triggerStarted": "Backup started",
+    "triggerFailed": "Failed to start backup",
+    "refresh": "Refresh",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "previewHint": "Select a file to preview it",
+    "previewFailed": "Failed to load preview",
+    "download": "Download",
+    "downloadFailed": "Failed to download file"
+  },
   "command": {
     "dark": "Mørk",
     "light": "Lys",
@@ -1511,7 +1549,8 @@
     "other": "Annet",
     "settings": "Innstillinger",
     "timestampAnchor": "Tidsstempelforankring",
-    "users": "Systembrukere"
+    "users": "Systembrukere",
+    "backup": "Backup"
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "En hemmelig nøkkel levert av OAuth-leverandøren for å autentisere applikasjonen din.",
@@ -1931,6 +1970,7 @@
     "pleaseSelectAtLeastOne": "Vennligst velg minst ett søkekriterium",
     "preview": "Forhåndsvisning",
     "recipient": "Mottaker",
+    "refresh": "Oppdater",
     "searchArchivedEmails": "Søk i arkiverte e-poster",
     "searchButton": "Søk",
     "searchInSubjectBody": "Søk i emne, innhold, vedlegg...",
@@ -2365,7 +2405,9 @@
     "title": "Logg ut"
   },
   "system": {
-    "notifications": "Systemvarsler"
+    "notifications": "Systemvarsler",
+    "alertError": "Error",
+    "alertWarning": "Warning"
   },
   "systemConfig": {
     "pageDescription": "Disse parametrene initialiseres via CLI-flagg eller miljøvariabler. De er skrivebeskyttede.",

@@ -7,8 +7,10 @@ edition.workspace = true
 [dependencies]
 bichon-core = { path = "../core" }
 tokio.workspace = true
+clap.workspace = true
 dialoguer.workspace = true
 console.workspace = true
+tracing-subscriber.workspace = true
 indicatif.workspace = true
 native_db = "0.8.2"
 native_model = "0.4.20"

@@ -104,6 +104,12 @@ impl Permission {
     /// operation, so the requester and the approver are different people.
     pub const APPROVAL_DECIDE: &str = "approval:decide";
 
+    /// Trigger and manage backups, and browse backup data (restore points,
+    /// manifests, audit deltas). Grants no other administrative powers, so a
+    /// delegated operator can own the backup duty without touching users,
+    /// accounts or mail data.
+    pub const BACKUP_MANAGE: &str = "backup:manage";
+
     // ----------------------------------------------------------------------
     // 3. Scoped/Limited Permissions (Manager & Viewer)
     //    Authorization requires checking the user's Account Access List (ACL)
@@ -194,6 +200,10 @@ impl Permission {
             (
                 Self::APPROVAL_DECIDE,
                 "Approve or reject dual-control requests for high-risk operations (Enterprise).",
+            ),
+            (
+                Self::BACKUP_MANAGE,
+                "Trigger backups and browse backup data (snapshots, files, previews).",
             ),
         ]
     }

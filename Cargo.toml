@@ -88,7 +88,7 @@ mail-send = "0.6"
 rcgen = "0.14"
 rustls-pemfile = "2.2.0"
 blake3 = "1.8"
-uuid = { version = "1.26", features = ["v4", "serde"] }
+uuid = { version = "1.26", features = ["v4", "v7", "serde"] }
 fjall = { version = "3.1", features = ["lz4", "metrics", "bytes_1"] }
 tracing-log = "0.2.0"
 tokio-util = "0.7"

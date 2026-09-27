@@ -837,6 +837,44 @@
     "welcome": "Bichon へようこそ",
     "youWillNeedToLogInAgain": "アカウントにアクセスするには、再度ログインする必要があります。"
   },
+  "backup": {
+    "title": "Backup",
+    "statusCard": "Backup status",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "statusFailed": "Failed",
+    "phase": "Phase",
+    "schedule": "Schedule",
+    "nextRun": "Next run",
+    "lastSuccess": "Last success",
+    "lastSnapshot": "Last snapshot",
+    "lastError": "Last error",
+    "none": "None",
+    "never": "Never",
+    "runNow": "Run backup now",
+    "trigger": "Trigger",
+    "status": "Status",
+    "snapshot": "Snapshot",
+    "error": "Error",
+    "time": "Time",
+    "filesLabel": "files",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "loadFailed": "Failed to load backup data",
+    "triggerStarted": "Backup started",
+    "triggerFailed": "Failed to start backup",
+    "refresh": "Refresh",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "previewHint": "Select a file to preview it",
+    "previewFailed": "Failed to load preview",
+    "download": "Download",
+    "downloadFailed": "Failed to download file"
+  },
   "command": {
     "dark": "ダーク",
     "light": "ライト",
@@ -1511,7 +1549,8 @@
     "other": "その他",
     "settings": "設定",
     "timestampAnchor": "タイムスタンプ固定",
-    "users": "システムユーザー"
+    "users": "システムユーザー",
+    "backup": "Backup"
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "OAuthプロバイダーから提供される、アプリケーションを認証するためのシークレットキー。",
@@ -1931,6 +1970,7 @@
     "pleaseSelectAtLeastOne": "少なくとも1つの検索条件を選択してください",
     "preview": "プレビュー",
     "recipient": "受信者",
+    "refresh": "更新",
     "searchArchivedEmails": "アーカイブされたメールを検索",
     "searchButton": "検索",
     "searchInSubjectBody": "件名、本文、添付ファイル内を検索...",
@@ -2365,7 +2405,9 @@
     "title": "サインアウト"
   },
   "system": {
-    "notifications": "システム通知"
+    "notifications": "システム通知",
+    "alertError": "Error",
+    "alertWarning": "Warning"
   },
   "systemConfig": {
     "pageDescription": "これらのパラメータは、CLIフラグまたは環境変数を介して初期化されます。環境の一貫性を確保するため、現在は読み取り専用です。",

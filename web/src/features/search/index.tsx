@@ -15,50 +15,60 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
-import { Card, CardContent } from '@/components/ui/card';
-import { FixedHeader } from '@/components/layout/fixed-header';
-import { Main } from '@/components/layout/main';
-import { useSearchMessages } from '@/hooks/use-search-messages';
-import { TablePagination } from '@/components/pagination';
-import React from 'react';
-import { EmailEnvelope } from '@/api';
-import { MailDisplayDrawer } from './mail-display-dialog';
-import { EnvelopeDeleteDialog } from './delete-dialog';
-import SearchProvider, { SearchDialogType } from './context';
-import { useDateDisplay } from '@/hooks/use-date-display';
-import useDialogState from '@/hooks/use-dialog-state';
-import { EditTagsDialog } from './edit-tag-dialog';
-import { useTranslation } from 'react-i18next';
-import { RestoreMessageDialog } from './restore-message-dialog';
-import { MailListTable } from './mail-list-table';
-import { SortingState } from '@tanstack/react-table';
-import { MailBoxDeleteDialog } from './delete-mailbox-dialog';
-import { UpdateTagsDialog } from './bulk-add-tag-dialog';
+import React from 'react'
+import { SortingState } from '@tanstack/react-table'
+import { EmailEnvelope } from '@/api'
+import { useTranslation } from 'react-i18next'
+import { useDateDisplay } from '@/hooks/use-date-display'
+import useDialogState from '@/hooks/use-dialog-state'
+import { useSearchMessages } from '@/hooks/use-search-messages'
+import { Card, CardContent } from '@/components/ui/card'
+import { FixedHeader } from '@/components/layout/fixed-header'
+import { Main } from '@/components/layout/main'
+import { TablePagination } from '@/components/pagination'
+import { UpdateTagsDialog } from './bulk-add-tag-dialog'
+import SearchProvider, { SearchDialogType } from './context'
+import { EnvelopeDeleteDialog } from './delete-dialog'
+import { MailBoxDeleteDialog } from './delete-mailbox-dialog'
+import { EditTagsDialog } from './edit-tag-dialog'
+import { MailDisplayDrawer } from './mail-display-dialog'
+import { MailListTable } from './mail-list-table'
+import { RestoreMessageDialog } from './restore-message-dialog'
 
 export default function EmailSearch() {
   const { t } = useTranslation()
-  const [selectedEnvelope, setSelectedEnvelope] = React.useState<EmailEnvelope | undefined>(undefined);
+  const [selectedEnvelope, setSelectedEnvelope] = React.useState<
+    EmailEnvelope | undefined
+  >(undefined)
   const [open, setOpen] = useDialogState<SearchDialogType>(null)
-  const [toDelete, setToDelete] = React.useState<Map<number, Set<string>>>(new Map());
-  const [selected, setSelected] = React.useState<Map<number, Set<string>>>(new Map());
-  const [selectedTags, setSelectedTags] = React.useState<string[]>([]);
+  const [toDelete, setToDelete] = React.useState<Map<number, Set<string>>>(
+    new Map()
+  )
+  const [selected, setSelected] = React.useState<Map<number, Set<string>>>(
+    new Map()
+  )
+  const [selectedTags, setSelectedTags] = React.useState<string[]>([])
   // Start with no client-side sort: the server already orders the page
   // (RELEVANCE when the query has a text term, DATE desc otherwise), and
   // forcing a date sort here would write sortBy=DATE into the URL and
   // override the backend's relevance default.
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [deleteMailboxId, setDeleteMailboxId] = React.useState<string | undefined>(undefined);
-  const [selectedAccountId, setSelectedAccountId] = React.useState<number | undefined>(undefined);
-  const [editTagsOpen, setEditTagsOpen] = React.useState(false);
-  const { dateDisplay, setDateDisplay: handleSetDateDisplay } = useDateDisplay();
+  const [sorting, setSorting] = React.useState<SortingState>([])
+  const [deleteMailboxId, setDeleteMailboxId] = React.useState<
+    string | undefined
+  >(undefined)
+  const [selectedAccountId, setSelectedAccountId] = React.useState<
+    number | undefined
+  >(undefined)
+  const [editTagsOpen, setEditTagsOpen] = React.useState(false)
+  const { dateDisplay, setDateDisplay: handleSetDateDisplay } = useDateDisplay()
 
   const {
     emails,
     total,
     totalPages,
     isLoading,
+    isFetching,
+    refetch,
     page,
     pageSize,
     setPage,
@@ -67,21 +77,19 @@ export default function EmailSearch() {
     setSortOrder,
     effectiveSort,
     filter,
-    setFilter
-  } = useSearchMessages();
+    setFilter,
+  } = useSearchMessages()
 
   const handleSetPageSize = (pageSize: number) => {
-    setPage(1);
+    setPage(1)
     setSearchPageSize(pageSize)
   }
 
   const handleTagToggle = (tag: string) => {
-    setSelectedTags(prev =>
-      prev.includes(tag)
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    );
-  };
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    )
+  }
 
   return (
     <>
@@ -103,6 +111,8 @@ export default function EmailSearch() {
             filter,
             setFilter,
             effectiveSort,
+            refetch,
+            isFetching,
             deleteMailboxId,
             setDeleteMailboxId,
             selectedAccountId,
@@ -114,15 +124,15 @@ export default function EmailSearch() {
             setDateDisplay: handleSetDateDisplay,
           }}
         >
-          <div className="mx-auto w-full px-4">
-            <div className="flex gap-6">
-              <div className="flex-1 min-w-0 space-y-4">
+          <div className='mx-auto w-full px-4'>
+            <div className='flex gap-6'>
+              <div className='flex-1 min-w-0 space-y-4'>
                 {isLoading && (
                   <Card>
-                    <CardContent className="py-12">
-                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                        <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent"></div>
-                        <p className="text-sm">{t('search.searching')}</p>
+                    <CardContent className='py-12'>
+                      <div className='flex flex-col items-center gap-2 text-muted-foreground'>
+                        <div className='animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent'></div>
+                        <p className='text-sm'>{t('search.searching')}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -132,20 +142,22 @@ export default function EmailSearch() {
                   isLoading={isLoading}
                   items={emails}
                   onEnvelopeChanged={(envelope) => {
-                    setOpen('display');
-                    setSelectedEnvelope(envelope);
+                    setOpen('display')
+                    setSelectedEnvelope(envelope)
                   }}
                   setSortBy={setSortBy}
                   setSortOrder={setSortOrder}
                 />
-                {total > 0 && <TablePagination
-                  totalItems={total}
-                  hasNextPage={() => page < totalPages}
-                  pageIndex={page - 1}
-                  pageSize={pageSize}
-                  setPageIndex={(index) => setPage(index + 1)}
-                  setPageSize={handleSetPageSize}
-                />}
+                {total > 0 && (
+                  <TablePagination
+                    totalItems={total}
+                    hasNextPage={() => page < totalPages}
+                    pageIndex={page - 1}
+                    pageSize={pageSize}
+                    setPageIndex={(index) => setPage(index + 1)}
+                    setPageSize={handleSetPageSize}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -188,5 +200,5 @@ export default function EmailSearch() {
         </SearchProvider>
       </Main>
     </>
-  );
+  )
 }

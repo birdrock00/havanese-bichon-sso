@@ -837,6 +837,44 @@
     "welcome": "Bienvenue sur Bichon",
     "youWillNeedToLogInAgain": "Vous devrez vous reconnecter pour accéder à votre compte."
   },
+  "backup": {
+    "title": "Backup",
+    "statusCard": "Backup status",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "statusFailed": "Failed",
+    "phase": "Phase",
+    "schedule": "Schedule",
+    "nextRun": "Next run",
+    "lastSuccess": "Last success",
+    "lastSnapshot": "Last snapshot",
+    "lastError": "Last error",
+    "none": "None",
+    "never": "Never",
+    "runNow": "Run backup now",
+    "trigger": "Trigger",
+    "status": "Status",
+    "snapshot": "Snapshot",
+    "error": "Error",
+    "time": "Time",
+    "filesLabel": "files",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "loadFailed": "Failed to load backup data",
+    "triggerStarted": "Backup started",
+    "triggerFailed": "Failed to start backup",
+    "refresh": "Refresh",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "previewHint": "Select a file to preview it",
+    "previewFailed": "Failed to load preview",
+    "download": "Download",
+    "downloadFailed": "Failed to download file"
+  },
   "command": {
     "dark": "Sombre",
     "light": "Clair",
@@ -1511,7 +1549,8 @@
     "other": "Autre",
     "settings": "Paramètres",
     "timestampAnchor": "Ancrage horodaté",
-    "users": "Utilisateurs du système"
+    "users": "Utilisateurs du système",
+    "backup": "Backup"
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "Une clé secrète fournie par le fournisseur OAuth pour authentifier votre application.",
@@ -1931,6 +1970,7 @@
     "pleaseSelectAtLeastOne": "Veuillez sélectionner au moins un critère de recherche",
     "preview": "Aperçu",
     "recipient": "Destinataire",
+    "refresh": "Actualiser",
     "searchArchivedEmails": "Rechercher dans les E-mails Archivés",
     "searchButton": "Rechercher",
     "searchInSubjectBody": "Rechercher dans l'objet, le corps, les pièces jointes...",
@@ -2365,7 +2405,9 @@
     "title": "Déconnexion"
   },
   "system": {
-    "notifications": "Notifications système"
+    "notifications": "Notifications système",
+    "alertError": "Error",
+    "alertWarning": "Warning"
   },
   "systemConfig": {
     "pageDescription": "Ces paramètres sont initialisés via des drapeaux CLI ou des variables d'environnement. Ils sont en lecture seule pour garantir la cohérence de l'environnement.",

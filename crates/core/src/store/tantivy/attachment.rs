@@ -25,6 +25,7 @@ use std::{
 };
 
 use crate::{
+    backup::gate::{BACKUP_ACQUIRE_TIMEOUT, WRITE_GATE},
     common::{paginated::DataPage, signal::SIGNAL_MANAGER},
     dashboard::{Group, LargestAttachment},
     error::{code::ErrorCode, BichonResult},
@@ -44,6 +45,7 @@ use crate::{
         model::{extract_senders, AttachmentModel},
         schema::SchemaTools,
         tokenizers::EuroTokenizer,
+        WriterSlot,
     },
 };
 
@@ -62,7 +64,7 @@ use tantivy::{
 };
 use tantivy::{schema::Facet, Searcher};
 use tokio::{
-    sync::{mpsc, Mutex},
+    sync::{mpsc, oneshot, Mutex},
     task::{self, JoinHandle},
 };
 use tracing::info;
@@ -71,14 +73,17 @@ pub static ATTACHMENT_MANAGER: LazyLock<IndexManager> = LazyLock::new(IndexManag
 
 pub struct IndexManager {
     index: Arc<Index>,
-    index_writer: Arc<Mutex<IndexWriter>>,
+    index_writer: Arc<Mutex<WriterSlot>>,
     sender: mpsc::Sender<TantivyDocument>,
+    /// One-shot ack channel used by `prepare_for_backup` to force the writer
+    /// loop to commit everything queued and wait for merges before replying.
+    flush_tx: mpsc::Sender<oneshot::Sender<()>>,
     reader: IndexReader,
     handle: Mutex<Option<JoinHandle<()>>>,
 }
 
 impl IndexManager {
-    pub(crate) fn index_writer(&self) -> &Arc<Mutex<IndexWriter>> {
+    pub(crate) fn index_writer(&self) -> &Arc<Mutex<WriterSlot>> {
         &self.index_writer
     }
 
@@ -88,24 +93,36 @@ impl IndexManager {
             let _ = handle.await;
         }
     }
-    pub fn new() -> Self {
-        let index = Self::open_or_create_index(&DATA_DIR_MANAGER.attachment_dir);
-        index.tokenizers().register("euro", EuroTokenizer::new());
+    /// Creates the attachment index writer with Bichon's merge policy. Used at
+    /// startup and again after a backup flush consumes the writer while waiting
+    /// for in-flight merges to drain.
+    fn create_index_writer(index: &Index) -> BichonResult<IndexWriter> {
         let mut merge_policy = LogMergePolicy::default();
         merge_policy.set_min_num_segments(25);
         merge_policy.set_min_layer_size(10_000);
         merge_policy.set_max_docs_before_merge(100_000);
 
-        let index_writer = index
-            .writer_with_num_threads(4, 67_108_864)
-            .unwrap_or_else(|e| {
-                panic!(
-                    "Failed to create IndexWriter with 4 threads and 64MB buffer for {:?}: {}",
-                    &DATA_DIR_MANAGER.envelope_dir, e
-                )
-            });
+        let index_writer = index.writer_with_num_threads(4, 67_108_864).map_err(|e| {
+            raise_error!(
+                format!("Failed to create IndexWriter: {e:#?}"),
+                ErrorCode::InternalError
+            )
+        })?;
         index_writer.set_merge_policy(Box::new(merge_policy));
-        let index_writer = Arc::new(Mutex::new(index_writer));
+        Ok(index_writer)
+    }
+
+    pub fn new() -> Self {
+        let index = Arc::new(Self::open_or_create_index(&DATA_DIR_MANAGER.attachment_dir));
+        index.tokenizers().register("euro", EuroTokenizer::new());
+
+        let index_writer = Self::create_index_writer(&index).unwrap_or_else(|e| {
+            panic!(
+                "Failed to create IndexWriter with 4 threads and 64MB buffer for {:?}: {}",
+                &DATA_DIR_MANAGER.envelope_dir, e
+            )
+        });
+        let index_writer = Arc::new(Mutex::new(WriterSlot::new(index_writer)));
         let reader = index.reader().unwrap_or_else(|e| {
             panic!(
                 "Failed to create IndexReader for {:?}: {}",
@@ -114,8 +131,10 @@ impl IndexManager {
         });
 
         let (sender, mut receiver) = mpsc::channel::<TantivyDocument>(100);
+        let (flush_tx, mut flush_rx) = mpsc::channel::<oneshot::Sender<()>>(4);
 
         let writer = index_writer.clone();
+        let index_bg = Arc::clone(&index);
         let handler = task::spawn(async move {
             let mut shutdown = SIGNAL_MANAGER.subscribe();
             let mut commit_interval = tokio::time::interval(Duration::from_secs(60));
@@ -123,6 +142,71 @@ impl IndexManager {
             let commit_threshold = 1000;
             loop {
                 tokio::select! {
+                    flush = flush_rx.recv() => {
+                        match flush {
+                            Some(done) => {
+                                let mut writer = writer.lock().await;
+                                // Drain any queued-but-not-yet-added docs so the
+                                // commit below includes everything sent before
+                                // the flush request.
+                                let mut added = 0;
+                                while let Ok(next_doc) = receiver.try_recv() {
+                                    match writer.add_document(next_doc) {
+                                        Ok(_) => added += 1,
+                                        Err(e) => {
+                                            eprintln!("[ERROR] Failed to add document: {e:?}");
+                                            tracing::error!("Tantivy: Failed to add document: {e:?}");
+                                        }
+                                    }
+                                }
+                                pending_count += added;
+                                if pending_count > 0 {
+                                    tracing::info!(
+                                        "Tantivy attach: backup flush committing {} docs",
+                                        pending_count
+                                    );
+                                    tokio::task::block_in_place(|| fatal_commit(&mut writer));
+                                    pending_count = 0;
+                                    commit_interval.reset();
+                                }
+                                // Deterministically drain every in-flight merge so
+                                // no segment file changes while the backup copies
+                                // the index. `wait_merging_threads` takes ownership
+                                // of the writer, so take it out of the slot and
+                                // install a fresh writer once merges have drained.
+                                // The write gate is paused and we hold the writer
+                                // lock, so no other code path can observe the slot
+                                // as empty.
+                                let writer_owned = writer.take();
+                                if let Err(e) = tokio::task::block_in_place(|| {
+                                    writer_owned.wait_merging_threads()
+                                }) {
+                                    // Index is still consistent (all commits are
+                                    // durable); a failed merge only means segments
+                                    // were not re-packed.
+                                    tracing::error!(
+                                        "Tantivy attach: wait_merging_threads failed, index stays consistent: {e:#?}"
+                                    );
+                                }
+                                let fresh = loop {
+                                    match IndexManager::create_index_writer(&index_bg) {
+                                        Ok(w) => break w,
+                                        Err(e) => {
+                                            tracing::error!(
+                                                "Tantivy attach: failed to recreate index writer after backup flush: {e:#?}; retrying"
+                                            );
+                                            tokio::time::sleep(Duration::from_millis(500)).await;
+                                        }
+                                    }
+                                };
+                                writer.put(fresh);
+                                let _ = done.send(());
+                            }
+                            None => {
+                                tracing::info!("Tantivy attach: flush channel closed.");
+                            }
+                        }
+                    }
                     maybe_msg = receiver.recv() => {
                         match maybe_msg {
                             Some(doc) => {
@@ -197,12 +281,27 @@ impl IndexManager {
             }
         });
         Self {
-            index: Arc::new(index),
+            index,
             index_writer,
             sender,
+            flush_tx,
             reader,
             handle: Mutex::new(Some(handler)),
         }
+    }
+
+    /// Commit every queued document and wait for in-progress merges to finish,
+    /// leaving the index directory in a copy-safe state. Called by the backup
+    /// manager inside a write window.
+    pub async fn prepare_for_backup(&self) -> BichonResult<()> {
+        let (done_tx, done_rx) = oneshot::channel();
+        self.flush_tx
+            .send(done_tx)
+            .await
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        done_rx
+            .await
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
     }
 
     pub async fn queue(&self, doc: TantivyDocument) {
@@ -604,6 +703,7 @@ impl IndexManager {
     }
 
     pub async fn delete_account_attachments(&self, account_id: u64) -> BichonResult<()> {
+        let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
         let query = self.account_query(account_id);
         let mut writer = self.index_writer.lock().await;
         writer
@@ -623,6 +723,7 @@ impl IndexManager {
         if mailbox_ids.is_empty() {
             return Ok(());
         }
+        let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
 
         let mut queries: Vec<Box<dyn Query>> = Vec::with_capacity(mailbox_ids.len());
         for mailbox_id in mailbox_ids {
@@ -648,6 +749,7 @@ impl IndexManager {
             tracing::warn!("delete_envelopes_multi_account: deletes is empty, nothing to delete");
             return Ok(());
         }
+        let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
 
         let mut writer = self.index_writer.lock().await;
         for (account_id, envelope_ids) in deletes {
@@ -729,6 +831,7 @@ impl IndexManager {
             tracing::warn!("update_attachment_tags: request is empty, nothing to update");
             return Ok(());
         }
+        let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
         let searcher = self.create_searcher()?;
         let mut writer = self.index_writer.lock().await;
 

@@ -15,8 +15,6 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
 import React from 'react'
 import { SortingState } from '@tanstack/react-table'
 import { AttachmentModel } from '@/api/attachment/api'
@@ -24,13 +22,25 @@ import type { DateDisplayMode } from '@/hooks/use-date-display'
 
 export type { DateDisplayMode }
 
-export type AttachmentDialogType = 'mailbox' | 'display' | 'delete' | 'filters' | 'tags' | 'edit-tags' | 'update-tags' | 'restore' | 'delete-mailbox' | 'nested-eml'
+export type AttachmentDialogType =
+  | 'mailbox'
+  | 'display'
+  | 'delete'
+  | 'filters'
+  | 'tags'
+  | 'edit-tags'
+  | 'update-tags'
+  | 'restore'
+  | 'delete-mailbox'
+  | 'nested-eml'
 
 interface AttachmentContextType {
   open: AttachmentDialogType | null
   setOpen: (str: AttachmentDialogType | null) => void
   currentAttachment: AttachmentModel | undefined
-  setCurrentAttachment: React.Dispatch<React.SetStateAction<AttachmentModel | undefined>>
+  setCurrentAttachment: React.Dispatch<
+    React.SetStateAction<AttachmentModel | undefined>
+  >
   toDelete: Map<number, Set<string>>
   setToDelete: React.Dispatch<React.SetStateAction<Map<number, Set<string>>>>
   selected: Map<number, Set<string>>
@@ -44,15 +54,19 @@ interface AttachmentContextType {
   setSorting: React.Dispatch<React.SetStateAction<SortingState>>
   filter: Record<string, any>
   setFilter: React.Dispatch<React.SetStateAction<Record<string, any>>>
+  refetch: () => Promise<unknown>
+  isFetching: boolean
   /// Effective sort order actually applied by the backend (RELEVANCE when a
   /// text term is present and no explicit sort was chosen).
-  effectiveSort: "DATE" | "SIZE" | "RELEVANCE"
+  effectiveSort: 'DATE' | 'SIZE' | 'RELEVANCE'
   handleTagToggle: (tag: string) => void
   dateDisplay: DateDisplayMode
   setDateDisplay: (mode: DateDisplayMode) => void
 }
 
-const AttachmentContext = React.createContext<AttachmentContextType | null>(null)
+const AttachmentContext = React.createContext<AttachmentContextType | null>(
+  null
+)
 
 interface Props {
   children: React.ReactNode
@@ -60,7 +74,11 @@ interface Props {
 }
 
 export default function AttachmentProvider({ children, value }: Props) {
-  return <AttachmentContext.Provider value={value}>{children}</AttachmentContext.Provider>
+  return (
+    <AttachmentContext.Provider value={value}>
+      {children}
+    </AttachmentContext.Provider>
+  )
 }
 
 export const useAttachmentContext = () => {

@@ -15,147 +15,150 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
-import { PaginatedResponse } from '@/api';
-import { AttachmentModel, search_attachment } from '@/api/attachment/api';
-import { useQuery } from '@tanstack/react-query';
-import { getRouteApi } from '@tanstack/react-router';
-import React from 'react';
+import React from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { getRouteApi } from '@tanstack/react-router'
+import { PaginatedResponse } from '@/api'
+import { AttachmentModel, search_attachment } from '@/api/attachment/api'
 
 const routeApi = getRouteApi('/_authenticated/attachment/')
 
 export function useSearchAttachments() {
-    // const queryClient = useQueryClient();
-    const search = routeApi.useSearch()
-    const navigate = routeApi.useNavigate()
+  // const queryClient = useQueryClient();
+  const search = routeApi.useSearch()
+  const navigate = routeApi.useNavigate()
 
-    const page = search.page;
-    const pageSize = search.pageSize;
-    const sortBy = search.sortBy;
-    const sortOrder = search.sortOrder;
+  const page = search.page
+  const pageSize = search.pageSize
+  const sortBy = search.sortBy
+  const sortOrder = search.sortOrder
 
-    const filter = React.useMemo(() => {
-        if (!search.q) return {};
-        try {
-            return JSON.parse(search.q);
-        } catch (e) {
-            console.error("URL 'q' parameter parse error:", e);
-            return {};
-        }
-    }, [search.q]);
-
-
-
-    const updateParams = React.useCallback((newParams: Partial<typeof search>) => {
-        navigate({
-            search: (prev) => ({
-                ...prev,
-                ...newParams,
-            }),
-            replace: false,
-        });
-    }, [navigate]);
-
-
-    const setFilter = React.useCallback((val: any | ((prev: any) => any)) => {
-        navigate({
-            search: (prev) => {
-                let currentFilter = {};
-                try {
-                    currentFilter = prev.q ? JSON.parse(prev.q) : {};
-                } catch (e) {
-                    currentFilter = {};
-                }
-                const nextFilter = typeof val === 'function' ? val(currentFilter) : val;
-                return {
-                    ...prev,
-                    page: 1,
-                    q: Object.keys(nextFilter).length > 0 ? JSON.stringify(nextFilter) : undefined
-                };
-            }
-        });
-    }, [navigate]);
-
-
-    const setPage = (p: number) => updateParams({ page: p });
-
-    const setSearchPageSize = (size: number) => {
-        localStorage.setItem('bichon_search_attachment_page_size', size.toString());
-        updateParams({ pageSize: size, page: 1 });
-    };
-
-    const setSortBy = (val: "DATE" | "SIZE" | "RELEVANCE") => updateParams({ sortBy: val });
-    const setSortOrder = (val: "desc" | "asc") => updateParams({ sortOrder: val });
-
-    // Mirror the backend's resolve_sort_by: an explicit sort wins, except an
-    // explicit RELEVANCE with no text term (falls back to DATE); when unset,
-    // a text term (text/subject) defaults to RELEVANCE, otherwise DATE.
-    const hasText = !!(filter.text || filter.subject);
-    const effectiveSort: "DATE" | "SIZE" | "RELEVANCE" =
-        sortBy === "RELEVANCE" && !hasText ? "DATE"
-        : sortBy ?? (hasText ? "RELEVANCE" : "DATE");
-
-    const onSubmit = (cleaned: Record<string, any>) => {
-        if ('has_attachment' in cleaned && cleaned.has_attachment === false) {
-            delete cleaned.has_attachment;
-        }
-        if (Object.keys(cleaned).length > 0) {
-            const payload = {
-                ...cleaned,
-                ...(cleaned.since && { since: cleaned.since.getTime() }),
-                ...(cleaned.before && { before: cleaned.before.getTime() }),
-            };
-            setFilter(payload);
-        } else {
-            setFilter({});
-        }
-    };
-
-    const reset = () => {
-        setFilter({});
+  const filter = React.useMemo(() => {
+    if (!search.q) return {}
+    try {
+      return JSON.parse(search.q)
+    } catch (e) {
+      console.error("URL 'q' parameter parse error:", e)
+      return {}
     }
+  }, [search.q])
 
-    const {
-        data,
-        isLoading,
-        isError,
-        error,
-        isFetching,
-    } = useQuery<PaginatedResponse<AttachmentModel>>({
-        queryKey: ['search-attachments', filter, page, pageSize, sortBy, sortOrder],
-        queryFn: () =>
-            search_attachment({
-                filter: filter,
-                page,
-                page_size: pageSize,
-                sort_by: sortBy,
-                desc: sortOrder === "desc"
-            }),
-        staleTime: 1000,
-        retry: false,
-    });
+  const updateParams = React.useCallback(
+    (newParams: Partial<typeof search>) => {
+      navigate({
+        search: (prev) => ({
+          ...prev,
+          ...newParams,
+        }),
+        replace: false,
+      })
+    },
+    [navigate]
+  )
 
-    return {
-        attachments: data?.items ?? [],
-        total: data?.total_items ?? 0,
-        totalPages: data?.total_pages ?? 1,
-        pageSize: data?.page_size ?? pageSize,
-        setSearchPageSize,
-        sortBy,
-        setSortBy,
-        sortOrder,
-        setSortOrder,
-        effectiveSort,
-        isLoading,
-        isError,
-        error: error as Error | null,
-        isFetching,
+  const setFilter = React.useCallback(
+    (val: any | ((prev: any) => any)) => {
+      navigate({
+        search: (prev) => {
+          let currentFilter = {}
+          try {
+            currentFilter = prev.q ? JSON.parse(prev.q) : {}
+          } catch (e) {
+            currentFilter = {}
+          }
+          const nextFilter =
+            typeof val === 'function' ? val(currentFilter) : val
+          return {
+            ...prev,
+            page: 1,
+            q:
+              Object.keys(nextFilter).length > 0
+                ? JSON.stringify(nextFilter)
+                : undefined,
+          }
+        },
+      })
+    },
+    [navigate]
+  )
+
+  const setPage = (p: number) => updateParams({ page: p })
+
+  const setSearchPageSize = (size: number) => {
+    localStorage.setItem('bichon_search_attachment_page_size', size.toString())
+    updateParams({ pageSize: size, page: 1 })
+  }
+
+  const setSortBy = (val: 'DATE' | 'SIZE' | 'RELEVANCE') =>
+    updateParams({ sortBy: val })
+  const setSortOrder = (val: 'desc' | 'asc') => updateParams({ sortOrder: val })
+
+  // Mirror the backend's resolve_sort_by: an explicit sort wins, except an
+  // explicit RELEVANCE with no text term (falls back to DATE); when unset,
+  // a text term (text/subject) defaults to RELEVANCE, otherwise DATE.
+  const hasText = !!(filter.text || filter.subject)
+  const effectiveSort: 'DATE' | 'SIZE' | 'RELEVANCE' =
+    sortBy === 'RELEVANCE' && !hasText
+      ? 'DATE'
+      : (sortBy ?? (hasText ? 'RELEVANCE' : 'DATE'))
+
+  const onSubmit = (cleaned: Record<string, any>) => {
+    if ('has_attachment' in cleaned && cleaned.has_attachment === false) {
+      delete cleaned.has_attachment
+    }
+    if (Object.keys(cleaned).length > 0) {
+      const payload = {
+        ...cleaned,
+        ...(cleaned.since && { since: cleaned.since.getTime() }),
+        ...(cleaned.before && { before: cleaned.before.getTime() }),
+      }
+      setFilter(payload)
+    } else {
+      setFilter({})
+    }
+  }
+
+  const reset = () => {
+    setFilter({})
+  }
+
+  const { data, isLoading, isError, error, isFetching, refetch } = useQuery<
+    PaginatedResponse<AttachmentModel>
+  >({
+    queryKey: ['search-attachments', filter, page, pageSize, sortBy, sortOrder],
+    queryFn: () =>
+      search_attachment({
+        filter: filter,
         page,
-        setPage,
-        onSubmit,
-        reset,
-        filter,
-        setFilter
-    };
+        page_size: pageSize,
+        sort_by: sortBy,
+        desc: sortOrder === 'desc',
+      }),
+    staleTime: 1000,
+    retry: false,
+  })
+
+  return {
+    attachments: data?.items ?? [],
+    total: data?.total_items ?? 0,
+    totalPages: data?.total_pages ?? 1,
+    pageSize: data?.page_size ?? pageSize,
+    setSearchPageSize,
+    sortBy,
+    setSortBy,
+    sortOrder,
+    setSortOrder,
+    effectiveSort,
+    isLoading,
+    isError,
+    error: error as Error | null,
+    isFetching,
+    refetch,
+    page,
+    setPage,
+    onSubmit,
+    reset,
+    filter,
+    setFilter,
+  }
 }

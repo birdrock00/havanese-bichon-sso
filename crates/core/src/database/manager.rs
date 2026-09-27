@@ -16,6 +16,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::error::code::ErrorCode;
+use crate::error::BichonResult;
+use crate::raise_error;
 use crate::settings::dir::DATA_DIR_MANAGER;
 use bichon_memdb::{Durability, MemDb};
 use std::sync::LazyLock;
@@ -56,5 +59,15 @@ impl DatabaseManager {
         if let Err(e) = self.db.flush() {
             eprintln!("[memdb] flush error on shutdown: {e}");
         }
+    }
+
+    /// Stream the current in-memory state into `w` (the backup preparer wraps
+    /// it in gzip). A pure read — the live memdb dir is not touched. Called by
+    /// the backup manager inside a write window — no memdb writes can land
+    /// while this runs, so the dump is a self-consistent point-in-time.
+    pub fn dump_to<W: std::io::Write>(&self, w: W) -> BichonResult<()> {
+        self.db.dump_to(w).map_err(|e| {
+            raise_error!(format!("memdb dump during backup: {e:#?}"), ErrorCode::InternalError)
+        })
     }
 }

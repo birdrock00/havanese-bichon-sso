@@ -837,6 +837,44 @@
     "welcome": "Welkom bij Bichon",
     "youWillNeedToLogInAgain": "U moet opnieuw inloggen om toegang te krijgen tot uw account."
   },
+  "backup": {
+    "title": "Backup",
+    "statusCard": "Backup status",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "statusFailed": "Failed",
+    "phase": "Phase",
+    "schedule": "Schedule",
+    "nextRun": "Next run",
+    "lastSuccess": "Last success",
+    "lastSnapshot": "Last snapshot",
+    "lastError": "Last error",
+    "none": "None",
+    "never": "Never",
+    "runNow": "Run backup now",
+    "trigger": "Trigger",
+    "status": "Status",
+    "snapshot": "Snapshot",
+    "error": "Error",
+    "time": "Time",
+    "filesLabel": "files",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "loadFailed": "Failed to load backup data",
+    "triggerStarted": "Backup started",
+    "triggerFailed": "Failed to start backup",
+    "refresh": "Refresh",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "previewHint": "Select a file to preview it",
+    "previewFailed": "Failed to load preview",
+    "download": "Download",
+    "downloadFailed": "Failed to download file"
+  },
   "command": {
     "dark": "Donker",
     "light": "Licht",
@@ -1511,7 +1549,8 @@
     "other": "Overig",
     "settings": "Instellingen",
     "timestampAnchor": "Tijdstempelverankering",
-    "users": "Systeemgebruikers"
+    "users": "Systeemgebruikers",
+    "backup": "Backup"
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "Een geheime sleutel verstrekt door de OAuth-aanbieder om uw applicatie te authenticeren.",
@@ -1931,6 +1970,7 @@
     "pleaseSelectAtLeastOne": "Selecteer ten minste één zoekcriterium",
     "preview": "Voorbeeld",
     "recipient": "Ontvanger",
+    "refresh": "Vernieuwen",
     "searchArchivedEmails": "Gearchiveerde E-mails Zoeken",
     "searchButton": "Zoeken",
     "searchInSubjectBody": "Zoek in onderwerp, tekst, bijlagen...",
@@ -2365,7 +2405,9 @@
     "title": "Uitloggen"
   },
   "system": {
-    "notifications": "Systeemmeldingen"
+    "notifications": "Systeemmeldingen",
+    "alertError": "Error",
+    "alertWarning": "Warning"
   },
   "systemConfig": {
     "pageDescription": "Deze parameters worden geïnitialiseerd via CLI-flags of omgevingsvariabelen. Ze zijn alleen-lezen.",

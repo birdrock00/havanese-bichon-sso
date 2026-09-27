@@ -457,6 +457,15 @@ pub enum Event {
     },
     /// The SIEM webhook configuration was changed by an admin (Enterprise).
     SiemConfigUpdated { user: String },
+    /// The backup configuration (target, schedule, retention, tags, excludes,
+    /// credentials) was changed by an admin from the WebUI. Credential
+    /// changes are audited as a single event; the values themselves never
+    /// leave the server.
+    BackupConfigUpdated { user: String },
+    /// Pro/Enterprise: the compliance configuration (audit retention,
+    /// integrity schedule and retention, TSP anchoring interval) was changed
+    /// by an admin from the WebUI.
+    ComplianceConfigUpdated { user: String },
     /// A dual-control approval request was created and awaits a second
     /// person's decision (Enterprise). Nothing has happened to the target yet
     /// — this is the "first person" half of the two-person rule.
