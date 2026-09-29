@@ -22,9 +22,10 @@
 // hold requires the global `legal:hold` permission.
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Lock, LockOpen, Plus, Scale, Unlock } from 'lucide-react'
+import { Clock, Lock, LockOpen, Plus, Scale, Unlock } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { minimal_account_list } from '@/api/account/api'
+import { list_pending_account_ids } from '@/api/approvals/api'
 import {
   list_legal_holds,
   place_legal_holds_batch,
@@ -78,6 +79,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { FixedHeader } from '@/components/layout/fixed-header'
 import { Main } from '@/components/layout/main'
 import { TableSkeleton } from '@/components/table-skeleton'
+import { DualControlNotice } from '@/features/approvals'
 
 interface ApiErrorLike {
   response?: { data?: { message?: string } }
@@ -108,10 +110,22 @@ function formatTime(ts: number): string {
 export default function LegalHoldPage() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const { isEnterprise } = useEdition()
+  const { isEnterprise, approvalEnabled } = useEdition()
   const { require_any_permission } = useCurrentUser()
 
   // ---- gating ---------------------------------------------------------
+  // Read access includes compliance officers (`compliance:audit`,
+  // separation of duties); placing/releasing stays manage-only. An approver
+  // holding only `approval:decide` must be able to reach the page too, or the
+  // queue they are supposed to work would be invisible to them.
+  const canView =
+    isEnterprise &&
+    require_any_permission([
+      'legal:hold',
+      'system:root',
+      'compliance:audit',
+      'approval:decide',
+    ])
   const canManage =
     isEnterprise && require_any_permission(['legal:hold', 'system:root'])
 
@@ -119,8 +133,17 @@ export default function LegalHoldPage() {
   const { data: holds, isLoading } = useQuery({
     queryKey: ['legal-hold'],
     queryFn: list_legal_holds,
-    enabled: canManage,
+    enabled: canView,
   })
+
+  // Accounts with a release already in the queue. Without this the operator
+  // would queue the same release again every time they looked at the page.
+  const { data: pendingAccountIds } = useQuery({
+    queryKey: ['approvals', 'pending-accounts'],
+    queryFn: list_pending_account_ids,
+    enabled: canView && approvalEnabled,
+  })
+  const queuedIds = new Set(pendingAccountIds ?? [])
 
   const { data: accounts } = useQuery({
     queryKey: ['legal-hold-accounts'],
@@ -184,6 +207,69 @@ export default function LegalHoldPage() {
     }
   }
 
+  /**
+   * Toast for a batch release. Three buckets, not two: with dual control on, an
+   * account can be accepted-and-queued rather than released, and calling that
+   * "released" would tell the operator a hold is gone when it is not. `pending`
+   * is checked before `ok` because a queued row carries both.
+   */
+  const batchReleaseToast = (results: BatchHoldResult[]) => {
+    const queued = results.filter((r) => r.pending)
+    const released = results.filter((r) => r.ok && !r.pending)
+    const failed = results.filter((r) => !r.ok && !r.pending)
+
+    if (queued.length > 0 && released.length === 0 && failed.length === 0) {
+      toast({
+        title: t(
+          'legalHold.batchQueued',
+          '{{count}} release request(s) submitted for approval',
+          { count: queued.length }
+        ),
+        description: t(
+          'legalHold.batchQueuedHint',
+          'Nothing has been released yet — a second person must approve the request.'
+        ),
+      })
+      return
+    }
+
+    const parts: string[] = []
+    if (released.length > 0) {
+      parts.push(
+        t('legalHold.batchReleased', 'Released {{count}} account(s)', {
+          count: released.length,
+        })
+      )
+    }
+    if (queued.length > 0) {
+      parts.push(
+        t(
+          'legalHold.batchQueuedCount',
+          '{{count}} submitted for approval',
+          { count: queued.length }
+        )
+      )
+    }
+    if (failed.length > 0) {
+      parts.push(
+        t('legalHold.batchFailedCount', '{{count}} failed', {
+          count: failed.length,
+        })
+      )
+    }
+
+    toast({
+      title: parts.join(' · '),
+      description:
+        failed.length > 0
+          ? failed
+              .map((r) => `${r.email || r.account_id}: ${r.error ?? 'unknown'}`)
+              .join('; ')
+          : undefined,
+      variant: failed.length > 0 ? 'destructive' : undefined,
+    })
+  }
+
   const placeMutation = useMutation({
     mutationFn: (vars: { account_ids: number[]; reason: string }) =>
       place_legal_holds_batch(vars.account_ids, vars.reason),
@@ -213,10 +299,27 @@ export default function LegalHoldPage() {
   const releaseMutation = useMutation({
     mutationFn: (vars: { account_id: number; reason?: string }) =>
       release_legal_hold(vars.account_id, vars.reason),
-    onSuccess: () => {
-      toast({ title: t('legalHold.released', 'Legal hold released') })
-      queryClient.invalidateQueries({ queryKey: ['legal-hold'] })
-      queryClient.invalidateQueries({ queryKey: ['account-list'] })
+    onSuccess: (result) => {
+      if (result.pending || result.status === 'pending') {
+        // Queued, not released. The account is still on hold and the operator
+        // must not walk away believing otherwise.
+        toast({
+          title: t(
+            'legalHold.releaseQueued',
+            'Release submitted for approval'
+          ),
+          description: t(
+            'legalHold.releaseQueuedHint',
+            'The hold is still in place. A second person must approve the request before the account is released.'
+          ),
+        })
+        // The hold itself did not change, but the pending badges did.
+        queryClient.invalidateQueries({ queryKey: ['approvals'] })
+      } else {
+        toast({ title: t('legalHold.released', 'Legal hold released') })
+        queryClient.invalidateQueries({ queryKey: ['legal-hold'] })
+        queryClient.invalidateQueries({ queryKey: ['account-list'] })
+      }
       setReleasing(null)
       setReleaseReason('')
     },
@@ -233,15 +336,10 @@ export default function LegalHoldPage() {
     mutationFn: (vars: { account_ids: number[]; reason?: string }) =>
       release_legal_holds_batch(vars.account_ids, vars.reason),
     onSuccess: (results) => {
-      batchToast(
-        'legalHold.batchReleased',
-        'Released {{count}} account(s)',
-        'legalHold.batchReleasedPartial',
-        'Released {{ok}} of {{total}} holds',
-        results
-      )
+      batchReleaseToast(results)
       queryClient.invalidateQueries({ queryKey: ['legal-hold'] })
       queryClient.invalidateQueries({ queryKey: ['account-list'] })
+      queryClient.invalidateQueries({ queryKey: ['approvals'] })
       setReleaseBatchOpen(false)
       setHeldSelected([])
       setReleaseBatchReason('')
@@ -255,7 +353,7 @@ export default function LegalHoldPage() {
     },
   })
 
-  if (!canManage) {
+  if (!canView) {
     return (
       <>
         <FixedHeader />
@@ -290,7 +388,7 @@ export default function LegalHoldPage() {
               </p>
             </div>
             <div className='flex items-center gap-2'>
-              {heldSelected.length > 0 && (
+              {canManage && heldSelected.length > 0 && (
                 <Button
                   variant='outline'
                   onClick={() => setReleaseBatchOpen(true)}
@@ -301,13 +399,15 @@ export default function LegalHoldPage() {
                   })}
                 </Button>
               )}
-              <Button
-                onClick={() => setPlaceOpen(true)}
-                disabled={placeable.length === 0}
-              >
-                <Plus className='mr-1 h-4 w-4' />
-                {t('legalHold.place', 'Place hold')}
-              </Button>
+              {canManage && (
+                <Button
+                  onClick={() => setPlaceOpen(true)}
+                  disabled={placeable.length === 0}
+                >
+                  <Plus className='mr-1 h-4 w-4' />
+                  {t('legalHold.place', 'Place hold')}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -339,16 +439,18 @@ export default function LegalHoldPage() {
                 <Table className='text-xs'>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className='w-8'>
-                        <Checkbox
-                          checked={allHeldSelected}
-                          onCheckedChange={toggleAllHeld}
-                          aria-label={t(
-                            'legalHold.selectAll',
-                            'Select all accounts'
-                          )}
-                        />
-                      </TableHead>
+                      {canManage && (
+                        <TableHead className='w-8'>
+                          <Checkbox
+                            checked={allHeldSelected}
+                            onCheckedChange={toggleAllHeld}
+                            aria-label={t(
+                              'legalHold.selectAll',
+                              'Select all accounts'
+                            )}
+                          />
+                        </TableHead>
+                      )}
                       <TableHead>{t('legalHold.account', 'Account')}</TableHead>
                       <TableHead>{t('legalHold.reason', 'Reason')}</TableHead>
                       <TableHead>
@@ -357,23 +459,27 @@ export default function LegalHoldPage() {
                       <TableHead>
                         {t('legalHold.placedAt', 'Placed at')}
                       </TableHead>
-                      <TableHead className='text-right'>
-                        {t('legalHold.actions', 'Actions')}
-                      </TableHead>
+                      {canManage && (
+                        <TableHead className='text-right'>
+                          {t('legalHold.actions', 'Actions')}
+                        </TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {(holds ?? []).map((hold) => (
                       <TableRow key={hold.id}>
-                        <TableCell className='w-8'>
-                          <Checkbox
-                            checked={heldSelected.includes(hold.id)}
-                            onCheckedChange={() =>
-                              toggleId(heldSelected, setHeldSelected, hold.id)
-                            }
-                            aria-label={hold.email}
-                          />
-                        </TableCell>
+                        {canManage && (
+                          <TableCell className='w-8'>
+                            <Checkbox
+                              checked={heldSelected.includes(hold.id)}
+                              onCheckedChange={() =>
+                                toggleId(heldSelected, setHeldSelected, hold.id)
+                              }
+                              aria-label={hold.email}
+                            />
+                          </TableCell>
+                        )}
                         <TableCell className='font-medium'>
                           <div className='flex items-center gap-2'>
                             <Badge
@@ -383,6 +489,18 @@ export default function LegalHoldPage() {
                               <Lock className='mr-1 h-3 w-3' />
                               {t('legalHold.badge', 'Held')}
                             </Badge>
+                            {queuedIds.has(hold.id) && (
+                              <Badge
+                                variant='outline'
+                                className='border-sky-500/40 bg-sky-500/10 text-sky-600'
+                              >
+                                <Clock className='mr-1 h-3 w-3' />
+                                {t(
+                                  'legalHold.awaitingApproval',
+                                  'Awaiting approval'
+                                )}
+                              </Badge>
+                            )}
                             <span>{hold.email}</span>
                           </div>
                         </TableCell>
@@ -398,16 +516,27 @@ export default function LegalHoldPage() {
                         <TableCell>
                           {hold.placed_at ? formatTime(hold.placed_at) : '—'}
                         </TableCell>
-                        <TableCell className='text-right'>
-                          <Button
-                            variant='outline'
-                            size='sm'
-                            onClick={() => setReleasing(hold)}
-                          >
-                            <LockOpen className='mr-1 h-3.5 w-3.5' />
-                            {t('legalHold.release', 'Release')}
-                          </Button>
-                        </TableCell>
+                        {canManage && (
+                          <TableCell className='text-right'>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              disabled={queuedIds.has(hold.id)}
+                              title={
+                                queuedIds.has(hold.id)
+                                  ? t(
+                                      'legalHold.alreadyQueued',
+                                      'A release request for this account is already awaiting approval.'
+                                    )
+                                  : undefined
+                              }
+                              onClick={() => setReleasing(hold)}
+                            >
+                              <LockOpen className='mr-1 h-3.5 w-3.5' />
+                              {t('legalHold.release', 'Release')}
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -525,14 +654,25 @@ export default function LegalHoldPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {t('legalHold.releaseTitle', 'Release legal hold?')}
+                {approvalEnabled
+                  ? t(
+                      'legalHold.releaseTitleApproval',
+                      'Submit this release for approval?'
+                    )
+                  : t('legalHold.releaseTitle', 'Release legal hold?')}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                {t(
-                  'legalHold.releaseDesc',
-                  'Releasing the hold on {email} resumes the retention sweep for this account. Older messages may be purged on the next sweep.',
-                  { email: releasing?.email ?? '' }
-                )}
+                {approvalEnabled
+                  ? t(
+                      'legalHold.releaseDescApproval',
+                      'Dual control is on. Requesting the release of {email} does NOT release it — a second person must approve the request first, and the account stays on hold until they do.',
+                      { email: releasing?.email ?? '' }
+                    )
+                  : t(
+                      'legalHold.releaseDesc',
+                      'Releasing the hold on {email} resumes the retention sweep for this account. Older messages may be purged on the next sweep.',
+                      { email: releasing?.email ?? '' }
+                    )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className='space-y-2'>
@@ -565,7 +705,9 @@ export default function LegalHoldPage() {
                 <LockOpen className='mr-1 h-4 w-4' />
                 {releaseMutation.isPending
                   ? t('legalHold.releasing', 'Releasing…')
-                  : t('legalHold.confirmRelease', 'Release hold')}
+                  : approvalEnabled
+                    ? t('legalHold.confirmRequestRelease', 'Submit for approval')
+                    : t('legalHold.confirmRelease', 'Release hold')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -579,14 +721,28 @@ export default function LegalHoldPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>
-                {t('legalHold.releaseBatchTitle', 'Release selected holds?')}
+                {approvalEnabled
+                  ? t(
+                      'legalHold.releaseBatchTitleApproval',
+                      'Submit these releases for approval?'
+                    )
+                  : t(
+                      'legalHold.releaseBatchTitle',
+                      'Release selected holds?'
+                    )}
               </AlertDialogTitle>
               <AlertDialogDescription>
-                {t(
-                  'legalHold.releaseBatchDesc',
-                  'Releasing {{count}} account(s) resumes the retention sweep for each of them. Older messages may be purged on the next sweep.',
-                  { count: heldSelected.length }
-                )}
+                {approvalEnabled
+                  ? t(
+                      'legalHold.releaseBatchDescApproval',
+                      'Dual control is on. Requesting the release of {{count}} account(s) does NOT release them — a second person must approve the request first.',
+                      { count: heldSelected.length }
+                    )
+                  : t(
+                      'legalHold.releaseBatchDesc',
+                      'Releasing {{count}} account(s) resumes the retention sweep for each of them. Older messages may be purged on the next sweep.',
+                      { count: heldSelected.length }
+                    )}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <div className='space-y-2'>
@@ -618,13 +774,28 @@ export default function LegalHoldPage() {
                 <LockOpen className='mr-1 h-4 w-4' />
                 {releaseBatchMutation.isPending
                   ? t('legalHold.releasing', 'Releasing…')
-                  : t('legalHold.releaseSelected', 'Release selected', {
-                      count: heldSelected.length,
-                    })}
+                  : approvalEnabled
+                    ? t(
+                        'legalHold.confirmRequestRelease',
+                        'Submit for approval'
+                      )
+                    : t('legalHold.releaseSelected', 'Release selected', {
+                        count: heldSelected.length,
+                      })}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* ---- Dual control moved to its own page ---- */}
+        {/* The queue used to be rendered here. It now covers five operations,
+            not just hold releases, so it lives on /approvals and this console
+            only points at it. */}
+        {approvalEnabled && (
+          <div className='mx-auto w-full max-w-7xl'>
+            <DualControlNotice />
+          </div>
+        )}
       </Main>
     </>
   )

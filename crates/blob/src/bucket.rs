@@ -115,6 +115,7 @@ const INDEX_TABLE: TableDefinition<[u8; 32], RecordBytes> = TableDefinition::new
 /// management.  Startup is O(1) — redb reads only its root page.
 pub struct IndexStore {
     db: Database,
+    path: std::path::PathBuf,
 }
 
 impl IndexStore {
@@ -133,7 +134,7 @@ impl IndexStore {
             txn.commit()
                 .map_err(|e| crate::error::Error::IndexDb(format!("init commit: {}", e)))?;
         }
-        Ok(Self { db })
+        Ok(Self { db, path })
     }
 
     /// Look up a key. Returns the latest IndexRecord, or None if absent/tombstone.
@@ -228,6 +229,32 @@ impl IndexStore {
         txn.commit()
             .map_err(|e| crate::error::Error::IndexDb(format!("commit: {}", e)))?;
         Ok(())
+    }
+
+    /// Flush all pending index writes to stable storage.
+    ///
+    /// redb is an mmap'd copy-on-write database with no public flush API: the
+    /// OS may still hold dirty pages after a commit. We commit a no-op write
+    /// transaction (runs redb's write path so the latest state is reflected in
+    /// the mapped file) and then fsync the file itself, which pushes every
+    /// mmap-dirtied page to disk. Called by the backup manager inside a write
+    /// window so a subsequent external copy of `index.redb` is durable.
+    pub fn flush(&self) -> Result<()> {
+        {
+            let txn = self
+                .db
+                .begin_write()
+                .map_err(|e| crate::error::Error::IndexDb(format!("flush write txn: {}", e)))?;
+            txn.open_table(INDEX_TABLE)
+                .map_err(|e| crate::error::Error::IndexDb(format!("flush open table: {}", e)))?;
+            txn.commit()
+                .map_err(|e| crate::error::Error::IndexDb(format!("flush commit: {}", e)))?;
+        }
+        std::fs::File::options()
+            .write(true)
+            .open(&self.path)
+            .and_then(|f| f.sync_all())
+            .map_err(|e| crate::error::Error::IndexDb(format!("flush: {}", e)))
     }
 
     /// Total number of live (non-tombstone) keys.

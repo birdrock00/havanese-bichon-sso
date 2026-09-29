@@ -15,11 +15,10 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
+//
 import { createLazyFileRoute } from '@tanstack/react-router'
-import APIDocs from '@/components/api-docs'
+import ApprovalsPage from '@/features/approvals'
 
-export const Route = createLazyFileRoute('/_authenticated/api-docs/')({
-  component: APIDocs,
+export const Route = createLazyFileRoute('/_authenticated/approvals')({
+  component: ApprovalsPage,
 })

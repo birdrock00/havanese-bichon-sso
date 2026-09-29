@@ -19,7 +19,7 @@
 
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Row } from '@tanstack/react-table'
-import { IconEdit, IconTrash } from '@tabler/icons-react'
+import { IconClock, IconEdit, IconTrash } from '@tabler/icons-react'
 import { ShieldOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -33,6 +33,8 @@ import {
 import { useUserContext } from '../context'
 import { useTranslation } from 'react-i18next'
 import { User } from '@/api/users/api'
+import { OP_USER_DELETE } from '@/api/approvals/api'
+import { usePendingApprovals } from '@/features/approvals/use-pending-approvals'
 
 interface DataTableRowActionsProps {
   row: Row<User>
@@ -41,6 +43,12 @@ interface DataTableRowActionsProps {
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const { setOpen, setCurrentRow } = useUserContext()
   const { t } = useTranslation()
+
+  // A queued removal leaves the user in place with their roles intact, so the
+  // list gives no sign anything was asked for. Disable the entry rather than
+  // let an operator queue the same removal twice.
+  const { hasPendingUser } = usePendingApprovals()
+  const deleteQueued = hasPendingUser(OP_USER_DELETE, row.original.id)
   return (
     <>
       <DropdownMenu modal={false}>
@@ -91,6 +99,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
+            disabled={deleteQueued}
             onClick={() => {
               setCurrentRow(row.original)
               setOpen('delete')
@@ -99,7 +108,14 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           >
             {t('table.delete')}
             <DropdownMenuShortcut>
-              <IconTrash size={16} />
+              {deleteQueued ? (
+                <span className='flex items-center gap-1 text-amber-600 dark:text-amber-500'>
+                  <IconClock size={16} />
+                  {t('approvals.pendingBadge', 'Awaiting approval')}
+                </span>
+              ) : (
+                <IconTrash size={16} />
+              )}
             </DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuContent>

@@ -145,7 +145,8 @@ export default function MailArchiveDashboard() {
       search: (prev: any) => ({
         page: 1,
         pageSize: prev.pageSize ?? 50,
-        sortBy: prev.sortBy ?? "DATE",
+        // Leave sortBy unset: the backend defaults to RELEVANCE when the
+        // query has a text term, DATE otherwise.
         sortOrder: prev.sortOrder ?? "desc",
         q: JSON.stringify(filter),
       }),
@@ -159,7 +160,8 @@ export default function MailArchiveDashboard() {
       search: (prev: any) => ({
         page: 1,
         pageSize: prev.pageSize ?? 50,
-        sortBy: prev.sortBy ?? "DATE",
+        // Leave sortBy unset: the backend defaults to RELEVANCE when the
+        // query has a text term, DATE otherwise.
         sortOrder: prev.sortOrder ?? "desc",
         q: JSON.stringify(filter),
       }),

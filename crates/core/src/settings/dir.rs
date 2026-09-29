@@ -26,7 +26,7 @@ use crate::{
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
-const MEMDB_DIR: &str = "memdb";
+pub(crate) const MEMDB_DIR: &str = "memdb";
 const INDICES: &str = "bichon-indices";
 const MAIL_METADATA: &str = "mail_metadata";
 const ATTACHMENT_METADATA: &str = "attachment_metadata";
@@ -34,12 +34,13 @@ const STORAGE: &str = "bichon-storage";
 const TMP_DIR: &str = "tmp";
 const LOG_DIR: &str = "logs";
 const EXPORTS_DIR: &str = "exports";
+const BACKUP_STAGING: &str = "backup-staging";
 
 const TLS_CERT: &str = "cert.pem";
 const TLS_KEY: &str = "key.pem";
 
 pub static DATA_DIR_MANAGER: LazyLock<DataDirManager> =
-    LazyLock::new(|| DataDirManager::new(PathBuf::from(&SETTINGS.bichon_root_dir)));
+    LazyLock::new(|| DataDirManager::new(PathBuf::from(SETTINGS.root_dir())));
 
 #[derive(Debug)]
 pub struct DataDirManager {
@@ -53,6 +54,11 @@ pub struct DataDirManager {
     pub storage_dir: PathBuf,
     pub log_dir: PathBuf,
     pub exports_dir: PathBuf,
+    /// Scratch space inside the data root used by Pro/Enterprise backup
+    /// preparers to stage online snapshots (e.g. `VACUUM INTO` copies) that
+    /// must be included in the backup. Lives under the data root so
+    /// it is backed up automatically and cleaned by `finalize`.
+    pub backup_staging_dir: PathBuf,
 }
 
 impl Initialize for DataDirManager {
@@ -66,6 +72,8 @@ impl Initialize for DataDirManager {
         std::fs::create_dir_all(&DATA_DIR_MANAGER.storage_dir)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         std::fs::create_dir_all(&DATA_DIR_MANAGER.exports_dir)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        std::fs::create_dir_all(&DATA_DIR_MANAGER.backup_staging_dir)
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         // Write STORAGE_VERSION on fresh install (no existing data)
@@ -104,6 +112,7 @@ impl DataDirManager {
             temp_dir: root_dir.join(TMP_DIR),
             storage_dir,
             exports_dir: root_dir.join(EXPORTS_DIR),
+            backup_staging_dir: root_dir.join(BACKUP_STAGING),
         }
     }
 }

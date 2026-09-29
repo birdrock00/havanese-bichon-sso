@@ -25,6 +25,7 @@
 // The open-source server emits events at key points (login, view, delete, search).
 // It never reads from the event bus — events are fire-and-forget.
 
+pub mod audit_detail;
 pub mod event_bus;
 pub mod text_extractor;
 pub mod timestamp;

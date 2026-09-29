@@ -28,6 +28,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ToastAction } from '@/components/ui/toast'
 import { AxiosError } from 'axios'
 import { AccountModel, remove_account } from '@/api/account/api'
+import { OP_ACCOUNT_DELETE } from '@/api/approvals/api'
+import { useGatedOp } from '@/features/approvals/use-gated-op'
 import { useTranslation } from 'react-i18next'
 
 interface Props {
@@ -39,17 +41,23 @@ interface Props {
 export function AccountDeleteDialog({ open, onOpenChange, currentRow }: Props) {
   const { t } = useTranslation()
   const [value, setValue] = useState('')
+  const { gated, announceIfQueued } = useGatedOp(OP_ACCOUNT_DELETE)
 
   const queryClient = useQueryClient();
-  function handleSuccess() {
+  function handleSuccess(data: unknown) {
+    queryClient.invalidateQueries({ queryKey: ['account-list'] });
+    queryClient.invalidateQueries({ queryKey: ['approvals'] });
+    onOpenChange(false);
+
+    // A queued deletion must not report "deletion started": nothing has
+    // started, and the account is still fully present.
+    if (announceIfQueued(data)) return;
+
     toast({
       title: t('dialogs.accountDeletionStarted'),
       description: t('dialogs.accountDeletionStartedDesc'),
       action: <ToastAction altText={t('common.close')}>{t('common.close')}</ToastAction>,
     });
-
-    queryClient.invalidateQueries({ queryKey: ['account-list'] });
-    onOpenChange(false);
   }
 
   function handleError(error: AxiosError) {
@@ -117,17 +125,36 @@ export function AccountDeleteDialog({ open, onOpenChange, currentRow }: Props) {
             </Label>
           </div>
 
-          <Alert variant='destructive'>
-            <IconAlertCircle className="h-4 w-4" />
-            <AlertTitle>{t('dialogs.cannotBeUndone')}</AlertTitle>
-            <AlertDescription>
-              {t('dialogs.allResourcesErased')}
-            </AlertDescription>
-          </Alert>
+          {gated ? (
+            <Alert>
+              <IconAlertCircle className="h-4 w-4" />
+              <AlertTitle>
+                {t('approvals.gatedAccountTitle', 'Dual control is on for this operation')}
+              </AlertTitle>
+              <AlertDescription>
+                {t(
+                  'approvals.gatedAccountDesc',
+                  'This will NOT delete the account now. It submits a request that a second person must approve, and only then does the deletion begin. Until that happens the account keeps syncing and its mail stays intact.'
+                )}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert variant='destructive'>
+              <IconAlertCircle className="h-4 w-4" />
+              <AlertTitle>{t('dialogs.cannotBeUndone')}</AlertTitle>
+              <AlertDescription>
+                {t('dialogs.allResourcesErased')}
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       }
       confirmText={
-        deleteMutation.isPending ? t('dialogs.deleting') : t('dialogs.permanentlyDeleteAccount')
+        deleteMutation.isPending
+          ? t('dialogs.deleting')
+          : gated
+            ? t('approvals.submitForApproval', 'Submit for approval')
+            : t('dialogs.permanentlyDeleteAccount')
       }
       isLoading={deleteMutation.isPending}
       destructive

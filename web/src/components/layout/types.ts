@@ -39,8 +39,14 @@ type NavCollapsible = BaseNavItem & {
 type NavItem = NavCollapsible | NavLink
 
 interface NavGroup {
+  /** Stable id, used to persist the open/close choice in localStorage (the
+   *  title is translated, so it cannot serve as the storage key). */
+  id: string
   title: string
   items: NavItem[]
+  /** Start this group expanded on first render, unless the user stored an
+   *  explicit choice or the current route lands on one of its items. */
+  defaultOpen?: boolean
 }
 
 interface SidebarData {

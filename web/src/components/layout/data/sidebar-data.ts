@@ -15,17 +15,14 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import { IconLayoutDashboard, IconSettings } from '@tabler/icons-react'
 import {
-  IconHelp,
-  IconLayoutDashboard,
-  IconSettings,
-} from '@tabler/icons-react'
-import {
-  BadgeCheck,
+  Archive,
   BarChart3,
   Download,
   FileCheck2,
   Fingerprint,
+  Gauge,
   IdCard,
   Inbox,
   Lock,
@@ -35,6 +32,7 @@ import {
   Upload,
   Users2,
   ScrollText,
+  Settings2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/use-current-user'
@@ -50,7 +48,9 @@ export function useSidebarData(): SidebarData {
   return {
     navGroups: [
       {
+        id: 'general',
         title: t('navigation.general'),
+        defaultOpen: true,
         items: [
           {
             title: t('navigation.dashboard'),
@@ -60,7 +60,9 @@ export function useSidebarData(): SidebarData {
         ],
       },
       {
+        id: 'accounts',
         title: t('navigation.accounts'),
+        defaultOpen: true,
         items: [
           {
             title: t('navigation.accounts'),
@@ -111,7 +113,9 @@ export function useSidebarData(): SidebarData {
         ],
       },
       {
+        id: 'auth',
         title: t('navigation.auth'),
+        defaultOpen: true,
         items: [
           {
             title: t('navigation.oauth2'),
@@ -121,7 +125,9 @@ export function useSidebarData(): SidebarData {
         ],
       },
       {
+        id: 'users',
         title: t('navigation.users'),
+        defaultOpen: true,
         items: [
           {
             title: t('navigation.users'),
@@ -132,8 +138,26 @@ export function useSidebarData(): SidebarData {
         ],
       },
       {
+        id: 'compliance',
         title: t('navigation.compliance'),
         items: [
+          {
+            // First in the group on purpose: it is the one entry that answers
+            // the question the whole group exists for, and it links out to
+            // every entry below it rather than duplicating them.
+            title: t('navigation.complianceDashboard', 'Compliance dashboard'),
+            url: '/compliance-dashboard',
+            icon: Gauge,
+            visible:
+              isEnterprise &&
+              require_any_permission([
+                'system:root',
+                'user:manage',
+                // The read-only separation-of-duties view. A compliance
+                // officer holds only this, and this page is written for them.
+                'compliance:audit',
+              ]),
+          },
           {
             title: t('navigation.integrity', 'Integrity'),
             url: '/integrity',
@@ -144,6 +168,8 @@ export function useSidebarData(): SidebarData {
                 'system:root',
                 'account:manage:all',
                 'account:manage',
+                // Read-only separation-of-duties view (compliance officers).
+                'compliance:audit',
               ]),
           },
           {
@@ -167,6 +193,7 @@ export function useSidebarData(): SidebarData {
                 'system:root',
                 'user:manage',
                 'data:read:all',
+                'compliance:audit',
               ]),
           },
           {
@@ -175,7 +202,27 @@ export function useSidebarData(): SidebarData {
             icon: Lock,
             visible:
               isEnterprise &&
-              require_any_permission(['legal:hold', 'system:root']),
+              require_any_permission([
+                'legal:hold',
+                'system:root',
+                'compliance:audit',
+              ]),
+          },
+          {
+            title: t('navigation.approvals', 'Approvals'),
+            url: '/approvals',
+            icon: ShieldCheck,
+            visible:
+              isEnterprise &&
+              require_any_permission([
+                // The queue is the second half of the two-person rule. A
+                // compliance officer without `approval:decide` may still read
+                // it — that is the separation-of-duties view, not a way to
+                // move it.
+                'approval:decide',
+                'compliance:audit',
+                'system:root',
+              ]),
           },
           {
             title: t('navigation.timestampAnchor', 'Timestamp anchoring'),
@@ -183,29 +230,40 @@ export function useSidebarData(): SidebarData {
             icon: Fingerprint,
             visible:
               isEnterprise &&
-              require_any_permission(['timestamp:manage', 'system:root']),
+              require_any_permission([
+                'timestamp:manage',
+                'system:root',
+                'compliance:audit',
+              ]),
+          },
+          {
+            title: t(
+              'navigation.complianceSettings',
+              'Compliance configuration',
+            ),
+            url: '/settings/compliance',
+            icon: Settings2,
+            visible:
+              (isPro || isEnterprise) &&
+              require_any_permission(['system:root']),
           },
         ],
       },
       {
+        id: 'other',
         title: t('navigation.other'),
+        defaultOpen: true,
         items: [
+          {
+            title: t('navigation.backup', 'Backup'),
+            url: '/backup',
+            icon: Archive,
+            visible: require_any_permission(['backup:manage', 'system:root']),
+          },
           {
             title: t('navigation.settings'),
             url: '/settings',
             icon: IconSettings,
-          },
-          {
-            title: t('navigation.apiDocs'),
-            url: '/api-docs',
-            icon: IconHelp,
-          },
-          {
-            title: t('navigation.license'),
-            url: '/license',
-            icon: BadgeCheck,
-            visible:
-              isPro && require_any_permission(['system:root', 'user:manage']),
           },
         ],
       },

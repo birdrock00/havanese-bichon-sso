@@ -18,13 +18,114 @@
 
 
 use std::collections::HashSet;
+use std::sync::LazyLock;
+
+/// Gmail system labels that describe message *state* rather than a folder.
+/// They must never become the import destination.
+///
+/// Google localizes these system labels in Takeout's `X-Gmail-Labels` header
+/// (e.g. French `Archivés`), so the English canonical tokens alone miss every
+/// non-English account and the status label is wrongly treated as a business
+/// folder. We therefore match the English tokens plus the known translations.
+///
+/// Best-effort from Gmail's UI label names; the reporter's real French export
+/// confirmed `Archivés`/`Envoyé`. Extend or correct entries as real exports
+/// confirm — only ever add *system* labels here, never user-created ones
+/// (those are never localized).
+static STATUS_LABELS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
+    [
+        // English (canonical Takeout tokens)
+        "Opened", "Unread", "Archived",
+        // French
+        "Ouverts", "Non lus", "Archivés",
+        // Spanish
+        "Abiertos", "No leídos", "Archivados",
+        // Italian
+        "Aperti", "Non letti", "Archiviati",
+        // Portuguese
+        "Abertos", "Não lidos", "Arquivados",
+        // German
+        "Geöffnet", "Ungelesen", "Archiviert",
+        // Dutch
+        "Geopend", "Ongelezen", "Gearchiveerd",
+        // Swedish
+        "Öppnade", "Olästa", "Arkiverade",
+        // Danish
+        "Åbnet", "Ulæst", "Arkiveret",
+        // Norwegian
+        "Åpnet", "Ulest", "Arkivert",
+        // Finnish
+        "Avatut", "Lukemattomat", "Arkistoidut",
+        // Polish
+        "Otworzone", "Nieprzeczytane", "Zarchiwizowane",
+        // Czech
+        "Otevřené", "Nepřečtené", "Archivováno",
+        // Hungarian
+        "Megnyitott", "Olvasatlan", "Archivált",
+        // Romanian
+        "Deschise", "Necitite", "Arhivate",
+        // Russian
+        "Открытые", "Непрочитанные", "В архиве",
+        // Ukrainian
+        "Відкриті", "Непрочитані", "В архіві",
+        // Turkish
+        "Açıldı", "Okunmamış", "Arşivlendi",
+        // Greek
+        "Ανοιγμένα", "Μη αναγνωσμένα", "Αρχειοθέτηση",
+    ]
+    .into_iter()
+    .collect()
+});
+
+/// Gmail's generic location folders: real folders, but never a "business"
+/// destination. Used only to prefer a custom label over them when several
+/// labels remain.
+static GENERIC_LOCATION_LABELS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
+    [
+        // English
+        "Inbox", "Sent",
+        // French
+        "Boîte de réception", "Envoyé",
+        // Spanish
+        "Recibidos", "Enviados",
+        // Italian
+        "Posta in arrivo", "Inviati",
+        // Portuguese
+        "Caixa de entrada", "Enviados",
+        // German
+        "Posteingang", "Gesendet",
+        // Dutch
+        "Postvak IN", "Verzonden items",
+        // Swedish
+        "Inkorgen", "Skickade",
+        // Danish
+        "Indbakke", "Sendt",
+        // Norwegian
+        "Innboks", "Sendt",
+        // Finnish
+        "Saapuneet", "Lähetetyt",
+        // Polish
+        "Odebrane", "Wysłane",
+        // Czech
+        "Doručená pošta", "Odeslané",
+        // Hungarian
+        "Beérkezett üzenetek", "Elküldött üzenetek",
+        // Romanian
+        "Căsuța de intrare", "Trimise",
+        // Russian
+        "Входящие", "Отправленные",
+        // Ukrainian
+        "Вхідні", "Надіслані",
+        // Turkish
+        "Gelen Kutusu", "Gönderilmiş",
+        // Greek
+        "Εισερχόμενα", "Απεσταλμένα",
+    ]
+    .into_iter()
+    .collect()
+});
 
 pub fn determine_folder(labels_raw: &str) -> String {
-    let mut status_blacklist = HashSet::new();
-    status_blacklist.insert("Opened");
-    status_blacklist.insert("Unread");
-    status_blacklist.insert("Archived");
-
     let all_labels: Vec<&str> = labels_raw
         .split(',')
         .map(|s| s.trim())
@@ -37,7 +138,7 @@ pub fn determine_folder(labels_raw: &str) -> String {
 
     let filtered: Vec<&str> = all_labels
         .iter()
-        .filter(|&&l| !status_blacklist.contains(l))
+        .filter(|&&l| !STATUS_LABELS.contains(l))
         .cloned()
         .collect();
 
@@ -49,7 +150,9 @@ pub fn determine_folder(labels_raw: &str) -> String {
         // Case C: Multiple labels remain (e.g., ["Inbox", "medium"])
         _ => {
             // Prioritize custom business labels by excluding generic locations like "Inbox" or "Sent"
-            let business_label = filtered.iter().find(|&&l| l != "Inbox" && l != "Sent");
+            let business_label = filtered
+                .iter()
+                .find(|&&l| !GENERIC_LOCATION_LABELS.contains(l));
 
             match business_label {
                 // Return the first non-generic label found
@@ -130,5 +233,33 @@ mod tests {
         let raw = b"From: sender@example.com\r\nTo: r@example.com\r\n\r\nBody.\r\n";
         let message = MessageParser::new().parse(raw.as_slice()).unwrap();
         assert!(message.header("X-Gmail-Labels").is_none());
+    }
+
+    /// Issue: non-English system labels were treated as business folders.
+    /// French "Archivés,Envoyé" must file under "Envoyé", like English
+    /// "Archived,Sent" files under "Sent".
+    #[test]
+    fn french_archived_sent_goes_to_sent() {
+        assert_eq!(determine_folder("Archivés,Envoyé"), "Envoyé");
+        assert_eq!(determine_folder("Archived,Sent"), "Sent");
+    }
+
+    #[test]
+    fn french_inbox_prefers_custom_label() {
+        assert_eq!(determine_folder("Boîte de réception,Ma boîte"), "Ma boîte");
+    }
+
+    #[test]
+    fn spanish_and_german_system_labels() {
+        assert_eq!(determine_folder("Archivados,Enviados"), "Enviados");
+        assert_eq!(determine_folder("Archiviert,Gesendet"), "Gesendet");
+    }
+
+    #[test]
+    fn archived_only_falls_back_to_original_label() {
+        // Same fallback as English: a message whose only label is the archive
+        // status cannot be filed anywhere meaningful.
+        assert_eq!(determine_folder("Archivés"), "Archivés");
+        assert_eq!(determine_folder("Archived"), "Archived");
     }
 }

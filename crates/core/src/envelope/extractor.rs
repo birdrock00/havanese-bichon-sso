@@ -25,6 +25,7 @@ use uuid::Uuid;
 use crate::{
     account::migration::AccountModel,
     archive::imap::mailbox::MailBox,
+    backup::gate::{BACKUP_ACQUIRE_TIMEOUT, WRITE_GATE},
     common::AddrVec,
     envelope::{meta::parse_bichon_metadata, utils::normalize_subject},
     error::{code::ErrorCode, BichonResult},
@@ -62,6 +63,7 @@ pub async fn extract_envelope_and_store_it(
     account_id: u64,
     mailbox_id: u64,
 ) -> BichonResult<()> {
+    let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
     let internal_date = fetch
         .internal_date()
         .map(|d| d.timestamp_millis())
@@ -89,6 +91,7 @@ pub async fn extract_envelope_from_eml(
     account_id: u64,
     mailbox_id: u64,
 ) -> BichonResult<ExtractOutcome> {
+    let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
     extract_envelope_core(body, 0, body.len() as u32, 0, account_id, mailbox_id).await
 }
 
@@ -97,6 +100,7 @@ pub async fn extract_envelope_from_smtp(
     account_id: u64,
     mailbox_id: u64,
 ) -> BichonResult<ExtractOutcome> {
+    let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
     extract_envelope_core(
         body,
         0,
@@ -830,14 +834,19 @@ async fn recover_message_blob(envelope: &Envelope) -> BichonResult<Bytes> {
                 ErrorCode::InternalError
             )
         })?;
-    detach_and_store_attachments(
-        &raw_body,
-        &message,
-        &fetched_hash,
-        envelope.account_id,
-        envelope.mailbox_id,
-    )
-    .await;
+    // Persist the recovered blob for future requests — unless a backup window
+    // is open, in which case we still return the content to the caller but skip
+    // the write so the blob store stays byte-stable for the running snapshot.
+    if !WRITE_GATE.is_paused() {
+        detach_and_store_attachments(
+            &raw_body,
+            &message,
+            &fetched_hash,
+            envelope.account_id,
+            envelope.mailbox_id,
+        )
+        .await;
+    }
 
     Ok(Bytes::from(raw_body))
 }

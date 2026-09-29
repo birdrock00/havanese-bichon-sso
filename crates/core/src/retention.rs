@@ -30,6 +30,7 @@
 //! `retention_days`.
 
 use crate::account::migration::AccountModel;
+use crate::backup::gate::WRITE_GATE;
 use crate::common::periodic::PeriodicTask;
 use crate::error::BichonResult;
 use crate::store::tantivy::envelope::ENVELOPE_MANAGER;
@@ -107,6 +108,12 @@ pub fn start_retention_scheduler() {
 /// hold are skipped. Per-account failures are logged and do not abort the
 /// sweep for the remaining accounts.
 pub async fn retention_sweep() -> BichonResult<()> {
+    // Skip a round entirely while a backup window is open: the sweep rewrites
+    // the index in place and would race the snapshot.
+    if WRITE_GATE.is_paused() {
+        info!("retention: skipping sweep, backup in progress");
+        return Ok(());
+    }
     let accounts = match AccountModel::list_all() {
         Ok(accounts) => accounts,
         Err(e) => {

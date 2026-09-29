@@ -59,7 +59,7 @@ interface DataTableProps {
   columns: ColumnDef<EmailEnvelope>[]
   data: EmailEnvelope[]
   onRowClick: (e: ReactMouseEvent<HTMLTableRowElement, MouseEvent>, row: Row<EmailEnvelope>) => void
-  setSortBy: (sortBy: "DATE" | "SIZE") => void
+  setSortBy: (sortBy: "DATE" | "SIZE" | "RELEVANCE") => void
   setSortOrder: (value: "desc" | "asc") => void
   children?: (table: Table<EmailEnvelope>) => React.ReactNode
 }
@@ -71,7 +71,11 @@ export function SearchTable({ columns, data, onRowClick, setSortBy, setSortOrder
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
 
   useEffect(() => {
+    // With no column sorted we leave the URL sort params unset, so the
+    // backend default applies (RELEVANCE when the query has a text term,
+    // DATE otherwise).
     const [value] = sorting
+    if (!value) return
     setSortBy(value.id.toUpperCase() as "DATE" | "SIZE")
     setSortOrder(value.desc ? "desc" : "asc")
   }, [sorting])

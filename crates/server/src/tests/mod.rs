@@ -5,6 +5,7 @@
 
 pub mod access_token_tests;
 pub mod account_tests;
+pub mod backup_tests;
 pub mod oauth2_tests;
 pub mod proxy_tests;
 pub mod role_tests;
@@ -55,7 +56,21 @@ pub async fn setup() {
         return;
     }
 
-    let root = PathBuf::from(&SETTINGS.bichon_root_dir);
+    // Unit tests never pass --bichon-root-dir, and the settings parser now
+    // panics on a missing data root for server runs (restore subcommand
+    // excepted). Provide a throwaway root + encryption password before the
+    // first SETTINGS use so the test binary boots like a configured server.
+    if std::env::var("BICHON_ROOT_DIR").is_err() {
+        std::env::set_var(
+            "BICHON_ROOT_DIR",
+            std::env::temp_dir().join(format!("bichon-server-test-{}", std::process::id())),
+        );
+    }
+    if std::env::var("BICHON_ENCRYPT_PASSWORD").is_err() {
+        std::env::set_var("BICHON_ENCRYPT_PASSWORD", "test-password");
+    }
+
+    let root = PathBuf::from(SETTINGS.root_dir());
     if root.exists() {
         let _ = std::fs::remove_dir_all(&root);
     }

@@ -34,6 +34,9 @@ struct EngineShared {
     index_store: IndexStore,
     write_mutex: Mutex<()>,
     file_pool: FilePool,
+    /// When set, the background GC thread skips its pass. Used to keep the
+    /// store byte-stable while an external backup tool copies the segments.
+    gc_paused: AtomicBool,
     #[allow(dead_code)]
     lock_file: File,
 }
@@ -60,6 +63,18 @@ pub struct Stats {
     pub total_bytes: u64,
     pub deleted_bytes: u64,
     pub segment_count: usize,
+}
+
+/// One sealed, immutable segment as a backup artifact.
+#[derive(Debug, Clone)]
+pub struct SegmentArtifact {
+    pub segment_id: u32,
+    /// Path of the sealed `.seg` file (immutable until GC reclaims it).
+    pub path: PathBuf,
+    /// SHA-256 of the file — the S3 object key derives from it.
+    pub sha256: [u8; 32],
+    /// Size of the file in bytes.
+    pub bytes: u64,
 }
 
 impl Engine {
@@ -151,6 +166,7 @@ impl Engine {
             index_store,
             write_mutex: Mutex::new(()),
             file_pool: FilePool::new(8),
+            gc_paused: AtomicBool::new(false),
             lock_file,
         });
 
@@ -195,6 +211,12 @@ impl Engine {
                         thread::park_timeout(interval);
                         if stop2.load(Ordering::Acquire) {
                             break;
+                        }
+                        // Skip the pass entirely while a backup window is open:
+                        // GC seals and renames segment files, which would race
+                        // an external copy of the segments directory.
+                        if shared3.gc_paused.load(Ordering::Acquire) {
+                            continue;
                         }
                         // Seal the active segment first so that the data from
                         // this GC cycle becomes eligible for compaction.
@@ -434,6 +456,106 @@ impl Engine {
         inner.flush_active()
     }
 
+    /// Pause or resume the background GC thread. While paused, no segment is
+    /// sealed, renamed or deleted, keeping the on-disk store byte-stable for
+    /// an external backup copy. Must be re-enabled after the backup window
+    /// closes.
+    pub fn set_gc_paused(&self, paused: bool) {
+        self.shared.gc_paused.store(paused, Ordering::Release);
+    }
+
+    /// Whether the background GC is currently paused for a backup window.
+    pub fn is_gc_paused(&self) -> bool {
+        self.shared.gc_paused.load(Ordering::Acquire)
+    }
+
+    /// Bring the store into a copy-safe, fully durable state.
+    ///
+    /// Runs inside a backup write window (no writers active):
+    /// 1. Pause GC so no file is sealed/renamed/deleted mid-copy.
+    /// 2. Seal the active segment so its file becomes immutable.
+    /// 3. Flush the (now empty) active writer + metadata.
+    /// 4. Fsync every segment file — a freshly sealed segment may still have
+    ///    unflushed page-cache data that `flush_active` never synced.
+    /// 5. Flush the redb index file.
+    pub fn prepare_for_backup(&self) -> Result<()> {
+        self.set_gc_paused(true);
+
+        self.seal_active_segment()?;
+
+        let seg_dir = {
+            let _write_lock = self.shared.write_mutex.lock().unwrap();
+            let mut inner = self.shared.inner.write().unwrap();
+            inner.flush_active()?;
+            inner.root.join("segments")
+        };
+
+        for entry in fs::read_dir(&seg_dir)? {
+            let entry = entry?;
+            let name = entry.file_name();
+            let name_str = name.to_string_lossy();
+            if name_str.ends_with(".seg") {
+                if let Ok(f) = File::options().write(true).open(entry.path()) {
+                    if let Err(e) = f.sync_all() {
+                        tracing::warn!(
+                            "backup: failed to fsync segment {}: {}",
+                            entry.path().display(),
+                            e
+                        );
+                    }
+                }
+            }
+        }
+
+        self.shared.index_store.flush()
+    }
+
+    /// List every sealed segment as a backup artifact. Call after
+    /// [`Engine::prepare_for_backup`] (GC paused, active segment sealed), so
+    /// the listed files are immutable and nothing mutates the store.
+    ///
+    /// Hashes come from the meta (computed at seal / compaction); segments
+    /// sealed before hashing existed are hashed here once and persisted, so
+    /// the backup capture window only ever pays for genuinely first-time
+    /// hashes.
+    pub fn backup_segments(&self) -> Result<Vec<SegmentArtifact>> {
+        let _write_lock = self.shared.write_mutex.lock().unwrap();
+        let mut inner = self.shared.inner.write().unwrap();
+        let mut out = Vec::new();
+        let mut dirty = false;
+        let seg_dir = inner.root.join("segments");
+        for (&seg_id, stats) in inner.meta.segments.iter_mut() {
+            if !stats.sealed {
+                continue; // the (empty) active segment is not part of a backup
+            }
+            let path = seg_dir.join(segment::segment_filename(seg_id));
+            if !path.exists() {
+                return Err(Error::SegmentNotFound(seg_id));
+            }
+            let bytes = fs::metadata(&path)?.len();
+            let sha256 = match stats.sha256 {
+                Some(h) => h,
+                None => {
+                    // One-time backfill for segments sealed before hashing.
+                    let h = crate::checksum::sha256_file(&path)?;
+                    stats.sha256 = Some(h);
+                    dirty = true;
+                    h
+                }
+            };
+            out.push(SegmentArtifact {
+                segment_id: seg_id,
+                path,
+                sha256,
+                bytes,
+            });
+        }
+        if dirty {
+            inner.meta.save(&inner.root)?;
+        }
+        Ok(out)
+    }
+
     pub fn stats(&self) -> Result<Stats> {
         let inner = self.shared.inner.read().unwrap();
         let meta = &inner.meta;
@@ -593,12 +715,15 @@ impl EngineShared {
                     .join(segment::segment_filename(stats.segment_id));
                 let _ = fs::remove_file(&seg_path);
             } else {
-                // Update segment stats: now smaller and clean.
+                // Update segment stats: now smaller and clean. The file was
+                // rewritten by compaction, so the stored hash must be replaced
+                // with the new content's hash (computed on the temp file).
                 if let Some(seg_stats) = inner.meta.segments.get_mut(&stats.segment_id) {
                     seg_stats.total_bytes = stats.bytes_after;
                     seg_stats.deleted_bytes = 0;
                     seg_stats.deleted_ratio = 0.0;
                     seg_stats.indexed_up_to_offset = stats.bytes_after;
+                    seg_stats.sha256 = Some(stats.sha256);
                 }
                 inner.meta.save(&inner.root)?;
             }
@@ -663,6 +788,14 @@ impl EngineInner {
     }
 
     fn seal_active(&mut self) -> Result<()> {
+        // An empty active segment holds nothing worth freezing — sealing it
+        // (e.g. a backup window that opened with no new writes) would create a
+        // pointless 0-byte sealed segment on every run, growing the file/meta
+        // count without any data. Skip; `backup_segments` skips unsealed
+        // segments, so the empty active simply stays out of the snapshot.
+        if self.active_writer.bytes_written() == 0 {
+            return Ok(());
+        }
         let old_id = self.active_writer.id();
         let old_stats = self
             .meta
@@ -670,6 +803,14 @@ impl EngineInner {
             .entry(old_id)
             .or_insert_with(|| SegmentStats::new(old_id));
         old_stats.sealed = true;
+        // The file just received its last entry and is page-cache warm —
+        // hashing now is nearly free, and lets a backup skip every segment
+        // (design doc §7: blob hash-at-seal).
+        let old_path = self
+            .root
+            .join("segments")
+            .join(segment::segment_filename(old_id));
+        old_stats.sha256 = Some(crate::checksum::sha256_file(&old_path)?);
 
         let new_id = old_id + 1;
         self.meta.active_segment_id = new_id;
@@ -692,6 +833,108 @@ impl EngineInner {
             Ok(path)
         } else {
             Err(Error::SegmentNotFound(segment_id))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn test_key(byte: u8) -> [u8; 32] {
+        [byte; 32]
+    }
+
+    fn no_background_config() -> Config {
+        Config {
+            gc_interval_secs: 0,
+            flush_interval_secs: 0,
+            ..Config::default()
+        }
+    }
+
+    /// M1 round-trip: write → prepare_for_backup → reopen → read.
+    ///
+    /// `prepare_for_backup` must leave the store byte-stable and fully durable
+    /// (sealed segment + fsync + flushed index), so a process that exits right
+    /// after the backup window closes and is restarted sees every byte.
+    #[test]
+    fn prepare_for_backup_leaves_store_reopenable() {
+        let dir = TempDir::new().unwrap();
+        let config = no_background_config();
+
+        let key = test_key(0x42);
+        let value = b"state-consistent-backup-payload".to_vec();
+
+        {
+            let engine = Engine::open(dir.path(), config.clone()).unwrap();
+            engine.put(key, &value, Codec::Zstd).unwrap();
+
+            // prepare_for_backup pauses GC and seals+fsyncs everything.
+            engine.prepare_for_backup().unwrap();
+            assert!(engine.is_gc_paused(), "GC must be paused during the window");
+
+            // The store remains writable-independent while paused (no new
+            // writers here — the write gate covers that at the core layer).
+
+            // Drop without calling shutdown(): after a backup the process may
+            // simply exit. All data must be on disk already.
+        }
+
+        let engine = Engine::open(dir.path(), config).unwrap();
+        assert_eq!(engine.get(&key).unwrap(), Some(value.clone()));
+
+        // GC is re-enabled after the window; a fresh prepare still round-trips.
+        engine.set_gc_paused(false);
+        assert!(!engine.is_gc_paused());
+
+        let key2 = test_key(0x43);
+        engine.put(key2, &value, Codec::Lz4).unwrap();
+        engine.prepare_for_backup().unwrap();
+        assert_eq!(engine.get(&key2).unwrap(), Some(value.clone()));
+        engine.shutdown().unwrap();
+    }
+
+    /// An empty active segment must not be sealed by a backup window: repeated
+    /// `prepare_for_backup` on an idle store must not accumulate 0-byte
+    /// sealed segments (guard in `seal_active`), while a non-empty active is
+    /// still sealed exactly once and stays in the snapshot.
+    #[test]
+    fn prepare_for_backup_skips_empty_active() {
+        let dir = TempDir::new().unwrap();
+        let config = no_background_config();
+
+        {
+            let engine = Engine::open(dir.path(), config.clone()).unwrap();
+            // Idle store: two backup windows, no writes between.
+            engine.prepare_for_backup().unwrap();
+            assert!(
+                engine.backup_segments().unwrap().is_empty(),
+                "no data → no sealed segment must appear in the snapshot"
+            );
+            engine.prepare_for_backup().unwrap();
+            assert!(
+                engine.backup_segments().unwrap().is_empty(),
+                "a second idle window must not add an empty sealed segment"
+            );
+            engine.set_gc_paused(false);
+
+            // With data, the window seals exactly the non-empty active segment...
+            let key = test_key(0x51);
+            let value = b"payload".to_vec();
+            engine.put(key, &value, Codec::Zstd).unwrap();
+            engine.prepare_for_backup().unwrap();
+            let segs = engine.backup_segments().unwrap();
+            assert_eq!(segs.len(), 1);
+            assert!(segs[0].bytes > 0);
+
+            // ...and a second window with no new writes does NOT add an empty
+            // sealed segment (the post-seal active is skipped, not re-sealed).
+            engine.prepare_for_backup().unwrap();
+            assert_eq!(engine.backup_segments().unwrap().len(), 1);
+            engine.set_gc_paused(false);
+            engine.shutdown().unwrap();
         }
     }
 }

@@ -20,7 +20,7 @@
 import { useState } from 'react'
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Row } from '@tanstack/react-table'
-import { IconEdit, IconPlayerPlay, IconPlayerStop, IconShieldLock, IconTrash } from '@tabler/icons-react'
+import { IconClock, IconEdit, IconPlayerPlay, IconPlayerStop, IconShieldLock, IconTrash } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -38,6 +38,8 @@ import { AccountModel, cancel_account_download } from '@/api/account/api'
 import { toast } from '@/hooks/use-toast'
 import { useNavigate } from '@tanstack/react-router'
 import { StartDownloadDialog } from './start-download-dialog'
+import { OP_ACCOUNT_DELETE } from '@/api/approvals/api'
+import { usePendingApprovals } from '@/features/approvals/use-pending-approvals'
 
 interface DataTableRowActionsProps {
   row: Row<AccountModel>
@@ -51,6 +53,12 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
 
   const account_type = row.original.account_type;
   const { require_any_permission } = useCurrentUser()
+
+  // A queued deletion leaves the account exactly as it is, so without this the
+  // row looks untouched and the delete is offered again. Asking twice would
+  // queue two requests for one account.
+  const { hasPendingAccount } = usePendingApprovals()
+  const deleteQueued = hasPendingAccount(OP_ACCOUNT_DELETE, row.original.id)
 
   const hasPermission = require_any_permission(['system:root', 'account:manage'], row.original.id);
   const hasReadPermission = require_any_permission(['system:root', 'account:read_details'], row.original.id);
@@ -183,6 +191,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           {showDownload && <DropdownMenuSeparator />}
 
           {hasPermission && <DropdownMenuItem
+            disabled={deleteQueued}
             onClick={() => {
               setCurrentRow(row.original)
               setOpen('delete')
@@ -191,7 +200,14 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           >
             {t('accounts.delete')}
             <DropdownMenuShortcut>
-              <IconTrash size={16} />
+              {deleteQueued ? (
+                <span className='flex items-center gap-1 text-amber-600 dark:text-amber-500'>
+                  <IconClock size={16} />
+                  {t('approvals.pendingBadge', 'Awaiting approval')}
+                </span>
+              ) : (
+                <IconTrash size={16} />
+              )}
             </DropdownMenuShortcut>
           </DropdownMenuItem>}
         </DropdownMenuContent>

@@ -384,6 +384,41 @@ fn test_recover_after_snapshot() {
 }
 
 #[test]
+fn test_dump_to_round_trip() {
+    let dir = tempfile::tempdir().unwrap();
+    let target = tempfile::tempdir().unwrap();
+
+    // Write, dump to an arbitrary file, then write more — `dump_to` is a pure
+    // read and must not touch the live WAL.
+    {
+        let db = MemDb::open(dir.path()).unwrap();
+        let col = db.collection("accounts");
+        col.insert("1", &Account::new("1", "a@x.com", "active"))
+            .unwrap();
+        let file = std::fs::File::create(target.path().join("snapshot.json")).unwrap();
+        db.dump_to(&file).unwrap();
+        col.insert("2", &Account::new("2", "b@x.com", "active"))
+            .unwrap();
+    }
+
+    // Recover from only the dumped file: exactly the state at dump time.
+    {
+        let db = MemDb::open(target.path()).unwrap();
+        let col = db.collection("accounts");
+        assert_eq!(col.count(), 1);
+        assert!(col.exists("1"));
+        assert!(!col.exists("2"));
+    }
+
+    // The live dir still recovers everything through its own WAL + snapshot.
+    {
+        let db = MemDb::open(dir.path()).unwrap();
+        let col = db.collection("accounts");
+        assert_eq!(col.count(), 2);
+    }
+}
+
+#[test]
 fn test_recover_snapshot_plus_wal() {
     let dir = tempfile::tempdir().unwrap();
 

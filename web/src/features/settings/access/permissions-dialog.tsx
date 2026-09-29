@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useTranslation } from 'react-i18next'
+import { useEdition } from '@/hooks/use-edition'
 import useMinimalAccountList from '@/hooks/use-minimal-account-list'
 
 interface Props {
@@ -41,8 +42,8 @@ interface Props {
 }
 
 
-function getGlobalCategories(t: (key: string) => string) {
-  return [
+function getGlobalCategories(t: (key: string) => string, isEnterprise: boolean) {
+  const categories = [
     {
       title: t('permission.category.system_identity'),
       keys: [
@@ -66,6 +67,13 @@ function getGlobalCategories(t: (key: string) => string) {
       ],
     },
   ]
+  if (isEnterprise) {
+    categories.push({
+      title: t('permission.category.compliance'),
+      keys: ['legal:hold', 'timestamp:manage', 'compliance:audit', 'approval:decide'],
+    })
+  }
+  return categories
 }
 
 function getAccountCategories(t: (key: string) => string) {
@@ -95,6 +103,7 @@ export function PermissionsDialog({
   accountId,
 }: Props) {
   const { t } = useTranslation()
+  const { isEnterprise } = useEdition()
 
   const { getEmailById } = useMinimalAccountList();
 
@@ -114,13 +123,13 @@ export function PermissionsDialog({
 
 
   const permissions = React.useMemo(() => {
-    const list = getPermissions(t)
+    const list = getPermissions(t, { isEnterprise })
     return new Map(list.map((p) => [p.value, p]))
-  }, [t])
+  }, [t, isEnterprise])
 
   const categories =
     mode === 'global'
-      ? getGlobalCategories(t)
+      ? getGlobalCategories(t, isEnterprise)
       : getAccountCategories(t)
 
   const title =

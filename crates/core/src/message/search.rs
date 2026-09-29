@@ -84,6 +84,31 @@ pub enum SortBy {
     #[serde(rename = "INGEST_AT")]
     #[cfg_attr(feature = "web-api", oai(rename = "INGEST_AT"))]
     IngestAt,
+    /// Sort by full-text relevance (BM25), Tantivy's own scoring. Only
+    /// meaningful when the query carries a text term; always descending (a
+    /// higher score = more relevant), so the `desc` flag is ignored.
+    #[serde(rename = "RELEVANCE")]
+    #[cfg_attr(feature = "web-api", oai(rename = "RELEVANCE"))]
+    Relevance,
+}
+
+/// Resolve the effective sort order. The API default is DATE; when the query
+/// carries a full-text term we default to RELEVANCE instead — a date-desc
+/// default buries the best match under the most recent mail, which is the
+/// opposite of what a user searching expects. An explicitly requested sort is
+/// always respected, except an explicit RELEVANCE with no text term: there is
+/// no score to order by, so it falls back to DATE.
+fn resolve_sort_by(requested: Option<SortBy>, has_text: bool) -> SortBy {
+    match requested {
+        Some(SortBy::Relevance) if !has_text => SortBy::DATE,
+        Some(s) => s,
+        None if has_text => SortBy::Relevance,
+        None => SortBy::DATE,
+    }
+}
+
+fn has_text_filter(filter: &EmailSearchFilter) -> bool {
+    filter.text.is_some() || filter.subject.is_some() || filter.body.is_some()
 }
 
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -119,13 +144,14 @@ pub fn search_messages_impl(
     request: EmailSearchRequest,
 ) -> BichonResult<DataPage<Envelope>> {
     request.validate()?;
+    let sort_by = resolve_sort_by(request.sort_by, has_text_filter(&request.filter));
     ENVELOPE_MANAGER.search(
         accounts,
         request.filter,
         request.page,
         request.page_size,
         request.desc.unwrap_or(true),
-        request.sort_by.unwrap_or(SortBy::DATE),
+        sort_by,
     )
 }
 
@@ -196,12 +222,93 @@ pub fn search_attachment_impl(
     request: AttachmentSearchRequest,
 ) -> BichonResult<DataPage<AttachmentModel>> {
     request.validate()?;
+    let has_text = request.filter().text.is_some() || request.filter().subject.is_some();
+    let sort_by = resolve_sort_by(request.sort_by, has_text);
     ATTACHMENT_MANAGER.search(
         accounts,
         request.filter,
         request.page,
         request.page_size,
         request.desc.unwrap_or(true),
-        request.sort_by.unwrap_or(SortBy::DATE),
+        sort_by,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn filter(text: Option<&str>, subject: Option<&str>, body: Option<&str>) -> EmailSearchFilter {
+        EmailSearchFilter {
+            text: text.map(str::to_string),
+            subject: subject.map(str::to_string),
+            body: body.map(str::to_string),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn text_present_defaults_to_relevance() {
+        let f = filter(Some("bienvenue"), None, None);
+        assert!(has_text_filter(&f));
+        assert_eq!(resolve_sort_by(None, has_text_filter(&f)), SortBy::Relevance);
+    }
+
+    #[test]
+    fn subject_or_body_also_default_to_relevance() {
+        let f = filter(None, Some("kroatien"), Some("skipper"));
+        assert!(has_text_filter(&f));
+        assert_eq!(resolve_sort_by(None, has_text_filter(&f)), SortBy::Relevance);
+    }
+
+    #[test]
+    fn no_text_defaults_to_date() {
+        let f = filter(None, None, None);
+        assert!(!has_text_filter(&f));
+        assert_eq!(resolve_sort_by(None, has_text_filter(&f)), SortBy::DATE);
+    }
+
+    #[test]
+    fn explicit_date_is_not_overridden_by_text() {
+        let f = filter(Some("bienvenue"), None, None);
+        assert_eq!(
+            resolve_sort_by(Some(SortBy::DATE), has_text_filter(&f)),
+            SortBy::DATE
+        );
+    }
+
+    #[test]
+    fn explicit_relevance_with_text_is_kept() {
+        let f = filter(Some("bienvenue"), None, None);
+        assert_eq!(
+            resolve_sort_by(Some(SortBy::Relevance), has_text_filter(&f)),
+            SortBy::Relevance
+        );
+    }
+
+    #[test]
+    fn explicit_relevance_without_text_falls_back_to_date() {
+        let f = filter(None, None, None);
+        assert_eq!(
+            resolve_sort_by(Some(SortBy::Relevance), has_text_filter(&f)),
+            SortBy::DATE
+        );
+    }
+
+    #[test]
+    fn attachment_has_text_uses_text_or_subject() {
+        // `search_attachment_impl` derives has_text from text/subject only.
+        let with_text = AttachmentSearchFilter {
+            text: Some("invoice".to_string()),
+            ..Default::default()
+        };
+        let with_subject = AttachmentSearchFilter {
+            subject: Some("invoice".to_string()),
+            ..Default::default()
+        };
+        let no_text = AttachmentSearchFilter::default();
+        assert!(with_text.text.is_some() || with_text.subject.is_some());
+        assert!(with_subject.text.is_some() || with_subject.subject.is_some());
+        assert!(no_text.text.is_none() && no_text.subject.is_none());
+    }
 }

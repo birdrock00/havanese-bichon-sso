@@ -31,17 +31,26 @@ impl ClientContext {
         ))
     }
 
-    pub fn check_has_permission(
-        user: &UserModel,
-        account_id: Option<u64>,
-        permission: &str,
-    ) -> bool {
-        if user.is_admin() {
-            return true;
-        }
-
+    /// Resolve a user's effective permissions and test one against them.
+    ///
+    /// Expiry is applied here, at resolution time, and nowhere else. There is
+    /// deliberately no background job that sweeps expired assignments out of
+    /// `global_roles` / `account_access_map`: a sweeper that fails to run, or
+    /// that runs on one node of several, would leave an expired delegation
+    /// live — and "the grant is still in the list" is not something an auditor
+    /// can tell apart from a valid one. Deriving from the stored expiry on
+    /// every check makes expiry authoritative rather than eventual, and works
+    /// identically on IMAP, SMTP and REST because they all come through here.
+    ///
+    /// The cost is one map lookup per assignment per check, which is noise
+    /// beside the `UserRole::find` DB reads already in this loop.
+    fn permissions_allow(user: &UserModel, account_id: Option<u64>, permission: &str) -> bool {
+        let now = crate::utc_now!();
         let mut global_perms = HashSet::new();
         for rid in &user.global_roles {
+            if user.global_role_expired(*rid, now) {
+                continue;
+            }
             if let Some(role) = UserRole::find(*rid).ok().flatten() {
                 global_perms.extend(role.permissions);
             }
@@ -52,6 +61,9 @@ impl ClientContext {
         }
 
         if let Some(aid) = account_id {
+            if user.account_role_expired(aid, now) {
+                return false;
+            }
             if let Some(role_id) = user.account_access_map.get(&aid) {
                 if let Some(role) = UserRole::find(*role_id).ok().flatten() {
                     if role.permissions.contains(&permission.to_string())
@@ -66,35 +78,24 @@ impl ClientContext {
         false
     }
 
+    pub fn check_has_permission(
+        user: &UserModel,
+        account_id: Option<u64>,
+        permission: &str,
+    ) -> bool {
+        if user.is_admin() {
+            return true;
+        }
+
+        Self::permissions_allow(user, account_id, permission)
+    }
+
     pub fn has_permission(&self, account_id: Option<u64>, permission: &str) -> bool {
         if self.user.is_admin() {
             return true;
         }
 
-        let mut global_perms = HashSet::new();
-        for rid in &self.user.global_roles {
-            if let Some(role) = UserRole::find(*rid).ok().flatten() {
-                global_perms.extend(role.permissions);
-            }
-        }
-
-        if Self::check_global_logic(&global_perms, permission) {
-            return true;
-        }
-
-        if let Some(aid) = account_id {
-            if let Some(role_id) = self.user.account_access_map.get(&aid) {
-                if let Some(role) = UserRole::find(*role_id).ok().flatten() {
-                    if role.permissions.contains(&permission.to_string())
-                        || Self::check_account_logic(&role.permissions, permission)
-                    {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        false
+        Self::permissions_allow(&self.user, account_id, permission)
     }
 
     fn check_global_logic(global: &HashSet<String>, perm: &str) -> bool {

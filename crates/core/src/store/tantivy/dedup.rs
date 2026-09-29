@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use tantivy::schema::Term;
 use tantivy::{IndexReader, IndexWriter};
 
+use crate::backup::gate::WRITE_GATE;
 use crate::common::periodic::{PeriodicTask, TaskHandle};
 use crate::context::BichonTask;
 use crate::error::code::ErrorCode;
@@ -85,6 +86,12 @@ impl BichonTask for DedupTask {
 
         let task = move |_: Option<u64>| {
             Box::pin(async move {
+                // Skip a pass entirely while a backup window is open: the pass
+                // deletes in place and would race the snapshot.
+                if WRITE_GATE.is_paused() {
+                    tracing::info!("dedup: skipping pass, backup in progress");
+                    return Ok(());
+                }
                 // Acquire both writers before creating a reader. The fresh reader
                 // sees the last committed state, while the writers ensure we have
                 // exclusive access to perform deletions.

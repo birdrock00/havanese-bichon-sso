@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useTranslation } from 'react-i18next'
+import { useEdition } from '@/hooks/use-edition'
 
 interface Props {
   currentRow?: UserRole
@@ -38,23 +39,32 @@ interface Props {
 
 export function PermissionsDialog({ currentRow, open, onOpenChange }: Props) {
   const { t } = useTranslation()
+  const { isEnterprise } = useEdition()
   const ownedPermissions = currentRow?.permissions
     ? Array.from(currentRow.permissions)
     : [];
 
   const roleType = currentRow?.role_type;
 
+  const globalCategories = [
+    {
+      titleKey: "roles.categories.identity",
+      keys: ["system:access", "system:root", "user:manage", "user:view", "token:manage", "account:create"]
+    },
+    {
+      titleKey: "roles.categories.global_data",
+      keys: ["account:manage:all", "data:read:all", "data:manage:all", "data:raw:download:all", "data:delete:all", "data:export:batch:all"]
+    }
+  ];
+  if (isEnterprise) {
+    globalCategories.push({
+      titleKey: "roles.categories.compliance",
+      keys: ["legal:hold", "timestamp:manage", "compliance:audit", "approval:decide"]
+    })
+  }
+
   const allCategories = {
-    global: [
-      {
-        titleKey: "roles.categories.identity",
-        keys: ["system:access", "system:root", "user:manage", "user:view", "token:manage", "account:create"]
-      },
-      {
-        titleKey: "roles.categories.global_data",
-        keys: ["account:manage:all", "data:read:all", "data:manage:all", "data:raw:download:all", "data:delete:all", "data:export:batch:all"]
-      }
-    ],
+    global: globalCategories,
     account: [
       {
         titleKey: "roles.categories.account_resource",
@@ -97,7 +107,7 @@ export function PermissionsDialog({ currentRow, open, onOpenChange }: Props) {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   {cat.keys.map((key) => {
-                    const item = getPermissions(t).find(p => p.value === key);
+                    const item = getPermissions(t, { isEnterprise }).find(p => p.value === key);
                     if (!item) return null;
 
                     const hasPermission = ownedPermissions.includes(item.value);

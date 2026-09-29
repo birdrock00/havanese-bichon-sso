@@ -88,7 +88,7 @@ impl From<&Settings> for SystemConfigurations {
             bichon_encrypt_password_set: s.bichon_encrypt_password.is_some()
                 || s.bichon_encrypt_password_file.is_some(),
             bichon_webui_token_expiration_hours: s.bichon_webui_token_expiration_hours,
-            bichon_root_dir: s.bichon_root_dir.clone(),
+            bichon_root_dir: s.root_dir().to_string(),
             bichon_enable_rest_https: s.bichon_enable_rest_https,
             bichon_http_compression_enabled: s.bichon_http_compression_enabled,
             bichon_sync_concurrency: s.bichon_sync_concurrency,

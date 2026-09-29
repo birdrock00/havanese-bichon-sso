@@ -47,28 +47,52 @@ export async function place_legal_hold(
   return data
 }
 
+/**
+ * Result of releasing one hold.
+ *
+ * When dual control is on the release is not executed: the server answers
+ * `202` with `status: 'pending'` and a `request_id`, and the account stays on
+ * hold until someone else approves it. `ok` stays `false` in that case so a
+ * caller cannot read a queued request as a lifted hold.
+ */
+export interface ReleaseHoldResult {
+  ok: boolean
+  account_id: number
+  status?: 'released' | 'pending'
+  pending?: boolean
+  request_id?: string
+  expires_at?: number | null
+}
+
 export async function release_legal_hold(
   account_id: number,
   reason?: string
-): Promise<{ ok: boolean; account_id: number }> {
+): Promise<ReleaseHoldResult> {
   // Always send a JSON body ({ reason: null } when none) — a bodyless DELETE
   // used to hit the backend's required Json extractor and come back 415
   // Unsupported Media Type without a readable message.
-  const { data } = await axiosInstance.delete<{
-    ok: boolean
-    account_id: number
-  }>(`api/v1/legal-hold/${account_id}`, {
-    data: { reason: reason ?? null },
-  })
+  const { data } = await axiosInstance.delete<ReleaseHoldResult>(
+    `api/v1/legal-hold/${account_id}`,
+    {
+      data: { reason: reason ?? null },
+    }
+  )
   return data
 }
 
-/** Per-account outcome of a batch hold operation. */
+/**
+ * Per-account outcome of a batch hold operation.
+ *
+ * `pending` and `request_id` are only present on a release that was queued for
+ * approval; with dual control off the server omits them entirely.
+ */
 export interface BatchHoldResult {
   account_id: number
   email: string
   ok: boolean
   error?: string | null
+  pending?: boolean
+  request_id?: string
 }
 
 /** Place a hold on multiple accounts at once with a shared reason. */

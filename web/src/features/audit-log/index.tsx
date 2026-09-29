@@ -87,6 +87,12 @@ const EVENT_TYPES = [
   'ldap.login_failed',
   'siem.forward_failed',
   'siem.config_updated',
+  'approval.requested',
+  'approval.approved',
+  'approval.executed',
+  'approval.execution_failed',
+  'approval.rejected',
+  'approval.expired',
 ] as const
 
 function eventTypeLabel(t: (key: string, defaultValue: string) => string, et: string): string {
@@ -157,6 +163,30 @@ function eventTypeLabel(t: (key: string, defaultValue: string) => string, et: st
     'siem.config_updated': t(
       'audit.eventTypes.siemConfigUpdated',
       'SIEM configuration updated',
+    ),
+    'approval.requested': t(
+      'audit.eventTypes.approvalRequested',
+      'Approval requested',
+    ),
+    'approval.approved': t(
+      'audit.eventTypes.approvalApproved',
+      'Approval granted',
+    ),
+    'approval.executed': t(
+      'audit.eventTypes.approvalExecuted',
+      'Approval executed',
+    ),
+    'approval.execution_failed': t(
+      'audit.eventTypes.approvalExecutionFailed',
+      'Approval execution failed',
+    ),
+    'approval.rejected': t(
+      'audit.eventTypes.approvalRejected',
+      'Approval rejected',
+    ),
+    'approval.expired': t(
+      'audit.eventTypes.approvalExpired',
+      'Approval request expired',
     ),
   }
   return labels[et] ?? et
@@ -352,7 +382,15 @@ export default function AuditLog() {
   const toggleExpanded = (id: string) =>
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }))
 
-  const canView = isPro && require_any_permission(['system:root', 'user:manage', 'data:read:all'])
+  const canView =
+    isPro &&
+    require_any_permission([
+      'system:root',
+      'user:manage',
+      'data:read:all',
+      // Read-only separation-of-duties view (compliance officers).
+      'compliance:audit',
+    ])
 
   if (!canView) {
     return (

@@ -48,6 +48,7 @@ import {
 } from '@/components/ui/radio-group'
 import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
+import { useEdition } from '@/hooks/use-edition'
 import { getRoleFormSchema, type RoleFormValues } from './schema'
 
 interface Props {
@@ -56,8 +57,8 @@ interface Props {
   onOpenChange: (open: boolean) => void
 }
 
-const CATEGORY_MAP: Record<'Global' | 'Account', { titleKey: string; keys: string[] }[]> = {
-  Global: [
+function getCategoryMap(isEnterprise: boolean): Record<'Global' | 'Account', { titleKey: string; keys: string[] }[]> {
+  const global: { titleKey: string; keys: string[] }[] = [
     {
       titleKey: 'roles.categories.identity',
       keys: ['system:access', 'system:root', 'user:manage', 'user:view', 'token:manage', 'account:create'],
@@ -73,29 +74,41 @@ const CATEGORY_MAP: Record<'Global' | 'Account', { titleKey: string; keys: strin
         'data:export:batch:all',
       ],
     },
-  ],
-  Account: [
-    {
-      titleKey: 'roles.categories.account_resource',
-      keys: [
-        'account:manage',
-        'account:read_details',
-        'data:read',
-        'data:manage',
-        'data:raw:download',
-        'data:delete',
-        'data:export:batch',
-        'data:import:batch',
-        'data:smtp:ingest',
-      ],
-    },
-  ],
+  ]
+  if (isEnterprise) {
+    global.push({
+      titleKey: 'roles.categories.compliance',
+      keys: ['legal:hold', 'timestamp:manage', 'compliance:audit', 'approval:decide'],
+    })
+  }
+  return {
+    Global: global,
+    Account: [
+      {
+        titleKey: 'roles.categories.account_resource',
+        keys: [
+          'account:manage',
+          'account:read_details',
+          'data:read',
+          'data:manage',
+          'data:raw:download',
+          'data:delete',
+          'data:export:batch',
+          'data:import:batch',
+          'data:smtp:ingest',
+        ],
+      },
+    ],
+  }
 }
 
 export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
   const isEdit = !!currentRow
   const queryClient = useQueryClient()
   const { t } = useTranslation()
+  const { isEnterprise } = useEdition()
+
+  const categoryMap = getCategoryMap(isEnterprise)
 
   const roleFormSchema = getRoleFormSchema(t)
 
@@ -281,7 +294,7 @@ export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
                             : 'grid-cols-1'
                         )}
                       >
-                        {CATEGORY_MAP[selectedType].map((cat) => (
+                        {categoryMap[selectedType].map((cat) => (
                           <div key={cat.titleKey} className="space-y-4">
                             <h3 className="text-[11px] font-black text-muted-foreground/70 uppercase tracking-widest">
                               {t(cat.titleKey)}
@@ -289,7 +302,7 @@ export function RoleActionDialog({ currentRow, open, onOpenChange }: Props) {
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {cat.keys.map((key) => {
-                                const item = getPermissions(t).find(p => p.value === key)
+                                const item = getPermissions(t, { isEnterprise }).find(p => p.value === key)
                                 if (!item) return null
 
                                 const checked = field.value.includes(item.value)

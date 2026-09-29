@@ -314,6 +314,21 @@ impl MemDb {
         Ok(())
     }
 
+    /// Stream the current in-memory state as a pretty JSON dump to `w` in one
+    /// pass, without materializing it and without touching the live WAL. The
+    /// in-memory `(last_seq, data)` pair is a complete, self-consistent
+    /// snapshot, so this is all a full backup needs. Deterministic (sorted
+    /// BTreeMap keys), so identical states produce identical bytes.
+    pub fn dump_to<W: std::io::Write>(&self, mut w: W) -> Result<()> {
+        let inner = self.inner.lock().unwrap();
+        let snap = SnapshotRef {
+            last_seq: inner.last_seq,
+            data: &inner.data,
+        };
+        serde_json::to_writer_pretty(&mut w, &snap)?;
+        Ok(())
+    }
+
     /// Start a background snapshot worker that fires at the given interval.
     pub fn start_snapshot_worker(&self, interval: Duration) -> tokio::task::JoinHandle<()> {
         let db = self.clone();

@@ -22,6 +22,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { delete_messages } from '@/api/mailbox/envelope/api'
+import { OP_MESSAGE_DELETE } from '@/api/approvals/api'
+import { useGatedOp } from '@/features/approvals/use-gated-op'
 import { useSearchContext } from './context'
 import { mapToRecordOfArrays } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
@@ -35,17 +37,25 @@ export function EnvelopeDeleteDialog({ open, onOpenChange }: Props) {
   const queryClient = useQueryClient()
   const { toDelete, setToDelete, setSelected } = useSearchContext()
   const { t } = useTranslation()
+  const { gated, announceIfQueued } = useGatedOp(OP_MESSAGE_DELETE)
 
   const deleteMutation = useMutation({
     mutationFn: ({ payload }: { payload: Record<number, string[]> }) =>
       delete_messages(payload),
     retry: false,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['search-messages'], exact: false })
       queryClient.invalidateQueries({ queryKey: ['all-tags'] })
+      queryClient.invalidateQueries({ queryKey: ['approvals'] })
       onOpenChange(false)
       setToDelete(new Map())
       setSelected(new Map())
+
+      // A queued deletion must not report that the messages are gone. They are
+      // still there — the list was cleared because the operator asked for it,
+      // not because anything happened.
+      if (announceIfQueued(data)) return
+
       toast({
         title: t('search.delete.successTitle'),
         description: t('search.delete.successDesc'),
@@ -101,15 +111,33 @@ export function EnvelopeDeleteDialog({ open, onOpenChange }: Props) {
             {t('search.delete.confirmDetail')}
           </p>
 
-          <Alert variant="destructive">
-            <AlertTitle>{t('search.delete.warningTitle')}</AlertTitle>
-            <AlertDescription>
-              {t('search.delete.warningDesc')}
-            </AlertDescription>
-          </Alert>
+          {gated ? (
+            <Alert>
+              <AlertTitle>
+                {t('approvals.gatedMessagesTitle', 'Dual control is on for this operation')}
+              </AlertTitle>
+              <AlertDescription>
+                {t(
+                  'approvals.gatedMessagesDesc',
+                  'This will NOT delete these messages now. It submits a request that a second person must approve, and only then are they deleted. They stay in the archive until that happens.'
+                )}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert variant="destructive">
+              <AlertTitle>{t('search.delete.warningTitle')}</AlertTitle>
+              <AlertDescription>
+                {t('search.delete.warningDesc')}
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       }
-      confirmText={t('search.delete.confirmButton')}
+      confirmText={
+        gated
+          ? t('approvals.submitForApproval', 'Submit for approval')
+          : t('search.delete.confirmButton')
+      }
     />
   )
 }

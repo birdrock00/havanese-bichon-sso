@@ -23,6 +23,8 @@ import { ConfirmDialog } from '@/components/confirm-dialog';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { delete_mailbox } from '@/api/mailbox/api';
+import { OP_MAILBOX_DELETE } from '@/api/approvals/api';
+import { useGatedOp } from '@/features/approvals/use-gated-op';
 import { useSearchContext } from './context';
 
 interface Props {
@@ -34,15 +36,20 @@ export function MailBoxDeleteDialog({ open, onOpenChange }: Props) {
   const queryClient = useQueryClient();
   const { selectedAccountId, deleteMailboxId, setDeleteMailboxId } = useSearchContext();
   const { t } = useTranslation();
+  const { gated, announceIfQueued } = useGatedOp(OP_MAILBOX_DELETE);
 
   const deleteMutation = useMutation({
     mutationFn: ({ accountId, mailboxId }: { accountId: number; mailboxId: string }) =>
       delete_mailbox(accountId, mailboxId),
     retry: false,
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Invalidate either way: a queued delete does not change the mailbox
+      // list, but it does add a row to the approval queue.
       queryClient.invalidateQueries({ queryKey: ['search-mailboxes', selectedAccountId] });
+      queryClient.invalidateQueries({ queryKey: ['approvals'] });
       onOpenChange(false);
       setDeleteMailboxId(undefined);
+      if (announceIfQueued(data)) return;
       toast({
         title: t('mailbox.deleteMailboxDialog.successTitle'),
         description: t('mailbox.deleteMailboxDialog.successDesc'),
@@ -84,21 +91,43 @@ export function MailBoxDeleteDialog({ open, onOpenChange }: Props) {
             className="mr-1 inline-block stroke-destructive"
             size={18}
           />{' '}
-          {t('mailbox.deleteMailboxDialog.title')}
+          {gated
+            ? t('approvals.gatedTitle', 'Submit for approval?')
+            : t('mailbox.deleteMailboxDialog.title')}
         </span>
       }
       desc={
         <div className="space-y-4">
-          <p className="mb-2">
-            {t('mailbox.deleteMailboxDialog.desc')}
-          </p>
-          <Alert variant="destructive">
-            <AlertTitle>{t('mailbox.deleteMailboxDialog.warningTitle')}</AlertTitle>
-            <AlertDescription>{t('mailbox.deleteMailboxDialog.warningDesc')}</AlertDescription>
-          </Alert>
+          {gated ? (
+            <Alert>
+              <AlertTitle>
+                {t('approvals.gatedMailboxTitle', 'Dual control is on for this operation')}
+              </AlertTitle>
+              <AlertDescription>
+                {t(
+                  'approvals.gatedMailboxDesc',
+                  'This will NOT delete the mailbox now. It submits a request that a second person must approve, and only then is the mailbox deleted. The mailbox and its subfolders stay exactly as they are until that happens.'
+                )}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <>
+              <p className="mb-2">
+                {t('mailbox.deleteMailboxDialog.desc')}
+              </p>
+              <Alert variant="destructive">
+                <AlertTitle>{t('mailbox.deleteMailboxDialog.warningTitle')}</AlertTitle>
+                <AlertDescription>{t('mailbox.deleteMailboxDialog.warningDesc')}</AlertDescription>
+              </Alert>
+            </>
+          )}
         </div>
       }
-      confirmText={t('mailbox.deleteMailboxDialog.confirm')}
+      confirmText={
+        gated
+          ? t('approvals.submitForApproval', 'Submit for approval')
+          : t('mailbox.deleteMailboxDialog.confirm')
+      }
       destructive
     />
   );

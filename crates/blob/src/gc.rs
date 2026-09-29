@@ -14,6 +14,9 @@ pub struct GcStats {
     pub bytes_after: u64,
     pub entries_kept: usize,
     pub entries_skipped: usize,
+    /// SHA-256 of the compacted segment (recomputed after the rewrite, since
+    /// a seal-time hash would be stale). See [`GcPrepare::sha256`].
+    pub sha256: [u8; 32],
 }
 
 /// Prepared GC result — the compacted segment has been written to a temp file
@@ -29,6 +32,9 @@ pub struct GcPrepare {
     /// Keys whose tombstone IndexRecord should be removed from redb after
     /// this segment is compacted (the tombstone entries they pointed to are gone).
     pub deleted_keys: Vec<[u8; 32]>,
+    /// SHA-256 of the compacted file, computed on the temp file right after it
+    /// is fsynced (page-cache warm, before the rename — no write lock held).
+    pub sha256: [u8; 32],
     temp_path: PathBuf,
     seg_path: PathBuf,
 }
@@ -121,6 +127,9 @@ pub fn gc_prepare(
     })?;
 
     writer.fsync()?;
+    // Compaction rewrites the segment, so the seal-time hash is stale — hash
+    // the new content now, while it is page-cache warm (design doc §7).
+    let sha256 = crate::checksum::sha256_file(&temp_path)?;
 
     Ok(Some(GcPrepare {
         segment_id: target.segment_id,
@@ -130,6 +139,7 @@ pub fn gc_prepare(
         entries_skipped,
         kept_records,
         deleted_keys,
+        sha256,
         temp_path,
         seg_path,
     }))
@@ -144,5 +154,6 @@ pub fn gc_finish(prep: GcPrepare) -> Result<GcStats> {
         bytes_after: prep.bytes_after,
         entries_kept: prep.entries_kept,
         entries_skipped: prep.entries_skipped,
+        sha256: prep.sha256,
     })
 }

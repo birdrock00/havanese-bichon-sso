@@ -203,9 +203,11 @@ function Stat({
 interface ActiveRunCardProps {
   active: JobProgress
   onCancelling: (value: boolean) => void
+  /** Hide the cancel button for read-only compliance officers. */
+  canCancel?: boolean
 }
 
-function ActiveRunCard({ active, onCancelling }: ActiveRunCardProps) {
+function ActiveRunCard({ active, onCancelling, canCancel = true }: ActiveRunCardProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [busy, setBusy] = useState(false)
@@ -301,15 +303,17 @@ function ActiveRunCard({ active, onCancelling }: ActiveRunCardProps) {
               <RefreshCw className='mr-1 h-4 w-4' />
               {t('integrity.refresh', 'Refresh')}
             </Button>
-            <Button
-              variant='destructive'
-              size='sm'
-              onClick={handleCancel}
-              disabled={busy}
-            >
-              <XCircle className='mr-1 h-4 w-4' />
-              {t('integrity.cancelRun', 'Cancel')}
-            </Button>
+            {canCancel && (
+              <Button
+                variant='destructive'
+                size='sm'
+                onClick={handleCancel}
+                disabled={busy}
+              >
+                <XCircle className='mr-1 h-4 w-4' />
+                {t('integrity.cancelRun', 'Cancel')}
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>
@@ -936,6 +940,16 @@ export default function IntegrityPage() {
   )
   const [selectedRun, setSelectedRun] = useState<string | null>(null)
 
+  // Read access includes compliance officers (`compliance:audit`,
+  // separation of duties); starting/canceling runs stays manage-only.
+  const canView =
+    isPro &&
+    require_any_permission([
+      'system:root',
+      'account:manage:all',
+      'account:manage',
+      'compliance:audit',
+    ])
   const canManage =
     isPro &&
     require_any_permission([
@@ -947,7 +961,7 @@ export default function IntegrityPage() {
   const { data: active } = useQuery({
     queryKey: ['integrity-active'],
     queryFn: get_active_integrity_run,
-    enabled: canManage,
+    enabled: canView,
     refetchInterval: (query) =>
       query.state.data &&
       'status' in query.state.data &&
@@ -961,7 +975,7 @@ export default function IntegrityPage() {
   const { data: jobs, isLoading: jobsLoading } = useQuery({
     queryKey: ['integrity-jobs', page, pageSize],
     queryFn: () => list_integrity_runs(page, pageSize),
-    enabled: canManage,
+    enabled: canView,
     placeholderData: (prev) => prev,
     // Poll while the newest run is still in progress so the history status
     // flips to finished/cancelled/failed without a manual refresh.
@@ -977,7 +991,7 @@ export default function IntegrityPage() {
     setPageSize(size)
   }
 
-  if (!canManage) {
+  if (!canView) {
     return (
       <>
         <FixedHeader />
@@ -1011,10 +1025,19 @@ export default function IntegrityPage() {
           </div>
 
           {activeRun && (
-            <ActiveRunCard active={activeRun} onCancelling={() => {}} />
+            <ActiveRunCard
+              active={activeRun}
+              onCancelling={() => {}}
+              canCancel={canManage}
+            />
           )}
 
-          <RunForm onStarted={setSelectedRun} hasActiveRun={activeRun !== null} />
+          {canManage && (
+            <RunForm
+              onStarted={setSelectedRun}
+              hasActiveRun={activeRun !== null}
+            />
+          )}
 
           <Card>
             <CardHeader>

@@ -49,12 +49,58 @@ pub struct Release {
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct Notifications {
     pub release: ReleaseNotification,
+    /// Operational alerts derived from local state (backup warnings, and
+    /// future license/storage issues), shown in the WebUI notifications bell
+    /// alongside the release check. Empty when nothing needs attention.
+    #[serde(default)]
+    pub alerts: Vec<SystemAlert>,
+}
+
+/// One alert shown to the admin in the notifications bell.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
+pub struct SystemAlert {
+    /// Discriminator the UI uses to pick a label/icon (`"backup"`, ...).
+    pub kind: String,
+    /// `"warning"` (non-fatal, action recommended) or `"error"`.
+    pub severity: String,
+    /// Short one-line title.
+    pub title: String,
+    /// Longer human-readable detail.
+    pub message: String,
 }
 
 pub async fn fetch_notifications() -> BichonResult<Notifications> {
     let current_version = bichon_version!();
     let release = check_new_release("rustmailer", "bichon", current_version).await;
-    Ok(Notifications { release })
+    Ok(Notifications {
+        release,
+        alerts: system_alerts(),
+    })
+}
+
+/// Alerts derived from local state. Currently the non-fatal warnings reported
+/// by the most recent backup run (editions flag e.g. a database that has grown
+/// large enough to slow backups); the community edition has no such sources,
+/// so this is normally empty there.
+fn system_alerts() -> Vec<SystemAlert> {
+    warnings_to_alerts(crate::backup::manager::BACKUP_MANAGER
+        .state()
+        .last_warnings)
+}
+
+/// Map backup-run warnings to notification alerts. Pure so it is testable
+/// without touching the process-global manager state.
+fn warnings_to_alerts(warnings: Vec<String>) -> Vec<SystemAlert> {
+    warnings
+        .into_iter()
+        .map(|w| SystemAlert {
+            kind: "backup".to_string(),
+            severity: "warning".to_string(),
+            title: "Backup warning".to_string(),
+            message: w,
+        })
+        .collect()
 }
 
 async fn check_new_release(owner: &str, repo: &str, current_version: &str) -> ReleaseNotification {
@@ -107,13 +153,30 @@ async fn check_new_release(owner: &str, repo: &str, current_version: &str) -> Re
 
 #[cfg(test)]
 mod test {
-    use crate::{bichon_version, version::check_new_release};
+    use super::warnings_to_alerts;
+
+    #[test]
+    fn backup_warnings_map_to_backup_alerts() {
+        let alerts = warnings_to_alerts(vec!["audit database is 2048 MB".to_string()]);
+        assert_eq!(alerts.len(), 1);
+        let a = &alerts[0];
+        assert_eq!(a.kind, "backup");
+        assert_eq!(a.severity, "warning");
+        assert!(a.message.contains("2048 MB"), "message must carry the detail");
+    }
+
+    #[test]
+    fn empty_warnings_produce_no_alerts() {
+        assert!(warnings_to_alerts(vec![]).is_empty());
+    }
 
     #[tokio::test]
     async fn test() {
-        let current_version = bichon_version!();
-        println!("current_version: {}", bichon_version!());
-        let result = check_new_release("rustmailer", "persistent-scheduler", current_version).await;
+        let current_version = crate::bichon_version!();
+        println!("current_version: {}", crate::bichon_version!());
+        let result =
+            crate::version::check_new_release("rustmailer", "persistent-scheduler", current_version)
+                .await;
 
         println!("{:#?}", result);
     }

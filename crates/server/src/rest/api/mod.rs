@@ -19,6 +19,7 @@
 use access_token::AccessTokenApi;
 use account::AccountApi;
 use auto_config::AutoConfigApi;
+use backup::BackupApi;
 use bichon_core::bichon_version;
 use mailbox::MailBoxApi;
 use mfa::MfaApi;
@@ -34,6 +35,7 @@ pub mod access_token;
 pub mod account;
 pub mod attachment;
 pub mod auto_config;
+pub mod backup;
 pub mod export;
 pub mod import;
 pub mod mailbox;
@@ -59,6 +61,7 @@ pub enum ApiTags {
     System,
     Import,
     Users,
+    Backup,
 }
 
 type RustMailOpenApi = (
@@ -75,6 +78,7 @@ type RustMailOpenApi = (
     UsersApi,
     SavedSearchApi,
     ExportApi,
+    BackupApi,
 );
 
 pub fn create_openapi_service() -> OpenApiService<RustMailOpenApi, ()> {
@@ -93,6 +97,7 @@ pub fn create_openapi_service() -> OpenApiService<RustMailOpenApi, ()> {
             UsersApi,
             SavedSearchApi,
             ExportApi,
+            BackupApi,
         ),
         "BichonApi",
         bichon_version!(),

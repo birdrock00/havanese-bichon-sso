@@ -41,6 +41,11 @@ impl Initialize for BichonContext {
         // community and Pro servers initialize through this hook, so the
         // scheduler starts exactly once per process.
         crate::retention::start_retention_scheduler();
+        // Built-in backup subsystem (community preparers + scheduler). The Pro
+        // binary registers its own preparers *before* this hook runs, so
+        // `register_base_preparers` plus the Pro additions are all in place
+        // before any backup window can open.
+        crate::backup::init();
         Ok(())
     }
 }

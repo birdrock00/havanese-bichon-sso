@@ -15,6 +15,7 @@ fn api_client(route: impl poem::Endpoint) -> TestClient<impl poem::Endpoint> {
 #[derive(Debug, Deserialize)]
 struct Proxy {
     id: u64,
+    #[allow(dead_code)] // present in the API response, not asserted here
     url: String,
 }
 

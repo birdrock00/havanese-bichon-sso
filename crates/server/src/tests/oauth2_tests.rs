@@ -22,6 +22,7 @@ struct CreateOAuth2Payload {
     enabled: bool,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct OAuth2Config {
     id: u64,

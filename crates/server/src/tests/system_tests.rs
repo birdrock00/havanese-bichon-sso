@@ -12,6 +12,7 @@ fn api_client(route: impl poem::Endpoint) -> TestClient<impl poem::Endpoint> {
     TestClient::new(route).default_header("X-Forwarded-For", "127.0.0.1")
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct SystemConfig {
     bichon_root_dir: String,
@@ -19,6 +20,7 @@ struct SystemConfig {
     bichon_version: Option<String>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Deserialize)]
 struct DashboardStats {
     account_count: usize,

@@ -28,6 +28,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ToastAction } from '@/components/ui/toast'
 import { AxiosError } from 'axios'
 import { remove_user, User } from '@/api/users/api'
+import { OP_USER_DELETE } from '@/api/approvals/api'
+import { useGatedOp } from '@/features/approvals/use-gated-op'
 import { useTranslation } from 'react-i18next'
 
 interface Props {
@@ -40,8 +42,17 @@ export function UserDeleteDialog({ open, onOpenChange, currentRow }: Props) {
   const { t } = useTranslation()
   const [value, setValue] = useState(0)
   const queryClient = useQueryClient()
+  const { gated, announceIfQueued } = useGatedOp(OP_USER_DELETE)
 
-  function handleSuccess() {
+  function handleSuccess(data: unknown) {
+    queryClient.invalidateQueries({ queryKey: ['user-list'] })
+    queryClient.invalidateQueries({ queryKey: ['approvals'] })
+    onOpenChange(false)
+
+    // A queued deletion must not report that the user was removed: they are
+    // still there, with their roles and their access.
+    if (announceIfQueued(data)) return
+
     toast({
       title: t('users.actions.delete.toast.success_title'),
       description: t('users.actions.delete.toast.success_desc', {
@@ -50,9 +61,6 @@ export function UserDeleteDialog({ open, onOpenChange, currentRow }: Props) {
       }),
       action: <ToastAction altText={t('common.close')}>{t('common.close')}</ToastAction>,
     })
-
-    queryClient.invalidateQueries({ queryKey: ['user-list'] })
-    onOpenChange(false)
   }
 
   function handleError(error: AxiosError) {
@@ -120,15 +128,35 @@ export function UserDeleteDialog({ open, onOpenChange, currentRow }: Props) {
             />
           </Label>
 
-          <Alert variant="destructive">
-            <AlertTitle>{t('users.actions.delete.alert_title')}</AlertTitle>
-            <AlertDescription>
-              {t('users.actions.delete.alert_desc')}
-            </AlertDescription>
-          </Alert>
+          {gated ? (
+            <Alert>
+              <AlertTitle>
+                {t('approvals.gatedUserTitle', 'Dual control is on for this operation')}
+              </AlertTitle>
+              <AlertDescription>
+                {t(
+                  'approvals.gatedUserDesc',
+                  'This will NOT remove the user now. It submits a request that a second person must approve. The user keeps their roles and access until that happens.'
+                )}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert variant="destructive">
+              <AlertTitle>{t('users.actions.delete.alert_title')}</AlertTitle>
+              <AlertDescription>
+                {t('users.actions.delete.alert_desc')}
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       }
-      confirmText={deleteMutation.isPending ? t('users.actions.delete.button_deleting') : t('users.actions.delete.button_confirm')}
+      confirmText={
+        deleteMutation.isPending
+          ? t('users.actions.delete.button_deleting')
+          : gated
+            ? t('approvals.submitForApproval', 'Submit for approval')
+            : t('users.actions.delete.button_confirm')
+      }
       destructive
     />
   )

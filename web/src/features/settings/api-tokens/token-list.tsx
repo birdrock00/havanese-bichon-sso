@@ -37,6 +37,8 @@ import {
 import { format } from "date-fns";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { AccessToken, remove_access_token } from "@/api/users/api";
+import { OP_TOKEN_REVOKE } from "@/api/approvals/api";
+import { useGatedOp } from "@/features/approvals/use-gated-op";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/hooks/use-toast";
 
@@ -53,14 +55,20 @@ const isTokenExpired = (expireAt: number | null | undefined): boolean => {
 export const TokenCardList: React.FC<Props> = ({ tokens, userId }) => {
     const { t } = useTranslation();
     const queryClient = useQueryClient();
+    const { gated, announceIfQueued } = useGatedOp(OP_TOKEN_REVOKE);
     const [deleteTarget, setDeleteTarget] =
         React.useState<AccessToken | null>(null);
 
     const deleteMutation = useMutation({
         mutationFn: (token: string) => remove_access_token(token),
-        onSuccess: () => {
+        onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['user-tokens', userId] });
+            queryClient.invalidateQueries({ queryKey: ['approvals'] });
             setDeleteTarget(null);
+            // A queued revocation leaves the token working. Reporting success
+            // would tell an operator a leaked credential is dead when it is
+            // still live — the one mistake this dialog must not make.
+            if (announceIfQueued(data)) return;
             toast({
                 description: t('apiTokens.notifications.deleteSuccess'),
             });
@@ -196,7 +204,12 @@ export const TokenCardList: React.FC<Props> = ({ tokens, userId }) => {
                     </DialogHeader>
 
                     <p className="text-sm text-muted-foreground">
-                        {t('apiTokens.deleteDialog.description')}
+                        {gated
+                            ? t(
+                                  'approvals.gatedTokenDesc',
+                                  'This will NOT revoke the token now. It submits a request that a second person must approve, and only then is the token revoked. Until that happens the token keeps working — if it has leaked, treat it as live.'
+                              )
+                            : t('apiTokens.deleteDialog.description')}
                     </p>
 
                     <DialogFooter className="mt-4">
@@ -217,7 +230,12 @@ export const TokenCardList: React.FC<Props> = ({ tokens, userId }) => {
                         >
                             {deleteMutation.isPending
                                 ? t('apiTokens.deleteDialog.deleting')
-                                : t('apiTokens.deleteDialog.confirm')}
+                                : gated
+                                  ? t(
+                                        'approvals.submitForApproval',
+                                        'Submit for approval'
+                                    )
+                                  : t('apiTokens.deleteDialog.confirm')}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

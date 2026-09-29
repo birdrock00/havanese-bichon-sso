@@ -18,7 +18,9 @@ struct UserRole {
     id: u64,
     name: String,
     is_builtin: bool,
+    #[allow(dead_code)] // present in the API response, not asserted here
     permissions: BTreeSet<String>,
+    #[allow(dead_code)]
     role_type: String,
 }
 

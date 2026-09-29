@@ -50,7 +50,7 @@ pub fn is_tantivy_index_dir(dir: &PathBuf) -> std::io::Result<bool> {
 /// Check whether the data layout is compatible with the current server.
 /// Returns `false` when legacy data (v0.3.7 or v1.x) is detected and migration is required.
 pub fn check_data_status() -> std::io::Result<bool> {
-    let root_dir = PathBuf::from(&SETTINGS.bichon_root_dir);
+    let root_dir = PathBuf::from(SETTINGS.root_dir());
 
     // 1. Version file takes precedence
     if let Some(version) = read_storage_version(&root_dir) {

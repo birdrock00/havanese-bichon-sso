@@ -22,6 +22,9 @@ pub mod error;
 pub mod export;
 pub mod rest;
 
+#[cfg(test)]
+mod tests;
+
 use std::sync::LazyLock;
 
 use bichon_core::{
@@ -62,6 +65,11 @@ pub async fn run() -> BichonResult<()> {
     info!("Version:  {}", bichon_version!());
     info!("Git:      [{}]", env!("GIT_HASH"));
     info!("GitHub:   https://github.com/rustmailer/bichon");
+
+    // Disaster recovery (`restore`) lives in the `bichon-admin` tool, not
+    // here: a fresh box has no data root yet, and this binary requires one
+    // at the clap level (the non-optional `bichon_root_dir` field) before
+    // `run` is ever reached.
 
     match check_data_status() {
         Ok(false) => {

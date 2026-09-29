@@ -29,8 +29,10 @@ use bichon_core::message::attachment::retrieve_nested_attachment_content;
 use bichon_core::message::content::retrieve_nested_eml_content;
 use bichon_core::message::content::FullNestedMessageContent;
 use bichon_core::message::content::{retrieve_email_content, FullMessageContent};
-use bichon_core::message::delete::delete_messages_impl;
-use bichon_core::ext::event_bus::{emit, Event, EventPayload};
+use bichon_core::message::delete::{
+    delete_messages_impl, emit_delete_audit, plan_delete_audit,
+};
+use bichon_core::ext::event_bus::{emit, Event};
 use bichon_core::message::list::get_thread_messages;
 use bichon_core::message::search::{search_messages_impl, EmailSearchRequest};
 use bichon_core::message::tags::TagCount;
@@ -68,20 +70,16 @@ impl MessageApi {
         for account_id in request.keys() {
             context.require_permission(Some(*account_id), Permission::DATA_DELETE)?;
         }
-        // Audit: capture the subject and a content snapshot BEFORE the
-        // messages are gone, so the audit trail stays self-describing.
+        // Audit: plan the records and capture whatever must be captured before
+        // the messages are gone — inline snapshots, or a detail file for large
+        // batches — so the trail stays self-describing.
         let user = context.user.username.clone();
-        let snapshots = audit_snapshots_for_deleted(&request);
+        let plan = plan_delete_audit(&request);
         let result = delete_messages_impl(request).await;
-        for (account_id, email_id, mailbox_id, subject, snapshot) in snapshots {
-            emit(Event::EmailDeleted {
-                email_id,
-                user: user.clone(),
-                account_id,
-                mailbox_id,
-                subject,
-                snapshot,
-            });
+        // Emit only on success: a failed delete must not leave "deleted"
+        // records for messages that still exist.
+        if result.is_ok() {
+            emit_delete_audit(plan, &user);
         }
         result?;
         Ok(())
@@ -564,42 +562,7 @@ fn attachment_meta_for_audit(
     meta
 }
 
-/// Collects (account_id, email_id, mailbox_id, subject, snapshot) for every
-/// message about to be deleted, so the audit trail keeps a readable record
-/// of what was removed.
-fn audit_snapshots_for_deleted(
-    request: &HashMap<u64, Vec<String>>,
-) -> Vec<(u64, String, u64, Option<String>, Option<EventPayload>)> {
-    let mut out = Vec::new();
-    for (account_id, envelope_ids) in request {
-        for eid in envelope_ids {
-            let mut mailbox_id = 0u64;
-            let mut subject = None;
-            let mut snapshot: EventPayload = serde_json::Map::new();
-            if let Ok(Some(ea)) = ENVELOPE_MANAGER.get_envelope_by_id(*account_id, eid) {
-                let e = ea.envelope;
-                mailbox_id = e.mailbox_id;
-                subject = Some(e.subject.clone());
-                snapshot.insert("from".into(), serde_json::json!(e.from));
-                snapshot.insert("date".into(), serde_json::json!(e.date));
-                snapshot.insert("size".into(), serde_json::json!(e.size));
-                snapshot.insert(
-                    "attachment_count".into(),
-                    serde_json::json!(e.regular_attachment_count),
-                );
-                if let Some(atts) = ea.attachments {
-                    let names: Vec<String> = atts
-                        .iter()
-                        .filter_map(|a| a.filename.clone())
-                        .collect();
-                    if !names.is_empty() {
-                        snapshot.insert("attachment_names".into(), serde_json::json!(names));
-                    }
-                }
-                snapshot.insert("content_hash".into(), serde_json::json!(e.content_hash));
-            }
-            out.push((*account_id, eid.clone(), mailbox_id, subject, Some(snapshot)));
-        }
-    }
-    out
-}
+// The delete-batch audit helpers used to live here. They moved to
+// `bichon_core::message::delete` when the dual-control executor became a
+// second caller: a handler-private copy would have left the approval path
+// emitting `email.deleted` records with no subject.

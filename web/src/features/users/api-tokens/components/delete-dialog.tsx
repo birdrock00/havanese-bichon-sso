@@ -28,6 +28,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ToastAction } from '@/components/ui/toast'
 import { AxiosError } from 'axios'
 import { AccessToken, remove_access_token } from '@/api/users/api'
+import { OP_TOKEN_REVOKE } from '@/api/approvals/api'
+import { useGatedOp } from '@/features/approvals/use-gated-op'
 import { useTranslation } from 'react-i18next'
 
 interface Props {
@@ -40,8 +42,19 @@ export function ApiTokenDeleteDialog({ open, onOpenChange, currentRow }: Props) 
   const { t } = useTranslation()
   const [value, setValue] = useState('')
   const queryClient = useQueryClient()
+  const { gated, announceIfQueued } = useGatedOp(OP_TOKEN_REVOKE)
 
-  function handleSuccess() {
+  function handleSuccess(data: unknown) {
+    queryClient.invalidateQueries({ queryKey: ['access-token-list'] })
+    queryClient.invalidateQueries({ queryKey: ['approvals'] })
+    onOpenChange(false)
+    setValue('')
+
+    // A queued revocation must not report "token deleted": the token still
+    // works, and a leaked credential the operator believes is dead is worse
+    // than one they know is still live.
+    if (announceIfQueued(data)) return
+
     toast({
       title: t('users.api_tokens.toast.deleted_title'),
       description: t('users.api_tokens.toast.deleted_desc', {
@@ -53,10 +66,6 @@ export function ApiTokenDeleteDialog({ open, onOpenChange, currentRow }: Props) 
         </ToastAction>
       ),
     })
-
-    queryClient.invalidateQueries({ queryKey: ['access-token-list'] })
-    onOpenChange(false)
-    setValue('')
   }
 
   function handleError(error: AxiosError) {
@@ -139,20 +148,39 @@ export function ApiTokenDeleteDialog({ open, onOpenChange, currentRow }: Props) 
             />
           </div>
 
-          <Alert variant="destructive">
-            <AlertTitle>
-              {t('users.api_tokens.delete.warning_title')}
-            </AlertTitle>
-            <AlertDescription>
-              {t('users.api_tokens.delete.warning_desc')}
-            </AlertDescription>
-          </Alert>
+          {gated ? (
+            <Alert>
+              <AlertTitle>
+                {t(
+                  'approvals.gatedTokenTitle',
+                  'Dual control is on for this operation'
+                )}
+              </AlertTitle>
+              <AlertDescription>
+                {t(
+                  'approvals.gatedTokenDesc',
+                  'This will NOT revoke the token now. It submits a request that a second person must approve, and only then is the token revoked. Until that happens the token keeps working — if it has leaked, treat it as live.'
+                )}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert variant="destructive">
+              <AlertTitle>
+                {t('users.api_tokens.delete.warning_title')}
+              </AlertTitle>
+              <AlertDescription>
+                {t('users.api_tokens.delete.warning_desc')}
+              </AlertDescription>
+            </Alert>
+          )}
         </div>
       }
       confirmText={
         deleteMutation.isPending
           ? t('users.api_tokens.delete.deleting')
-          : t('users.api_tokens.delete.confirm_button')
+          : gated
+            ? t('approvals.submitForApproval', 'Submit for approval')
+            : t('users.api_tokens.delete.confirm_button')
       }
       destructive
     />
