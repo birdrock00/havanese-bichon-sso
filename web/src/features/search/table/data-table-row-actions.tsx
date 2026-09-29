@@ -28,9 +28,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useTranslation } from 'react-i18next'
-import { MoreVertical, TagIcon, Trash2, Upload } from 'lucide-react'
+import { Clock, MoreVertical, TagIcon, Trash2, Upload } from 'lucide-react'
 import { EmailEnvelope } from '@/api'
 import { useSearchContext } from '../context'
+import { OP_MESSAGE_DELETE } from '@/api/approvals/api'
+import { usePendingApprovals } from '@/features/approvals/use-pending-approvals'
 
 interface DataTableRowActionsProps {
   row: Row<EmailEnvelope>
@@ -39,6 +41,16 @@ interface DataTableRowActionsProps {
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const { setOpen, setCurrentEnvelope, setSelected, setToDelete, setEditTagsOpen } = useSearchContext()
   const { t } = useTranslation()
+
+  // A queued message deletion leaves the message in the list, so the row still
+  // offers to delete it. Blocking only *this* message keeps unrelated cleanup
+  // possible while an approval is pending.
+  const { hasPendingMessage } = usePendingApprovals()
+  const deleteQueued = hasPendingMessage(
+    OP_MESSAGE_DELETE,
+    row.original.account_id,
+    row.original.id
+  )
 
   const toggleToDelete = (accountId: number, mailId: string) => {
     setToDelete(prev => {
@@ -106,7 +118,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-
+            disabled={deleteQueued}
             onClick={(e) => {
               e.stopPropagation()
               handleDelete(row.original)
@@ -115,7 +127,14 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           >
             {t('common.delete')}
             <DropdownMenuShortcut>
-              <Trash2 size={16} />
+              {deleteQueued ? (
+                <span className='flex items-center gap-1 text-amber-600 dark:text-amber-500'>
+                  <Clock size={16} />
+                  {t('approvals.pendingBadge', 'Awaiting approval')}
+                </span>
+              ) : (
+                <Trash2 size={16} />
+              )}
             </DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuContent>

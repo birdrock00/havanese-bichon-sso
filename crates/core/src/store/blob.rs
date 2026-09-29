@@ -26,7 +26,11 @@ use crate::{
 use bichon_blob::{Codec, Config, Engine};
 use bytes::Bytes;
 
-use std::{io::Cursor, sync::Arc, sync::LazyLock};
+use std::io::Cursor;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+use std::sync::LazyLock;
+use std::time::Duration;
 use tokio::{
     sync::{mpsc, Mutex},
     task::{self, JoinHandle},
@@ -43,6 +47,9 @@ pub struct BlobManager {
     sender: mpsc::Sender<DetachedEmail>,
     engine: Arc<Engine>,
     handle: Mutex<Option<JoinHandle<()>>>,
+    /// Emails queued but not yet written by the background loop. Tracks the
+    /// boundary the backup manager drains before sealing the blob store.
+    pending: Arc<AtomicUsize>,
 }
 
 fn hex_to_key(hex: &str) -> BichonResult<[u8; 32]> {
@@ -128,6 +135,8 @@ impl BlobManager {
 
         let (sender, mut receiver) = mpsc::channel::<DetachedEmail>(100);
 
+        let pending = Arc::new(AtomicUsize::new(0));
+        let pending_bg = Arc::clone(&pending);
         let engine_bg = Arc::clone(&engine);
         let handler = task::spawn(async move {
             let mut shutdown = SIGNAL_MANAGER.subscribe();
@@ -140,6 +149,7 @@ impl BlobManager {
                                 while let Ok(next_eml) = receiver.try_recv() {
                                     batch.push(next_eml);
                                 }
+                                let batch_len = batch.len();
                                 let engine_bg = Arc::clone(&engine_bg);
                                 if let Err(e) = tokio::task::spawn_blocking(move || {
                                     for eml in batch {
@@ -148,6 +158,7 @@ impl BlobManager {
                                 }).await {
                                     tracing::error!("BlobManager: spawn_blocking join error: {:#?}", e);
                                 }
+                                pending_bg.fetch_sub(batch_len, Ordering::AcqRel);
                             }
                             None => {
                                 tracing::info!("BlobManager: All senders dropped, closing blob storage.");
@@ -166,6 +177,7 @@ impl BlobManager {
                             remaining.len()
                         );
                         if !remaining.is_empty() {
+                            let batch_len = remaining.len();
                             let engine_bg = Arc::clone(&engine_bg);
                             if let Err(e) = tokio::task::spawn_blocking(move || {
                                 for eml in remaining {
@@ -174,6 +186,7 @@ impl BlobManager {
                             }).await {
                                 tracing::error!("BlobManager: shutdown spawn_blocking join error: {:#?}", e);
                             }
+                            pending_bg.fetch_sub(batch_len, Ordering::AcqRel);
                         }
                         tracing::info!("BlobManager: All remaining tasks processed. Closing blob engine.");
                         break;
@@ -185,14 +198,56 @@ impl BlobManager {
         Self {
             sender,
             engine,
+            pending,
             handle: Mutex::new(Some(handler)),
         }
     }
 
     pub async fn queue(&self, email: DetachedEmail) {
+        self.pending.fetch_add(1, Ordering::AcqRel);
         if let Err(e) = self.sender.send(email).await {
+            self.pending.fetch_sub(1, Ordering::AcqRel);
             tracing::error!("BlobManager channel closed, email lost: {:#?}", e);
         }
+    }
+
+    /// Number of emails queued but not yet persisted to the blob store.
+    pub fn pending(&self) -> usize {
+        self.pending.load(Ordering::Acquire)
+    }
+
+    /// Wait until every queued email has been written to disk. Called inside a
+    /// backup write window (after the write gate has drained), so no new items
+    /// are queued while we wait.
+    pub async fn drain(&self) {
+        while self.pending.load(Ordering::Acquire) != 0 {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    }
+
+    /// Bring the blob store into a copy-safe, fully durable state: pause GC,
+    /// seal the active segment, fsync every segment and flush the redb index.
+    /// Callers must have paused the write gate and drained both in-flight
+    /// extractors and this queue first.
+    pub fn prepare_for_backup(&self) -> BichonResult<()> {
+        self.engine
+            .prepare_for_backup()
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
+    }
+
+    /// Re-enable the blob GC after a backup window closes.
+    pub fn resume_gc(&self) {
+        self.engine.set_gc_paused(false);
+    }
+
+    /// Every sealed segment as a backup artifact (call after
+    /// [`BlobManager::prepare_for_backup`], while GC is paused). Missing
+    /// hashes are computed and persisted here, so a capture window only ever
+    /// pays for first-time hashes.
+    pub fn backup_segments(&self) -> BichonResult<Vec<bichon_blob::engine::SegmentArtifact>> {
+        self.engine
+            .backup_segments()
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
     }
 
     pub fn get_email(&self, content_hash: &str) -> BichonResult<Option<Bytes>> {

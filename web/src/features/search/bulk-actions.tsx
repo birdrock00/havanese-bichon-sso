@@ -31,6 +31,9 @@ import {
 } from '@/components/ui/tooltip'
 import { useSearchContext } from './context'
 import { useTranslation } from 'react-i18next'
+import { toast } from '@/hooks/use-toast'
+import { OP_MESSAGE_DELETE } from '@/api/approvals/api'
+import { usePendingApprovals } from '@/features/approvals/use-pending-approvals'
 
 type MailBulkActionsProps = {
     children?: React.ReactNode
@@ -40,9 +43,16 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
     const { selected, setSelected, setOpen, setToDelete, setCurrentEnvelope } = useSearchContext()
     const toolbarRef = useRef<HTMLDivElement>(null)
     const { t } = useTranslation()
+    const { countPendingMessages, hasPendingMessage } = usePendingApprovals()
 
     const selectedCount = Array.from(selected.values())
         .reduce((sum, set) => sum + set.size, 0)
+
+    // Part of the selection may already be queued. The server has no dedup —
+    // it would happily queue a message twice — so those are filtered out
+    // before the dialog opens, and this count explains the difference between
+    // what was selected and what will actually be submitted.
+    const queuedCount = countPendingMessages(OP_MESSAGE_DELETE, selected)
 
     const handleClearSelection = () => {
         setSelected(new Map())
@@ -57,6 +67,42 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
                 return next
             })
         })
+        setOpen('delete')
+    }
+
+    /** Open the delete dialog, leaving out anything already queued.
+     *
+     *  Skipping rather than submitting the lot: the server has no dedup, so a
+     *  message that already awaits approval would be queued a second time and
+     *  two approvers would each execute a deletion of the same message. */
+    const handleDeleteSkippingQueued = () => {
+        if (queuedCount === 0) {
+            handleDelete()
+            return
+        }
+        const remaining = new Map<number, Set<string>>()
+        selected.forEach((ids, accountId) => {
+            const keep = new Set(
+                Array.from(ids).filter(
+                    (id) => !hasPendingMessage(OP_MESSAGE_DELETE, accountId, id)
+                )
+            )
+            if (keep.size > 0) remaining.set(accountId, keep)
+        })
+        setToDelete(remaining)
+        if (remaining.size === 0) {
+            toast({
+                title: t(
+                    'approvals.allQueuedTitle',
+                    'Nothing to submit — every selected message already awaits approval'
+                ),
+                description: t(
+                    'approvals.allQueuedDesc',
+                    'A second person has to decide on those requests before they can be asked for again.'
+                ),
+            })
+            return
+        }
         setOpen('delete')
     }
 
@@ -201,14 +247,25 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
                             <Button
                                 variant="destructive"
                                 size="sm"
-                                onClick={handleDelete}
+                                onClick={handleDeleteSkippingQueued}
                                 className="gap-1"
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
+                                {queuedCount > 0 && (
+                                    <span className="text-[10px] leading-none">
+                                        {selectedCount - queuedCount}
+                                    </span>
+                                )}
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            {t('search.bulkActions.deleteDesc')}
+                            {queuedCount > 0
+                                ? t(
+                                      'approvals.bulkPartlyQueued',
+                                      '{{queued}} of {{total}} selected message(s) already await approval and will be skipped',
+                                      { queued: queuedCount, total: selectedCount }
+                                  )
+                                : t('search.bulkActions.deleteDesc')}
                         </TooltipContent>
                     </Tooltip>
 

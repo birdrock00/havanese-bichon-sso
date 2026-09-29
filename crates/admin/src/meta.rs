@@ -10,8 +10,8 @@ use bichon_core::{
         migration::{AccountModel, AccountType},
         since::{DateSince, RelativeDate},
     },
-    autoconfig::entity::MailServerConfig,
     archive::imap::mailbox::Attribute,
+    autoconfig::entity::MailServerConfig,
     database::batch_insert_impl,
     error::{code::ErrorCode, BichonError, BichonResult},
     raise_error,
@@ -589,6 +589,8 @@ impl From<BichonUserV2> for bichon_core::users::BichonUserV2 {
             totp_secret: None,
             totp_enabled: false,
             totp_recovery_codes: Vec::new(),
+            global_role_expiries: Default::default(),
+            account_role_expiries: Default::default(),
         }
     }
 }

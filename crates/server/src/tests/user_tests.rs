@@ -25,6 +25,7 @@ struct CreateUserPayload {
 struct UserView {
     id: u64,
     username: String,
+    #[allow(dead_code)] // present in the API response, not asserted here
     email: String,
 }
 

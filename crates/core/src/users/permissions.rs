@@ -92,6 +92,24 @@ impl Permission {
     /// feature) and look up counter-proofs for individual emails.
     pub const TIMESTAMP_MANAGE: &str = "timestamp:manage";
 
+    /// Read-only access to compliance views: audit log, integrity reports,
+    /// legal-hold status and timestamp anchors. Carries no administrative
+    /// powers at all, so a compliance officer can verify administrators'
+    /// actions without being able to alter them (Enterprise feature).
+    pub const COMPLIANCE_AUDIT: &str = "compliance:audit";
+
+    /// Approve or reject dual-control requests — high-risk operations that a
+    /// second person must authorize before they execute (Enterprise feature).
+    /// Deliberately separate from the permission that *requests* such an
+    /// operation, so the requester and the approver are different people.
+    pub const APPROVAL_DECIDE: &str = "approval:decide";
+
+    /// Trigger and manage backups, and browse backup data (restore points,
+    /// manifests, audit deltas). Grants no other administrative powers, so a
+    /// delegated operator can own the backup duty without touching users,
+    /// accounts or mail data.
+    pub const BACKUP_MANAGE: &str = "backup:manage";
+
     // ----------------------------------------------------------------------
     // 3. Scoped/Limited Permissions (Manager & Viewer)
     //    Authorization requires checking the user's Account Access List (ACL)
@@ -174,6 +192,18 @@ impl Permission {
             (
                 Self::TIMESTAMP_MANAGE,
                 "Manage RFC 3161 timestamp anchoring and verify email proofs (Enterprise).",
+            ),
+            (
+                Self::COMPLIANCE_AUDIT,
+                "Read-only compliance views: audit log, integrity reports, holds, anchors (Enterprise).",
+            ),
+            (
+                Self::APPROVAL_DECIDE,
+                "Approve or reject dual-control requests for high-risk operations (Enterprise).",
+            ),
+            (
+                Self::BACKUP_MANAGE,
+                "Trigger backups and browse backup data (snapshots, files, previews).",
             ),
         ]
     }

@@ -21,7 +21,7 @@ import * as React from 'react';
 import {
     ChevronDown, Folders, X, TreeDeciduous, FolderIcon,
     MoreVertical, Trash2, Search,
-    Check
+    Check, Clock
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -60,6 +60,8 @@ import { list_mailboxes } from '@/api/mailbox/api';
 import useMinimalAccountList from '@/hooks/use-minimal-account-list';
 import { useSearchContext } from './context';
 import { buildTree, ExtendedTreeItemProps } from '@/lib/build-tree';
+import { OP_MAILBOX_DELETE } from '@/api/approvals/api';
+import { usePendingApprovals } from '@/features/approvals/use-pending-approvals';
 
 const CustomCollapse = styled(Collapse)({ padding: 0 });
 const AnimatedCollapse = animated(CustomCollapse);
@@ -86,6 +88,8 @@ interface CustomLabelProps {
     icon?: React.ElementType;
     expandable?: boolean;
     onDelete: (id: string) => void;
+    /** A deletion of this mailbox is already waiting on a second person. */
+    deleteQueued?: boolean;
 }
 
 function CustomLabel({
@@ -95,6 +99,7 @@ function CustomLabel({
     children,
     id,
     onDelete,
+    deleteQueued,
     ...other
 }: CustomLabelProps) {
     const { t } = useTranslation()
@@ -128,6 +133,7 @@ function CustomLabel({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-24">
                         <DropdownMenuItem
+                            disabled={deleteQueued}
                             className="text-destructive focus:text-destructive flex items-center px-2 py-1 text-[11px] cursor-pointer"
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -137,8 +143,17 @@ function CustomLabel({
                                 onDelete(id);
                             }}
                         >
-                            <Trash2 className="mr-1 h-3 w-3" />
-                            <span>{t('common.delete')}</span>
+                            {deleteQueued ? (
+                                <>
+                                    <Clock className="mr-1 h-3 w-3" />
+                                    <span>{t('approvals.pendingBadge', 'Awaiting approval')}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="mr-1 h-3 w-3" />
+                                    <span>{t('common.delete')}</span>
+                                </>
+                            )}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -151,6 +166,10 @@ export function MailboxPopover() {
     const { t } = useTranslation();
     const { filter, setFilter, setOpen, setDeleteMailboxId, setSelectedAccountId } = useSearchContext();
     const { minimalList = [] } = useMinimalAccountList();
+
+    // A mailbox deletion that is already queued changes nothing on disk, so the
+    // tree would happily offer the same deletion again.
+    const { hasPending } = usePendingApprovals();
 
     const [localOpen, setLocalOpen] = React.useState(false);
     const [search, setSearch] = React.useState('');
@@ -250,6 +269,12 @@ export function MailboxPopover() {
                                 exists: item.exists,
                                 id: item.id,
                                 onDelete: handleDeleteClick,
+                                deleteQueued:
+                                    activeAccountId !== undefined &&
+                                    hasPending(
+                                        OP_MAILBOX_DELETE,
+                                        `mailbox:${activeAccountId}:${item.id}`,
+                                    ),
                                 attributes: item.attributes,
                                 expandable: status.expandable && status.expanded,
                             })}

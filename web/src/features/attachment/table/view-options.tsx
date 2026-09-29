@@ -7,10 +7,13 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import React from 'react'
 import { useTranslation } from 'react-i18next'
+import { DateDisplayMode, useAttachmentContext } from '../context'
 
 type DataTableViewOptionsProps<TData> = {
   table: Table<TData>
@@ -31,6 +34,7 @@ export function DataTableViewOptions<TData>({
   table,
 }: DataTableViewOptionsProps<TData>) {
   const { t } = useTranslation()
+  const { dateDisplay, setDateDisplay } = useAttachmentContext()
 
 
   const columnLabels = React.useMemo(() => {
@@ -74,6 +78,21 @@ export function DataTableViewOptions<TData>({
               </DropdownMenuCheckboxItem>
             )
           })}
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className='text-xs'>
+          {t('search_view.date_display')}
+        </DropdownMenuLabel>
+        <DropdownMenuRadioGroup
+          value={dateDisplay}
+          onValueChange={(value) => setDateDisplay(value as DateDisplayMode)}
+        >
+          <DropdownMenuRadioItem value='relative' className='text-xs'>
+            {t('search_view.relative')}
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value='absolute' className='text-xs'>
+            {t('search_view.absolute')}
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -16,51 +16,21 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use console::style;
-use dialoguer::{theme::ColorfulTheme, Select};
+//! Thin binary half of `bichon-admin`: everything lives in the library so
+//! the Pro build can ship its own `bichon-admin` on top of the same code.
 
-use crate::{migrate_v037::handle_migration_v037, migrate_v1::handle_migrate_v1, reset::handle_reset_password};
-
-pub mod legacy;
-pub mod meta;
-pub mod migrate_store_v2;
-pub mod migrate_v037;
-pub mod migrate_v1;
-pub mod reset;
-
+use bichon_admin::{AdminCli, AdminCommand};
+use clap::Parser;
 
 fn main() {
-    run_interactive();
-}
-
-#[tokio::main]
-async fn run_interactive() {
-    let theme = ColorfulTheme::default();
-    println!(
-        "\n{}\n",
-        style("BICHON ADMINISTRATIVE TOOL").bold().bright().cyan()
-    );
-
-    let main_options = vec![
-        "Reset Admin Password",
-        "Migrate Legacy v0.3.7 Storage to v2.x (bichon-blob)",
-        "Migrate v1.x Storage to v2.x (Fjall → bichon-blob)",
-        "Exit",
-    ];
-
-    let selection = Select::with_theme(&theme)
-        .with_prompt("Select an operation")
-        .default(0)
-        .items(&main_options)
-        .interact()
-        .unwrap();
-
-    match selection {
-        0 => handle_reset_password(&theme),
-        1 => handle_migration_v037(&theme),
-        2 => handle_migrate_v1(&theme),
-        _ => {
-            println!("{}", style("Exiting...").dim());
+    let cli = AdminCli::parse();
+    match cli.command {
+        Some(AdminCommand::Restore(args)) => {
+            let code = tokio::runtime::Runtime::new()
+                .expect("tokio runtime")
+                .block_on(bichon_admin::restore::run_cli(args, false));
+            std::process::exit(code);
         }
+        None => bichon_admin::run_interactive(false),
     }
 }

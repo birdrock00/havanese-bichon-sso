@@ -24,7 +24,7 @@ import { DataTableRowActions } from './data-table-row-actions'
 import { format } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { User, UserRole } from '@/api/users/api'
-import { LockIcon } from 'lucide-react'
+import { ClockIcon, LockIcon } from 'lucide-react'
 
 export const getColumns = (t: (key: string) => string, roles: UserRole[]): ColumnDef<User>[] => [
   {
@@ -89,7 +89,16 @@ export const getColumns = (t: (key: string) => string, roles: UserRole[]): Colum
       const user = row.original
       const userRoleIds = user.global_roles || []
 
-      const mapped = userRoleIds
+      // Lapsed delegations are dropped from this column: `global_roles` keeps
+      // the grant so it can be listed and renewed, but a role that grants
+      // nothing is not a role the user holds. Showing it struck through would
+      // say "holds this, expired"; the truth is "does not hold this".
+      const now = Date.now()
+      const liveRoleIds = userRoleIds.filter(
+        (rid) => (user.global_role_expiries?.[rid] ?? Infinity) > now
+      )
+
+      const mapped = liveRoleIds
         .map((rid) => roles.find((r) => r.id === rid))
         .filter(Boolean) as UserRole[]
 
@@ -99,12 +108,33 @@ export const getColumns = (t: (key: string) => string, roles: UserRole[]): Colum
 
       return (
         <div className="flex flex-wrap gap-1 justify-center">
-          {mapped.map((role) => (
-            <Badge key={role.id} variant="outline">
-              {role.name}
-              {user.id === 100000000000000 && <LockIcon className="ml-1 h-3 w-3 text-muted-foreground" />}
-            </Badge>
-          ))}
+          {mapped.map((role) => {
+            // A deadline is shown on the role itself rather than in a
+            // separate column: "Manager" and "Manager until 31 Dec" are the
+            // same grant, and splitting them apart is how a reviewer misses
+            // that an access is about to lapse (or quietly renews it).
+            const expiresAt = user.global_role_expiries?.[role.id]
+            return (
+              <Badge
+                key={role.id}
+                variant="outline"
+                title={
+                  expiresAt !== undefined
+                    ? t('users.delegation.expiresOn')
+                    : undefined
+                }
+              >
+                {role.name}
+                {expiresAt !== undefined && (
+                  <span className="ml-1 inline-flex items-center gap-0.5 font-normal">
+                    <ClockIcon className="h-3 w-3" />
+                    {format(new Date(expiresAt), 'yyyy-MM-dd')}
+                  </span>
+                )}
+                {user.id === 100000000000000 && <LockIcon className="ml-1 h-3 w-3 text-muted-foreground" />}
+              </Badge>
+            )
+          })}
         </div>
       )
     },
