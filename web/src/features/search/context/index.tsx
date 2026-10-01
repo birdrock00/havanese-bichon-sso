@@ -15,19 +15,31 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
 import React from 'react'
-import { EmailEnvelope } from '@/api'
 import { SortingState } from '@tanstack/react-table'
+import { EmailEnvelope } from '@/api'
+import type { DateDisplayMode } from '@/hooks/use-date-display'
 
-export type SearchDialogType = 'mailbox' | 'display' | 'delete' | 'filters' | 'tags' | 'edit-tags' | 'update-tags' | 'restore' | 'delete-mailbox'
+export type SearchDialogType =
+  | 'mailbox'
+  | 'display'
+  | 'delete'
+  | 'filters'
+  | 'tags'
+  | 'edit-tags'
+  | 'update-tags'
+  | 'restore'
+  | 'delete-mailbox'
+
+export type { DateDisplayMode }
 
 interface SearchContextType {
   open: SearchDialogType | null
   setOpen: (str: SearchDialogType | null) => void
   currentEnvelope: EmailEnvelope | undefined
-  setCurrentEnvelope: React.Dispatch<React.SetStateAction<EmailEnvelope | undefined>>
+  setCurrentEnvelope: React.Dispatch<
+    React.SetStateAction<EmailEnvelope | undefined>
+  >
   toDelete: Map<number, Set<string>>
   setToDelete: React.Dispatch<React.SetStateAction<Map<number, Set<string>>>>
   selected: Map<number, Set<string>>
@@ -41,9 +53,16 @@ interface SearchContextType {
   setSorting: React.Dispatch<React.SetStateAction<SortingState>>
   filter: Record<string, any>
   setFilter: React.Dispatch<React.SetStateAction<Record<string, any>>>
+  refetch: () => Promise<unknown>
+  isFetching: boolean
+  /// Effective sort order actually applied by the backend (RELEVANCE when a
+  /// text term is present and no explicit sort was chosen).
+  effectiveSort: 'DATE' | 'SIZE' | 'RELEVANCE'
   handleTagToggle: (tag: string) => void
   editTagsOpen: boolean
   setEditTagsOpen: (open: boolean) => void
+  dateDisplay: DateDisplayMode
+  setDateDisplay: (mode: DateDisplayMode) => void
 }
 
 const SearchContext = React.createContext<SearchContextType | null>(null)
@@ -54,7 +73,9 @@ interface Props {
 }
 
 export default function SearchProvider({ children, value }: Props) {
-  return <SearchContext.Provider value={value}>{children}</SearchContext.Provider>
+  return (
+    <SearchContext.Provider value={value}>{children}</SearchContext.Provider>
+  )
 }
 
 export const useSearchContext = () => {

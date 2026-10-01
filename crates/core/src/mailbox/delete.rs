@@ -25,6 +25,25 @@ use crate::{
     store::tantivy::{attachment::ATTACHMENT_MANAGER, envelope::ENVELOPE_MANAGER},
 };
 
+/// Every mailbox id a delete of `mailbox_id` would destroy: the mailbox
+/// itself plus its whole subtree, matched by name prefix.
+///
+/// Extracted so the deletion path and any caller that needs to *count* what is
+/// about to be destroyed agree by construction. A separate counting
+/// implementation would drift from this one and report a blast radius that
+/// does not match what actually gets deleted — which is exactly the number an
+/// approver is being asked to sign off on.
+pub fn mailbox_subtree_ids(account_id: u64, mailbox_id: u64) -> BichonResult<Vec<u64>> {
+    let mailbox = MailBox::get(mailbox_id)?;
+    let prefix = format!("{}{}", mailbox.name, mailbox.delimiter.unwrap_or("/".to_owned()));
+    let all_mailboxes = MailBox::list_all(account_id)?;
+    Ok(all_mailboxes
+        .into_iter()
+        .filter(|m| m.id == mailbox_id || m.name.starts_with(&prefix))
+        .map(|m| m.id)
+        .collect())
+}
+
 pub async fn delete_mailbox_impl(account_id: u64, mailbox_id: u64) -> BichonResult<()> {
     let account = AccountModel::get(account_id)?;
 
@@ -42,18 +61,7 @@ pub async fn delete_mailbox_impl(account_id: u64, mailbox_id: u64) -> BichonResu
         ));
     }
 
-    let mailbox = MailBox::get(mailbox_id)?;
-
-    let name = mailbox.name;
-    let delimiter = mailbox.delimiter.unwrap_or("/".to_owned());
-    let all_mailboxes = MailBox::list_all(account_id)?;
-
-    let prefix = format!("{}{}", name, delimiter);
-    let ids_to_delete: Vec<u64> = all_mailboxes
-        .into_iter()
-        .filter(|m| m.id == mailbox_id || m.name.starts_with(&prefix))
-        .map(|m| m.id)
-        .collect();
+    let ids_to_delete = mailbox_subtree_ids(account_id, mailbox_id)?;
 
     if ids_to_delete.is_empty() {
         return Ok(());

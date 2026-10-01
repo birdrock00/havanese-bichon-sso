@@ -514,6 +514,37 @@ impl Account {
     }
 
     pub async fn delete(account_id: u64) -> BichonResult<()> {
+        // Spawn background cleanup — heavy work (Tantivy, attachments) runs off the request path
+        tokio::spawn(async move {
+            if let Err(error) = Self::delete_and_wait(account_id).await {
+                tracing::error!(
+                    "[CLEANUP_ACCOUNT_ERROR] Account {}: cleanup failed, reverting deleting flag: {:#?}",
+                    account_id,
+                    error
+                );
+            }
+        });
+        Ok(())
+    }
+
+    /// The same pre-checks and prelude as [`delete`], but the heavy cleanup is
+    /// awaited instead of spawned.
+    ///
+    /// `delete` returns as soon as the account is *marked* for deletion; the
+    /// purge of envelopes, attachments and the Tantivy index runs on for
+    /// minutes or hours afterwards, with no completion signal and no record.
+    /// That is the right shape for an HTTP handler with a deadline, and the
+    /// wrong shape for a caller that needs to know when the work actually
+    /// finished — a dual-control executor recording "the deletion executed"
+    /// while the account is still fully present would be recording a falsehood.
+    ///
+    /// `delete` is implemented in terms of this function so there is one
+    /// implementation of the cleanup and its failure handling, not two.
+    ///
+    /// On failure the account is revived (`deleting = false`, `enabled = true`)
+    /// so an operator can retry, and the error is returned to the caller rather
+    /// than only logged.
+    pub async fn delete_and_wait(account_id: u64) -> BichonResult<()> {
         let account = Self::get(account_id)?;
 
         // Legal hold: an account under a hold is frozen — deleting the account
@@ -548,27 +579,20 @@ impl Account {
             },
         )?;
 
-        // Spawn background cleanup — heavy work (Tantivy, attachments) runs off the request path
-        tokio::spawn(async move {
-            if let Err(error) = Self::cleanup_account_resources_sequential(&account).await {
-                tracing::error!(
-                    "[CLEANUP_ACCOUNT_ERROR] Account {}: cleanup failed, reverting deleting flag: {:#?}",
-                    account_id,
-                    error
-                );
-                // Revert deleting flag so the user can retry (only if account record still exists)
-                let _ = update_impl(
-                    DB_MANAGER.db(),
-                    &account_id.to_string(),
-                    move |current: Account| {
-                        let mut updated = current.clone();
-                        updated.deleting = false;
-                        updated.enabled = true;
-                        Ok(updated)
-                    },
-                );
-            }
-        });
+        if let Err(error) = Self::cleanup_account_resources_sequential(&account).await {
+            // Revert deleting flag so the user can retry (only if account record still exists)
+            let _ = update_impl(
+                DB_MANAGER.db(),
+                &account_id.to_string(),
+                move |current: Account| {
+                    let mut updated = current.clone();
+                    updated.deleting = false;
+                    updated.enabled = true;
+                    Ok(updated)
+                },
+            );
+            return Err(error);
+        }
 
         Ok(())
     }

@@ -79,3 +79,5 @@ outlook-pst = { git = "https://github.com/rustmailer/outlook-pst-rs.git", branch
 compressed-rtf = "1.0.1"
 codepage-strings = "1.0.2"
 hex.workspace = true
+object_store = { version = "0.14.2", features = ["aws", "http"] }
+flate2 = "1.1.10"

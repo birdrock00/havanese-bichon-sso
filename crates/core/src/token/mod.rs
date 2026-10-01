@@ -20,7 +20,8 @@ use std::collections::HashMap;
 
 use crate::database::manager::DB_MANAGER;
 use crate::database::{
-    MemDbModel, delete_impl, filter_impl, find_impl, insert_impl, list_all_impl, update_impl, with_transaction
+    MemDbModel, delete_impl, filter_impl, find_impl, insert_impl, list_all_impl, update_impl,
+    with_transaction_exempt
 };
 use crate::error::code::ErrorCode;
 use crate::raise_error;
@@ -68,6 +69,12 @@ pub struct AccessTokenModel {
 }
 
 impl MemDbModel for AccessTokenModel {
+    /// Tokens are ephemeral credentials that only ever touch memdb: they may
+    /// be written during a backup capture window (see
+    /// [`MemDbModel::BACKUP_GATE_EXEMPT`]) so login and logout keep working
+    /// while a backup runs.
+    const BACKUP_GATE_EXEMPT: bool = true;
+
     fn collection() -> &'static str {
         "tokens"
     }
@@ -116,7 +123,9 @@ impl AccessTokenModel {
 
         match old_token {
             Some(old) => {
-                with_transaction(DB_MANAGER.db(), move |txn| {
+                // Tokens are gate-exempt (memdb-only writes); the exempt
+                // transaction keeps login working during a backup window.
+                with_transaction_exempt(DB_MANAGER.db(), move |txn| {
                     let txn = txn.delete(AccessTokenModel::collection(), old.token.clone());
                     txn.insert(AccessTokenModel::collection(), new_token.key(), &new_token)
                         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))

@@ -26,11 +26,25 @@ function decodeRfc2047(raw: string): string {
         bytes = new Uint8Array(bin.length);
         for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       } else {
-        // Q-encoding
-        const hex = encoded.replace(/_/g, ' ').replace(/=([0-9A-Fa-f]{2})/g, (_, h) =>
-          String.fromCharCode(parseInt(h, 16)),
-        );
-        bytes = new TextEncoder().encode(hex);
+        // Q-encoding: assemble real bytes. Literal chars become UTF-8 bytes,
+        // `=HH` is one byte (so a multi-byte UTF-8 char like `=C3=A9` decodes
+        // as `é`, not as two Latin-1 code points `Ã©`).
+        const out: number[] = [];
+        let i = 0;
+        while (i < encoded.length) {
+          const ch = encoded[i];
+          if (ch === '_') {
+            out.push(0x20);
+            i += 1;
+          } else if (ch === '=' && /^[0-9A-Fa-f]{2}$/.test(encoded.slice(i + 1, i + 3))) {
+            out.push(parseInt(encoded.slice(i + 1, i + 3), 16));
+            i += 3;
+          } else {
+            for (const b of new TextEncoder().encode(ch)) out.push(b);
+            i += 1;
+          }
+        }
+        bytes = new Uint8Array(out);
       }
       return new TextDecoder(charset).decode(bytes);
     } catch {
@@ -56,21 +70,111 @@ function getHeader(raw: string, name: string): string | null {
   return decodeRfc2047(val);
 }
 
+/**
+ * Gmail system labels that describe message *state* rather than a folder.
+ * They must never become the import destination. Takeout localizes these in
+ * X-Gmail-Labels (e.g. French "Archivés"), so match the English canonical
+ * tokens plus the known translations. Must stay in sync with
+ * crates/cli/src/mbox/gmail.rs. Best-effort; only ever add *system* labels
+ * here, never user-created ones (those are never localized).
+ */
+const STATUS_LABELS = new Set([
+  // English (canonical Takeout tokens)
+  'Opened', 'Unread', 'Archived',
+  // French
+  'Ouverts', 'Non lus', 'Archivés',
+  // Spanish
+  'Abiertos', 'No leídos', 'Archivados',
+  // Italian
+  'Aperti', 'Non letti', 'Archiviati',
+  // Portuguese
+  'Abertos', 'Não lidos', 'Arquivados',
+  // German
+  'Geöffnet', 'Ungelesen', 'Archiviert',
+  // Dutch
+  'Geopend', 'Ongelezen', 'Gearchiveerd',
+  // Swedish
+  'Öppnade', 'Olästa', 'Arkiverade',
+  // Danish
+  'Åbnet', 'Ulæst', 'Arkiveret',
+  // Norwegian
+  'Åpnet', 'Ulest', 'Arkivert',
+  // Finnish
+  'Avatut', 'Lukemattomat', 'Arkistoidut',
+  // Polish
+  'Otworzone', 'Nieprzeczytane', 'Zarchiwizowane',
+  // Czech
+  'Otevřené', 'Nepřečtené', 'Archivováno',
+  // Hungarian
+  'Megnyitott', 'Olvasatlan', 'Archivált',
+  // Romanian
+  'Deschise', 'Necitite', 'Arhivate',
+  // Russian
+  'Открытые', 'Непрочитанные', 'В архиве',
+  // Ukrainian
+  'Відкриті', 'Непрочитані', 'В архіві',
+  // Turkish
+  'Açıldı', 'Okunmamış', 'Arşivlendi',
+  // Greek
+  'Ανοιγμένα', 'Μη αναγνωσμένα', 'Αρχειοθέτηση',
+])
+
+/** Gmail generic location folders (real folders, never a business destination). */
+const GENERIC_LOCATION_LABELS = new Set([
+  // English
+  'Inbox', 'Sent',
+  // French
+  'Boîte de réception', 'Envoyé',
+  // Spanish
+  'Recibidos', 'Enviados',
+  // Italian
+  'Posta in arrivo', 'Inviati',
+  // Portuguese
+  'Caixa de entrada', 'Enviados',
+  // German
+  'Posteingang', 'Gesendet',
+  // Dutch
+  'Postvak IN', 'Verzonden items',
+  // Swedish
+  'Inkorgen', 'Skickade',
+  // Danish
+  'Indbakke', 'Sendt',
+  // Norwegian
+  'Innboks', 'Sendt',
+  // Finnish
+  'Saapuneet', 'Lähetetyt',
+  // Polish
+  'Odebrane', 'Wysłane',
+  // Czech
+  'Doručená pošta', 'Odeslané',
+  // Hungarian
+  'Beérkezett üzenetek', 'Elküldött üzenetek',
+  // Romanian
+  'Căsuța de intrare', 'Trimise',
+  // Russian
+  'Входящие', 'Отправленные',
+  // Ukrainian
+  'Вхідні', 'Надіслані',
+  // Turkish
+  'Gelen Kutusu', 'Gönderilmiş',
+  // Greek
+  'Εισερχόμενα', 'Απεσταλμένα',
+])
+
 /** Determine folder from X-Gmail-Labels, mirroring the CLI's determine_folder(). */
 function folderFromGmailLabels(raw: string): string | null {
   const labelsRaw = getHeader(raw, 'X-Gmail-Labels');
   if (!labelsRaw) return null;
 
-  const statusBlacklist = new Set(['Opened', 'Unread', 'Archived']);
   const allLabels = labelsRaw.split(',').map((s) => s.trim()).filter(Boolean);
   if (allLabels.length === 0) return null;
 
-  const filtered = allLabels.filter((l) => !statusBlacklist.has(l));
+  const filtered = allLabels.filter((l) => !STATUS_LABELS.has(l));
   if (filtered.length === 0) return allLabels[0];
   if (filtered.length === 1) return filtered[0];
 
   // Prefer business labels over generic Inbox/Sent
-  const business = filtered.find((l) => l !== 'Inbox' && l !== 'Sent');
+  const business = filtered.find((l) => !GENERIC_LOCATION_LABELS.has(l));
   return business ?? filtered[0];
 }
 

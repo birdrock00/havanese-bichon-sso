@@ -4,12 +4,19 @@ import { useQuery } from '@tanstack/react-query'
 export interface EditionInfo {
   edition: 'community' | 'pro' | 'enterprise'
   version: string
+<<<<<<< HEAD
   features?: string[]
   oidc_enabled?: boolean
   oidc_auto_redirect?: boolean
   sso_enabled?: boolean
   ldap_enabled?: boolean
   siem_enabled?: boolean
+=======
+  sso_enabled: boolean
+  ldap_enabled: boolean
+  siem_enabled: boolean
+  approval_enabled: boolean
+>>>>>>> upstream/main
 }
 
 async function fetchEdition(): Promise<EditionInfo> {
@@ -38,5 +45,6 @@ export function useEdition() {
     ssoEnabled: (data?.sso_enabled ?? false) || (data?.oidc_enabled ?? false),
     ldapEnabled: data?.ldap_enabled ?? false,
     siemEnabled: data?.siem_enabled ?? false,
+    approvalEnabled: data?.approval_enabled ?? false,
   } as const
 }

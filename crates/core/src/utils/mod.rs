@@ -108,7 +108,7 @@ macro_rules! raise_error {
         $crate::error::BichonError::Generic {
             message: $msg,
             code: $code,
-            location: snafu::location!(),
+            location: $crate::error::snafu::location!(),
         }
     };
 }

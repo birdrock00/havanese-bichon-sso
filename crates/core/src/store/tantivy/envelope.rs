@@ -26,6 +26,7 @@ use std::{
 
 use crate::{
     account::{migration::AccountModel, stats::AccountStats},
+    backup::gate::{BACKUP_ACQUIRE_TIMEOUT, WRITE_GATE},
     common::{paginated::DataPage, signal::SIGNAL_MANAGER},
     dashboard::{DashboardStats, Group, LargestEmail, TimeBucket},
     error::{code::ErrorCode, BichonResult},
@@ -50,6 +51,7 @@ use crate::{
             model::{extract_contacts, EnvelopeWithAttachments},
             schema::SchemaTools,
             tokenizers::EuroTokenizer,
+            WriterSlot,
         },
     },
     utc_now,
@@ -75,7 +77,7 @@ use tantivy::{
 };
 use tantivy::{schema::Facet, Searcher};
 use tokio::{
-    sync::{mpsc, Mutex},
+    sync::{mpsc, oneshot, Mutex},
     task::{self, JoinHandle},
 };
 use tracing::{info, warn};
@@ -102,14 +104,17 @@ pub struct EnvelopeSnapshot {
 
 pub struct IndexManager {
     index: Arc<Index>,
-    index_writer: Arc<Mutex<IndexWriter>>,
+    index_writer: Arc<Mutex<WriterSlot>>,
     sender: mpsc::Sender<TantivyDocument>,
+    /// One-shot ack channel used by `prepare_for_backup` to force the writer
+    /// loop to commit everything queued and wait for merges before replying.
+    flush_tx: mpsc::Sender<oneshot::Sender<()>>,
     reader: IndexReader,
     handle: Mutex<Option<JoinHandle<()>>>,
 }
 
 impl IndexManager {
-    pub(crate) fn index_writer(&self) -> &Arc<Mutex<IndexWriter>> {
+    pub(crate) fn index_writer(&self) -> &Arc<Mutex<WriterSlot>> {
         &self.index_writer
     }
 
@@ -125,24 +130,36 @@ impl IndexManager {
             let _ = handle.await;
         }
     }
-    pub fn new() -> Self {
-        let index = Self::open_or_create_index(&DATA_DIR_MANAGER.envelope_dir);
-        index.tokenizers().register("euro", EuroTokenizer::new());
+    /// Creates the envelope index writer with Bichon's merge policy. Used at
+    /// startup and again after a backup flush consumes the writer while waiting
+    /// for in-flight merges to drain.
+    fn create_index_writer(index: &Index) -> BichonResult<IndexWriter> {
         let mut merge_policy = LogMergePolicy::default();
         merge_policy.set_min_num_segments(25);
         merge_policy.set_min_layer_size(10_000);
         merge_policy.set_max_docs_before_merge(100_000);
 
-        let index_writer = index
-            .writer_with_num_threads(4, 67_108_864)
-            .unwrap_or_else(|e| {
-                panic!(
-                    "Failed to create IndexWriter with 4 threads and 64MB buffer for {:?}: {}",
-                    &DATA_DIR_MANAGER.envelope_dir, e
-                )
-            });
+        let index_writer = index.writer_with_num_threads(4, 67_108_864).map_err(|e| {
+            raise_error!(
+                format!("Failed to create IndexWriter: {e:#?}"),
+                ErrorCode::InternalError
+            )
+        })?;
         index_writer.set_merge_policy(Box::new(merge_policy));
-        let index_writer = Arc::new(Mutex::new(index_writer));
+        Ok(index_writer)
+    }
+
+    pub fn new() -> Self {
+        let index = Arc::new(Self::open_or_create_index(&DATA_DIR_MANAGER.envelope_dir));
+        index.tokenizers().register("euro", EuroTokenizer::new());
+
+        let index_writer = Self::create_index_writer(&index).unwrap_or_else(|e| {
+            panic!(
+                "Failed to create IndexWriter with 4 threads and 64MB buffer for {:?}: {}",
+                &DATA_DIR_MANAGER.envelope_dir, e
+            )
+        });
+        let index_writer = Arc::new(Mutex::new(WriterSlot::new(index_writer)));
         let reader = index.reader().unwrap_or_else(|e| {
             panic!(
                 "Failed to create IndexReader for {:?}: {}",
@@ -151,8 +168,10 @@ impl IndexManager {
         });
 
         let (sender, mut receiver) = mpsc::channel::<TantivyDocument>(100);
+        let (flush_tx, mut flush_rx) = mpsc::channel::<oneshot::Sender<()>>(4);
 
         let writer = index_writer.clone();
+        let index_bg = Arc::clone(&index);
         let handler = task::spawn(async move {
             let mut shutdown = SIGNAL_MANAGER.subscribe();
             let mut commit_interval = tokio::time::interval(Duration::from_secs(60));
@@ -160,6 +179,71 @@ impl IndexManager {
             let commit_threshold = 1000;
             loop {
                 tokio::select! {
+                    flush = flush_rx.recv() => {
+                        match flush {
+                            Some(done) => {
+                                let mut writer = writer.lock().await;
+                                // Drain any queued-but-not-yet-added docs so the
+                                // commit below includes everything sent before
+                                // the flush request.
+                                let mut added = 0;
+                                while let Ok(next_doc) = receiver.try_recv() {
+                                    match writer.add_document(next_doc) {
+                                        Ok(_) => added += 1,
+                                        Err(e) => {
+                                            eprintln!("[ERROR] Failed to add document: {e:?}");
+                                            tracing::error!("Tantivy: Failed to add document: {e:?}");
+                                        }
+                                    }
+                                }
+                                pending_count += added;
+                                if pending_count > 0 {
+                                    tracing::info!(
+                                        "Tantivy: backup flush committing {} docs",
+                                        pending_count
+                                    );
+                                    tokio::task::block_in_place(|| fatal_commit(&mut writer));
+                                    pending_count = 0;
+                                    commit_interval.reset();
+                                }
+                                // Deterministically drain every in-flight merge so
+                                // no segment file changes while the backup copies
+                                // the index. `wait_merging_threads` takes ownership
+                                // of the writer, so take it out of the slot and
+                                // install a fresh writer once merges have drained.
+                                // The write gate is paused and we hold the writer
+                                // lock, so no other code path can observe the slot
+                                // as empty.
+                                let writer_owned = writer.take();
+                                if let Err(e) = tokio::task::block_in_place(|| {
+                                    writer_owned.wait_merging_threads()
+                                }) {
+                                    // Index is still consistent (all commits are
+                                    // durable); a failed merge only means segments
+                                    // were not re-packed.
+                                    tracing::error!(
+                                        "Tantivy: wait_merging_threads failed, index stays consistent: {e:#?}"
+                                    );
+                                }
+                                let fresh = loop {
+                                    match IndexManager::create_index_writer(&index_bg) {
+                                        Ok(w) => break w,
+                                        Err(e) => {
+                                            tracing::error!(
+                                                "Tantivy: failed to recreate index writer after backup flush: {e:#?}; retrying"
+                                            );
+                                            tokio::time::sleep(Duration::from_millis(500)).await;
+                                        }
+                                    }
+                                };
+                                writer.put(fresh);
+                                let _ = done.send(());
+                            }
+                            None => {
+                                tracing::info!("Tantivy: flush channel closed.");
+                            }
+                        }
+                    }
                     maybe_msg = receiver.recv() => {
                         match maybe_msg {
                             Some(doc) => {
@@ -234,12 +318,28 @@ impl IndexManager {
             }
         });
         Self {
-            index: Arc::new(index),
+            index,
             index_writer,
             sender,
+            flush_tx,
             reader,
             handle: Mutex::new(Some(handler)),
         }
+    }
+
+    /// Commit every queued document and wait for in-progress merges to finish,
+    /// leaving the index directory in a copy-safe state. Called by the backup
+    /// manager inside a write window (nothing is queued while we wait, but
+    /// anything sent just before the window closed is still flushed here).
+    pub async fn prepare_for_backup(&self) -> BichonResult<()> {
+        let (done_tx, done_rx) = oneshot::channel();
+        self.flush_tx
+            .send(done_tx)
+            .await
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        done_rx
+            .await
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
     }
 
     pub async fn queue(&self, doc: TantivyDocument) {
@@ -844,6 +944,37 @@ impl IndexManager {
         Ok(result)
     }
 
+    /// How many messages live in these mailboxes of this account.
+    ///
+    /// Used to tell an approver the blast radius of a mailbox deletion before
+    /// they sign off on it. Takes the whole subtree at once rather than one
+    /// mailbox at a time because the delete is recursive: counting only the
+    /// named mailbox would understate a folder with subfolders by however much
+    /// they hold, and the approver would be approving a number that is wrong
+    /// in the direction that matters.
+    pub fn count_mailbox_envelopes(
+        &self,
+        account_id: u64,
+        mailbox_ids: &[u64],
+    ) -> BichonResult<u64> {
+        if mailbox_ids.is_empty() {
+            return Ok(0);
+        }
+        let mut subqueries: Vec<(Occur, Box<dyn Query>)> = Vec::with_capacity(mailbox_ids.len());
+        for mailbox_id in mailbox_ids {
+            subqueries.push((
+                Occur::Should,
+                Box::new(self.mailbox_query(account_id, *mailbox_id)),
+            ));
+        }
+        let query = Box::new(BooleanQuery::new(subqueries)) as Box<dyn Query>;
+        let searcher = self.create_searcher()?;
+        let count = searcher
+            .search(&query, &Count)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        Ok(count as u64)
+    }
+
     pub fn total_emails(&self, accounts: &Option<HashSet<u64>>) -> BichonResult<u64> {
         let searcher = self.create_searcher()?;
 
@@ -954,6 +1085,7 @@ impl IndexManager {
     }
 
     pub async fn delete_account_envelopes(&self, account_id: u64) -> BichonResult<()> {
+        let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
         let query = self.account_query(account_id);
         let (eml_content_hashes, attachments_content_hashes, leafs) =
             self.collect_content_hashes(query)?;
@@ -993,6 +1125,7 @@ impl IndexManager {
         if mailbox_ids.is_empty() {
             return Ok(());
         }
+        let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
 
         let mut eml_content_hashes: HashSet<String> = HashSet::new();
         let mut attachments_content_hashes: HashSet<String> = HashSet::new();
@@ -1061,6 +1194,7 @@ impl IndexManager {
         if count == 0 {
             return Ok(0);
         }
+        let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
 
         let (eml_hashes_with_mailbox, attachments_content_hashes, leafs) =
             self.collect_content_hashes_with_mailbox(self.retention_purge_query(
@@ -1261,6 +1395,7 @@ impl IndexManager {
             tracing::warn!("delete_envelopes_multi_account: deletes is empty, nothing to delete");
             return Ok(());
         }
+        let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
 
         let mut eml_content_hash_triples: HashSet<(u64, u64, String)> = HashSet::new();
         let mut attachments_content_hashes: HashSet<String> = HashSet::new();
@@ -1419,6 +1554,7 @@ impl IndexManager {
             tracing::warn!("update_envelope_tags: request is empty, nothing to update");
             return Ok(());
         }
+        let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
 
         // Legal hold: tag edits rewrite the envelope index for the account.
         // A held account's messages must stay findable and classified exactly
@@ -1706,6 +1842,20 @@ impl IndexManager {
                     )
                     .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
                 mailbox_docs = ingest_at_docs.into_iter().map(|(_, addr)| addr).collect();
+            }
+            SortBy::Relevance => {
+                // BM25 relevance: Tantivy scores the whole query. Always
+                // descending (a higher score = more relevant); the `desc`
+                // flag has no meaning here.
+                let score_docs: Vec<(f32, DocAddress)> = searcher
+                    .search(
+                        &query,
+                        &TopDocs::with_limit(page_size as usize)
+                            .and_offset(offset as usize)
+                            .order_by_score(),
+                    )
+                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+                mailbox_docs = score_docs.into_iter().map(|(_, addr)| addr).collect();
             }
         }
 
@@ -3042,5 +3192,118 @@ mod tests {
         AccountModel::place_legal_hold(account.id, 7, Some("freeze".into())).unwrap();
         let err = ENVELOPE_MANAGER.update_envelope_tags(req).await.unwrap_err();
         assert_eq!(err.code(), ErrorCode::Forbidden);
+    }
+
+    // ── BM25 relevance vs DATE desc ordering ──────────────────────
+    //
+    // Regression scenario from the "RELEVANCE sort" feature request: a
+    // multi-term text query is OR'ed across the default fields, and results
+    // are ordered by DATE desc (the API default), so the mail matching all
+    // terms gets buried under a newer, one-term-only hit. The BM25 score that
+    // Tantivy already computes internally ranks the both-terms match first —
+    // it is just never surfaced or used for ordering.
+    #[test]
+    fn bm25_relevance_ranks_both_terms_match_first_while_date_desc_buries_it() {
+        let f = SchemaTools::email_fields();
+        let index = Index::create_in_ram(SchemaTools::email_schema());
+        index.tokenizers().register("euro", EuroTokenizer::new());
+
+        {
+            let mut writer = index
+                .writer_with_num_threads(1, 15_000_000)
+                .expect("writer");
+
+            // The mail the user is actually looking for: 2025-01-16, subject
+            // "Bienvenue chez Primagaz !" — contains BOTH query terms.
+            let mut target = TantivyDocument::new();
+            target.add_u64(f.f_account_id, 1);
+            target.add_u64(f.f_mailbox_id, 10);
+            target.add_text(f.f_message_id, "<target@test>");
+            target.add_text(f.f_id, "id-target");
+            target.add_u64(f.f_uid, 1);
+            target.add_text(f.f_content_hash, "hash-target");
+            target.add_text(f.f_subject, "Bienvenue chez Primagaz !");
+            target.add_text(f.f_body, "Bienvenue chez Primagaz, votre compte est prêt.");
+            target.add_i64(f.f_date, 1_736_985_600_000); // 2025-01-16
+            writer.add_document(target).unwrap();
+
+            // Newer mail (2025-09-01) that only mentions "bienvenue": it
+            // matches the OR query but is irrelevant to "primagaz".
+            let mut recent = TantivyDocument::new();
+            recent.add_u64(f.f_account_id, 1);
+            recent.add_u64(f.f_mailbox_id, 10);
+            recent.add_text(f.f_message_id, "<recent@test>");
+            recent.add_text(f.f_id, "id-recent");
+            recent.add_u64(f.f_uid, 2);
+            recent.add_text(f.f_content_hash, "hash-recent");
+            recent.add_text(f.f_subject, "Welcome to our September newsletter");
+            recent.add_text(f.f_body, "bienvenue à tous nos nouveaux abonnés");
+            recent.add_i64(f.f_date, 1_755_705_600_000); // 2025-09-01
+            writer.add_document(recent).unwrap();
+
+            writer.commit().unwrap();
+        }
+
+        let reader = index.reader().unwrap();
+        reader.reload().unwrap();
+        let searcher = reader.searcher();
+
+        // The exact query the search path builds for a text filter
+        // (filter_query in this file: QueryParser over email_default_fields,
+        // default OR conjunction).
+        let query = QueryParser::for_index(&index, SchemaTools::email_default_fields())
+            .parse_query("bienvenue primagaz")
+            .unwrap();
+
+        // ── Current behaviour: DATE desc (the API default) ─────────
+        let date_top: Vec<(Option<i64>, DocAddress)> = searcher
+            .search(
+                &query,
+                &TopDocs::with_limit(2).order_by_fast_field(F_DATE, Order::Desc),
+            )
+            .unwrap();
+        let date_order: Vec<String> = date_top
+            .iter()
+            .map(|(_, addr)| {
+                let doc: TantivyDocument = searcher.doc(*addr).unwrap();
+                doc.get_first(f.f_message_id)
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string()
+            })
+            .collect();
+        assert_eq!(
+            date_order[0], "<recent@test>",
+            "DATE desc must put the newer one-term mail first, burying the best match"
+        );
+
+        // ── Desired: BM25 relevance ordering ───────────────────────
+        let score_top: Vec<(f32, DocAddress)> = searcher
+            .search(&query, &TopDocs::with_limit(2).order_by_score())
+            .unwrap();
+        let score_order: Vec<String> = score_top
+            .iter()
+            .map(|(_, addr)| {
+                let doc: TantivyDocument = searcher.doc(*addr).unwrap();
+                doc.get_first(f.f_message_id)
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string()
+            })
+            .collect();
+        assert_eq!(
+            score_order[0], "<target@test>",
+            "BM25 must rank the both-terms match first"
+        );
+
+        // The both-terms doc must genuinely outscore the one-term doc.
+        assert!(
+            score_top[0].0 > score_top[1].0,
+            "target score {:.4} should exceed recent score {:.4}",
+            score_top[0].0,
+            score_top[1].0
+        );
     }
 }

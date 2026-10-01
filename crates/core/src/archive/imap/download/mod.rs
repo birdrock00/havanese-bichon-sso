@@ -25,6 +25,7 @@ use crate::{
         },
     },
     archive::imap::{download::flow::FetchDirection, mailbox::MailBox},
+    backup::gate::WRITE_GATE,
     error::BichonResult,
     imap::executor::ImapExecutor,
 };
@@ -51,6 +52,13 @@ pub async fn process_imap_download(
     assert_eq!(account.account_type, AccountType::IMAP);
     let start_time = Instant::now();
     let account_id = account.id;
+
+    // Skip a round entirely while a backup window is open: downloads would
+    // repeatedly hit the paused write gate and error on every envelope.
+    if WRITE_GATE.is_paused() {
+        debug!(account_id = account_id, "IMAP sync skipped: backup in progress");
+        return Ok(());
+    }
     let download_task = decide_next_download_task(account, trigger_type).await?;
     if matches!(download_task, DownloadTask::Idle) {
         return Ok(());

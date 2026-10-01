@@ -4,6 +4,11 @@ use crate::error::code::ErrorCode;
 
 pub mod code;
 
+// Re-exported so the `raise_error!` macro can resolve `snafu::location!`
+// through `$crate` at call sites in other crates (which do not depend on
+// snafu directly).
+pub use snafu;
+
 #[derive(Debug, Snafu)]
 #[snafu(visibility(pub))]
 pub enum BichonError {

@@ -45,6 +45,24 @@ pub struct UserView {
     pub global_roles: Vec<u64>,
     pub global_roles_names: Vec<String>,
     pub global_permissions: Vec<String>,
+
+    /// Deadline (unix ms) for each *global* role assignment that has one,
+    /// keyed by role id. A role absent from this map is permanent.
+    ///
+    /// Only non-expired assignments appear: the UI's question is "what is
+    /// still delegated and when does it end", and an entry that has already
+    /// lapsed is indistinguishable from a role the user was re-granted.
+    ///
+    /// `#[serde(default)]` + `skip_serializing_if` keep the wire shape
+    /// unchanged for the overwhelmingly common case of no delegations — an
+    /// older client parsing this response never sees the key.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub global_role_expiries: BTreeMap<u64, i64>,
+
+    /// Deadline (unix ms) for each *scoped* role assignment that has one,
+    /// keyed by account id. See `global_role_expiries`.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub account_role_expiries: BTreeMap<u64, i64>,
     pub avatar: Option<String>,
     pub created_at: i64,
     pub updated_at: i64,

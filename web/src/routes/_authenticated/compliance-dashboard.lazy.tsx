@@ -15,10 +15,10 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-import LicensePage from '@/features/license'
+//
 import { createLazyFileRoute } from '@tanstack/react-router'
+import ComplianceDashboardPage from '@/features/compliance-dashboard'
 
-export const Route = createLazyFileRoute('/_authenticated/license')({
-  component: LicensePage,
+export const Route = createLazyFileRoute('/_authenticated/compliance-dashboard')({
+  component: ComplianceDashboardPage,
 })
