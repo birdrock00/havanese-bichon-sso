@@ -65,7 +65,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const { setTheme } = useTheme();
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { oidcEnabled, oidcAutoRedirect, isPro, ssoEnabled, ldapEnabled } = useEdition()
+  const { oidcEnabled, oidcAutoRedirect, ssoEnabled, ldapEnabled } = useEdition()
 
   const { search } = useLocation();
   const searchParams = toSearchParams(search);

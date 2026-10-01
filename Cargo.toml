@@ -13,11 +13,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-<<<<<<< HEAD
-version = "2.0.4"
-=======
 version = "2.1.0"
->>>>>>> upstream/main
 edition = "2021"
 
 [workspace.dependencies]

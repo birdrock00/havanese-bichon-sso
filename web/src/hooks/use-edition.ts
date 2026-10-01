@@ -4,19 +4,15 @@ import { useQuery } from '@tanstack/react-query'
 export interface EditionInfo {
   edition: 'community' | 'pro' | 'enterprise'
   version: string
-<<<<<<< HEAD
   features?: string[]
   oidc_enabled?: boolean
   oidc_auto_redirect?: boolean
   sso_enabled?: boolean
   ldap_enabled?: boolean
   siem_enabled?: boolean
-=======
-  sso_enabled: boolean
-  ldap_enabled: boolean
-  siem_enabled: boolean
-  approval_enabled: boolean
->>>>>>> upstream/main
+  // Upstream Pro flag; the community features endpoint does not send it,
+  // so it stays optional and falls back to false below.
+  approval_enabled?: boolean
 }
 
 async function fetchEdition(): Promise<EditionInfo> {
