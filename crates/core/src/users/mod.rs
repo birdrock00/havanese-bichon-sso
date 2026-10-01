@@ -636,6 +636,9 @@ impl BichonUserV2 {
             totp_secret: None,
             totp_enabled: false,
             totp_recovery_codes: Vec::new(),
+            // SSO-provisioned role assignments are permanent (no expiries).
+            global_role_expiries: BTreeMap::new(),
+            account_role_expiries: BTreeMap::new(),
         };
 
         let user_clone = new_user.clone();
