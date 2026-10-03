@@ -35,19 +35,27 @@ pub fn setup_file_logger(level: Level) -> Result<(), tracing::dispatcher::SetGlo
     let (server_nonb, server_guard) = server_log_writer();
     LOG_WORKER_GUARD.set(vec![server_guard]).unwrap();
 
-    let server_layer = fmt::layer()
-        .with_timer(LocalTimer)
-        .with_ansi(with_ansi)
-        .with_level(true)
-        .with_writer(server_nonb)
-        .with_target(true);
-
-    let subscriber = tracing_subscriber::registry()
-        .with(LevelFilter::from_level(level))
-        .with(server_layer);
+    let registry = tracing_subscriber::registry().with(LevelFilter::from_level(level));
 
     // Set the combined subscriber as the global default
-    tracing::subscriber::set_global_default(subscriber)
+    if SETTINGS.bichon_json_logs {
+        let server_layer = fmt::layer()
+            .json()
+            .with_timer(LocalTimer)
+            .with_ansi(with_ansi)
+            .with_writer(server_nonb);
+
+        tracing::subscriber::set_global_default(registry.with(server_layer))
+    } else {
+        let server_layer = fmt::layer()
+            .with_timer(LocalTimer)
+            .with_ansi(with_ansi)
+            .with_level(true)
+            .with_writer(server_nonb)
+            .with_target(true);
+
+        tracing::subscriber::set_global_default(registry.with(server_layer))
+    }
 }
 
 fn server_log_writer() -> (NonBlocking, WorkerGuard) {

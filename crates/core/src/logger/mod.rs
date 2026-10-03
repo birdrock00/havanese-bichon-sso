@@ -49,19 +49,31 @@ pub fn initialize_logging() {
 fn setup_stdout_logger(level: Level) -> Result<(), tracing::dispatcher::SetGlobalDefaultError> {
     let with_ansi = SETTINGS.bichon_ansi_logs;
 
-    let format = tracing_subscriber::fmt::format()
-        .with_level(true)
-        .with_target(true)
-        .with_timer(LocalTimer);
+    if SETTINGS.bichon_json_logs {
+        let subscriber = tracing_subscriber::fmt()
+            .with_max_level(level)
+            .with_ansi(with_ansi)
+            .with_writer(std::io::stdout)
+            .json()
+            .with_timer(LocalTimer)
+            .finish();
 
-    let subscriber = tracing_subscriber::fmt()
-        .with_max_level(level)
-        .with_ansi(with_ansi)
-        .with_writer(std::io::stdout)
-        .event_format(format)
-        .finish();
+        tracing::subscriber::set_global_default(subscriber)
+    } else {
+        let format = tracing_subscriber::fmt::format()
+            .with_level(true)
+            .with_target(true)
+            .with_timer(LocalTimer);
 
-    tracing::subscriber::set_global_default(subscriber)
+        let subscriber = tracing_subscriber::fmt()
+            .with_max_level(level)
+            .with_ansi(with_ansi)
+            .with_writer(std::io::stdout)
+            .event_format(format)
+            .finish();
+
+        tracing::subscriber::set_global_default(subscriber)
+    }
 }
 
 fn validate_log_level(value: &String) -> Level {
