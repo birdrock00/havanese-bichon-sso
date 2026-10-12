@@ -31,6 +31,10 @@ pub enum ErrorCode {
     ImapCommandFailed = 50000,
     ImapAuthenticationFailed = 50010,
     ImapUnexpectedResult = 50020,
+    /// A message body could not be parsed (e.g. broken MIME/headers). A
+    /// per-message failure: callers streaming a batch treat it as
+    /// "skip this one, keep going" instead of a batch-level abort.
+    EmailParseError = 50030,
     AutoconfigFetchFailed = 50060,
     // Internal system errors (70000–70999)
     InternalError = 70000,

@@ -127,10 +127,16 @@ async fn extract_envelope_core(
         // println!("Duplicate email detected");
         return Ok(ExtractOutcome::Duplicate);
     }
+    // A message that cannot be parsed is a per-message failure, not a system
+    // failure: streaming callers match on EmailParseError to skip the message
+    // (it is NOT archived) and continue with the rest of the batch instead of
+    // letting one broken email abort the whole folder (#377).
     let message: Message<'_> = MessageParser::new().parse(body).ok_or_else(|| {
         raise_error!(
-            "Email header parse result is not available".into(),
-            ErrorCode::InternalError
+            format!(
+                "Email parse failed (uid {uid}, {size} bytes): message not archived"
+            ),
+            ErrorCode::EmailParseError
         )
     })?;
 
@@ -854,6 +860,56 @@ async fn recover_message_blob(envelope: &Envelope) -> BichonResult<Bytes> {
 #[cfg(test)]
 mod test {
     use html2text::config;
+
+    use std::sync::Once;
+
+    /// Extract tests touch the process-global settings/DB/DEDUP_CACHE, so they
+    /// need the same one-time environment as the backup config tests, and they
+    /// serialize with those via the shared lock (convention: see
+    /// `backup::BACKUP_STATE_TESTS`).
+    static TEST_ENV: Once = Once::new();
+
+    fn init_test_env() {
+        TEST_ENV.call_once(|| {
+            let root = std::env::temp_dir().join(format!(
+                "bichon-extractor-test-{}",
+                std::process::id()
+            ));
+            std::fs::create_dir_all(&root).unwrap();
+            std::env::set_var("BICHON_ROOT_DIR", &root);
+            std::env::set_var("BICHON_ENCRYPT_PASSWORD", "test-password");
+            let _ = &*crate::settings::cli::SETTINGS;
+            let _ = &*crate::database::manager::DB_MANAGER;
+        });
+    }
+
+    /// A body that cannot be parsed must surface as `EmailParseError` (not a
+    /// generic InternalError): the batch streaming path matches on that code
+    /// to skip the single message and keep the batch going (#377). Pins the
+    /// classification contract end to end — if a parser upgrade starts
+    /// parsing this junk, the input here needs replacing, not the assertion.
+    #[tokio::test]
+    async fn unparseable_body_raises_email_parse_error() {
+        let _run_guard = crate::backup::BACKUP_STATE_TESTS.lock().await;
+        init_test_env();
+        // mail-parser 0.11 is extremely lenient (even binary junk parses as a
+        // header-less message); the empty body is the input it still refuses,
+        // so it pins the classification. If a parser upgrade starts parsing
+        // this, replace the input — the assertion is the contract.
+        let junk: &[u8] = b"";
+        assert!(
+            mail_parser::MessageParser::new().parse(junk).is_none(),
+            "test input must actually be unparseable for the classification to apply"
+        );
+        let err = super::extract_envelope_from_eml(junk, 1, 1)
+            .await
+            .expect_err("unparseable body must be an error");
+        assert_eq!(
+            err.code(),
+            crate::error::code::ErrorCode::EmailParseError,
+            "parse failures must classify as EmailParseError, got {err:?}"
+        );
+    }
 
     #[test]
     fn test_various_html_with_overflow_enabled() {

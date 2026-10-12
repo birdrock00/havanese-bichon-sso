@@ -466,11 +466,13 @@ pub struct RestoreArgs {
     )]
     pub into: String,
 
-    /// Restore a specific point (`m-<id>`); default = LATEST.
+    /// Restore a specific point; default = LATEST. Accepts the manifest id,
+    /// the object name from the bucket listing (`m-<id>` / `m-<id>.json.gz`),
+    /// or the keyword LATEST for the newest point.
     #[clap(
         long,
         env = "BICHON_RESTORE_POINT",
-        help = "Restore point to use (default: LATEST)"
+        help = "Restore point to use: manifest id, m-<id> object name, or LATEST (default: LATEST)"
     )]
     pub point: Option<String>,
 

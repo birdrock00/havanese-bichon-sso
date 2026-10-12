@@ -134,6 +134,12 @@ pub async fn fetch_and_save_by_date(
     )?;
 
     let mut current_processed = 0u64;
+    // Messages skipped because they could not be parsed (not archived). They
+    // do not fail the folder — the watermark advances past them so scheduled
+    // syncs do not re-fetch a permanently broken message — but the total is
+    // reported so the running state carries a warning (they stay "missing"
+    // locally, so gap-fill keeps detecting them).
+    let mut parse_skipped = 0u64;
     let mut has_error_or_cancel = false;
     for (index, batch) in uid_batches.into_iter().enumerate() {
         if token.is_cancelled() {
@@ -179,7 +185,7 @@ pub async fn fetch_and_save_by_date(
             )
             .await
             {
-                Ok((processed, _throttled)) => break Ok(processed),
+                Ok(outcome) => break Ok(outcome),
                 Err(e) if retries < MAX_NETWORK_RETRIES && e.code() == ErrorCode::NetworkError => {
                     retries += 1;
                     warn!(
@@ -216,8 +222,9 @@ pub async fn fetch_and_save_by_date(
             }
         };
         match batch_result {
-            Ok(processed) => {
-                current_processed += processed;
+            Ok(outcome) => {
+                current_processed += outcome.stored;
+                parse_skipped += outcome.parse_skipped;
                 DownloadState::update_folder_progress(
                     account_id,
                     mailbox.name.clone(),
@@ -244,6 +251,19 @@ pub async fn fetch_and_save_by_date(
         }
     }
     if !has_error_or_cancel {
+        if parse_skipped > 0 {
+            // Folder-level summary of the per-message warnings the batch
+            // fetch already recorded, so the running state's error list
+            // carries the total as well.
+            let _ = DownloadState::append_session_error(
+                account_id,
+                format!(
+                    "Mailbox '{}': {} email(s) could not be parsed and were skipped \
+                     (not archived); gap-fill will keep detecting them",
+                    mailbox.name, parse_skipped
+                ),
+            );
+        }
         DownloadState::update_folder_progress(
             account_id,
             mailbox.name.clone(),
@@ -254,7 +274,10 @@ pub async fn fetch_and_save_by_date(
         )?;
     }
     session.logout().await.ok();
-    Ok(max_uid)
+    // Only hand back a watermark when the whole folder completed: the caller
+    // persists it as the incremental-sync cursor, and a mid-download failure
+    // must not move it past UIDs that were never fetched (#377).
+    Ok(if has_error_or_cancel { None } else { max_uid })
 }
 
 /// Fetches all messages from a mailbox.
@@ -350,6 +373,12 @@ pub async fn fetch_and_save_full_mailbox(
     );
 
     let mut current_processed = 0u64;
+    // Messages skipped because they could not be parsed (not archived). They
+    // do not fail the folder — the watermark advances past them so scheduled
+    // syncs do not re-fetch a permanently broken message — but the total is
+    // reported so the running state carries a warning (they stay "missing"
+    // locally, so gap-fill keeps detecting them).
+    let mut parse_skipped = 0u64;
     let mut has_error_or_cancel = false;
 
     for (index, batch) in uid_batches.into_iter().enumerate() {
@@ -404,7 +433,7 @@ pub async fn fetch_and_save_full_mailbox(
             )
             .await
             {
-                Ok((count, _throttled)) => break Ok(count),
+                Ok(outcome) => break Ok(outcome),
                 Err(e) if retries < MAX_NETWORK_RETRIES && e.code() == ErrorCode::NetworkError => {
                     retries += 1;
                     warn!(
@@ -443,8 +472,9 @@ pub async fn fetch_and_save_full_mailbox(
             }
         };
         match batch_result {
-            Ok(count) => {
-                current_processed += count as u64;
+            Ok(outcome) => {
+                current_processed += outcome.stored;
+                parse_skipped += outcome.parse_skipped;
                 DownloadState::update_folder_progress(
                     account_id,
                     mailbox.name.clone(),
@@ -472,6 +502,19 @@ pub async fn fetch_and_save_full_mailbox(
     }
 
     if !has_error_or_cancel {
+        if parse_skipped > 0 {
+            // Folder-level summary of the per-message warnings the batch
+            // fetch already recorded, so the running state's error list
+            // carries the total as well.
+            let _ = DownloadState::append_session_error(
+                account_id,
+                format!(
+                    "Mailbox '{}': {} email(s) could not be parsed and were skipped \
+                     (not archived); gap-fill will keep detecting them",
+                    mailbox.name, parse_skipped
+                ),
+            );
+        }
         DownloadState::update_folder_progress(
             account_id,
             mailbox.name.clone(),
@@ -482,7 +525,14 @@ pub async fn fetch_and_save_full_mailbox(
         )?;
     }
     session.logout().await.ok();
-    Ok(max_uid.into())
+    // Only hand back a watermark when the whole folder completed: the caller
+    // persists it as the incremental-sync cursor, and a mid-download failure
+    // must not move it past UIDs that were never fetched (#377).
+    if has_error_or_cancel {
+        Ok(None)
+    } else {
+        Ok(Some(max_uid))
+    }
 }
 
 /// Generates a synthetic UIDVALIDITY for IMAP servers that don't provide it.
@@ -696,6 +746,9 @@ async fn reconcile_uid_validity_change(
         let batches = generate_uid_sequence_hashset(missing_uids, batch_size);
 
         let mut downloaded = 0u64;
+        // Messages skipped because they could not be parsed (not archived);
+        // reported as a folder-level warning once the batch loop ends.
+        let mut parse_skipped = 0u64;
         for (index, batch) in batches.into_iter().enumerate() {
             if token.is_cancelled() {
                 DownloadState::update_folder_progress(
@@ -733,8 +786,9 @@ async fn reconcile_uid_validity_change(
             )
             .await
             {
-                Ok((processed, _throttled)) => {
-                    downloaded += processed;
+                Ok(outcome) => {
+                    downloaded += outcome.stored;
+                    parse_skipped += outcome.parse_skipped;
                     DownloadState::update_folder_progress(
                         account_id,
                         remote_mailbox.name.clone(),
@@ -761,6 +815,16 @@ async fn reconcile_uid_validity_change(
             }
         }
 
+        if parse_skipped > 0 {
+            let _ = DownloadState::append_session_error(
+                account_id,
+                format!(
+                    "Mailbox '{}': {} email(s) could not be parsed and were skipped \
+                     (not archived); gap-fill will keep detecting them",
+                    remote_mailbox.name, parse_skipped
+                ),
+            );
+        }
         DownloadState::update_folder_progress(
             account_id,
             remote_mailbox.name.clone(),
@@ -784,6 +848,10 @@ pub async fn reconcile_mailboxes(
     let start_time = Instant::now();
     let existing_mailboxes = find_intersecting_mailboxes(local_mailboxes, remote_mailboxes);
     let account_id = account.id;
+    // Folders whose sync failed this round. A failed folder must fail the
+    // session (so it is not reported as Success), but must not stop the other
+    // folders from being attempted (#377).
+    let mut failed_folders = 0u32;
     if !existing_mailboxes.is_empty() {
         let mut mailboxes_to_update = Vec::with_capacity(existing_mailboxes.len());
 
@@ -861,10 +929,23 @@ pub async fn reconcile_mailboxes(
                 );
 
                 reconcile_uid_validity_change(account, local_mailbox, remote_mailbox, token.clone())
-                    .await?
+                    .await
             } else {
                 perform_incremental_sync(account, local_mailbox, remote_mailbox, token.clone())
-                    .await?
+                    .await
+            };
+            // A folder failure must not abort the remaining folders: record
+            // it, keep the session honest (reconcile returns Err at the end so
+            // the session is not reported as Success), and move on.
+            let new_highest_uid = match new_highest_uid {
+                Ok(v) => v,
+                Err(e) => {
+                    failed_folders += 1;
+                    let err_msg = format!("Folder '{}' sync failed: {:#?}", remote_mailbox.name, e);
+                    warn!(account_id, "{}", err_msg);
+                    DownloadState::append_session_error(account.id, err_msg)?;
+                    continue;
+                }
             };
             info!(
                 account_id,
@@ -874,7 +955,12 @@ pub async fn reconcile_mailboxes(
                 "reconcile: computed highest_uid for mailbox"
             );
             let mut updated = remote_mailbox.clone();
-            updated.highest_uid = new_highest_uid;
+            // Preserve the stored watermark when this round produced none
+            // (folder failed / empty): None must never clear it, or the
+            // un-downloaded range would be skipped forever. Note
+            // `remote_mailbox.highest_uid` comes from a fresh remote listing
+            // and is not the local value.
+            updated.highest_uid = new_highest_uid.or(local_mailbox.highest_uid);
             // Update uid_validity with the resolved value (either from server or synthetic)
             if updated.uid_validity.is_none() {
                 updated.uid_validity = Some(remote_uid_validity);
@@ -983,6 +1069,15 @@ pub async fn reconcile_mailboxes(
                 ErrorCode::InternalError
             ));
         }
+    }
+    // Folders that failed mid-sync must fail the whole session: a Success
+    // session here would tell the user everything was archived when part of
+    // a folder was skipped (#377).
+    if failed_folders > 0 {
+        return Err(raise_error!(
+            format!("{failed_folders} folder(s) failed to sync"),
+            ErrorCode::InternalError
+        ));
     }
     Ok(())
 }

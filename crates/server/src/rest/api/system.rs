@@ -46,8 +46,12 @@ impl SystemApi {
         path = "/notifications",
         operation_id = "get_notifications"
     )]
-    async fn get_notifications(&self) -> ApiResult<Json<Notifications>> {
-        let notification = fetch_notifications()
+    async fn get_notifications(&self, context: WrappedContext) -> ApiResult<Json<Notifications>> {
+        // The default-password reminder is admin-only: revealing to ordinary
+        // users that the admin password is still the public default would be
+        // a privilege-escalation hint, not a reminder.
+        let is_admin = context.has_permission(None, Permission::USER_MANAGE);
+        let notification = fetch_notifications(is_admin)
             .await
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
         Ok(Json(notification))

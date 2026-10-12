@@ -19,7 +19,7 @@
 //use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
 
-use crate::{bichon_version, error::BichonResult};
+use crate::{bichon_version, error::BichonResult, users::UserModel};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
@@ -70,23 +70,58 @@ pub struct SystemAlert {
     pub message: String,
 }
 
-pub async fn fetch_notifications() -> BichonResult<Notifications> {
+pub async fn fetch_notifications(is_admin: bool) -> BichonResult<Notifications> {
     let current_version = bichon_version!();
     let release = check_new_release("rustmailer", "bichon", current_version).await;
     Ok(Notifications {
         release,
-        alerts: system_alerts(),
+        alerts: system_alerts(is_admin).await,
     })
 }
 
 /// Alerts derived from local state. Currently the non-fatal warnings reported
 /// by the most recent backup run (editions flag e.g. a database that has grown
-/// large enough to slow backups); the community edition has no such sources,
-/// so this is normally empty there.
-fn system_alerts() -> Vec<SystemAlert> {
-    warnings_to_alerts(crate::backup::manager::BACKUP_MANAGER
+/// large enough to slow backups), plus the admin-only reminder that the
+/// default administrator password is still in use.
+async fn system_alerts(is_admin: bool) -> Vec<SystemAlert> {
+    let mut alerts = warnings_to_alerts(crate::backup::manager::BACKUP_MANAGER
         .state()
-        .last_warnings)
+        .last_warnings);
+
+    if is_admin {
+        if let Some(alert) = default_password_alert().await {
+            alerts.insert(0, alert);
+        }
+    }
+    alerts
+}
+
+/// Reminder shown in the notifications bell while the default administrator
+/// account still accepts the well-known initial password. Admin-only: it
+/// must not tell other users the admin password is the public default.
+async fn default_password_alert() -> Option<SystemAlert> {
+    // argon2 verify is blocking work; keep it off the async executor.
+    let active = tokio::task::spawn_blocking(UserModel::default_admin_password_active)
+        .await
+        .ok()?;
+    default_password_alert_for(active)
+}
+
+/// Pure half of [`default_password_alert`], split out so the alert shape is
+/// testable without a database.
+fn default_password_alert_for(active: bool) -> Option<SystemAlert> {
+    if !active {
+        return None;
+    }
+    Some(SystemAlert {
+        kind: "security".to_string(),
+        severity: "warning".to_string(),
+        title: "Default administrator password in use".to_string(),
+        message: "The administrator account still accepts the initial password \
+                  (admin / admin@bichon). Open Settings -> Profile and set a new \
+                  password now."
+            .to_string(),
+    })
 }
 
 /// Map backup-run warnings to notification alerts. Pure so it is testable
@@ -153,7 +188,7 @@ async fn check_new_release(owner: &str, repo: &str, current_version: &str) -> Re
 
 #[cfg(test)]
 mod test {
-    use super::warnings_to_alerts;
+    use super::{default_password_alert_for, warnings_to_alerts};
 
     #[test]
     fn backup_warnings_map_to_backup_alerts() {
@@ -168,6 +203,21 @@ mod test {
     #[test]
     fn empty_warnings_produce_no_alerts() {
         assert!(warnings_to_alerts(vec![]).is_empty());
+    }
+
+    #[test]
+    fn default_password_alert_only_exists_while_active() {
+        assert!(default_password_alert_for(true).is_some());
+        assert!(default_password_alert_for(false).is_none());
+    }
+
+    #[test]
+    fn default_password_alert_tells_the_admin_what_to_do() {
+        let alert = default_password_alert_for(true).unwrap();
+        assert_eq!(alert.kind, "security");
+        assert_eq!(alert.severity, "warning");
+        assert!(alert.message.contains("admin@bichon"));
+        assert!(alert.message.contains("Profile"), "must say where to change it");
     }
 
     #[tokio::test]

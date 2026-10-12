@@ -34,6 +34,9 @@ impl IntoStatusCode for ErrorCode {
                 StatusCode::FORBIDDEN
             }
             ErrorCode::ResourceNotFound => StatusCode::NOT_FOUND,
+            // The request itself was fine; the submitted message content
+            // could not be parsed (e.g. a broken EML body).
+            ErrorCode::EmailParseError => StatusCode::UNPROCESSABLE_ENTITY,
             ErrorCode::RequestTimeout => StatusCode::REQUEST_TIMEOUT,
             ErrorCode::PayloadTooLarge => StatusCode::PAYLOAD_TOO_LARGE,
             ErrorCode::TooManyRequest => StatusCode::TOO_MANY_REQUESTS,
@@ -128,6 +131,7 @@ mod tests {
             ErrorCode::OAuth2ItemDisabled,
             ErrorCode::Forbidden,
             ErrorCode::ResourceNotFound,
+            ErrorCode::EmailParseError,
             ErrorCode::RequestTimeout,
             ErrorCode::PayloadTooLarge,
             ErrorCode::TooManyRequest,

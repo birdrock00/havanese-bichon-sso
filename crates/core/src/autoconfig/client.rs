@@ -317,49 +317,7 @@ fn extract_base_domain(host: &str) -> Option<String> {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_fetch_valid_domain() {
-        let domains = vec![
-            // North America
-            ("gmail.com", "Google Gmail"),
-            ("outlook.com", "Microsoft Outlook"),
-            ("hotmail.com", "Microsoft Hotmail"),
-            ("yahoo.com", "Yahoo Mail"),
-            ("icloud.com", "Apple iCloud"),
-            ("aol.com", "AOL Mail"),
-            ("protonmail.com", "ProtonMail"),
-            ("zoho.com", "Zoho Mail"),
-            ("fastmail.com", "FastMail"),
-            // Europe
-            ("gmx.de", "GMX Germany"),
-            ("gmx.net", "GMX International"),
-            ("web.de", "Web.de Germany"),
-            ("freenet.de", "Freenet Germany"),
-            ("mail.ru", "Mail.ru Russia"),
-            ("yandex.ru", "Yandex Russia"),
-            ("orange.fr", "Orange France"),
-            ("laposte.net", "La Poste France"),
-            ("libero.it", "Libero Italy"),
-            ("tiscali.it", "Tiscali Italy"),
-            ("telenet.be", "Telenet Belgium"),
-            // Asia Pacific
-            ("qq.com", "Tencent QQ"),
-            ("163.com", "NetEase 163"),
-            ("126.com", "NetEase 126"),
-            ("sina.com", "Sina Mail"),
-            ("naver.com", "Naver Korea"),
-        ];
-
-        for (domain, label) in &domains {
-            let result = fetch(domain).await;
-            match result {
-                Ok(config) => println!("✅ [{label}] {domain}: {config:#?}"),
-                Err(e) => println!("⚠️  [{label}] {domain}: {e:?}"),
-            }
-        }
-    }
-
-    #[test]
+        #[test]
     fn test_parse_autoconfig_xml() {
         let xml = r#"<?xml version="1.0" encoding="UTF-8"?>
 <clientConfig version="1.1">
