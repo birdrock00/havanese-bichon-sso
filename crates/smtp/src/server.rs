@@ -388,7 +388,6 @@ where
                 .await?;
         } else {
             let addr = extract_address(&trimmed[8..]);
-            // println!("DEBUG: SMTP RCPT TO extracted address -> '{}'", addr);
             let account_result = AccountModel::find_by_email(addr.as_str());
 
             match account_result {

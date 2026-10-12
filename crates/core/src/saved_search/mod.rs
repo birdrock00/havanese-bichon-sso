@@ -254,7 +254,9 @@ mod tests {
     fn duplicate_name_is_case_insensitive_within_kind() {
         let existing = vec![
             sample("1", SavedSearchKind::Email, "Tax"),
-            sample("2", SavedSearchKind::Attachment, "Tax"),
+            // A different name in a different kind: only the Email-kind
+            // "Tax" exists, so the assertions below stay meaningful.
+            sample("2", SavedSearchKind::Attachment, "Statements"),
         ];
         // Same name in Email kind -> duplicate (case-insensitive).
         assert!(SavedSearchModel::has_duplicate_name(
