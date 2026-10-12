@@ -51,7 +51,7 @@ use tracing::{info, warn};
 
 use crate::backup::config::{RestoreFileConfig, DEFAULT_PREFIX};
 use crate::backup::engine::{s3_store, BackupEngine, S3Options};
-use crate::backup::manifest::{Manifest, ObjectRef};
+use crate::backup::manifest::{Manifest, ObjectRef, LATEST_NAME, MANIFEST_PREFIX};
 use crate::backup::prepare::unpackage_dir;
 use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
@@ -84,7 +84,9 @@ pub(crate) const ATTACHMENT_INDEX_DIR: &str = "attachment_metadata";
 pub struct RestoreOptions {
     /// `s3://<endpoint>/<bucket>/<prefix>` — the backup target.
     pub s3_uri: String,
-    /// Restore a specific point (`m-<id>`); default = LATEST.
+    /// Restore a specific point; default = LATEST. [`normalize_point`]
+    /// accepts the id, the pasted object name (`m-<id>` / `m-<id>.json.gz`),
+    /// or the keyword `LATEST` (any case) for the newest point.
     pub point: Option<String>,
     /// Empty target directory (R7). Ignored in `verify_only` mode.
     pub into: PathBuf,
@@ -252,6 +254,23 @@ pub fn register_audit_replayer(replayer: Arc<dyn AuditReplayer>) {
     AUDIT_REPLAYERS.lock().unwrap().push(replayer);
 }
 
+/// Normalize a `--point` value (CLI flag, interactive prompt, drill) to a
+/// manifest id. `LATEST` (any case) and blank select the newest point — the
+/// same as passing nothing — and a name pasted straight from the bucket
+/// listing (`m-<id>` or `m-<id>.json.gz`) is accepted for the bare `<id>`,
+/// so `load_by_id` does not look for `m-m-<id>.json.gz`.
+pub(crate) fn normalize_point(point: Option<&str>) -> Option<String> {
+    let raw = point?.trim();
+    if raw.is_empty() || raw.eq_ignore_ascii_case(LATEST_NAME) {
+        return None;
+    }
+    let id = raw
+        .strip_prefix(MANIFEST_PREFIX)
+        .unwrap_or(raw)
+        .trim_end_matches(".json.gz");
+    Some(id.to_string())
+}
+
 /// Parse `s3://<endpoint>/<bucket>/<prefix>` into `(endpoint, bucket, prefix)`.
 /// `endpoint` is the bare host[:port] (`s3://localhost:9000/bichon-backups/...`);
 /// the prefix is optional and defaults to [`DEFAULT_PREFIX`].
@@ -341,8 +360,8 @@ pub struct RestorePreflight {
 
 pub async fn restore_preflight(opts: &RestoreOptions) -> BichonResult<RestorePreflight> {
     let engine = build_restore_engine(opts)?;
-    let manifest = match &opts.point {
-        Some(id) => engine.load_by_id(id).await?.ok_or_else(|| {
+    let manifest = match normalize_point(opts.point.as_deref()) {
+        Some(id) => engine.load_by_id(&id).await?.ok_or_else(|| {
             raise_error!(
                 format!("restore: restore point {id} not found"),
                 ErrorCode::ResourceNotFound
@@ -444,8 +463,8 @@ pub(crate) async fn restore_with_engine(
     engine: &BackupEngine,
 ) -> BichonResult<RestoreReport> {
     // ── pick the restore point ────────────────────────────────────────────
-    let manifest = match &opts.point {
-        Some(id) => engine.load_by_id(id).await?.ok_or_else(|| {
+    let manifest = match normalize_point(opts.point.as_deref()) {
+        Some(id) => engine.load_by_id(&id).await?.ok_or_else(|| {
             raise_error!(
                 format!("restore: restore point {id} not found"),
                 ErrorCode::ResourceNotFound
@@ -1203,6 +1222,35 @@ mod tests {
 
         assert!(parse_s3_uri("http://h/b").is_err());
         assert!(parse_s3_uri("s3://h").is_err());
+    }
+
+    #[test]
+    fn normalize_point_variants() {
+        // Keyword / blank / absent → the newest point (no explicit id).
+        assert!(normalize_point(None).is_none());
+        assert!(normalize_point(Some("")).is_none());
+        assert!(normalize_point(Some("   ")).is_none());
+        assert!(normalize_point(Some("LATEST")).is_none());
+        assert!(normalize_point(Some("latest")).is_none());
+
+        // Bare id passes through untouched.
+        assert_eq!(
+            normalize_point(Some("0192a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b")).as_deref(),
+            Some("0192a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b")
+        );
+
+        // A name pasted from the bucket listing loses its `m-` / `.json.gz`,
+        // so load_by_id does not look for `m-m-<id>.json.gz`.
+        assert_eq!(
+            normalize_point(Some("m-0192a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b")).as_deref(),
+            Some("0192a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b")
+        );
+        assert_eq!(
+            normalize_point(Some("m-0192a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b.json.gz")).as_deref(),
+            Some("0192a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b")
+        );
+        // Surrounding whitespace is tolerated.
+        assert_eq!(normalize_point(Some("  m-abc  ")).as_deref(), Some("abc"));
     }
 
     #[tokio::test]
