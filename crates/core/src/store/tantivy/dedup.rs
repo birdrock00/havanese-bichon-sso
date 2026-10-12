@@ -165,10 +165,6 @@ fn dedup_account(
 ) -> BichonResult<u64> {
     let searcher = email_reader.searcher();
     let fields = SchemaTools::email_fields();
-    // eprintln!(
-    //     "DEBUG dedup_account: entry account={account_id} f_id_field={:?} f_content_hash_field={:?}",
-    //     fields.f_id, fields.f_content_hash
-    // );
     let mut map: DedupMap = HashMap::new();
 
     // ── Phase 1: build the dedup map via FAST column scans ──────────────────
@@ -234,10 +230,6 @@ fn dedup_account(
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
             let email_id = id_buf;
 
-            // eprintln!(
-            //     "DEBUG dedup_account: account={account_id} doc_id={doc_id} mailbox={mailbox_id} hash={content_hash:?} id={email_id:?} ingest_at={ingest_at}"
-            // );
-
             map.entry((mailbox_id, content_hash))
                 .or_default()
                 .push(DedupEntry {
@@ -273,17 +265,8 @@ fn dedup_account(
             entries.len() - 1
         );
 
-        // eprintln!(
-        //     "DEBUG Phase2: key={_key:?} kept={} deleting={}",
-        //     entries[0].email_id,
-        //     entries.len() - 1
-        // );
         // Keep entries[0], soft-delete everything else via term query on f_id
         for entry in &entries[1..] {
-            eprintln!(
-                "DEBUG Phase2: delete_term f_id={:?} text=\"{}\"",
-                fields.f_id, &entry.email_id
-            );
             // Remove the duplicate email from the email index
             let email_term = Term::from_field_text(fields.f_id, &entry.email_id);
             email_writer.delete_term(email_term);
@@ -348,21 +331,17 @@ mod tests {
         reader.reload().expect("reader reload failed");
         let searcher = reader.searcher();
         let mut ids = HashSet::new();
-        let segments = searcher.segment_readers();
-        eprintln!(
-            "DEBUG surviving_email_ids: segment_count={}",
-            segments.len()
-        );
-        for (seg_idx, seg) in segments.iter().enumerate() {
+        for seg in searcher.segment_readers() {
             let id_col = seg
                 .fast_fields()
                 .str(F_ID)
                 .unwrap()
                 .expect("FAST str column 'id' missing");
             let max_doc = seg.max_doc();
-            eprintln!("DEBUG surviving_email_ids: seg={seg_idx} max_doc={max_doc}");
             for doc_id in 0..max_doc {
-                let is_del = seg.is_deleted(doc_id);
+                if seg.is_deleted(doc_id) {
+                    continue;
+                }
                 let ord = id_col
                     .ords()
                     .values_for_doc(doc_id as u32)
@@ -370,10 +349,7 @@ mod tests {
                     .unwrap_or(0);
                 let mut buf = String::new();
                 id_col.ord_to_str(ord, &mut buf).unwrap();
-                eprintln!("DEBUG surviving_email_ids: seg={seg_idx} doc_id={doc_id} is_deleted={is_del} ord={ord} buf={buf:?}");
-                if !is_del {
-                    ids.insert(buf);
-                }
+                ids.insert(buf);
             }
         }
         ids
@@ -624,28 +600,32 @@ mod tests {
         .await;
     }
 
-    /// Inspects the production email index and reports duplicate counts.
+    /// Inspects a real email index and reports duplicate counts.
     ///
     /// A "duplicate" is defined as two or more emails sharing the same
     /// (account_id, mailbox_id, content_hash) tuple.
     ///
-    /// This test is read-only — it does not modify the index.
+    /// Developer diagnostic, not part of the regular test suite: the test is
+    /// skipped unless `BICHON_DEDUP_INSPECT_INDEX` points at an index
+    /// directory (e.g. a production `mail_metadata` index). Read-only — it
+    /// does not modify the index; the report goes to stdout.
     #[test]
     fn inspect_production_duplicates() {
-        let index_path = r"E:\bichon-data\bichon-indices\mail_metadata";
-        let report_path = std::path::PathBuf::from(r"E:\bichon\dedup_report.txt");
+        let Ok(index_path) = std::env::var("BICHON_DEDUP_INSPECT_INDEX") else {
+            return;
+        };
 
         let mut report = String::new();
         let _ = writeln!(report, "opening index at {index_path}...");
 
-        let index = match Index::open_in_dir(index_path) {
+        let index = match Index::open_in_dir(&index_path) {
             Ok(idx) => {
                 let _ = writeln!(report, "index opened successfully");
                 idx
             }
             Err(e) => {
                 let _ = writeln!(report, "Failed to open index at {index_path}: {e}");
-                let _ = std::fs::write(&report_path, &report);
+                println!("{report}");
                 return;
             }
         };
@@ -654,7 +634,7 @@ mod tests {
             Ok(r) => r,
             Err(e) => {
                 let _ = writeln!(report, "Failed to create reader: {e}");
-                let _ = std::fs::write(&report_path, &report);
+                println!("{report}");
                 return;
             }
         };
@@ -745,7 +725,6 @@ mod tests {
             total_docs - total_duplicate_emails,
         );
 
-        std::fs::write(&report_path, &report).unwrap();
-        println!("report written to {}", report_path.display());
+        println!("{report}");
     }
 }

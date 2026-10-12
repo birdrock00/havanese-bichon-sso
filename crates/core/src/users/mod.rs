@@ -70,6 +70,13 @@ pub struct LoginResult {
 
 pub const DEFAULT_ADMIN_USER_ID: u64 = 100000000000000;
 
+/// Username of the default administrator created on first startup.
+pub const DEFAULT_ADMIN_USERNAME: &str = "admin";
+
+/// The password the default administrator is created with. The WebUI shows a
+/// notifications-bell reminder for as long as this password still works.
+pub const DEFAULT_ADMIN_PASSWORD: &str = "admin@bichon";
+
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct BichonUserV2 {
     pub id: u64,
@@ -329,9 +336,9 @@ impl BichonUserV2 {
             // 2. Insert the BichonUser with the updated schema
             let user = UserModel {
                 id: DEFAULT_ADMIN_USER_ID,
-                username: "admin".into(),
+                username: DEFAULT_ADMIN_USERNAME.into(),
                 email: "placeholder@example.com".into(),
-                password: Some(hash_login_password("admin@bichon")?),
+                password: Some(hash_login_password(DEFAULT_ADMIN_PASSWORD)?),
 
                 // Use global_roles as defined in our new schema
                 global_roles: vec![DEFAULT_ADMIN_ROLE_ID],
@@ -516,6 +523,21 @@ impl BichonUserV2 {
 
     pub fn find(user_id: u64) -> BichonResult<Option<UserModel>> {
         find_impl::<UserModel>(DB_MANAGER.db(), &user_id.to_string())
+    }
+
+    /// Whether the default administrator account still authenticates with the
+    /// well-known initial password. Read-only: verifies the stored hash
+    /// directly instead of going through `authenticate_user`, so probing never
+    /// touches login bookkeeping (lockout counters, audit events, token
+    /// issuance). Drives the WebUI notifications-bell reminder.
+    pub fn default_admin_password_active() -> bool {
+        match Self::find(DEFAULT_ADMIN_USER_ID) {
+            Ok(Some(user)) => match user.password.as_deref() {
+                Some(stored) => stored_password_matches(stored, DEFAULT_ADMIN_PASSWORD),
+                None => false,
+            },
+            _ => false,
+        }
     }
 
     // ── TOTP two-factor authentication ─────────────────────────────
@@ -905,6 +927,25 @@ fn hash_login_password(password: &str) -> BichonResult<String> {
         })
 }
 
+/// Verify `candidate` against a stored password hash without any of the
+/// login bookkeeping. Handles both current argon2id hashes and the legacy
+/// encrypted-format hashes, mirroring the check in `authenticate_user`.
+fn stored_password_matches(stored: &str, candidate: &str) -> bool {
+    if stored.starts_with("$argon2id$") {
+        match PasswordHash::new(stored) {
+            Ok(parsed) => Argon2::default()
+                .verify_password(candidate.as_bytes(), &parsed)
+                .is_ok(),
+            Err(_) => false,
+        }
+    } else {
+        match decrypt!(stored) {
+            Ok(decrypted) => bool::from(candidate.as_bytes().ct_eq(decrypted.as_bytes())),
+            Err(_) => false,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -932,6 +973,20 @@ mod tests {
             86_400_000,
             "expiry must be milliseconds to compare against utc_now!()"
         );
+    }
+
+    /// The bell reminder hinges on this check: a fresh default-admin hash
+    /// must match the well-known initial password, and nothing else.
+    #[test]
+    fn stored_password_matches_recognises_the_initial_password_only() {
+        let hash = hash_login_password(DEFAULT_ADMIN_PASSWORD).unwrap();
+        assert!(stored_password_matches(&hash, DEFAULT_ADMIN_PASSWORD));
+        assert!(!stored_password_matches(&hash, "admin@bichon-typo"));
+    }
+
+    #[test]
+    fn a_mangled_hash_never_matches() {
+        assert!(!stored_password_matches("not-a-valid-hash", DEFAULT_ADMIN_PASSWORD));
     }
 
     #[test]

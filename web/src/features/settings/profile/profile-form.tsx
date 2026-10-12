@@ -96,6 +96,8 @@ export function UserProfileForm({ user }: UserProfileFormProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['current-user'] })
+      // A password change can clear the default-password bell reminder.
+      queryClient.invalidateQueries({ queryKey: ['system-notifications'] })
       toast({ title: t('settings.profile.toast.updated') })
     },
     onError: (err: AxiosError) => {
