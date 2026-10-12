@@ -90,9 +90,15 @@ pub async fn rebuild_cache(
 
         match fetch_and_save_full_mailbox(&account, &mailbox, token.clone()).await {
             Ok(new_highest_uid) => {
-                let mut updated = mailbox.clone();
-                updated.highest_uid = new_highest_uid;
-                MailBox::batch_upsert(&[updated])?;
+                // Only persist a watermark when the folder actually
+                // completed: Ok(None) means the download broke mid-way (or
+                // the folder is empty), and writing it would clear the row
+                // and hide the un-downloaded range from later syncs (#377).
+                if let Some(uid) = new_highest_uid {
+                    let mut updated = mailbox.clone();
+                    updated.highest_uid = Some(uid);
+                    MailBox::batch_upsert(&[updated])?;
+                }
             }
             Err(err) => {
                 has_error = true;
@@ -174,9 +180,15 @@ pub async fn rebuild_cache_by_date(
             .await
         {
             Ok(new_highest_uid) => {
-                let mut updated = mailbox.clone();
-                updated.highest_uid = new_highest_uid;
-                MailBox::batch_upsert(&[updated])?;
+                // Only persist a watermark when the folder actually
+                // completed: Ok(None) means the download broke mid-way (or
+                // the folder is empty), and writing it would clear the row
+                // and hide the un-downloaded range from later syncs (#377).
+                if let Some(uid) = new_highest_uid {
+                    let mut updated = mailbox.clone();
+                    updated.highest_uid = Some(uid);
+                    MailBox::batch_upsert(&[updated])?;
+                }
             }
             Err(err) => {
                 has_error = true;

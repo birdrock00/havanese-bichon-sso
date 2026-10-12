@@ -52,6 +52,21 @@ fn classify_imap_error(e: &async_imap::error::Error) -> ErrorCode {
     }
 }
 
+/// The outcome of one batched body fetch ([`ImapExecutor::uid_batch_retrieve_emails`]).
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct BatchFetchOutcome {
+    /// Messages actually stored. Parse-skipped and oversized messages are
+    /// not included.
+    pub stored: u64,
+    /// The server looked like it was rate-limiting (consecutive stall
+    /// reports); callers back off before the next batch.
+    pub throttled: bool,
+    /// Messages whose body could not be parsed and were skipped (not
+    /// archived). They stay "missing" locally, so gap-fill keeps detecting
+    /// them on every later run.
+    pub parse_skipped: u64,
+}
+
 pub struct ImapExecutor;
 
 impl ImapExecutor {
@@ -286,7 +301,7 @@ impl ImapExecutor {
                     ErrorCode::InternalError
                 ));
             }
-            let (processed, throttled) = Self::uid_batch_retrieve_emails(
+            let outcome = Self::uid_batch_retrieve_emails(
                 session,
                 account.id,
                 mailbox.id,
@@ -308,12 +323,12 @@ impl ImapExecutor {
                 }),
             )
             .await?;
-            if throttled {
+            if outcome.throttled {
                 // Server appears to be rate-limiting; back off before the next
                 // batch so we don't hammer the limiter with back-to-back bursts.
                 tokio::time::sleep(std::time::Duration::from_secs(5)).await;
             }
-            count += processed;
+            count += outcome.stored;
             DownloadState::update_folder_progress(
                 account.id,
                 mailbox.name.clone(),
@@ -579,7 +594,7 @@ impl ImapExecutor {
                 )
                 .await
                 {
-                    Ok(processed) => break Ok(processed),
+                    Ok(outcome) => break Ok(outcome),
                     Err(e)
                         if retries < MAX_NETWORK_RETRIES && e.code() == ErrorCode::NetworkError =>
                     {
@@ -628,8 +643,8 @@ impl ImapExecutor {
                 }
             };
             match batch_result {
-                Ok((processed, _throttled)) => {
-                    count += processed;
+                Ok(outcome) => {
+                    count += outcome.stored;
                     DownloadState::update_folder_progress(
                         account.id,
                         mailbox.name.clone(),
@@ -644,7 +659,7 @@ impl ImapExecutor {
                         mailbox.name,
                         index + 1,
                         total_batches,
-                        processed
+                        outcome.stored
                     );
                 }
                 Err(e) => {
@@ -671,6 +686,11 @@ impl ImapExecutor {
 
     /// Downloads the bodies of `uid_set` in one batch.
     ///
+    /// A message whose body cannot be parsed is skipped — it is NOT archived,
+    /// the batch and the stream keep going, and it is reported both through
+    /// the log and as a session error so the running state shows a warning
+    /// (#377). Oversized messages are skipped the same way as before.
+    ///
     /// `progress` (if given) is invoked after each stored message with the
     /// cumulative count for the whole mailbox, the current average
     /// inter-message interval in seconds (None until at least two messages
@@ -690,7 +710,7 @@ impl ImapExecutor {
         progress: Option<
             &(dyn Fn(u64, Option<f64>, Option<f64>) -> BichonResult<()> + Send + Sync),
         >,
-    ) -> BichonResult<(u64, bool)> {
+    ) -> BichonResult<BatchFetchOutcome> {
         let limit = max_email_size_bytes.unwrap_or(DEFAULT_MAX_EMAIL_SIZE);
 
         // PASS 1: fetch only SIZE to identify oversized messages
@@ -725,7 +745,7 @@ impl ImapExecutor {
         };
 
         if acceptable_uids.is_empty() {
-            return Ok((0, false));
+            return Ok(BatchFetchOutcome::default());
         }
 
         // PASS 2: fetch bodies only for acceptable UIDs
@@ -736,6 +756,10 @@ impl ImapExecutor {
             .map_err(|e| raise_error!(format!("{:#?}", e), classify_imap_error(&e)))?;
 
         let mut count = 0u64;
+        // Messages skipped because their body could not be parsed (not
+        // archived). Reported through the outcome so callers can surface a
+        // folder-level warning and count them as failed where appropriate.
+        let mut parse_skipped = 0u64;
         // Sliding window of recent per-message receive times, used to estimate
         // how slow the server is: slow servers push messages seconds apart.
         let mut recv_times: std::collections::VecDeque<std::time::Instant> =
@@ -813,18 +837,50 @@ impl ImapExecutor {
             } else {
                 None
             };
-            if let Err(e) = extract_envelope_and_store_it(fetch, account_id, mailbox_id).await {
-                if let Some(progress) = progress {
-                    let _ = progress(count, None, None);
+            // Read the UID before the fetch is moved into the extractor, so
+            // the skip-warning below can name the message.
+            let fetch_uid = fetch.uid.unwrap_or(0);
+            match extract_envelope_and_store_it(fetch, account_id, mailbox_id).await {
+                Ok(()) => {}
+                Err(e) if e.code() == ErrorCode::EmailParseError => {
+                    // One broken message must not abort the batch (#377): it is
+                    // not stored, the stream keeps going, and the running state
+                    // gets a per-message warning so the user can find it. The
+                    // UID is never marked present locally, so gap-fill keeps
+                    // detecting it on every later run (and warns again).
+                    parse_skipped += 1;
+                    tracing::warn!(
+                        account_id,
+                        mailbox_id,
+                        uid = fetch_uid,
+                        "Skipping unparseable email (not archived)"
+                    );
+                    let _ = DownloadState::append_session_error(
+                        account_id,
+                        format!(
+                            "Skipped unparseable email (mailbox {mailbox_id}, uid {fetch_uid}): \
+                             message not archived; gap-fill will keep detecting it"
+                        ),
+                    );
+                    continue;
                 }
-                return Err(e);
+                Err(e) => {
+                    if let Some(progress) = progress {
+                        let _ = progress(count, None, None);
+                    }
+                    return Err(e);
+                }
             }
             count += 1;
             if let Some(progress) = progress {
                 progress(count, avg_secs, None)?;
             }
         }
-        Ok((count, consecutive_stalls >= 2))
+        Ok(BatchFetchOutcome {
+            stored: count,
+            throttled: consecutive_stalls >= 2,
+            parse_skipped,
+        })
     }
 
     /// Fetches the raw RFC822 body of a single message by UID.

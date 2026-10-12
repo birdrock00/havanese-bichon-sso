@@ -111,34 +111,48 @@ pub async fn gap_fill_mailbox(
     // take a while to answer `UID SEARCH ALL`; keep the UI informed instead of
     // appearing stuck (the socket read timeout is the final backstop).
     let search_started = std::time::Instant::now();
-    let results = loop {
-        match tokio::time::timeout(std::time::Duration::from_secs(5), session.uid_search("ALL"))
-            .await
-        {
-            Ok(res) => {
-                break res
-                    .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-            }
-            Err(_) => {
-                let stall = search_started.elapsed().as_secs_f64();
-                if token.is_cancelled() {
-                    session.logout().await.ok();
-                    return Ok(stats);
+    // Build the search future ONCE and keep polling it: the stall-report
+    // loop used to construct a fresh `uid_search("ALL")` future on every
+    // 5 s timeout, dropping the in-flight command (desyncing the session
+    // and restarting the server's work each time), so any mailbox whose
+    // search takes longer than one stall interval could never finish (#373).
+    // The block scope drops the pinned future before the logout on cancel —
+    // it holds the `&mut session` borrow.
+    let search_outcome = {
+        let search_fut = session.uid_search("ALL");
+        tokio::pin!(search_fut);
+        loop {
+            match tokio::time::timeout(std::time::Duration::from_secs(5), &mut search_fut).await {
+                Ok(res) => break Some(res),
+                Err(_) => {
+                    let stall = search_started.elapsed().as_secs_f64();
+                    if token.is_cancelled() {
+                        break None;
+                    }
+                    let _ = GapFillState::update_folder_progress(
+                        account_id,
+                        remote_mailbox.name.clone(),
+                        0,
+                        0,
+                        crate::imap::executor::slow_server_message(None, Some(stall)),
+                    );
+                    tracing::warn!(
+                        account_id,
+                        mailbox = %remote_mailbox.name,
+                        stall_secs = format!("{:.0}", stall),
+                        "gap-fill: UID SEARCH ALL taking long, still waiting"
+                    );
                 }
-                let _ = GapFillState::update_folder_progress(
-                    account_id,
-                    remote_mailbox.name.clone(),
-                    0,
-                    0,
-                    crate::imap::executor::slow_server_message(None, Some(stall)),
-                );
-                tracing::warn!(
-                    account_id,
-                    mailbox = %remote_mailbox.name,
-                    stall_secs = format!("{:.0}", stall),
-                    "gap-fill: UID SEARCH ALL taking long, still waiting"
-                );
             }
+        }
+    };
+    let results = match search_outcome {
+        Some(res) => {
+            res.map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
+        }
+        None => {
+            session.logout().await.ok();
+            return Ok(stats);
         }
     };
     let mut remote_uids: Vec<u32> = results.into_iter().collect();
@@ -159,29 +173,85 @@ pub async fn gap_fill_mailbox(
     // enumeration progress (and slow-server hints) while a huge mailbox is
     // being scanned.
     let headers_fetched = std::sync::Mutex::new(0u64);
+    // Header chunks share one progress callback (it only reads outer state).
+    let header_progress = |count: u64, stall_secs: Option<f64>| {
+        *headers_fetched.lock().unwrap() = count;
+        GapFillState::update_folder_progress(
+            account_id,
+            remote_mailbox.name.clone(),
+            remote_uids.len() as u64,
+            count,
+            crate::imap::executor::slow_server_message(None, stall_secs),
+        )
+    };
     for chunk in remote_uids.chunks(batch_size) {
         if token.is_cancelled() {
             cancelled = true;
             break;
         }
         let seq_set = compress_uid_list(chunk.to_vec());
-        match ImapExecutor::fetch_uid_headers(
-            &mut session,
-            &seq_set,
-            token.clone(),
-            Some(&|count, stall_secs| {
-                *headers_fetched.lock().unwrap() = count;
-                GapFillState::update_folder_progress(
-                    account_id,
-                    remote_mailbox.name.clone(),
-                    remote_uids.len() as u64,
-                    count,
-                    crate::imap::executor::slow_server_message(None, stall_secs),
-                )
-            }),
-        )
-        .await
-        {
+        // A network error mid-phase used to leave the (now dead) session in
+        // place: every later chunk silently returned no rows, so most of the
+        // folder was never compared while the run reported a tiny (or zero)
+        // candidate count. Reconnect and retry the chunk, the same way the
+        // download phase does, before giving up on it.
+        let mut header_retries = 0u32;
+        let header_result = loop {
+            match ImapExecutor::fetch_uid_headers(
+                &mut session,
+                &seq_set,
+                token.clone(),
+                Some(&header_progress),
+            )
+            .await
+            {
+                Ok(headers) => break Ok(headers),
+                Err(e)
+                    if header_retries < MAX_NETWORK_RETRIES
+                        && e.code() == ErrorCode::NetworkError =>
+                {
+                    header_retries += 1;
+                    warn!(
+                        account_id,
+                        mailbox = remote_mailbox.name,
+                        retries = header_retries,
+                        "Gap-fill: network error on header batch, reconnecting ({}/{})",
+                        header_retries,
+                        MAX_NETWORK_RETRIES
+                    );
+                    match ImapExecutor::create_connection(account_id).await {
+                        Ok(new_session) => {
+                            session = new_session;
+                            if let Err(e2) =
+                                session.examine(&remote_mailbox.encoded_name()).await
+                            {
+                                let err_msg = format!(
+                                    "Gap-fill: re-examine failed after reconnect: {:#?}",
+                                    e2
+                                );
+                                let _ = DownloadState::append_session_error(account_id, err_msg);
+                                break Err(e);
+                            }
+                            let backoff = [5u64, 15, 30][(header_retries - 1) as usize];
+                            warn!(
+                                account_id,
+                                mailbox = remote_mailbox.name,
+                                "Gap-fill: backing off {}s before retrying header batch",
+                                backoff
+                            );
+                            tokio::time::sleep(std::time::Duration::from_secs(backoff)).await;
+                            continue;
+                        }
+                        Err(e2) => {
+                            tracing::error!(account_id, "Gap-fill: reconnection failed: {:#?}", e2);
+                            break Err(e);
+                        }
+                    }
+                }
+                Err(e) => break Err(e),
+            }
+        };
+        match header_result {
             Ok(headers) => {
                 *headers_fetched.lock().unwrap() += headers.len() as u64;
                 remote_headers.extend(headers);
@@ -241,6 +311,11 @@ pub async fn gap_fill_mailbox(
         crate::imap::executor::generate_uid_sequence_hashset(missing_uids.clone(), batch_size);
     let mut downloaded = 0u64;
     let mut failed = 0u64;
+    // Messages skipped because they could not be parsed (not archived): they
+    // were candidates that did not land, so they count as failed — that keeps
+    // the watermark from advancing and guarantees the next gap-fill run
+    // re-detects them (#377).
+    let mut parse_skipped = 0u64;
     let mut cancelled = false;
     for (index, batch) in batches.into_iter().enumerate() {
         if token.is_cancelled() {
@@ -278,7 +353,7 @@ pub async fn gap_fill_mailbox(
             )
             .await
             {
-                Ok((processed, _throttled)) => break Ok(processed),
+                Ok(outcome) => break Ok(outcome),
                 Err(e) if retries < MAX_NETWORK_RETRIES && e.code() == ErrorCode::NetworkError => {
                     retries += 1;
                     warn!(
@@ -324,8 +399,9 @@ pub async fn gap_fill_mailbox(
             }
         };
         match batch_result {
-            Ok(processed) => {
-                downloaded += processed;
+            Ok(outcome) => {
+                downloaded += outcome.stored;
+                parse_skipped += outcome.parse_skipped;
                 GapFillState::update_folder_progress(
                     account_id,
                     remote_mailbox.name.clone(),
@@ -358,7 +434,24 @@ pub async fn gap_fill_mailbox(
     stats.downloaded = downloaded;
     // Accumulate rather than overwrite: phase 2 (header batch) failures already
     // counted into stats.failed and must survive alongside phase 5 failures.
-    stats.failed += failed;
+    // Parse-skipped messages count as failed too — they are never stored, so
+    // every later gap-fill run re-detects them (and warns about them again).
+    stats.failed += failed + parse_skipped;
+    // Surface the skips and the incomplete header enumeration in the folder's
+    // final message so the gap-fill running state carries a visible warning.
+    stats.message = if parse_skipped > 0 {
+        Some(format!(
+            "{parse_skipped} email(s) could not be parsed and were skipped (not archived); \
+             they will be re-detected on the next gap-fill run"
+        ))
+    } else if stats.failed > 0 {
+        Some(format!(
+            "{} email(s) could not be compared or downloaded; re-run gap-fill to retry them",
+            stats.failed
+        ))
+    } else {
+        None
+    };
     // Final progress write into the independent gap-fill state (the folder is
     // done; the outcome lands in GapFillRun.folders via add_folder_result).
     GapFillState::update_folder_progress(
