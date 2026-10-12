@@ -46,31 +46,11 @@ import { get_system_configurations } from '@/api/system/api';
 import { list_mailboxes } from '@/api/mailbox/api';
 import { extractFolderHint, type FolderHint } from './folder-hint';
 import { importFiles, errorMessage } from './import-files';
+import { isValidFileType } from './file-validation';
 
 const MAX_EML = 100 * 1024 * 1024;   // 100 MB (hardcoded)
 const DEFAULT_MAX_MBOX = 1024 * 1024 * 1024; // 1 GB (fallback; actual limit from server settings)
 const DEFAULT_MAX_PST = 2048 * 1024 * 1024; // 2 GB (fallback; actual limit from server settings)
-
-// MIME types that are clearly NOT email files — reject these upfront.
-const BLOCKED_MIME_PREFIXES = [
-  'video/', 'audio/', 'image/', 'font/',
-  'application/zip', 'application/gzip', 'application/x-tar',
-  'application/x-7z', 'application/x-rar',
-  'application/vnd.', 'application/pdf',
-  'application/x-msdownload', 'application/x-executable',
-];
-
-function isValidFileType(file: File, ext: string): boolean {
-  // Check MIME type: reject known binary types
-  const mime = file.type.toLowerCase();
-  if (mime) {
-    for (const prefix of BLOCKED_MIME_PREFIXES) {
-      if (mime.startsWith(prefix)) return false;
-    }
-  }
-  // Check extension
-  return ext === 'eml' || ext === 'mbox' || ext === 'pst';
-}
 
 type FolderMode = '' | 'header' | 'existing' | 'custom';
 
@@ -162,8 +142,12 @@ export default function ImportPage() {
     staleTime: 10_000,
   });
 
-  // Resolve the effective folder based on current mode
+  // Resolve the effective folder based on current mode.
+  // PST files carry their own folder structure (the backend ignores the
+  // mailbox id for them), but the upload endpoint still requires a non-empty
+  // mail_folder — so fall back to headerFolder ('INBOX').
   const effectiveFolder = (() => {
+    if (isPstSelected) return headerFolder;
     switch (folderMode) {
       case 'header':
         return headerFolder;
