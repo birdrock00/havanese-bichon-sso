@@ -322,6 +322,7 @@ pub struct Settings {
     )]
     pub bichon_smtp_auth_required: bool,
 
+<<<<<<< HEAD
     /// Enable the built-in IMAP server for read-only email access via standard
     /// email clients (Thunderbird, Outlook, Apple Mail, etc.).
     #[clap(
@@ -400,6 +401,8 @@ pub struct Settings {
     )]
     pub bichon_oidc_auto_redirect: bool,
 
+=======
+>>>>>>> upstream/main
     /// Maximum HTTP request body size in MB for file uploads (default: 1100 MB).
     /// Requests exceeding this limit are rejected at the framework level before
     /// the application reads the body, preventing memory exhaustion attacks.

@@ -46,6 +46,13 @@ pub struct AttachmentInfo {
     pub content_id: Option<String>,
     /// Hash of the content.
     pub content_hash: String,
+<<<<<<< HEAD
+=======
+    /// Hash of the original encoded MIME body used for lossless reconstruction.
+    /// Legacy records use `content_hash` as their storage key.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_content_hash: Option<String>,
+>>>>>>> upstream/main
     pub is_message: bool,
     /// Text extracted from the attachment body (Pro/Enterprise feature).
     /// Populated during IMAP sync; None for inline attachments and unsupported file types.
@@ -58,6 +65,15 @@ pub struct AttachmentInfo {
 }
 
 impl AttachmentInfo {
+<<<<<<< HEAD
+=======
+    pub fn storage_hash(&self) -> &str {
+        self.raw_content_hash
+            .as_deref()
+            .unwrap_or(&self.content_hash)
+    }
+
+>>>>>>> upstream/main
     pub fn is_inline(&self) -> bool {
         self.inline && self.content_id.is_some()
     }
@@ -239,6 +255,10 @@ pub fn retrieve_email_content(
             is_message,
             content_hash,
             content_id: attachment.content_id().map(Into::into),
+<<<<<<< HEAD
+=======
+            raw_content_hash: None,
+>>>>>>> upstream/main
             extracted_text: None,
             extracted_page_count: None,
             extracted_is_ocr: false,
@@ -341,6 +361,10 @@ pub fn retrieve_nested_eml_content(
             file_type,
             content_hash,
             is_message: attachment.is_message(),
+<<<<<<< HEAD
+=======
+            raw_content_hash: None,
+>>>>>>> upstream/main
             content_id: cid.map(Into::into),
             extracted_text: None,
             extracted_page_count: None,
@@ -439,6 +463,10 @@ mod tests {
                 size: 42,
                 content_id: None,
                 content_hash: "hash1".into(),
+<<<<<<< HEAD
+=======
+                raw_content_hash: Some("encoded-hash1".into()),
+>>>>>>> upstream/main
                 is_message: true,
                 extracted_text: Some("hello world".into()),
                 extracted_page_count: Some(1),
@@ -451,6 +479,10 @@ mod tests {
                 size: 99999,
                 content_id: None,
                 content_hash: "hash2".into(),
+<<<<<<< HEAD
+=======
+                raw_content_hash: None,
+>>>>>>> upstream/main
                 is_message: false,
                 extracted_text: None,
                 extracted_page_count: None,

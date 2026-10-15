@@ -838,6 +838,7 @@
     "youWillNeedToLogInAgain": "アカウントにアクセスするには、再度ログインする必要があります。"
   },
   "backup": {
+<<<<<<< HEAD
     "title": "Backup",
     "statusCard": "Backup status",
     "enabled": "Enabled",
@@ -874,6 +875,44 @@
     "previewFailed": "Failed to load preview",
     "download": "Download",
     "downloadFailed": "Failed to download file"
+=======
+    "disabled": "Disabled",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "download": "Download",
+    "downloadFailed": "Failed to download file",
+    "enabled": "Enabled",
+    "error": "Error",
+    "filesLabel": "files",
+    "lastError": "Last error",
+    "lastSnapshot": "Last snapshot",
+    "lastSuccess": "Last success",
+    "loadFailed": "Failed to load backup data",
+    "never": "Never",
+    "nextRun": "Next run",
+    "none": "None",
+    "phase": "Phase",
+    "previewFailed": "Failed to load preview",
+    "previewHint": "Select a file to preview it",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "refresh": "Refresh",
+    "runNow": "Run backup now",
+    "schedule": "Schedule",
+    "snapshot": "Snapshot",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "status": "Status",
+    "statusCard": "Backup status",
+    "statusFailed": "Failed",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "time": "Time",
+    "title": "Backup",
+    "trigger": "Trigger",
+    "triggerFailed": "Failed to start backup",
+    "triggerStarted": "Backup started"
+>>>>>>> upstream/main
   },
   "command": {
     "dark": "ダーク",
@@ -1536,8 +1575,15 @@
     "attachment": "添付ファイル",
     "auditLog": "監査ログ",
     "auth": "認証",
+<<<<<<< HEAD
     "compliance": "コンプライアンス",
     "complianceDashboard": "コンプライアンスダッシュボード",
+=======
+    "backup": "Backup",
+    "compliance": "コンプライアンス",
+    "complianceDashboard": "コンプライアンスダッシュボード",
+    "complianceSettings": "設定",
+>>>>>>> upstream/main
     "dashboard": "ダッシュボード",
     "general": "一般",
     "home": "ホーム",
@@ -1549,8 +1595,12 @@
     "other": "その他",
     "settings": "設定",
     "timestampAnchor": "タイムスタンプ固定",
+<<<<<<< HEAD
     "users": "システムユーザー",
     "backup": "Backup"
+=======
+    "users": "システムユーザー"
+>>>>>>> upstream/main
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "OAuthプロバイダーから提供される、アプリケーションを認証するためのシークレットキー。",
@@ -2405,9 +2455,15 @@
     "title": "サインアウト"
   },
   "system": {
+<<<<<<< HEAD
     "notifications": "システム通知",
     "alertError": "Error",
     "alertWarning": "Warning"
+=======
+    "alertError": "Error",
+    "alertWarning": "Warning",
+    "notifications": "システム通知"
+>>>>>>> upstream/main
   },
   "systemConfig": {
     "pageDescription": "これらのパラメータは、CLIフラグまたは環境変数を介して初期化されます。環境の一貫性を確保するため、現在は読み取り専用です。",
@@ -2822,4 +2878,8 @@
     "singleRequestBatchSizeTooLarge": "バッチサイズは最大でも200でなければなりません",
     "singleRequestBatchSizeTooSmall": "バッチサイズは最低でも10でなければなりません"
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> upstream/main

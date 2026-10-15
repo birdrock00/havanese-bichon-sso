@@ -28,11 +28,18 @@ import {
   Lock,
   Paperclip,
   Search,
+<<<<<<< HEAD
+=======
+  Settings2,
+>>>>>>> upstream/main
   ShieldCheck,
   Upload,
   Users2,
   ScrollText,
+<<<<<<< HEAD
   Settings2,
+=======
+>>>>>>> upstream/main
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/use-current-user'
@@ -162,8 +169,16 @@ export function useSidebarData(): SidebarData {
             title: t('navigation.integrity', 'Integrity'),
             url: '/integrity',
             icon: ShieldCheck,
+<<<<<<< HEAD
             visible:
               isEnterprise &&
+=======
+            // The backend serves integrity checks from the Pro edition up
+            // (bichon-pro integrity.rs) and the page itself gates on isPro;
+            // isEnterprise here hid the entry for plain-Pro installs.
+            visible:
+              isPro &&
+>>>>>>> upstream/main
               require_any_permission([
                 'system:root',
                 'account:manage:all',
@@ -237,11 +252,23 @@ export function useSidebarData(): SidebarData {
               ]),
           },
           {
+<<<<<<< HEAD
             title: t(
               'navigation.complianceSettings',
               'Compliance configuration',
             ),
             url: '/settings/compliance',
+=======
+            // The compliance REST endpoints live on the Pro server only
+            // (see rest/compliance_config.rs there), so the community
+            // edition — which always reports edition=community — never
+            // passes this gate and never shows the entry.
+            title: t(
+              'navigation.complianceSettings',
+              'Configuration',
+            ),
+            url: '/configuration',
+>>>>>>> upstream/main
             icon: Settings2,
             visible:
               (isPro || isEnterprise) &&

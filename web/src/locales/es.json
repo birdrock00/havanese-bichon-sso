@@ -838,6 +838,7 @@
     "youWillNeedToLogInAgain": "Necesitarás iniciar sesión de nuevo para acceder a tu cuenta."
   },
   "backup": {
+<<<<<<< HEAD
     "title": "Backup",
     "statusCard": "Backup status",
     "enabled": "Enabled",
@@ -874,6 +875,44 @@
     "previewFailed": "Failed to load preview",
     "download": "Download",
     "downloadFailed": "Failed to download file"
+=======
+    "disabled": "Disabled",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "download": "Download",
+    "downloadFailed": "Failed to download file",
+    "enabled": "Enabled",
+    "error": "Error",
+    "filesLabel": "files",
+    "lastError": "Last error",
+    "lastSnapshot": "Last snapshot",
+    "lastSuccess": "Last success",
+    "loadFailed": "Failed to load backup data",
+    "never": "Never",
+    "nextRun": "Next run",
+    "none": "None",
+    "phase": "Phase",
+    "previewFailed": "Failed to load preview",
+    "previewHint": "Select a file to preview it",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "refresh": "Refresh",
+    "runNow": "Run backup now",
+    "schedule": "Schedule",
+    "snapshot": "Snapshot",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "status": "Status",
+    "statusCard": "Backup status",
+    "statusFailed": "Failed",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "time": "Time",
+    "title": "Backup",
+    "trigger": "Trigger",
+    "triggerFailed": "Failed to start backup",
+    "triggerStarted": "Backup started"
+>>>>>>> upstream/main
   },
   "command": {
     "dark": "Oscuro",
@@ -1536,8 +1575,15 @@
     "attachment": "Archivos adjuntos",
     "auditLog": "Registro de auditoría",
     "auth": "Autenticación",
+<<<<<<< HEAD
     "compliance": "Cumplimiento",
     "complianceDashboard": "Panel de cumplimiento",
+=======
+    "backup": "Backup",
+    "compliance": "Cumplimiento",
+    "complianceDashboard": "Panel de cumplimiento",
+    "complianceSettings": "Configuración",
+>>>>>>> upstream/main
     "dashboard": "Panel de control",
     "general": "General",
     "home": "Inicio",
@@ -1549,8 +1595,12 @@
     "other": "Otro",
     "settings": "Configuración",
     "timestampAnchor": "Anclaje de marca de tiempo",
+<<<<<<< HEAD
     "users": "Usuarios del sistema",
     "backup": "Backup"
+=======
+    "users": "Usuarios del sistema"
+>>>>>>> upstream/main
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "Una clave secreta proporcionada por el proveedor OAuth para autenticar tu aplicación.",
@@ -2405,9 +2455,15 @@
     "title": "Cerrar sesión"
   },
   "system": {
+<<<<<<< HEAD
     "notifications": "Notificaciones del sistema",
     "alertError": "Error",
     "alertWarning": "Warning"
+=======
+    "alertError": "Error",
+    "alertWarning": "Warning",
+    "notifications": "Notificaciones del sistema"
+>>>>>>> upstream/main
   },
   "systemConfig": {
     "pageDescription": "Estos parámetros se inicializan mediante indicadores CLI o variables de entorno. Actualmente son de solo lectura.",
@@ -2822,4 +2878,8 @@
     "singleRequestBatchSizeTooLarge": "El tamaño del lote debe ser como máximo 200",
     "singleRequestBatchSizeTooSmall": "El tamaño del lote debe ser al menos 10"
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> upstream/main

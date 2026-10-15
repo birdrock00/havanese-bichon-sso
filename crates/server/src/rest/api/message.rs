@@ -21,6 +21,10 @@ use crate::rest::api::ApiTags;
 use crate::rest::ApiResult;
 use bichon_core::account::migration::AccountModel;
 use bichon_core::common::paginated::DataPage;
+<<<<<<< HEAD
+=======
+use bichon_core::envelope::extractor::{repair_envelope_blobs, BlobRepairReport};
+>>>>>>> upstream/main
 use bichon_core::error::code::ErrorCode;
 use bichon_core::message::append::restore_emails;
 use bichon_core::message::append::RestoreMessagesRequest;
@@ -286,6 +290,32 @@ impl MessageApi {
         Ok(attachment)
     }
 
+<<<<<<< HEAD
+=======
+    /// Re-fetches one archived message from IMAP and restores missing email or
+    /// attachment blobs in place. The envelope and its id are kept, so no
+    /// duplicate is created; nothing is written unless the fetched message
+    /// hashes to the archived content hash.
+    #[oai(
+        path = "/repair-message/:account_id/:envelope_id",
+        method = "post",
+        operation_id = "repair_message"
+    )]
+    async fn repair_message(
+        &self,
+        /// The ID of the account.
+        account_id: Path<u64>,
+        /// The ID of the message to repair.
+        envelope_id: Path<String>,
+        context: WrappedContext,
+    ) -> ApiResult<Json<BlobRepairReport>> {
+        let account_id = account_id.0;
+        AccountModel::check_account_exists(account_id)?;
+        context.require_permission(Some(account_id), Permission::DATA_MANAGE)?;
+        Ok(Json(repair_envelope_blobs(account_id, &envelope_id.0).await?))
+    }
+
+>>>>>>> upstream/main
     /// Restore an email to an account's IMAP server.
     #[oai(
         path = "/restore-messages/:account_id",

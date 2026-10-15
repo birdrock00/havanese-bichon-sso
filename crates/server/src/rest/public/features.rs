@@ -16,12 +16,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+<<<<<<< HEAD
 use bichon_core::settings::cli::SETTINGS;
+=======
+>>>>>>> upstream/main
 use poem::{handler, web::Json, IntoResponse};
 use serde::Serialize;
 
 #[derive(Serialize)]
 struct FeaturesResponse {
+<<<<<<< HEAD
     features: Vec<String>,
     edition: &'static str,
     version: String,
@@ -30,10 +34,15 @@ struct FeaturesResponse {
     sso_enabled: bool,
     ldap_enabled: bool,
     siem_enabled: bool,
+=======
+    edition: &'static str,
+    version: String,
+>>>>>>> upstream/main
 }
 
 #[handler]
 pub async fn get_features() -> impl IntoResponse {
+<<<<<<< HEAD
     let oidc_enabled = SETTINGS.bichon_oidc_enabled
         && SETTINGS.bichon_oidc_issuer_url.is_some()
         && SETTINGS.bichon_oidc_client_id.is_some()
@@ -57,5 +66,10 @@ pub async fn get_features() -> impl IntoResponse {
         sso_enabled: oidc_enabled,
         ldap_enabled: false,
         siem_enabled: false,
+=======
+    Json(FeaturesResponse {
+        edition: "community",
+        version: env!("CARGO_PKG_VERSION").to_string(),
+>>>>>>> upstream/main
     })
 }

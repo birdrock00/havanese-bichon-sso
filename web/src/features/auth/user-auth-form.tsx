@@ -17,7 +17,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+<<<<<<< HEAD
 import { HTMLAttributes, useEffect, useState } from 'react'
+=======
+import { HTMLAttributes, useState } from 'react'
+>>>>>>> upstream/main
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { cn, toSearchParams } from '@/lib/utils'
@@ -43,11 +47,16 @@ import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
 import { KeyRound, Loader2, LogIn, Shield } from 'lucide-react'
 import { ldapLogin, login, mfaVerify, type LoginResult } from '@/api/users/api'
+<<<<<<< HEAD
+=======
+import { resolveApiUrl } from '@/api/branding/api'
+>>>>>>> upstream/main
 import { useTheme } from '@/context/theme-context'
 import { useEdition } from '@/hooks/use-edition'
 
 type UserAuthFormProps = HTMLAttributes<HTMLDivElement>
 
+<<<<<<< HEAD
 function buildOidcLoginUrl(redirectTo: string): string {
   const injectedBase = (window as unknown as { __BICHON_BASE__?: string }).__BICHON_BASE__
   const base = !injectedBase || injectedBase === '/' ? '' : injectedBase.replace(/\/$/, '')
@@ -59,12 +68,15 @@ function buildOidcLoginUrl(redirectTo: string): string {
   return `${base}/api/auth/oidc/login${qs ? `?${qs}` : ''}`
 }
 
+=======
+>>>>>>> upstream/main
 export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [mfaChallenge, setMfaChallenge] = useState<string | null>(null)
   const { setTheme } = useTheme();
   const navigate = useNavigate()
   const { t } = useTranslation()
+<<<<<<< HEAD
   const { oidcEnabled, oidcAutoRedirect, ssoEnabled, ldapEnabled } = useEdition()
 
   const { search } = useLocation();
@@ -72,12 +84,19 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const redirect = searchParams.get('redirect') || '/';
   const localOnly = searchParams.get('local') === '1';
   const ssoError = searchParams.get('sso_error');
+=======
+  const { search } = useLocation();
+  const redirect = toSearchParams(search).get('redirect') || '/';
+
+  const { isPro, ssoEnabled, ldapEnabled } = useEdition()
+>>>>>>> upstream/main
   // Enterprise LDAP: the form authenticates against the directory (default
   // when enabled); a link lets the user fall back to their local account.
   const [loginMode, setLoginMode] = useState<'local' | 'ldap'>(
     ldapEnabled ? 'ldap' : 'local',
   )
 
+<<<<<<< HEAD
   useEffect(() => {
     if (ssoError) {
       toast({
@@ -94,6 +113,8 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     }
   }, [oidcEnabled, oidcAutoRedirect, localOnly, ssoError, redirect])
 
+=======
+>>>>>>> upstream/main
   const formSchema = getFormSchema(t)
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(formSchema),
@@ -256,15 +277,30 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
                   {t('auth.login')}
                 </Button>
 
+<<<<<<< HEAD
                 {(oidcEnabled || ssoEnabled) && (
+=======
+                {isPro && (
+>>>>>>> upstream/main
                   <Button
                     variant='outline'
                     className='mt-2 w-full'
                     type='button'
                     onClick={() => {
+<<<<<<< HEAD
                       // Fork community SSO and upstream Pro SSO share the
                       // same OIDC endpoints; preserve redirect + base path.
                       window.location.href = buildOidcLoginUrl(redirect)
+=======
+                      if (ssoEnabled) {
+                        window.location.href = resolveApiUrl('/api/auth/oidc/login')
+                      } else {
+                        toast({
+                          title: t('auth.ssoNotEnabled'),
+                          description: t('auth.ssoNotEnabledDesc'),
+                        })
+                      }
+>>>>>>> upstream/main
                     }}
                   >
                     <Shield size={16} className='mr-2' />

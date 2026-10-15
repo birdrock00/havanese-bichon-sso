@@ -1,4 +1,5 @@
 <p align="center">
+<<<<<<< HEAD
     <img width="200" height="175" alt="havanese-bichon-sso Logo" src="https://github.com/user-attachments/assets/06dc3b67-7d55-4a93-a3de-8b90951c575b" />
 </p>
 
@@ -15,16 +16,35 @@
     <img src="https://img.shields.io/github/stars/birdrock00/havanese-bichon-sso?style=for-the-badge&color=gold&label=STARS" alt="GitHub Stars">
   </a>
   <a href="https://github.com/birdrock00/havanese-bichon-sso/pkgs/container/havanese-bichon-sso"><img src="https://img.shields.io/badge/ghcr.io-birdrock00%2Fhavanese--bichon--sso-2496ED?style=for-the-badge" alt="GHCR Image"></a>
+=======
+    <img width="200" height="175" alt="havanese-bichon-sso Logo" src="https://github.com/user-attachments/assets/06dc3b67-7d55-4a93-a3de-8b90951c575b" />
+</p>
+
+<H1 align="center">HAVANESE-BICHON-SSO</H1>
+
+<p align="center">
+  <a href="https://github.com/birdrock00/havanese-bichon-sso/stargazers">
+    <img src="https://img.shields.io/github/stars/birdrock00/havanese-bichon-sso?style=for-the-badge&color=gold&label=STARS" alt="GitHub Stars">
+  </a>
+  <a href="https://github.com/birdrock00/havanese-bichon-sso/pkgs/container/havanese-bichon-sso"><img src="https://img.shields.io/badge/ghcr.io-birdrock00%2Fhavanese--bichon--sso-2496ED?style=for-the-badge" alt="GHCR Image"></a>
+>>>>>>> upstream/main
   <a href="https://docs.google.com/forms/d/e/1FAIpQLScOlwsiUMfyQPBCLW2MLkygdRmAutEgvXDYPzzvEGPz0HFPXQ/viewform">
     <img src="https://img.shields.io/badge/Roadmap-2026_Survey-blue?style=for-the-badge&logo=googleforms" alt="User Survey">
   </a>
 </p>
 
 <p align="center">
+<<<<<<< HEAD
   <a href="https://github.com/birdrock00/havanese-bichon-sso/releases">
     <img src="https://img.shields.io/github/v/release/birdrock00/havanese-bichon-sso" alt="Release">
   </a>
   <a href="https://github.com/birdrock00/havanese-bichon-sso/pkgs/container/havanese-bichon-sso"><img src="https://img.shields.io/badge/docker-ghcr.io-2496ED?style=for-the-badge" alt="Docker"></a>
+=======
+  <a href="https://github.com/birdrock00/havanese-bichon-sso/releases">
+    <img src="https://img.shields.io/github/v/release/birdrock00/havanese-bichon-sso" alt="Release">
+  </a>
+  <a href="https://github.com/birdrock00/havanese-bichon-sso/pkgs/container/havanese-bichon-sso"><img src="https://img.shields.io/badge/docker-ghcr.io-2496ED?style=for-the-badge" alt="Docker"></a>
+>>>>>>> upstream/main
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-AGPLv3-blue.svg" alt="License">
   </a>
@@ -50,7 +70,11 @@
 </p>
 
 > [!NOTE]
+<<<<<<< HEAD
 > havanese-bichon-sso is an **archiver**, not an email client. It does not send, compose, forward, or reply to emails. Its optional SMTP server is for **receiving** emails only.
+=======
+> havanese-bichon-sso is an **archiver**, not an email client. It does not send, compose, forward, or reply to emails. Its optional SMTP server is for **receiving** emails only.
+>>>>>>> upstream/main
 
 ## Contents
 
@@ -119,7 +143,11 @@
 
 ```bash
 # Pull the image
+<<<<<<< HEAD
 docker pull ghcr.io/birdrock00/havanese-bichon-sso:latest
+=======
+docker pull ghcr.io/birdrock00/havanese-bichon-sso:latest
+>>>>>>> upstream/main
 
 # Create data directory
 mkdir -p ./bichon-data
@@ -132,7 +160,11 @@ docker run -d \
   --user 1000:1000 \
   -e BICHON_ROOT_DIR=/data \
   -e BICHON_ENCRYPT_PASSWORD=your-secure-password-here \
+<<<<<<< HEAD
   ghcr.io/birdrock00/havanese-bichon-sso:latest
+=======
+  ghcr.io/birdrock00/havanese-bichon-sso:latest
+>>>>>>> upstream/main
 ```
 
 Open **[http://localhost:15630](http://localhost:15630)** in your browser.
@@ -145,7 +177,11 @@ Open **[http://localhost:15630](http://localhost:15630)** in your browser.
 ```yaml
 services:
   bichon:
+<<<<<<< HEAD
     image: ghcr.io/birdrock00/havanese-bichon-sso:latest
+=======
+    image: ghcr.io/birdrock00/havanese-bichon-sso:latest
+>>>>>>> upstream/main
     container_name: bichon
     ports:
       - "15630:15630"
@@ -160,7 +196,11 @@ services:
 
 ### Binary Installation
 
+<<<<<<< HEAD
 Download from the [Releases](https://github.com/birdrock00/havanese-bichon-sso/releases) page:
+=======
+Download from the [Releases](https://github.com/birdrock00/havanese-bichon-sso/releases) page:
+>>>>>>> upstream/main
 
 | Platform | Archive |
 |----------|---------|
@@ -177,15 +217,24 @@ Download from the [Releases](https://github.com/birdrock00/havanese-bichon-sso/r
 .\bichon.exe --bichon-root-dir E:\bichon-data --bichon-encrypt-password your-password
 ```
 
+<<<<<<< HEAD
 `--bichon-root-dir` **must be an absolute path**. All havanese-bichon-sso data lives under this directory.
+=======
+`--bichon-root-dir` **must be an absolute path**. All havanese-bichon-sso data lives under this directory.
+>>>>>>> upstream/main
 
 ### Build from Source
 
 **Prerequisites:** Rust (latest stable), Node.js 20+, pnpm
 
 ```bash
+<<<<<<< HEAD
 git clone https://github.com/birdrock00/havanese-bichon-sso.git
 cd havanese-bichon-sso
+=======
+git clone https://github.com/birdrock00/havanese-bichon-sso.git
+cd havanese-bichon-sso
+>>>>>>> upstream/main
 
 # Build and run — frontend dependencies are installed and built automatically via build.rs
 export BICHON_ENCRYPT_PASSWORD=dev-password
@@ -250,6 +299,7 @@ All settings accept both CLI flags (`--bichon-http-port`) and environment variab
 |----------|---------|-------------|
 | `BICHON_ENABLE_REST_HTTPS` | `false` | Serve the API over HTTPS (requires valid certificate) |
 
+<<<<<<< HEAD
 ### OpenID Connect (OIDC) Single Sign-On
 
 havanese-bichon-sso can delegate WebUI authentication to any OIDC provider (Authentik,
@@ -288,6 +338,8 @@ headers, or server access logs.
 > callbacks. Behind a reverse proxy this must be the externally-reachable
 > URL, not `http://localhost:15630`.
 
+=======
+>>>>>>> upstream/main
 ### SMTP Server
 
 | Variable | Default | Description |
@@ -311,7 +363,11 @@ headers, or server access logs.
 
 
 > [!IMPORTANT]
+<<<<<<< HEAD
 > havanese-bichon-sso does NOT support writing data directly to a network file system (NFS, CIFS/SMB, etc.). All directories — `BICHON_ROOT_DIR`, `BICHON_DATA_DIR`, and `BICHON_INDEX_DIR` — must reside on a **local file system**; otherwise, data corruption may occur.
+=======
+> havanese-bichon-sso does NOT support writing data directly to a network file system (NFS, CIFS/SMB, etc.). All directories — `BICHON_ROOT_DIR`, `BICHON_DATA_DIR`, and `BICHON_INDEX_DIR` — must reside on a **local file system**; otherwise, data corruption may occur.
+>>>>>>> upstream/main
 
 ### Performance Tuning
 
@@ -326,6 +382,7 @@ headers, or server access logs.
 ### Authentication
 
 1. `POST /api/login` with username + password returns a JWT access token
+<<<<<<< HEAD
 2. `GET /api/auth/oidc/login` starts an OIDC single sign-on flow (see [OIDC](#openid-connect-oidc-single-sign-on))
 3. All `/api/v1/*` endpoints require `Authorization: Bearer <token>`
 4. Tokens expire after the configured duration (`BICHON_WEBUI_TOKEN_EXPIRATION_HOURS`, default 7 days)
@@ -334,6 +391,15 @@ headers, or server access logs.
 ### Default Admin Account
 
 On first start, havanese-bichon-sso creates a built-in admin user:
+=======
+2. All `/api/v1/*` endpoints require `Authorization: Bearer <token>`
+3. Tokens expire after the configured duration (`BICHON_WEBUI_TOKEN_EXPIRATION_HOURS`, default 7 days)
+4. Long-lived API tokens can be created via WebUI or API for programmatic access
+
+### Default Admin Account
+
+On first start, havanese-bichon-sso creates a built-in admin user:
+>>>>>>> upstream/main
 
 - **Username:** `admin`
 - **Password:** `admin@bichon`
@@ -449,7 +515,11 @@ All `/api/v1/*` endpoints require `Authorization: Bearer <token>`.
 | **API Import** | `POST /api/v1/import` | Base64-encoded EML payloads for programmatic use |
 | **MBOX Export** | `bichon-cli` | Download account data as `.mbox` file |
 
+<<<<<<< HEAD
 All imports flow through the havanese-bichon-sso REST API. The server parses MIME, extracts metadata, indexes content into Tantivy, deduplicates by BLAKE3 content hash, and stores raw blobs in bichon-blob.
+=======
+All imports flow through the havanese-bichon-sso REST API. The server parses MIME, extracts metadata, indexes content into Tantivy, deduplicates by BLAKE3 content hash, and stores raw blobs in bichon-blob.
+>>>>>>> upstream/main
 
 ## Architecture
 
@@ -611,7 +681,11 @@ Every ingested email is hashed with BLAKE3. Attachments are detached from the MI
 Back up the entire `BICHON_ROOT_DIR` (and `BICHON_INDEX_DIR` / `BICHON_DATA_DIR` if overridden). **All three layers must be backed up together** for consistency.
 
 > [!WARNING]
+<<<<<<< HEAD
 > Do not place `BICHON_ROOT_DIR` or index/data directories directly on network-mounted storage (NFS, SMB, etc.). This can cause index corruption and data loss. Always run havanese-bichon-sso on local storage and use rsync or similar tools to sync to remote destinations.
+=======
+> Do not place `BICHON_ROOT_DIR` or index/data directories directly on network-mounted storage (NFS, SMB, etc.). This can cause index corruption and data loss. Always run havanese-bichon-sso on local storage and use rsync or similar tools to sync to remote destinations.
+>>>>>>> upstream/main
 
 ```bash
 # Example with rsync
@@ -644,7 +718,11 @@ Language preference and UI theme are saved to your user profile and can be chang
 
 ## Data Migration
 
+<<<<<<< HEAD
 havanese-bichon-sso v2.x replaces the Fjall blob engine with bichon-blob. Two migration paths are available:
+=======
+havanese-bichon-sso v2.x replaces the Fjall blob engine with bichon-blob. Two migration paths are available:
+>>>>>>> upstream/main
 
 | Layer | v0.3.7 (Legacy) | v1.x | v2.x |
 | :--- | :--- | :--- | :--- |
@@ -671,7 +749,11 @@ Rebuilds Tantivy indexes, migrates metadata to memdb, and converts blobs to bich
 Copies blobs from Fjall to bichon-blob. Tantivy indexes and memdb are left untouched.
 
 > [!NOTE]
+<<<<<<< HEAD
 > Both migrations are **non-destructive** — legacy files are never modified. After verifying the migration was successful, see the [Migration Guide](https://github.com/birdrock00/havanese-bichon-sso/wiki/Bichon-v2.x-Migration-Guide) for cleanup instructions.
+=======
+> Both migrations are **non-destructive** — legacy files are never modified. After verifying the migration was successful, see the [Migration Guide](https://github.com/birdrock00/havanese-bichon-sso/wiki/Bichon-v2.x-Migration-Guide) for cleanup instructions.
+>>>>>>> upstream/main
 
 ## FAQ
 
@@ -684,9 +766,15 @@ Copies blobs from Fjall to bichon-blob. Tantivy indexes and memdb are left untou
 
 ### "Legacy data layout detected" error on startup
 
+<<<<<<< HEAD
 Your data was created by an older version of havanese-bichon-sso and must be migrated. Run `./bichon-admin` and select the appropriate migration option.
 
 ### How do I run havanese-bichon-sso behind a reverse proxy?
+=======
+Your data was created by an older version of havanese-bichon-sso and must be migrated. Run `./bichon-admin` and select the appropriate migration option.
+
+### How do I run havanese-bichon-sso behind a reverse proxy?
+>>>>>>> upstream/main
 
 Set `BICHON_BASE_URL=/bichon` (or your sub-path) and configure your proxy:
 
@@ -699,11 +787,19 @@ location /bichon/ {
 }
 ```
 
+<<<<<<< HEAD
 ### Can havanese-bichon-sso send emails?
 
 No. havanese-bichon-sso is an **archiver**, not an email client. The optional SMTP server **receives** emails only — it cannot send, forward, or reply.
 
 ### What hardware does havanese-bichon-sso need?
+=======
+### Can havanese-bichon-sso send emails?
+
+No. havanese-bichon-sso is an **archiver**, not an email client. The optional SMTP server **receives** emails only — it cannot send, forward, or reply.
+
+### What hardware does havanese-bichon-sso need?
+>>>>>>> upstream/main
 
 - **Recommended:** 4+ CPU cores, 2+ GB RAM (sufficient for 10+ accounts and 200+ GB of archived data)
 - Filesystem: use a mainstream Linux filesystem such as **ext4** or **XFS**; avoid network / virtual filesystems (NFS, VirtIO-FS) for all data directories
@@ -718,9 +814,15 @@ No. havanese-bichon-sso is an **archiver**, not an email client. The optional SM
 
 ### Where can I get help?
 
+<<<<<<< HEAD
 - [GitHub Issues](https://github.com/birdrock00/havanese-bichon-sso/issues)
 - [Discord](https://discord.gg/Bq4M2cDmF4)
 - [Wiki](https://github.com/birdrock00/havanese-bichon-sso/wiki)
+=======
+- [GitHub Issues](https://github.com/birdrock00/havanese-bichon-sso/issues)
+- [Discord](https://discord.gg/Bq4M2cDmF4)
+- [Wiki](https://github.com/birdrock00/havanese-bichon-sso/wiki)
+>>>>>>> upstream/main
 
 ## Roadmap
 
@@ -738,8 +840,12 @@ No. havanese-bichon-sso is an **archiver**, not an email client. The optional SM
 - [ ] Account-to-account email merge / migration
 - [ ] MCP Server for LLM-powered email search and analysis
 - [ ] S3-compatible storage backend
+<<<<<<< HEAD
 - [x] OpenID Connect (OIDC) single sign-on — see [OpenID Connect](#openid-connect-oidc-single-sign-on)
 - [ ] SAML single sign-on
+=======
+- [ ] Enterprise SSO (OIDC / SAML)
+>>>>>>> upstream/main
 
 ## Contributing
 
@@ -749,8 +855,13 @@ Contributions of all kinds are welcome — code, bug reports, documentation, or 
 > By submitting a Pull Request, you agree to the terms of the [Contributor License Agreement](CLA.md).
 
 ```bash
+<<<<<<< HEAD
 git clone https://github.com/birdrock00/havanese-bichon-sso.git
 cd havanese-bichon-sso
+=======
+git clone https://github.com/birdrock00/havanese-bichon-sso.git
+cd havanese-bichon-sso
+>>>>>>> upstream/main
 
 # Build backend — frontend dependencies and build are handled automatically via build.rs
 cargo build
@@ -766,7 +877,11 @@ cargo test
 >
 > **Large, hard-to-review PRs** that touch many modules or contain substantial changes may be **rejected outright**. Break your work into smaller, focused PRs — one logical change per PR.
 
+<<<<<<< HEAD
 Feel free to open an [Issue](https://github.com/birdrock00/havanese-bichon-sso/issues) or join the [Discord](https://discord.gg/Bq4M2cDmF4) to discuss ideas.
+=======
+Feel free to open an [Issue](https://github.com/birdrock00/havanese-bichon-sso/issues) or join the [Discord](https://discord.gg/Bq4M2cDmF4) to discuss ideas.
+>>>>>>> upstream/main
 
 #### Guidelines
 
@@ -811,5 +926,9 @@ Rules:
 
 ## License
 
+<<<<<<< HEAD
 havanese-bichon-sso is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+=======
+havanese-bichon-sso is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+>>>>>>> upstream/main
 Copyright &copy; 2025–2026 [rustmailer.com](https://rustmailer.com)

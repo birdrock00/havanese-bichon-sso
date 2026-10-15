@@ -838,6 +838,7 @@
     "youWillNeedToLogInAgain": "Dovrai accedere nuovamente per accedere al tuo account."
   },
   "backup": {
+<<<<<<< HEAD
     "title": "Backup",
     "statusCard": "Backup status",
     "enabled": "Enabled",
@@ -874,6 +875,44 @@
     "previewFailed": "Failed to load preview",
     "download": "Download",
     "downloadFailed": "Failed to download file"
+=======
+    "disabled": "Disabled",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "download": "Download",
+    "downloadFailed": "Failed to download file",
+    "enabled": "Enabled",
+    "error": "Error",
+    "filesLabel": "files",
+    "lastError": "Last error",
+    "lastSnapshot": "Last snapshot",
+    "lastSuccess": "Last success",
+    "loadFailed": "Failed to load backup data",
+    "never": "Never",
+    "nextRun": "Next run",
+    "none": "None",
+    "phase": "Phase",
+    "previewFailed": "Failed to load preview",
+    "previewHint": "Select a file to preview it",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "refresh": "Refresh",
+    "runNow": "Run backup now",
+    "schedule": "Schedule",
+    "snapshot": "Snapshot",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "status": "Status",
+    "statusCard": "Backup status",
+    "statusFailed": "Failed",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "time": "Time",
+    "title": "Backup",
+    "trigger": "Trigger",
+    "triggerFailed": "Failed to start backup",
+    "triggerStarted": "Backup started"
+>>>>>>> upstream/main
   },
   "command": {
     "dark": "Scuro",
@@ -1536,8 +1575,15 @@
     "attachment": "Allegati",
     "auditLog": "Registro di controllo",
     "auth": "Autenticazione",
+<<<<<<< HEAD
     "compliance": "Conformità",
     "complianceDashboard": "Dashboard di conformità",
+=======
+    "backup": "Backup",
+    "compliance": "Conformità",
+    "complianceDashboard": "Dashboard di conformità",
+    "complianceSettings": "Configurazione",
+>>>>>>> upstream/main
     "dashboard": "Dashboard",
     "general": "Generale",
     "home": "Home",
@@ -1549,8 +1595,12 @@
     "other": "Altro",
     "settings": "Impostazioni",
     "timestampAnchor": "Ancoraggio temporale",
+<<<<<<< HEAD
     "users": "Utenti di sistema",
     "backup": "Backup"
+=======
+    "users": "Utenti di sistema"
+>>>>>>> upstream/main
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "Una chiave segreta fornita dal provider OAuth per autenticare la tua applicazione.",
@@ -2405,9 +2455,15 @@
     "title": "Disconnetti"
   },
   "system": {
+<<<<<<< HEAD
     "notifications": "Notifiche di sistema",
     "alertError": "Error",
     "alertWarning": "Warning"
+=======
+    "alertError": "Error",
+    "alertWarning": "Warning",
+    "notifications": "Notifiche di sistema"
+>>>>>>> upstream/main
   },
   "systemConfig": {
     "pageDescription": "Questi parametri sono inizializzati tramite flag CLI o variabili d'ambiente. Sono di sola lettura per garantire la coerenza.",
@@ -2822,4 +2878,8 @@
     "singleRequestBatchSizeTooLarge": "La dimensione del batch deve essere al massimo 200",
     "singleRequestBatchSizeTooSmall": "La dimensione del batch deve essere almeno 10"
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> upstream/main

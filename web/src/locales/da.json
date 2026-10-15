@@ -838,6 +838,7 @@
     "youWillNeedToLogInAgain": "Du skal logge ind igen for at få adgang til din konto."
   },
   "backup": {
+<<<<<<< HEAD
     "title": "Backup",
     "statusCard": "Backup status",
     "enabled": "Enabled",
@@ -874,6 +875,44 @@
     "previewFailed": "Failed to load preview",
     "download": "Download",
     "downloadFailed": "Failed to download file"
+=======
+    "disabled": "Disabled",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "download": "Download",
+    "downloadFailed": "Failed to download file",
+    "enabled": "Enabled",
+    "error": "Error",
+    "filesLabel": "files",
+    "lastError": "Last error",
+    "lastSnapshot": "Last snapshot",
+    "lastSuccess": "Last success",
+    "loadFailed": "Failed to load backup data",
+    "never": "Never",
+    "nextRun": "Next run",
+    "none": "None",
+    "phase": "Phase",
+    "previewFailed": "Failed to load preview",
+    "previewHint": "Select a file to preview it",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "refresh": "Refresh",
+    "runNow": "Run backup now",
+    "schedule": "Schedule",
+    "snapshot": "Snapshot",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "status": "Status",
+    "statusCard": "Backup status",
+    "statusFailed": "Failed",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "time": "Time",
+    "title": "Backup",
+    "trigger": "Trigger",
+    "triggerFailed": "Failed to start backup",
+    "triggerStarted": "Backup started"
+>>>>>>> upstream/main
   },
   "command": {
     "dark": "Mørk",
@@ -1536,8 +1575,15 @@
     "attachment": "Vedhæftede filer",
     "auditLog": "Revisjonslogg",
     "auth": "Godkendelse",
+<<<<<<< HEAD
     "compliance": "Compliance",
     "complianceDashboard": "Overholdelsesdashboard",
+=======
+    "backup": "Backup",
+    "compliance": "Compliance",
+    "complianceDashboard": "Overholdelsesdashboard",
+    "complianceSettings": "Konfiguration",
+>>>>>>> upstream/main
     "dashboard": "Oversigt",
     "general": "Generelt",
     "home": "Hjem",
@@ -1549,8 +1595,12 @@
     "other": "Andet",
     "settings": "Indstillinger",
     "timestampAnchor": "Tidsstempling",
+<<<<<<< HEAD
     "users": "Systembrugere",
     "backup": "Backup"
+=======
+    "users": "Systembrugere"
+>>>>>>> upstream/main
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "En hemmelig nøgle leveret af OAuth-udbyderen for at godkende din applikation.",
@@ -2405,9 +2455,15 @@
     "title": "Log ud"
   },
   "system": {
+<<<<<<< HEAD
     "notifications": "Systemmeddelelser",
     "alertError": "Error",
     "alertWarning": "Warning"
+=======
+    "alertError": "Error",
+    "alertWarning": "Warning",
+    "notifications": "Systemmeddelelser"
+>>>>>>> upstream/main
   },
   "systemConfig": {
     "pageDescription": "Disse parametre initialiseres via CLI-flag eller miljøvariabler. De er skrivebeskyttede.",
@@ -2822,4 +2878,8 @@
     "singleRequestBatchSizeTooLarge": "Batch‑størrelse skal være højst 200",
     "singleRequestBatchSizeTooSmall": "Batch‑størrelse skal være mindst 10"
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> upstream/main

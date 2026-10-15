@@ -951,9 +951,22 @@ mod tests {
     use crate::backup::artifact::ArtifactKey;
 
     fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
+<<<<<<< HEAD
         let dir = std::env::temp_dir().join(format!(
             "bichon-engine-test-{}-{}",
             std::process::id(),
+=======
+        // Unique per call: the directory only keys on pid + name, so parallel
+        // tests writing the same file name would share one path and truncate
+        // each other's file mid-capture, surfacing as spurious "changed size
+        // during capture" upload failures.
+        static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let seq = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!(
+            "bichon-engine-test-{}-{}-{}",
+            std::process::id(),
+            seq,
+>>>>>>> upstream/main
             name
         ));
         std::fs::create_dir_all(&dir).unwrap();

@@ -838,6 +838,7 @@
     "youWillNeedToLogInAgain": "Sinun on kirjauduttava sisään uudelleen päästäksesi tilillesi."
   },
   "backup": {
+<<<<<<< HEAD
     "title": "Backup",
     "statusCard": "Backup status",
     "enabled": "Enabled",
@@ -874,6 +875,44 @@
     "previewFailed": "Failed to load preview",
     "download": "Download",
     "downloadFailed": "Failed to download file"
+=======
+    "disabled": "Disabled",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "download": "Download",
+    "downloadFailed": "Failed to download file",
+    "enabled": "Enabled",
+    "error": "Error",
+    "filesLabel": "files",
+    "lastError": "Last error",
+    "lastSnapshot": "Last snapshot",
+    "lastSuccess": "Last success",
+    "loadFailed": "Failed to load backup data",
+    "never": "Never",
+    "nextRun": "Next run",
+    "none": "None",
+    "phase": "Phase",
+    "previewFailed": "Failed to load preview",
+    "previewHint": "Select a file to preview it",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "refresh": "Refresh",
+    "runNow": "Run backup now",
+    "schedule": "Schedule",
+    "snapshot": "Snapshot",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "status": "Status",
+    "statusCard": "Backup status",
+    "statusFailed": "Failed",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "time": "Time",
+    "title": "Backup",
+    "trigger": "Trigger",
+    "triggerFailed": "Failed to start backup",
+    "triggerStarted": "Backup started"
+>>>>>>> upstream/main
   },
   "command": {
     "dark": "Tumma",
@@ -1536,8 +1575,15 @@
     "attachment": "Liitteet",
     "auditLog": "Tarkastusloki",
     "auth": "Todennus",
+<<<<<<< HEAD
     "compliance": "Vaatimustenmukaisuus",
     "complianceDashboard": "Vaatimustenmukaisuuden koontinäyttö",
+=======
+    "backup": "Backup",
+    "compliance": "Vaatimustenmukaisuus",
+    "complianceDashboard": "Vaatimustenmukaisuuden koontinäyttö",
+    "complianceSettings": "Asetukset",
+>>>>>>> upstream/main
     "dashboard": "Kojelauta",
     "general": "Yleinen",
     "home": "Koti",
@@ -1549,8 +1595,12 @@
     "other": "Muu",
     "settings": "Asetukset",
     "timestampAnchor": "Aikaleima-ankkurointi",
+<<<<<<< HEAD
     "users": "Järjestelmän käyttäjät",
     "backup": "Backup"
+=======
+    "users": "Järjestelmän käyttäjät"
+>>>>>>> upstream/main
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "OAuth-palveluntarjoajan tarjoama salainen avain sovelluksesi todentamiseksi.",
@@ -2405,9 +2455,15 @@
     "title": "Kirjaudu ulos"
   },
   "system": {
+<<<<<<< HEAD
     "notifications": "Järjestelmäilmoitukset",
     "alertError": "Error",
     "alertWarning": "Warning"
+=======
+    "alertError": "Error",
+    "alertWarning": "Warning",
+    "notifications": "Järjestelmäilmoitukset"
+>>>>>>> upstream/main
   },
   "systemConfig": {
     "pageDescription": "Nämä parametrit alustetaan CLI-lippujen tai ympäristömuuttujien kautta. Ne ovat vain luku -tilassa.",
@@ -2822,4 +2878,8 @@
     "singleRequestBatchSizeTooLarge": "Eräkoko tulee olla enintään 200",
     "singleRequestBatchSizeTooSmall": "Eräkoko tulee olla vähintään 10"
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> upstream/main

@@ -1,7 +1,10 @@
 use std::{path::PathBuf, time::Instant};
 
 use bytes::Bytes;
+<<<<<<< HEAD
 use mail_parser::MimeHeaders;
+=======
+>>>>>>> upstream/main
 
 use bichon_core::{
     envelope::extractor::extract_references, message::content::AttachmentInfo,
@@ -76,6 +79,7 @@ pub fn detach_attachments_standalone(
     original_body: &[u8],
     message: &mail_parser::Message<'_>,
 ) -> (Vec<u8>, DetachOutput) {
+<<<<<<< HEAD
     let mut stripped_eml = original_body.to_vec();
     let mut infos = Vec::new();
     let mut blobs = Vec::new();
@@ -138,6 +142,24 @@ pub fn detach_attachments_standalone(
     }
 
     (stripped_eml, DetachOutput { infos, blobs })
+=======
+    // Delegate to the single canonical implementation shared with the live
+    // ingest path, so a migrated store always matches what the runtime
+    // writes and reads back. No extraction filter: offline migration does
+    // not run text extraction.
+    let detached = bichon_core::envelope::extractor::strip_attachment_bodies(
+        original_body,
+        message,
+        None,
+    );
+    (
+        detached.stripped_eml,
+        DetachOutput {
+            infos: detached.infos,
+            blobs: detached.blobs,
+        },
+    )
+>>>>>>> upstream/main
 }
 
 pub struct NewIndexWriterV2 {

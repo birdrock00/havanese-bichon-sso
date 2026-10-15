@@ -53,6 +53,7 @@ pub mod view;
 
 pub type UserModel = BichonUserV2;
 
+<<<<<<< HEAD
 fn derive_username_base(email: &str, display_name: Option<&str>) -> String {
     if let Some(name) = display_name.map(str::trim).filter(|s| !s.is_empty()) {
         let sanitized: String = name
@@ -107,6 +108,8 @@ fn allocate_unique_username(base: &str) -> BichonResult<String> {
     ))
 }
 
+=======
+>>>>>>> upstream/main
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct LoginResult {
     pub success: bool,
@@ -594,6 +597,7 @@ impl BichonUserV2 {
         }
     }
 
+<<<<<<< HEAD
     /// Resolve or auto-provision a Bichon user for an OIDC login.
     ///
     /// Resolution order:
@@ -671,6 +675,8 @@ impl BichonUserV2 {
         Ok(user_clone)
     }
 
+=======
+>>>>>>> upstream/main
     // ── TOTP two-factor authentication ─────────────────────────────
 
     /// Store a new (encrypted) TOTP secret. Enrollment is only completed by

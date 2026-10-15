@@ -838,6 +838,7 @@
     "youWillNeedToLogInAgain": "You will need to log in again to access your account."
   },
   "backup": {
+<<<<<<< HEAD
     "target": {
       "title": "Backup target & schedule",
       "forbidden": "Configuring the backup target requires the backup:manage or system:root permission.",
@@ -984,6 +985,154 @@
     "auditEmpty": "No audit chain in this restore point",
     "download": "Download",
     "downloadFailed": "Failed to download"
+=======
+    "auditBase": "baseline",
+    "auditBaseRatio": "base ratio",
+    "auditCumulative": "Cumulative deltas",
+    "auditCursor": "Cursor",
+    "auditEmpty": "No audit chain in this restore point",
+    "auditTitle": "Audit chain",
+    "deleteConfirmAction": "Delete",
+    "deleteConfirmBody": "Restore point {{id}} ({{created}} · {{bytes}}) will be permanently deleted. Objects shared with other restore points are kept; the rest are removed from the bucket. This cannot be undone.",
+    "deleteConfirmTitle": "Delete this restore point?",
+    "deleteDone": "Restore point deleted",
+    "deleteDoneHint": "{{objects}} object(s) removed, {{bytes}} freed from the bucket",
+    "deleteFailed": "Failed to delete the restore point",
+    "deletePoint": "Delete restore point",
+    "disabled": "Disabled",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "download": "Download",
+    "downloadFailed": "Failed to download",
+    "drillCard": "Restore drills",
+    "drillFailed": "Restore drill failed",
+    "drillPassed": "Restore drill passed",
+    "drillRestorePoint": "Restore point",
+    "drillStats": "{{checked}} of {{total}} objects hashed ({{bytes}})",
+    "enabled": "Enabled",
+    "error": "Error",
+    "history": "Backup history",
+    "kind": {
+      "attachmentIndex": "index (attachment)",
+      "audit": "audit",
+      "blob": "blob storage",
+      "envelopeIndex": "index (envelope)",
+      "imapUid": "IMAP UID",
+      "integrity": "integrity",
+      "memdb": "memdb (metadata)",
+      "timestamp": "timestamp"
+    },
+    "lastError": "Last error",
+    "lastRestorePoint": "Last restore point",
+    "lastSuccess": "Last success",
+    "loadFailed": "Failed to load backup data",
+    "manifestBrowser": "Restore points",
+    "manifestHint": "Select a restore point to inspect it",
+    "manifestsEmpty": "No restore points yet. Run a backup first.",
+    "never": "Never",
+    "newObjects": "new",
+    "nextPage": "Next page",
+    "nextRun": "Next run",
+    "none": "None",
+    "objects": {
+      "imapUid": "imap uid",
+      "index": "index {{n}}",
+      "integrity": "integrity",
+      "memdb": "memdb",
+      "segment": "segment {{n}}",
+      "timestamp": "timestamp"
+    },
+    "objectsEmpty": "No objects referenced",
+    "objectsLabel": "objects",
+    "objectsTitle": "Objects",
+    "phase": "Phase",
+    "prevPage": "Previous page",
+    "rebase": "Rebase audit chain",
+    "rebaseFailed": "Failed to request rebase",
+    "rebaseHint": "The next backup run produces a fresh audit baseline and clears the delta chain.",
+    "rebaseRequested": "Rebase requested",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "recordsHint": "The most recent 200 backup runs.",
+    "refresh": "Refresh",
+    "restorePoint": "Restore point",
+    "runDrill": "Run restore drill",
+    "runNow": "Run backup now",
+    "schedule": "Schedule",
+    "skippedObjects": "skipped",
+    "status": "Status",
+    "statusCard": "Backup status",
+    "statusFailed": "Failed",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "target": {
+      "advancedCron": "Advanced: cron expression",
+      "autoSaveFailed": "Auto-save failed",
+      "autoSavePending": "Unsaved changes…",
+      "autoSaveSaved": "Saved automatically",
+      "autoSaveSaving": "Saving…",
+      "bucketRequired": "Bucket is required",
+      "clear": "Clear",
+      "cronHint": "Six fields: second minute hour day month weekday, evaluated in UTC.",
+      "enabled": "Backups enabled",
+      "enabledHint": "When enabled, scheduled backups run on the configured schedule.",
+      "execTime": "Run at",
+      "forbidden": "Configuring the backup target requires the backup:manage or system:root permission.",
+      "freqDaily": "Daily",
+      "freqHourly": "Hourly",
+      "freqLabel": "Backup frequency",
+      "freqManual": "Manual only",
+      "freqSixHours": "Every 6 hours",
+      "freqWeekly": "Weekly",
+      "keepDaily": "Keep daily",
+      "keepLast": "Keep last",
+      "keepLastPrefix": "Keep the most recent",
+      "keepLastSuffix": "restore points",
+      "keepMonthly": "Keep monthly",
+      "keepWeekly": "Keep weekly",
+      "loadFailed": "Failed to load backup configuration",
+      "noChanges": "No changes to save",
+      "prefix": "Prefix",
+      "prefixConfirmAction": "Apply change",
+      "prefixConfirmBody": "Changing the prefix starts a fresh backup chain at a new location in the bucket. Existing restore points stay under the old prefix. Apply the change?",
+      "prefixConfirmTitle": "Change the prefix?",
+      "prefixHint": "Object-store prefix under the bucket. Changing it starts a fresh backup chain in a new location.",
+      "retention": "Retention",
+      "retentionHint": "Older restore points are deleted from the bucket after each successful backup. A failed backup never triggers cleanup — your existing restore points always stay intact.",
+      "retentionInvalid": "Retention counts cannot be negative",
+      "retry": "Retry",
+      "s3AccessKey": "Access key",
+      "s3Bucket": "Bucket",
+      "s3Endpoint": "Endpoint",
+      "s3EndpointHint": "For a custom backend type the endpoint with a scheme (e.g. http://localhost:9000 for MinIO); a bare host (s3.amazonaws.com) uses AWS signature/region resolution.",
+      "s3Region": "Region",
+      "s3RegionHint": "Local S3 servers (MinIO, SeaweedFS…) work with the default us-east-1; Cloudflare R2 needs \"auto\"; Garage must match its configured region.",
+      "s3SecretKey": "Secret key",
+      "save": "Save configuration",
+      "saveFailed": "Failed to save backup configuration",
+      "saved": "Backup configuration saved",
+      "schedule": "Schedule (cron, UTC)",
+      "secretPlaceholder": "******** (unchanged)",
+      "targetRequired": "S3 target requires an endpoint and a bucket",
+      "title": "Backup target & schedule"
+    },
+    "time": "Time",
+    "title": "Backup",
+    "transfer": "Transferred",
+    "trigger": "Trigger",
+    "triggerFailed": "Failed to start backup",
+    "triggerStarted": "Backup started",
+    "uploaded": "Uploaded",
+    "weekday": {
+      "FRI": "Friday",
+      "MON": "Monday",
+      "SAT": "Saturday",
+      "SUN": "Sunday",
+      "THU": "Thursday",
+      "TUE": "Tuesday",
+      "WED": "Wednesday"
+    }
+>>>>>>> upstream/main
   },
   "command": {
     "dark": "Dark",
@@ -1646,9 +1795,16 @@
     "attachment": "Attachments",
     "auditLog": "Audit log",
     "auth": "Auth",
+<<<<<<< HEAD
     "compliance": "Compliance",
     "complianceDashboard": "Compliance dashboard",
     "complianceSettings": "Compliance configuration",
+=======
+    "backup": "Backup",
+    "compliance": "Compliance",
+    "complianceDashboard": "Compliance dashboard",
+    "complianceSettings": "Configuration",
+>>>>>>> upstream/main
     "dashboard": "Dashboard",
     "general": "General",
     "home": "Home",
@@ -1660,8 +1816,12 @@
     "other": "Other",
     "settings": "Settings",
     "timestampAnchor": "Timestamp anchoring",
+<<<<<<< HEAD
     "users": "System Users",
     "backup": "Backup"
+=======
+    "users": "System Users"
+>>>>>>> upstream/main
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "A secret key provided by the OAuth provider to authenticate your application.",
@@ -2309,6 +2469,26 @@
       "uploadLogo": "Upload logo"
     },
     "changePasswordForFutureLogins": "Change password for future logins.",
+<<<<<<< HEAD
+=======
+    "compliance": {
+      "auditRetentionDays": "Audit retention (days)",
+      "auditRetentionDaysHint": "Audit records older than this are purged. 0 disables cleanup.",
+      "description": "Retention windows and schedule intervals for the audit trail, integrity checks and timestamp anchoring. Empty fields keep the server defaults; type a value to override.",
+      "forbidden": "Compliance configuration requires the Pro or Enterprise edition and the system:root permission.",
+      "integrityRetentionDays": "Integrity report retention (days)",
+      "integrityRetentionDaysHint": "How many days of integrity reports to keep. 0 disables cleanup.",
+      "integrityScheduleHours": "Integrity check interval (hours)",
+      "integrityScheduleHoursHint": "A quick integrity check runs this often. 0 disables the periodic loop.",
+      "loadFailed": "Failed to load compliance configuration",
+      "save": "Save configuration",
+      "saveFailed": "Failed to save compliance configuration",
+      "saved": "Compliance configuration saved",
+      "title": "Compliance configuration",
+      "tspIntervalHours": "Timestamp anchoring interval (hours)",
+      "tspIntervalHoursHint": "How often content hashes are anchored with the Time-Stamp Authority."
+    },
+>>>>>>> upstream/main
     "confirmReset": "Confirm Reset",
     "createdAt": "Created At",
     "delete": "Delete",
@@ -2438,13 +2618,17 @@
       "apiTokens": "API Tokens",
       "approvals": "Dual control",
       "branding": "Branding",
+<<<<<<< HEAD
       "compliance": "Compliance configuration",
+=======
+>>>>>>> upstream/main
       "configurations": "System Configurations",
       "mfa": "Two-factor Auth",
       "profile": "Profile",
       "proxy": "Network Proxy",
       "siem": "SIEM"
     },
+<<<<<<< HEAD
     "compliance": {
       "title": "Compliance configuration",
       "description": "Retention windows and schedule intervals for the audit trail, integrity checks and timestamp anchoring. Empty fields keep the server defaults; type a value to override.",
@@ -2462,6 +2646,8 @@
       "saved": "Compliance configuration saved",
       "saveFailed": "Failed to save compliance configuration"
     },
+=======
+>>>>>>> upstream/main
     "siem": {
       "authToken": "Bearer token (optional)",
       "batchSize": "Batch size",
@@ -2534,9 +2720,15 @@
     "title": "Sign out"
   },
   "system": {
+<<<<<<< HEAD
     "notifications": "System Notifications",
     "alertError": "Error",
     "alertWarning": "Warning"
+=======
+    "alertError": "Error",
+    "alertWarning": "Warning",
+    "notifications": "System Notifications"
+>>>>>>> upstream/main
   },
   "systemConfig": {
     "pageDescription": "These parameters are initialized via CLI flags or Environment Variables. They are currently read-only to ensure environment consistency.",
@@ -2951,4 +3143,8 @@
     "singleRequestBatchSizeTooLarge": "Batch size must be at most 200",
     "singleRequestBatchSizeTooSmall": "Batch size must be at least 10"
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> upstream/main

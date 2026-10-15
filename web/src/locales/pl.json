@@ -838,6 +838,7 @@
     "youWillNeedToLogInAgain": "Musisz zalogować się ponownie, aby ponownie móc korzystać."
   },
   "backup": {
+<<<<<<< HEAD
     "title": "Backup",
     "statusCard": "Backup status",
     "enabled": "Enabled",
@@ -874,6 +875,44 @@
     "previewFailed": "Failed to load preview",
     "download": "Download",
     "downloadFailed": "Failed to download file"
+=======
+    "disabled": "Disabled",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "download": "Download",
+    "downloadFailed": "Failed to download file",
+    "enabled": "Enabled",
+    "error": "Error",
+    "filesLabel": "files",
+    "lastError": "Last error",
+    "lastSnapshot": "Last snapshot",
+    "lastSuccess": "Last success",
+    "loadFailed": "Failed to load backup data",
+    "never": "Never",
+    "nextRun": "Next run",
+    "none": "None",
+    "phase": "Phase",
+    "previewFailed": "Failed to load preview",
+    "previewHint": "Select a file to preview it",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "refresh": "Refresh",
+    "runNow": "Run backup now",
+    "schedule": "Schedule",
+    "snapshot": "Snapshot",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "status": "Status",
+    "statusCard": "Backup status",
+    "statusFailed": "Failed",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "time": "Time",
+    "title": "Backup",
+    "trigger": "Trigger",
+    "triggerFailed": "Failed to start backup",
+    "triggerStarted": "Backup started"
+>>>>>>> upstream/main
   },
   "command": {
     "dark": "Ciemny",
@@ -1536,8 +1575,15 @@
     "attachment": "Załączniki",
     "auditLog": "Dziennik audytu",
     "auth": "Auth",
+<<<<<<< HEAD
     "compliance": "Zgodność",
     "complianceDashboard": "Panel zgodności",
+=======
+    "backup": "Backup",
+    "compliance": "Zgodność",
+    "complianceDashboard": "Panel zgodności",
+    "complianceSettings": "Konfiguracja",
+>>>>>>> upstream/main
     "dashboard": "Panel",
     "general": "Ogólne",
     "home": "Home",
@@ -1549,8 +1595,12 @@
     "other": "Pozostałe",
     "settings": "Ustawienia",
     "timestampAnchor": "Kotwiczenie czasu",
+<<<<<<< HEAD
     "users": "Użytkownicy systemu",
     "backup": "Backup"
+=======
+    "users": "Użytkownicy systemu"
+>>>>>>> upstream/main
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "Tajny klucz dostarczony przez dostawcę OAuth w celu uwierzytelnienia Twojej aplikacji.",
@@ -2405,9 +2455,15 @@
     "title": "Wyloguj się"
   },
   "system": {
+<<<<<<< HEAD
     "notifications": "Powiadomienia systemowe",
     "alertError": "Error",
     "alertWarning": "Warning"
+=======
+    "alertError": "Error",
+    "alertWarning": "Warning",
+    "notifications": "Powiadomienia systemowe"
+>>>>>>> upstream/main
   },
   "systemConfig": {
     "pageDescription": "Parametry te są inicjowane za pomocą flag CLI lub zmiennych środowiskowych. Są one obecnie tylko do odczytu.",
@@ -2822,4 +2878,8 @@
     "singleRequestBatchSizeTooLarge": "Rozmiar partii może wynosić maksymalnie 200",
     "singleRequestBatchSizeTooSmall": "Rozmiar partii musi wynosić co najmniej 10"
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> upstream/main

@@ -16,9 +16,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+<<<<<<<< HEAD:crates/core/src/oidc/mod.rs
 pub mod discovery;
 pub mod flow;
 pub mod handoff;
 pub mod id_token;
 pub mod pending;
 pub mod task;
+========
+import { AppearanceForm } from './appearance-form'
+
+export function SettingsAppearance() {
+    return (
+        <AppearanceForm />
+    )
+}
+>>>>>>>> upstream/main:web/src/features/settings/appearance/index.tsx

@@ -18,7 +18,10 @@ pub mod mailbox;
 pub mod message;
 pub mod migrate;
 pub mod oauth2;
+<<<<<<< HEAD
 pub mod oidc;
+=======
+>>>>>>> upstream/main
 pub mod retention;
 pub mod saved_search;
 pub mod settings;

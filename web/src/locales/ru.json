@@ -838,6 +838,7 @@
     "youWillNeedToLogInAgain": "Вам нужно будет снова войти в систему, чтобы получить доступ к учетной записи."
   },
   "backup": {
+<<<<<<< HEAD
     "title": "Backup",
     "statusCard": "Backup status",
     "enabled": "Enabled",
@@ -874,6 +875,44 @@
     "previewFailed": "Failed to load preview",
     "download": "Download",
     "downloadFailed": "Failed to download file"
+=======
+    "disabled": "Disabled",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "download": "Download",
+    "downloadFailed": "Failed to download file",
+    "enabled": "Enabled",
+    "error": "Error",
+    "filesLabel": "files",
+    "lastError": "Last error",
+    "lastSnapshot": "Last snapshot",
+    "lastSuccess": "Last success",
+    "loadFailed": "Failed to load backup data",
+    "never": "Never",
+    "nextRun": "Next run",
+    "none": "None",
+    "phase": "Phase",
+    "previewFailed": "Failed to load preview",
+    "previewHint": "Select a file to preview it",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "refresh": "Refresh",
+    "runNow": "Run backup now",
+    "schedule": "Schedule",
+    "snapshot": "Snapshot",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "status": "Status",
+    "statusCard": "Backup status",
+    "statusFailed": "Failed",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "time": "Time",
+    "title": "Backup",
+    "trigger": "Trigger",
+    "triggerFailed": "Failed to start backup",
+    "triggerStarted": "Backup started"
+>>>>>>> upstream/main
   },
   "command": {
     "dark": "Темная",
@@ -1536,8 +1575,15 @@
     "attachment": "Вложения",
     "auditLog": "Журнал аудита",
     "auth": "Авторизация",
+<<<<<<< HEAD
     "compliance": "Соответствие",
     "complianceDashboard": "Панель соответствия",
+=======
+    "backup": "Backup",
+    "compliance": "Соответствие",
+    "complianceDashboard": "Панель соответствия",
+    "complianceSettings": "Конфигурация",
+>>>>>>> upstream/main
     "dashboard": "Дашборд",
     "general": "Общие",
     "home": "Главная",
@@ -1549,8 +1595,12 @@
     "other": "Другое",
     "settings": "Настройки",
     "timestampAnchor": "Привязка времени",
+<<<<<<< HEAD
     "users": "Пользователи системы",
     "backup": "Backup"
+=======
+    "users": "Пользователи системы"
+>>>>>>> upstream/main
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "Секретный ключ, предоставленный провайдером OAuth для аутентификации вашего приложения.",
@@ -2405,9 +2455,15 @@
     "title": "Выйти"
   },
   "system": {
+<<<<<<< HEAD
     "notifications": "Системные уведомления",
     "alertError": "Error",
     "alertWarning": "Warning"
+=======
+    "alertError": "Error",
+    "alertWarning": "Warning",
+    "notifications": "Системные уведомления"
+>>>>>>> upstream/main
   },
   "systemConfig": {
     "pageDescription": "Эти параметры инициализируются через флаги CLI или переменные окружения. Они доступны только для чтения.",
@@ -2822,4 +2878,8 @@
     "singleRequestBatchSizeTooLarge": "Размер пакета должен быть не более 200",
     "singleRequestBatchSizeTooSmall": "Размер пакета должен быть не менее 10"
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> upstream/main

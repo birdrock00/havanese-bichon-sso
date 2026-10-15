@@ -838,6 +838,7 @@
     "youWillNeedToLogInAgain": "ستحتاج إلى تسجيل الدخول مرة أخرى للوصول إلى حسابك."
   },
   "backup": {
+<<<<<<< HEAD
     "title": "Backup",
     "statusCard": "Backup status",
     "enabled": "Enabled",
@@ -874,6 +875,44 @@
     "previewFailed": "Failed to load preview",
     "download": "Download",
     "downloadFailed": "Failed to download file"
+=======
+    "disabled": "Disabled",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "download": "Download",
+    "downloadFailed": "Failed to download file",
+    "enabled": "Enabled",
+    "error": "Error",
+    "filesLabel": "files",
+    "lastError": "Last error",
+    "lastSnapshot": "Last snapshot",
+    "lastSuccess": "Last success",
+    "loadFailed": "Failed to load backup data",
+    "never": "Never",
+    "nextRun": "Next run",
+    "none": "None",
+    "phase": "Phase",
+    "previewFailed": "Failed to load preview",
+    "previewHint": "Select a file to preview it",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "refresh": "Refresh",
+    "runNow": "Run backup now",
+    "schedule": "Schedule",
+    "snapshot": "Snapshot",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "status": "Status",
+    "statusCard": "Backup status",
+    "statusFailed": "Failed",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "time": "Time",
+    "title": "Backup",
+    "trigger": "Trigger",
+    "triggerFailed": "Failed to start backup",
+    "triggerStarted": "Backup started"
+>>>>>>> upstream/main
   },
   "command": {
     "dark": "داكن",
@@ -1536,8 +1575,15 @@
     "attachment": "المرفقات",
     "auditLog": "سجل التدقيق",
     "auth": "المصادقة",
+<<<<<<< HEAD
     "compliance": "الامتثال",
     "complianceDashboard": "لوحة الامتثال",
+=======
+    "backup": "Backup",
+    "compliance": "الامتثال",
+    "complianceDashboard": "لوحة الامتثال",
+    "complianceSettings": "التكوين",
+>>>>>>> upstream/main
     "dashboard": "لوحة التحكم",
     "general": "عام",
     "home": "الرئيسية",
@@ -1549,8 +1595,12 @@
     "other": "أخرى",
     "settings": "الإعدادات",
     "timestampAnchor": "التثبيت الزمني",
+<<<<<<< HEAD
     "users": "مستخدمو النظام",
     "backup": "Backup"
+=======
+    "users": "مستخدمو النظام"
+>>>>>>> upstream/main
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "مفتاح سري مقدم من مزود OAuth لمصادقة تطبيقك.",
@@ -2405,9 +2455,15 @@
     "title": "تسجيل الخروج"
   },
   "system": {
+<<<<<<< HEAD
     "notifications": "إشعارات النظام",
     "alertError": "Error",
     "alertWarning": "Warning"
+=======
+    "alertError": "Error",
+    "alertWarning": "Warning",
+    "notifications": "إشعارات النظام"
+>>>>>>> upstream/main
   },
   "systemConfig": {
     "pageDescription": "يتم تهيئة هذه المعلمات عبر علامات CLI أو متغيرات البيئة. وهي حاليًا للقراءة فقط لضمان اتساق البيئة.",
@@ -2822,4 +2878,8 @@
     "singleRequestBatchSizeTooLarge": "يجب أن يكون حجم الدُفعة على الأكثر 200",
     "singleRequestBatchSizeTooSmall": "يجب أن يكون حجم الدُفعة على الأقل 10"
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> upstream/main

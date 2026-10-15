@@ -466,6 +466,10 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.18",
  "tokio",
+<<<<<<< HEAD
+=======
+ "tracing",
+>>>>>>> upstream/main
 ]
 
 [[package]]

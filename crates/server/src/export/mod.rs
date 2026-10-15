@@ -1110,13 +1110,19 @@ async fn read_blob_content_hash(
 
 /// True when `raw` still contains a detached-attachment placeholder.
 fn contains_detach_placeholder(raw: &[u8]) -> bool {
+<<<<<<< HEAD
     const PREFIX: &[u8] = b"<<BICHON_DETACH_HASH:";
+=======
+    const PREFIX: &[u8] =
+        bichon_core::envelope::extractor::DETACH_PLACEHOLDER_PREFIX.as_bytes();
+>>>>>>> upstream/main
     raw.windows(PREFIX.len()).any(|window| window == PREFIX)
 }
 
 /// Returns the hashes of any `<<BICHON_DETACH_HASH:...>>` placeholders still
 /// present in `raw` whose blob is genuinely absent from the blob store.
 ///
+<<<<<<< HEAD
 /// Placeholders whose blob exists are intentionally not reported: the blob
 /// store is keyed by the hash of the decoded attachment content while values
 /// hold the undecoded raw bytes, so reattaching can yield the same decoded
@@ -1124,6 +1130,18 @@ fn contains_detach_placeholder(raw: &[u8]) -> bool {
 /// placeholder whose blob is truly missing is a real defect.
 fn missing_attachment_hashes(raw: &[u8]) -> Vec<String> {
     const PREFIX: &[u8] = b"<<BICHON_DETACH_HASH:";
+=======
+/// Placeholders whose blob exists are intentionally not reported: legacy
+/// records store raw bytes under the hash of the decoded attachment
+/// content, so reattaching them can yield the same decoded content without
+/// byte-identical output (e.g. base64 line folding). Only a placeholder
+/// whose blob is truly missing is a real defect. Which hash domain a
+/// placeholder belongs to is documented on
+/// [`bichon_core::envelope::extractor::DETACH_PLACEHOLDER_PREFIX`].
+fn missing_attachment_hashes(raw: &[u8]) -> Vec<String> {
+    const PREFIX: &[u8] =
+        bichon_core::envelope::extractor::DETACH_PLACEHOLDER_PREFIX.as_bytes();
+>>>>>>> upstream/main
     let mut missing = Vec::new();
     let mut search_cursor = 0;
     while let Some(pos) = raw[search_cursor..]

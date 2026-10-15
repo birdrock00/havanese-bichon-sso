@@ -4,6 +4,10 @@
 config.toml
 node_modules
 dedup_report.txt
+<<<<<<< HEAD
 crates/*/target
 .tmp/
 .playwright-mcp/
+=======
+crates/*/target
+>>>>>>> upstream/main

@@ -838,6 +838,7 @@
     "youWillNeedToLogInAgain": "您將需要再次登入才能存取您的帳號。"
   },
   "backup": {
+<<<<<<< HEAD
     "title": "Backup",
     "statusCard": "Backup status",
     "enabled": "Enabled",
@@ -874,6 +875,44 @@
     "previewFailed": "Failed to load preview",
     "download": "Download",
     "downloadFailed": "Failed to download file"
+=======
+    "disabled": "Disabled",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "download": "Download",
+    "downloadFailed": "Failed to download file",
+    "enabled": "Enabled",
+    "error": "Error",
+    "filesLabel": "files",
+    "lastError": "Last error",
+    "lastSnapshot": "Last snapshot",
+    "lastSuccess": "Last success",
+    "loadFailed": "Failed to load backup data",
+    "never": "Never",
+    "nextRun": "Next run",
+    "none": "None",
+    "phase": "Phase",
+    "previewFailed": "Failed to load preview",
+    "previewHint": "Select a file to preview it",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "refresh": "Refresh",
+    "runNow": "Run backup now",
+    "schedule": "Schedule",
+    "snapshot": "Snapshot",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "status": "Status",
+    "statusCard": "Backup status",
+    "statusFailed": "Failed",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "time": "Time",
+    "title": "Backup",
+    "trigger": "Trigger",
+    "triggerFailed": "Failed to start backup",
+    "triggerStarted": "Backup started"
+>>>>>>> upstream/main
   },
   "command": {
     "dark": "深色",
@@ -1536,8 +1575,15 @@
     "attachment": "附件",
     "auditLog": "稽核日誌",
     "auth": "驗證",
+<<<<<<< HEAD
     "compliance": "合規",
     "complianceDashboard": "合規儀表板",
+=======
+    "backup": "Backup",
+    "compliance": "合規",
+    "complianceDashboard": "合規儀表板",
+    "complianceSettings": "設定",
+>>>>>>> upstream/main
     "dashboard": "儀表板",
     "general": "一般",
     "home": "首頁",
@@ -1549,8 +1595,12 @@
     "other": "其他",
     "settings": "設定",
     "timestampAnchor": "時間戳錨定",
+<<<<<<< HEAD
     "users": "系統使用者",
     "backup": "Backup"
+=======
+    "users": "系統使用者"
+>>>>>>> upstream/main
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "由 OAuth 服務供應商提供，用於驗證您的應用程式的密鑰。",
@@ -2405,9 +2455,15 @@
     "title": "登出"
   },
   "system": {
+<<<<<<< HEAD
     "notifications": "系統通知",
     "alertError": "Error",
     "alertWarning": "Warning"
+=======
+    "alertError": "Error",
+    "alertWarning": "Warning",
+    "notifications": "系統通知"
+>>>>>>> upstream/main
   },
   "systemConfig": {
     "pageDescription": "這些參數透過 CLI 標誌或環境變數初始化。它們目前為唯讀，以確保環境一致性。",
@@ -2822,4 +2878,8 @@
     "singleRequestBatchSizeTooLarge": "批次大小必須最多為200",
     "singleRequestBatchSizeTooSmall": "批次大小必須至少為10"
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> upstream/main

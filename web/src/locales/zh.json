@@ -838,6 +838,7 @@
     "youWillNeedToLogInAgain": "您需要重新登录才能访问您的账户。"
   },
   "backup": {
+<<<<<<< HEAD
     "target": {
       "title": "备份目标与计划",
       "forbidden": "配置备份目标需要 backup:manage 或 system:root 权限。",
@@ -984,6 +985,154 @@
     "auditEmpty": "该恢复点中没有审计链",
     "download": "下载",
     "downloadFailed": "下载失败"
+=======
+    "auditBase": "基线",
+    "auditBaseRatio": "基线占比",
+    "auditCumulative": "增量累计",
+    "auditCursor": "游标",
+    "auditEmpty": "该恢复点中没有审计链",
+    "auditTitle": "审计链",
+    "deleteConfirmAction": "删除",
+    "deleteConfirmBody": "恢复点 {{id}}（{{created}} · {{bytes}}）将被永久删除。与其他恢复点共享的对象会保留，其余对象将从存储桶中移除。此操作不可撤销。",
+    "deleteConfirmTitle": "确定删除这个恢复点？",
+    "deleteDone": "恢复点已删除",
+    "deleteDoneHint": "已移除 {{objects}} 个对象，从存储桶释放 {{bytes}}",
+    "deleteFailed": "删除恢复点失败",
+    "deletePoint": "删除恢复点",
+    "disabled": "已禁用",
+    "disabledTitle": "备份功能未启用",
+    "disabledWarning": "请在配置表单中启用备份并配置 S3 目标（endpoint、bucket、access/secret key）以运行定时备份。",
+    "download": "下载",
+    "downloadFailed": "下载失败",
+    "drillCard": "恢复演练",
+    "drillFailed": "恢复演练失败",
+    "drillPassed": "恢复演练通过",
+    "drillRestorePoint": "恢复点",
+    "drillStats": "已哈希 {{checked}} / {{total}} 个对象（{{bytes}}）",
+    "enabled": "已启用",
+    "error": "错误",
+    "history": "备份历史",
+    "kind": {
+      "attachmentIndex": "索引（附件）",
+      "audit": "审计",
+      "blob": "blob 存储",
+      "envelopeIndex": "索引（信封）",
+      "imapUid": "IMAP UID",
+      "integrity": "完整性",
+      "memdb": "memdb（元数据）",
+      "timestamp": "时间戳"
+    },
+    "lastError": "上次错误",
+    "lastRestorePoint": "最近恢复点",
+    "lastSuccess": "上次成功",
+    "loadFailed": "加载备份数据失败",
+    "manifestBrowser": "恢复点",
+    "manifestHint": "选择一个恢复点进行查看",
+    "manifestsEmpty": "暂无恢复点，请先执行一次备份。",
+    "never": "从未",
+    "newObjects": "新增",
+    "nextPage": "下一页",
+    "nextRun": "下次运行",
+    "none": "无",
+    "objects": {
+      "imapUid": "imap uid",
+      "index": "索引 {{n}}",
+      "integrity": "integrity",
+      "memdb": "memdb",
+      "segment": "分段 {{n}}",
+      "timestamp": "timestamp"
+    },
+    "objectsEmpty": "未引用任何对象",
+    "objectsLabel": "个对象",
+    "objectsTitle": "对象",
+    "phase": "阶段",
+    "prevPage": "上一页",
+    "rebase": "重建审计链",
+    "rebaseFailed": "请求重建失败",
+    "rebaseHint": "下次备份运行将生成全新的审计基线并清空增量链。",
+    "rebaseRequested": "已请求重建",
+    "records": "备份历史",
+    "recordsEmpty": "暂无备份记录",
+    "recordsHint": "最近 200 次备份运行记录。",
+    "refresh": "刷新",
+    "restorePoint": "恢复点",
+    "runDrill": "运行恢复演练",
+    "runNow": "立即备份",
+    "schedule": "计划",
+    "skippedObjects": "跳过",
+    "status": "状态",
+    "statusCard": "备份状态",
+    "statusFailed": "失败",
+    "statusRunning": "运行中",
+    "statusSuccess": "成功",
+    "target": {
+      "advancedCron": "高级：cron 表达式",
+      "autoSaveFailed": "自动保存失败",
+      "autoSavePending": "有未保存的更改…",
+      "autoSaveSaved": "已自动保存",
+      "autoSaveSaving": "正在保存…",
+      "bucketRequired": "请填写 Bucket",
+      "clear": "清除",
+      "cronHint": "六段表达式：秒 分 时 日 月 周，按 UTC 时间执行。",
+      "enabled": "启用备份",
+      "enabledHint": "启用后，将按配置的计划自动执行备份。",
+      "execTime": "执行时刻",
+      "forbidden": "配置备份目标需要 backup:manage 或 system:root 权限。",
+      "freqDaily": "每天",
+      "freqHourly": "每小时",
+      "freqLabel": "备份频率",
+      "freqManual": "仅手动备份",
+      "freqSixHours": "每 6 小时",
+      "freqWeekly": "每周",
+      "keepDaily": "每日保留",
+      "keepLast": "最近保留",
+      "keepLastPrefix": "保留最近",
+      "keepLastSuffix": "个恢复点",
+      "keepMonthly": "每月保留",
+      "keepWeekly": "每周保留",
+      "loadFailed": "加载备份配置失败",
+      "noChanges": "没有需要保存的更改",
+      "prefix": "前缀",
+      "prefixConfirmAction": "应用更改",
+      "prefixConfirmBody": "更改前缀将在存储桶的新位置开始一条全新的备份链，已有恢复点仍保留在旧前缀下。确定应用更改吗？",
+      "prefixConfirmTitle": "更改存储前缀？",
+      "prefixHint": "存储桶下的对象前缀。更改它将在一个新位置开始新的备份链。",
+      "retention": "保留策略",
+      "retentionHint": "每次成功备份后，更早的恢复点会从存储桶中删除。备份失败时绝不会执行清理，现有恢复点始终安全。",
+      "retentionInvalid": "保留数量不能为负数",
+      "retry": "重试",
+      "s3AccessKey": "Access Key",
+      "s3Bucket": "Bucket",
+      "s3Endpoint": "Endpoint",
+      "s3EndpointHint": "自定义后端请填写带协议的 endpoint（如 MinIO 用 http://localhost:9000）；裸主机（s3.amazonaws.com）走 AWS 签名与区域解析。",
+      "s3Region": "Region",
+      "s3RegionHint": "本地 S3（MinIO、SeaweedFS 等）保持默认 us-east-1 即可；Cloudflare R2 需填 auto；Garage 需与其部署配置的区域一致。",
+      "s3SecretKey": "Secret Key",
+      "save": "保存配置",
+      "saveFailed": "保存备份配置失败",
+      "saved": "备份配置已保存",
+      "schedule": "计划（cron，UTC）",
+      "secretPlaceholder": "********（保持不变）",
+      "targetRequired": "S3 目标需要填写 endpoint 和 bucket",
+      "title": "备份目标与计划"
+    },
+    "time": "时间",
+    "title": "备份",
+    "transfer": "已传输",
+    "trigger": "触发方式",
+    "triggerFailed": "启动备份失败",
+    "triggerStarted": "备份已启动",
+    "uploaded": "已上传",
+    "weekday": {
+      "FRI": "周五",
+      "MON": "周一",
+      "SAT": "周六",
+      "SUN": "周日",
+      "THU": "周四",
+      "TUE": "周二",
+      "WED": "周三"
+    }
+>>>>>>> upstream/main
   },
   "command": {
     "dark": "深色",
@@ -1646,9 +1795,16 @@
     "attachment": "附件",
     "auditLog": "审计日志",
     "auth": "认证",
+<<<<<<< HEAD
     "compliance": "合规",
     "complianceDashboard": "合规仪表盘",
     "complianceSettings": "合规配置",
+=======
+    "backup": "备份",
+    "compliance": "合规",
+    "complianceDashboard": "合规仪表盘",
+    "complianceSettings": "配置",
+>>>>>>> upstream/main
     "dashboard": "仪表板",
     "general": "常规",
     "home": "首页",
@@ -1660,8 +1816,12 @@
     "other": "其他",
     "settings": "设置",
     "timestampAnchor": "时间戳锚定",
+<<<<<<< HEAD
     "users": "系统用户",
     "backup": "备份"
+=======
+    "users": "系统用户"
+>>>>>>> upstream/main
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "由 OAuth 提供商提供的密钥，用于验证您的应用程序。",
@@ -2309,6 +2469,26 @@
       "uploadLogo": "上传徽标"
     },
     "changePasswordForFutureLogins": "更改未来登录的密码。",
+<<<<<<< HEAD
+=======
+    "compliance": {
+      "auditRetentionDays": "审计保留（天）",
+      "auditRetentionDaysHint": "早于此期限的审计记录将被清理。0 表示禁用清理。",
+      "description": "审计日志、完整性检查与时间戳锚定的保留周期和调度间隔。留空保持服务器默认值，填写数值则以页面配置覆盖。",
+      "forbidden": "合规配置需要 Pro 或企业版以及 system:root 权限。",
+      "integrityRetentionDays": "完整性报告保留（天）",
+      "integrityRetentionDaysHint": "保留多少天的完整性报告。0 表示禁用清理。",
+      "integrityScheduleHours": "完整性检查间隔（小时）",
+      "integrityScheduleHoursHint": "定期执行快速完整性检查的间隔。0 表示禁用周期任务。",
+      "loadFailed": "加载合规配置失败",
+      "save": "保存配置",
+      "saveFailed": "保存合规配置失败",
+      "saved": "合规配置已保存",
+      "title": "合规配置",
+      "tspIntervalHours": "时间戳锚定间隔（小时）",
+      "tspIntervalHoursHint": "多长时间用时间戳机构锚定一次内容哈希。"
+    },
+>>>>>>> upstream/main
     "confirmReset": "确认重置",
     "createdAt": "创建时间",
     "delete": "删除",
@@ -2438,13 +2618,17 @@
       "apiTokens": "API 令牌",
       "approvals": "双人控制",
       "branding": "品牌样式",
+<<<<<<< HEAD
       "compliance": "合规配置",
+=======
+>>>>>>> upstream/main
       "configurations": "系统配置",
       "mfa": "两步验证",
       "profile": "个人资料",
       "proxy": "网络代理",
       "siem": "SIEM"
     },
+<<<<<<< HEAD
     "compliance": {
       "title": "合规配置",
       "description": "审计日志、完整性检查与时间戳锚定的保留周期和调度间隔。留空保持服务器默认值，填写数值则以页面配置覆盖。",
@@ -2462,6 +2646,8 @@
       "saved": "合规配置已保存",
       "saveFailed": "保存合规配置失败"
     },
+=======
+>>>>>>> upstream/main
     "siem": {
       "authToken": "Bearer Token（可选）",
       "batchSize": "批大小",
@@ -2534,9 +2720,15 @@
     "title": "退出登录"
   },
   "system": {
+<<<<<<< HEAD
     "notifications": "系统通知",
     "alertError": "错误",
     "alertWarning": "警告"
+=======
+    "alertError": "错误",
+    "alertWarning": "警告",
+    "notifications": "系统通知"
+>>>>>>> upstream/main
   },
   "systemConfig": {
     "pageDescription": "这些参数通过 CLI 标志或环境变量初始化。它们当前为只读，以确保环境一致性。",
@@ -2951,4 +3143,8 @@
     "singleRequestBatchSizeTooLarge": "批大小必须最多为200",
     "singleRequestBatchSizeTooSmall": "批大小必须至少为10"
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> upstream/main

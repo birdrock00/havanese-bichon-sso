@@ -3129,6 +3129,15 @@ mod tests {
 
     #[tokio::test]
     async fn update_envelope_tags_guard_fires_for_held_account() {
+<<<<<<< HEAD
+=======
+        // The account insert and tag update write through the backup write
+        // gate, which backup tests pause during their capture window;
+        // serialize against them via the shared state-test lock (see the
+        // note on BACKUP_STATE_TESTS in backup/manager.rs).
+        let _run_guard = crate::backup::BACKUP_STATE_TESTS.lock().await;
+
+>>>>>>> upstream/main
         use std::sync::Once;
 
         use crate::account::migration::{AccountModel, AccountType};

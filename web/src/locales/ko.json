@@ -838,6 +838,7 @@
     "youWillNeedToLogInAgain": "계정에 접근하려면 다시 로그인해야 합니다."
   },
   "backup": {
+<<<<<<< HEAD
     "title": "Backup",
     "statusCard": "Backup status",
     "enabled": "Enabled",
@@ -874,6 +875,44 @@
     "previewFailed": "Failed to load preview",
     "download": "Download",
     "downloadFailed": "Failed to download file"
+=======
+    "disabled": "Disabled",
+    "disabledTitle": "Backups are disabled",
+    "disabledWarning": "Enable backups in the configuration form and set the S3 target (endpoint, bucket, access/secret key) to run scheduled backups.",
+    "download": "Download",
+    "downloadFailed": "Failed to download file",
+    "enabled": "Enabled",
+    "error": "Error",
+    "filesLabel": "files",
+    "lastError": "Last error",
+    "lastSnapshot": "Last snapshot",
+    "lastSuccess": "Last success",
+    "loadFailed": "Failed to load backup data",
+    "never": "Never",
+    "nextRun": "Next run",
+    "none": "None",
+    "phase": "Phase",
+    "previewFailed": "Failed to load preview",
+    "previewHint": "Select a file to preview it",
+    "records": "Backup history",
+    "recordsEmpty": "No backup runs yet",
+    "refresh": "Refresh",
+    "runNow": "Run backup now",
+    "schedule": "Schedule",
+    "snapshot": "Snapshot",
+    "snapshotBrowser": "Browse backup data",
+    "snapshotsEmpty": "No snapshots in the repository yet. Run a backup first.",
+    "status": "Status",
+    "statusCard": "Backup status",
+    "statusFailed": "Failed",
+    "statusRunning": "Running",
+    "statusSuccess": "Success",
+    "time": "Time",
+    "title": "Backup",
+    "trigger": "Trigger",
+    "triggerFailed": "Failed to start backup",
+    "triggerStarted": "Backup started"
+>>>>>>> upstream/main
   },
   "command": {
     "dark": "어둡게",
@@ -1536,8 +1575,15 @@
     "attachment": "첨부파일",
     "auditLog": "감사 로그",
     "auth": "인증",
+<<<<<<< HEAD
     "compliance": "규정 준수",
     "complianceDashboard": "컴플라이언스 대시보드",
+=======
+    "backup": "Backup",
+    "compliance": "규정 준수",
+    "complianceDashboard": "컴플라이언스 대시보드",
+    "complianceSettings": "구성",
+>>>>>>> upstream/main
     "dashboard": "대시보드",
     "general": "일반",
     "home": "홈",
@@ -1549,8 +1595,12 @@
     "other": "기타",
     "settings": "설정",
     "timestampAnchor": "타임스탬프 앵커링",
+<<<<<<< HEAD
     "users": "시스템 사용자",
     "backup": "Backup"
+=======
+    "users": "시스템 사용자"
+>>>>>>> upstream/main
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "OAuth 공급자가 애플리케이션을 인증하기 위해 제공하는 비밀 키입니다.",
@@ -2405,9 +2455,15 @@
     "title": "로그아웃"
   },
   "system": {
+<<<<<<< HEAD
     "notifications": "시스템 알림",
     "alertError": "Error",
     "alertWarning": "Warning"
+=======
+    "alertError": "Error",
+    "alertWarning": "Warning",
+    "notifications": "시스템 알림"
+>>>>>>> upstream/main
   },
   "systemConfig": {
     "pageDescription": "이 매개변수는 CLI 플래그 또는 환경 변수를 통해 초기화됩니다. 환경의 일관성을 위해 현재 읽기 전용입니다.",
@@ -2822,4 +2878,8 @@
     "singleRequestBatchSizeTooLarge": "배치 크기는 최대 200이어야 합니다",
     "singleRequestBatchSizeTooSmall": "배치 크기는 최소 10이어야 합니다"
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> upstream/main

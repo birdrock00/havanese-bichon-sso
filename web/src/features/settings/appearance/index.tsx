@@ -15,7 +15,10 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import { createFileRoute } from '@tanstack/react-router'
+import BackupPage from '@/features/backup'
 
+<<<<<<<< HEAD:web/src/features/settings/appearance/index.tsx
 import { AppearanceForm } from './appearance-form'
 
 export function SettingsAppearance() {
@@ -23,3 +26,8 @@ export function SettingsAppearance() {
         <AppearanceForm />
     )
 }
+========
+export const Route = createFileRoute('/_authenticated/backup/')({
+  component: BackupPage,
+})
+>>>>>>>> upstream/main:web/src/routes/_authenticated/backup/index.tsx
