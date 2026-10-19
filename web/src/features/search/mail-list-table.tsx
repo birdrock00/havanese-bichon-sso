@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import { dateFnsLocaleMap, formatBytes } from "@/lib/utils"
+import { cn, dateFnsLocaleMap, formatBytes } from "@/lib/utils"
 import { format, formatDistanceToNow } from "date-fns"
 import { MessageSquareText, Paperclip } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -36,6 +36,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { DataTableToolbar } from "./table/toolbar"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { useSearchMessages } from "@/hooks/use-search-messages"
+import useMinimalAccountList from "@/hooks/use-minimal-account-list"
 
 interface MailListProps {
   items: EmailEnvelope[]
@@ -56,6 +57,15 @@ export function MailListTable({
 
   const locale = dateFnsLocaleMap[i18n.language.toLowerCase()] ?? enUS
   const { selected, setSelected, dateDisplay } = useSearchContext()
+  const { minimalList = [] } = useMinimalAccountList()
+
+  // Which accounts this user may name in a filter. A view is not one of them:
+  // the `account_id` on a result row is the *source* account (the row is the
+  // source's message), and a viewer holds no grant on it — the server drops an
+  // account the caller cannot read, so clicking through would empty the list
+  // instead of narrowing it. Only accounts the account picker offers are
+  // clickable.
+  const filterableAccounts = new Set(minimalList.map((account) => account.id))
 
   const columns: ColumnDef<EmailEnvelope>[] = [
     {
@@ -92,6 +102,10 @@ export function MailListTable({
         const { from, account_email, account_name, mailbox_name, account_id, mailbox_id } = row.original;
         const { setFilter } = useSearchMessages();
         const accountPrefix = account_name || account_email.split('@')[0];//https://github.com/rustmailer/bichon/issues/306
+        // A view's rows name the source account, which the viewer cannot filter
+        // by — see `filterableAccounts`. The labels still show it (that is
+        // where the message came from), they just stop being links.
+        const canFilterAccount = filterableAccounts.has(account_id);
 
         return (
           <div className="flex flex-col py-0.5 min-w-0 group">
@@ -109,23 +123,29 @@ export function MailListTable({
 
             <div className="flex items-center gap-1 mt-1 text-[10px] text-muted-foreground/70">
               <span
-                className="truncate max-w-[90px] hover:text-primary cursor-pointer transition-colors"
+                className={cn(
+                  "truncate max-w-[90px] transition-colors",
+                  canFilterAccount && "hover:text-primary cursor-pointer"
+                )}
                 title={account_email}
-                onClick={(e) => {
+                onClick={canFilterAccount ? (e) => {
                   e.stopPropagation();
                   setFilter((prev: any) => ({ ...prev, account_ids: [account_id], mailbox_ids: undefined }));
-                }}
+                } : undefined}
               >
                 {accountPrefix}
               </span>
 
               <span className="shrink-0 opacity-40">/</span>
               <span
-                className="truncate max-w-[70px] hover:text-primary cursor-pointer transition-colors"
-                onClick={(e) => {
+                className={cn(
+                  "truncate max-w-[70px] transition-colors",
+                  canFilterAccount && "hover:text-primary cursor-pointer"
+                )}
+                onClick={canFilterAccount ? (e) => {
                   e.stopPropagation();
                   setFilter((prev: any) => ({ ...prev, account_ids: [account_id], mailbox_ids: [mailbox_id] }));
-                }}
+                } : undefined}
               >
                 {mailbox_name}
               </span>

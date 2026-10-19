@@ -77,7 +77,7 @@ pub fn run_interactive(verify_only: bool) {
         "Reset Admin Password",
         "Migrate Legacy v0.3.7 Storage to v2.x (bichon-blob)",
         "Migrate v1.x Storage to v2.x (Fjall → bichon-blob)",
-        "Restore a Backup Point from S3 (Disaster Recovery)",
+        "Restore a Backup Point (Disaster Recovery)",
         "Exit",
     ];
 

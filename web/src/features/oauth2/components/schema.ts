@@ -28,6 +28,9 @@ export const getOAuth2Schema = (t: (key: string) => string) =>
         required_error: t('oauth2.clientIdIsRequired'),
       })
       .min(1, { message: t('oauth2.clientIdCannotBeEmpty') }),
+    client_type: z.enum(['Confidential', 'Public'], {
+      required_error: t('oauth2.clientTypeIsRequired'),
+    }),
     client_secret: z.string().optional(),
     auth_url: z
       .string({
@@ -54,3 +57,27 @@ export const getOAuth2Schema = (t: (key: string) => string) =>
   })
 
 export type OAuth2FormValues = z.infer<ReturnType<typeof getOAuth2Schema>>
+
+export const getImportTokensSchema = (t: (key: string) => string) =>
+  z.object({
+    account_id: z
+      .number({ invalid_type_error: t('oauth2.accountIsRequired') })
+      .optional()
+      .refine((value) => value !== undefined, {
+        message: t('oauth2.accountIsRequired'),
+      }),
+    // `.trim()` also strips surrounding whitespace from the submitted value, which is
+    // what a copy-paste out of devtools tends to carry.
+    access_token: z
+      .string()
+      .trim()
+      .min(1, { message: t('oauth2.accessTokenCannotBeEmpty') }),
+    refresh_token: z
+      .string()
+      .trim()
+      .min(1, { message: t('oauth2.refreshTokenCannotBeEmpty') }),
+  })
+
+export type ImportTokensFormValues = z.infer<
+  ReturnType<typeof getImportTokensSchema>
+>

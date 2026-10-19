@@ -24,6 +24,13 @@ export interface MinimalAccount {
     id: number;
     email: string;
     name?: string;
+    /** IMAP authentication method; `null`/absent for accounts with no IMAP config (e.g. NoSync). */
+    auth_type?: AuthType | null;
+    /** Storage type: `View` is a read-only filtered view and holds no mail of
+     *  its own; `NoSync` with a `kind` is the journal archive. */
+    account_type: AccountType;
+    /** Special role (Pro/Enterprise): present only on the journal archive. */
+    kind?: 'journal';
 }
 
 export const minimal_account_list = async () => {
@@ -120,7 +127,7 @@ export interface DownloadState {
 type Encryption = 'Ssl' | 'StartTls' | 'None';
 type AuthType = 'Password' | 'OAuth2';
 type Unit = 'Days' | 'Months' | 'Years';
-type AccountType = 'IMAP' | 'NoSync';
+type AccountType = 'IMAP' | 'NoSync' | 'View';
 
 // Interface definitions
 interface AuthConfig {
@@ -206,6 +213,30 @@ export interface AccountModel {
     hold_reason?: string | null;
     hold_placed_by?: number | null;
     hold_placed_at?: number | null;
+    /** Special role (Pro/Enterprise). `null`/absent = ordinary account. */
+    kind?: AccountKind | null;
+    /** Sources and per-source filters of a `View` account. */
+    view?: ViewConfig | null;
+}
+
+/** A view's restriction on one source account; every condition is ANDed with
+ *  the viewer's own search. */
+export interface ViewSource {
+    account_id: number;
+    /** OR within the field: at least one of these addresses must appear. */
+    any_participant?: string[] | null;
+    /** OR within the field: at least one of these addresses must appear. */
+    any_recipient?: string[] | null;
+}
+
+export interface AccountKind {
+    /** The only special role: the SMTP journaling archive. */
+    role: 'journal';
+    target_address?: string | null;
+}
+
+export interface ViewConfig {
+    sources: ViewSource[];
 }
 
 export const download_state = async (account_id: number) => {

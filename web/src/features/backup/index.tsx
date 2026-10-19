@@ -423,6 +423,14 @@ export default function BackupPage() {
                         {status.last_error}
                       </div>
                     )}
+                    {status?.target && (
+                      <div
+                        className='truncate text-xs text-muted-foreground'
+                        title={status.target}
+                      >
+                        {t('backup.statusTarget', 'Saving to')}: {status.target}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -644,13 +652,41 @@ export default function BackupPage() {
                       )
                       .map((record) => {
                         const info = statusInfo(record.status)
+                        // The history is one list across targets, so a record
+                        // from a target the user has since switched away from
+                        // would otherwise look like it belongs to the current
+                        // one. Only flag it once the current target is known.
+                        const offTarget =
+                          !!status?.target && record.target !== status.target
                         return (
                           <TableRow key={record.id}>
                             <TableCell className='whitespace-nowrap text-xs'>
                               {formatTime(record.started_at)}
                             </TableCell>
                             <TableCell className='text-xs'>
-                              {record.trigger}
+                              <div>{record.trigger}</div>
+                              {record.target && (
+                                <div className='mt-0.5 flex items-center gap-1'>
+                                  <span
+                                    className={`max-w-[150px] truncate text-[11px] ${
+                                      offTarget
+                                        ? 'text-amber-600 dark:text-amber-500'
+                                        : 'text-muted-foreground'
+                                    }`}
+                                    title={record.target}
+                                  >
+                                    {record.target}
+                                  </span>
+                                  {offTarget && (
+                                    <span className='shrink-0 text-[11px] text-amber-600 dark:text-amber-500'>
+                                      {t(
+                                        'backup.otherTarget',
+                                        'different target'
+                                      )}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </TableCell>
                             <TableCell>
                               <Badge variant={info.variant}>{info.label}</Badge>

@@ -19,7 +19,7 @@
 
 import { DotsHorizontalIcon } from '@radix-ui/react-icons'
 import { Row } from '@tanstack/react-table'
-import { IconEdit, IconTrash } from '@tabler/icons-react'
+import { IconEdit, IconKey, IconTrash } from '@tabler/icons-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -81,6 +81,19 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             {t('oauth2.actions.authorize')}
             <DropdownMenuShortcut>
               <WorkflowIcon size={16} />
+            </DropdownMenuShortcut>
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            disabled={!require_any_permission(['system:root', 'account:manage'])}
+            onClick={() => {
+              setCurrentRow(row.original)
+              setOpen('import-tokens')
+            }}
+          >
+            {t('oauth2.actions.importTokens')}
+            <DropdownMenuShortcut>
+              <IconKey size={16} />
             </DropdownMenuShortcut>
           </DropdownMenuItem>
           <DropdownMenuSeparator />

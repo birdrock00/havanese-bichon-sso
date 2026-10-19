@@ -18,9 +18,10 @@
 
 use std::str::FromStr;
 
-use crate::account::entity::ImapConfig;
+use crate::account::entity::{AuthType, ImapConfig};
 use crate::account::migration::{
-    AccountModel, AccountType, ArchiveRules, ExtractionRules, QuotaWindow,
+    AccountKind, AccountKindRole, AccountModel, AccountType, ArchiveRules, ExtractionRules,
+    QuotaWindow, ViewConfig,
 };
 use crate::account::since::{DateSince, RelativeDate};
 use crate::error::code::ErrorCode;
@@ -66,6 +67,16 @@ pub struct AccountCreateRequest {
     /// Account-level retention period in days (free/community feature).
     /// `None` or `0` = disabled (archive everything, never auto-purge).
     pub retention_days: Option<u64>,
+    /// Special role marker. It is set internally when the journaling
+    /// configuration creates its archive account; a client may not choose it.
+    ///
+    /// `None` — the default, and what every client that predates this field
+    /// sends — is an ordinary account.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<AccountKind>,
+    /// Sources and per-source filters for an `AccountType::View` account.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub view: Option<ViewConfig>,
 }
 
 impl AccountCreateRequest {
@@ -114,7 +125,38 @@ impl AccountCreateRequest {
                     validate_cron_expression(schedule)?;
                 }
             }
-            AccountType::NoSync => {}
+            // A view stores nothing and must not carry sync configuration;
+            // its validation happens below.
+            AccountType::View | AccountType::NoSync => {}
+        }
+
+        // The journal role is created by the journaling configuration, never
+        // chosen by a client.
+        if self.kind.is_some() {
+            return Err(raise_error!(
+                "This account role is reserved for the SMTP journaling configuration".into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+
+        if matches!(self.account_type, AccountType::View) {
+            // Pro/Enterprise only. The type exists in the data model
+            // everywhere so rows stay readable, but a community installation
+            // must not be able to create one — this is checked here, not only
+            // by a hidden WebUI field.
+            if !crate::ext::account_roles::view_role_enabled() {
+                return Err(raise_error!(
+                    "View accounts require the Pro or Enterprise edition".into(),
+                    ErrorCode::Forbidden
+                ));
+            }
+            let sources = self.view.as_ref().map(|v| v.sources.as_slice()).unwrap_or(&[]);
+            validate_view_sources(sources)?;
+        } else if self.view.is_some() {
+            return Err(raise_error!(
+                "Only a view account may carry view sources".into(),
+                ErrorCode::InvalidParameter
+            ));
         }
         if let Some(ref rules) = self.extraction_rules {
             rules.validate().map_err(|e| {
@@ -217,6 +259,10 @@ pub struct AccountUpdateRequest {
     /// Clear retention back to `None` (disabled). Cannot be combined with
     /// `retention_days`.
     pub clear_retention_days: Option<bool>,
+    /// Replace a `View` account's sources and filters. `None` = no change.
+    /// Only meaningful on an `AccountType::View` account.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub view: Option<ViewConfig>,
 }
 
 impl AccountUpdateRequest {
@@ -257,6 +303,24 @@ impl AccountUpdateRequest {
                 ErrorCode::InvalidParameter
             ));
         }
+        if let Some(view) = &self.view {
+            if !matches!(account.account_type, AccountType::View) {
+                return Err(raise_error!(
+                    "Only a view account may carry view sources".into(),
+                    ErrorCode::InvalidParameter
+                ));
+            }
+            // Same edition/live-licence gate as creation: a lapsed licence
+            // must not be able to widen an existing view's scope either.
+            if !crate::ext::account_roles::view_role_enabled() {
+                return Err(raise_error!(
+                    "View accounts require the Pro or Enterprise edition".into(),
+                    ErrorCode::Forbidden
+                ));
+            }
+            validate_view_sources(&view.sources)?;
+        }
+
         if self.clear_retention_days == Some(true) && self.retention_days.is_some() {
             return Err(raise_error!(
                 "clear_retention_days cannot be combined with retention_days".into(),
@@ -330,6 +394,20 @@ pub struct MinimalAccount {
     pub id: u64,
     pub email: String,
     pub name: Option<String>,
+    /// The IMAP authentication method of the account, or `None` for accounts that have
+    /// no IMAP configuration at all (e.g. `NoSync`). `#[serde(default)]` keeps this
+    /// readable from a server that predates the field.
+    #[serde(default)]
+    pub auth_type: Option<AuthType>,
+    /// The storage type (`IMAP`, `NoSync`, `View`).
+    ///
+    /// On the minimal list so the UI can tell a view apart from a local
+    /// account without loading the full account.
+    pub account_type: AccountType,
+    /// The only special role today: `journal` (the SMTP journaling archive).
+    /// Absent for ordinary accounts and for views.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<AccountKindRole>,
 }
 
 pub fn filter_accessible_accounts<'a>(
@@ -343,9 +421,111 @@ pub fn filter_accessible_accounts<'a>(
         .collect()
 }
 
+
+/// Validate a view's sources: at least one, no duplicates, every source must
+/// exist and must not itself be a view, and each filter must be an address.
+///
+/// Shared by creation and update so a view cannot be created valid and then
+/// edited into an invalid state (or vice versa).
+pub(crate) fn validate_view_sources(
+    sources: &[crate::account::migration::ViewSource],
+) -> BichonResult<()> {
+    if sources.is_empty() {
+        return Err(raise_error!(
+            "A view account needs at least one source account".into(),
+            ErrorCode::InvalidParameter
+        ));
+    }
+    let mut seen = std::collections::HashSet::new();
+    for source in sources {
+        if !seen.insert(source.account_id) {
+            return Err(raise_error!(
+                format!("View source account {} is listed twice", source.account_id),
+                ErrorCode::InvalidParameter
+            ));
+        }
+        let account = AccountModel::get(source.account_id).map_err(|_| {
+            raise_error!(
+                format!("View source account {} does not exist", source.account_id),
+                ErrorCode::InvalidParameter
+            )
+        })?;
+        if account.is_view_account() {
+            return Err(raise_error!(
+                format!("Account {} is itself a view; views cannot chain", source.account_id),
+                ErrorCode::InvalidParameter
+            ));
+        }
+        for address in source
+            .any_participant
+            .iter()
+            .chain(source.any_recipient.iter())
+        {
+            validate_filter_address(address, source.account_id)?;
+        }
+    }
+    Ok(())
+}
+
+/// A view filter address must be a bare e-mail address.
+///
+/// The filter is evaluated with **exact** equality — in the index query and in
+/// the per-message read check — so anything that is not one address matches
+/// nothing. A `contains('@')` test accepted `Zhang Wei <zhang@firma.de>` and
+/// `a@b.de, c@d.de` (both reachable through the picker's free-text entry) and
+/// the view then silently exposed an empty result set. Refusing it names the
+/// problem while the operator is looking at the field.
+fn validate_filter_address(address: &str, account_id: u64) -> BichonResult<()> {
+    let address = address.trim();
+    // The function, not the `validate_email!` macro imported at the top of
+    // this module.
+    crate::utils::validate_email(address).map_err(|_| {
+        raise_error!(
+            format!(
+                "View filter '{}' on account {} is not an e-mail address",
+                address, account_id
+            ),
+            ErrorCode::InvalidParameter
+        )
+    })
+}
+
 #[cfg(test)]
 mod test {
-    use super::validate_cron_expression;
+    use super::{validate_cron_expression, validate_filter_address, MinimalAccount};
+    use crate::account::entity::AuthType;
+
+    /// A filter that is not a bare address can never match, so it is refused at
+    /// the door rather than stored as a view that shows nothing.
+    #[test]
+    fn view_filter_addresses_must_be_bare_addresses() {
+        for good in [
+            "zhang@firma.de",
+            "  JÜRGEN@firma.de  ",
+            "a.b+tag@sub.example.co.uk",
+        ] {
+            assert!(
+                validate_filter_address(good, 1).is_ok(),
+                "{good} must be accepted"
+            );
+        }
+
+        for bad in [
+            // Display-name form and a list: both are what the free-text entry
+            // produces, and both would match nothing.
+            "Zhang Wei <zhang@firma.de>",
+            "a@b.de, c@d.de",
+            "zhang",
+            "@firma.de",
+            "zhang@",
+            "",
+        ] {
+            assert!(
+                validate_filter_address(bad, 1).is_err(),
+                "{bad} must be refused"
+            );
+        }
+    }
 
     #[test]
     fn valid_cron_expressions() {
@@ -371,5 +551,31 @@ mod test {
     #[test]
     fn invalid_cron_expression_garbage() {
         assert!(validate_cron_expression("not a cron").is_err());
+    }
+
+    /// A `bichon-cli` built from this revision may talk to a server that predates
+    /// `auth_type`; the response must still parse.
+    #[test]
+    fn minimal_account_parses_without_auth_type() {
+        let account: MinimalAccount =
+            serde_json::from_str(r#"{"id":7,"email":"a@example.com","name":"a","account_type":"NoSync"}"#).unwrap();
+        assert_eq!(account.id, 7);
+        assert_eq!(account.email, "a@example.com");
+        assert_eq!(account.name.as_deref(), Some("a"));
+        assert_eq!(account.auth_type, None);
+    }
+
+    #[test]
+    fn minimal_account_parses_auth_type() {
+        let account: MinimalAccount = serde_json::from_str(
+            r#"{"id":7,"email":"a@example.com","name":null,"auth_type":"OAuth2","account_type":"IMAP"}"#,
+        )
+        .unwrap();
+        assert_eq!(account.auth_type, Some(AuthType::OAuth2));
+
+        // NoSync accounts carry no IMAP config, so the field is explicitly null.
+        let account: MinimalAccount =
+            serde_json::from_str(r#"{"id":8,"email":"b@example.com","auth_type":null,"account_type":"NoSync"}"#).unwrap();
+        assert_eq!(account.auth_type, None);
     }
 }

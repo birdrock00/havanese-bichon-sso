@@ -20,7 +20,7 @@
 import { Outlet } from '@tanstack/react-router'
 import { Main } from '@/components/layout/main'
 import SidebarNav from './components/sidebar-nav'
-import { BadgeCheck, Brush, FileCode2, KeyRound, LockKeyhole, Palette, Radar, SettingsIcon, ShieldCheck, UserCog, Users, Waypoints } from 'lucide-react'
+import { BadgeCheck, Brush, FileCode2, Inbox, KeyRound, LockKeyhole, Palette, Radar, SettingsIcon, ShieldCheck, UserCog, Users, Waypoints } from 'lucide-react'
 import { FixedHeader } from '@/components/layout/fixed-header'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useEdition } from '@/hooks/use-edition'
@@ -65,6 +65,17 @@ export default function Settings() {
       href: '/settings/siem',
       icon: <Radar size={18} />,
       visible: isEnterprise && require_any_permission(['system:root', 'user:manage']),
+    },
+    {
+      // The mirror of SIEM: SIEM forwards audit events out, journaling takes
+      // the tenant's mail in. Both are admin-configured server integrations,
+      // and both need system:root — which is why this lives here and not in
+      // the compliance console, where a read-only compliance officer would
+      // see an entry they cannot open.
+      title: t('settings.sidebar.journal', 'SMTP journaling'),
+      href: '/settings/journal',
+      icon: <Inbox size={18} />,
+      visible: (isPro || isEnterprise) && require_any_permission(['system:root']),
     },
     {
       title: t('settings.sidebar.approvals', 'Dual control'),

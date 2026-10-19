@@ -32,9 +32,17 @@ export interface BackupStatusView {
   last_skipped_objects: number | null
   schedule: string
   next_run_at: string | null
+  /** The backup chain runs currently write to — target plus prefix, e.g.
+   *  `s3://host/bucket/prefix` or `/mnt/backup/prefix`. After a target change
+   *  the records below belong to the previous destination, so this is how the
+   *  card answers "where are my backups going right now?". */
+  target: string
 }
 
 export type BackupRunStatus = 'running' | 'success' | 'failed'
+
+/** Which backend a backup lands on. */
+export type BackupTargetType = 's3' | 'local'
 
 /** Per-component transfer stats: which part of the archive was new vs skipped. */
 export interface ArtifactStat {
@@ -58,8 +66,8 @@ export interface BackupRunSummary {
 }
 
 /** Effective backup configuration for the WebUI form. Credentials are exposed
- *  only as `*_set` flags — the plaintext never leaves the server.
- *  S3-only (design doc §9). */
+ *  only as `*_set` flags — the plaintext never leaves the server. Covers both
+ *  target types (design doc §9). */
 export interface RetentionPolicy {
   keep_last: number
   keep_daily: number
@@ -72,26 +80,33 @@ export interface BackupConfigView {
   schedule: string
   prefix: string
   retention: RetentionPolicy
+  target_type: BackupTargetType
   s3_endpoint: string | null
   s3_region: string | null
   s3_bucket: string | null
   s3_access_key_set: boolean
   s3_secret_key_set: boolean
+  /** Absolute path of the local backup directory. Not a secret. Kept while the
+   *  active target is `s3`, so switching targets is lossless. */
+  local_dir: string | null
 }
 
 /** Partial update. `undefined` leaves a field untouched. Secrets follow the
  *  SIEM convention: omit to keep, `'********'` to keep (same thing), `''` to
- *  clear (returning to the env fallback), anything else to replace. */
+ *  clear (returning to the env fallback), anything else to replace.
+ *  `local_dir` is not a secret: `''` clears it. */
 export interface BackupConfigUpdate {
   enabled?: boolean
   schedule?: string
   prefix?: string
   retention?: RetentionPolicy
+  target_type?: BackupTargetType
   s3_endpoint?: string
   s3_region?: string
   s3_bucket?: string
   s3_access_key?: string
   s3_secret_key?: string
+  local_dir?: string
 }
 
 /** The effective backup configuration (masked credentials). */
@@ -125,6 +140,11 @@ export interface BackupRecord {
   snapshot_id: string | null
   summary: BackupRunSummary | null
   warnings: string[]
+  /** Which backup chain this run wrote to (target + prefix). The history is a
+   *  single list across destinations, so this is what tells a run against the
+   *  current target from one against a target you have since switched away
+   *  from. `null` on records written before the field existed. */
+  target: string | null
 }
 
 /** One referenced object (content-addressed, immutable). */

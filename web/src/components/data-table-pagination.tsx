@@ -15,8 +15,14 @@
 //
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-
+//
+// Pagination for the tanstack-table pages.
+//
+// One implementation instead of a copy per feature. The copies had drifted only
+// in their localStorage key; `storageKey` keeps that behaviour per page while
+// the markup, typography and page-size options stay identical everywhere.
+// Reading the stored size back is the table's job (it is part of the table's
+// initial state); this component only writes it.
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -38,19 +44,22 @@ interface DataTablePaginationProps<TData> {
   table: Table<TData>
   showSelected?: boolean
   showPageSizeSelector?: boolean
+  /** localStorage key under which the chosen page size is remembered. */
+  storageKey?: string
 }
 
 export function DataTablePagination<TData>({
   table,
   showSelected = false,
-  showPageSizeSelector = true
+  showPageSizeSelector = true,
+  storageKey,
 }: DataTablePaginationProps<TData>) {
   const { t } = useTranslation()
 
   return (
     <div className='flex items-center justify-between overflow-auto px-2'>
       {showSelected && (
-        <div className='hidden flex-1 text-sm text-muted-foreground sm:block'>
+        <div className='hidden flex-1 text-xs text-muted-foreground sm:block'>
           {t('table.pagination.selected', {
             selected: table.getFilteredSelectedRowModel().rows.length,
             total: table.getFilteredRowModel().rows.length,
@@ -58,29 +67,33 @@ export function DataTablePagination<TData>({
         </div>
       )}
       {!showPageSizeSelector && (
-        <div className='hidden flex-1 text-sm text-muted-foreground sm:block'>
+        <div className='hidden flex-1 text-xs text-muted-foreground sm:block'>
           {t('table.pagination.fixed_page_size', { size: 10 })}
         </div>
       )}
       <div className='flex items-center sm:space-x-6 lg:space-x-8 ml-auto'>
         {showPageSizeSelector && (
           <div className='flex items-center space-x-2'>
-            <p className='hidden text-sm font-medium sm:block'>
+            <p className='hidden text-xs font-medium sm:block'>
               {t('table.pagination.rows_per_page')}
             </p>
             <Select
               value={`${table.getState().pagination.pageSize}`}
               onValueChange={(value) => {
-                localStorage.setItem('bichon_accounts_page_size', value);
+                if (storageKey) {
+                  localStorage.setItem(storageKey, value)
+                }
                 table.setPageSize(Number(value))
               }}
             >
-              <SelectTrigger className='h-8 w-[70px]'>
-                <SelectValue placeholder={table.getState().pagination.pageSize} />
+              <SelectTrigger className='h-8 w-[70px] text-xs'>
+                <SelectValue
+                  placeholder={table.getState().pagination.pageSize}
+                />
               </SelectTrigger>
               <SelectContent side='top'>
-                {[10, 20, 30, 40, 50, 100, 150].map((pageSize) => (
-                  <SelectItem key={pageSize} value={`${pageSize}`}>
+                {[10, 20, 30, 40, 50].map((pageSize) => (
+                  <SelectItem key={pageSize} value={`${pageSize}`} className='text-xs'>
                     {pageSize}
                   </SelectItem>
                 ))}
@@ -88,7 +101,7 @@ export function DataTablePagination<TData>({
             </Select>
           </div>
         )}
-        <div className='flex w-[130px] items-center justify-center text-sm font-medium'>
+        <div className='flex w-[130px] items-center justify-center text-xs font-medium'>
           {t('table.pagination.page_info', {
             page: table.getState().pagination.pageIndex + 1,
             total: table.getPageCount(),

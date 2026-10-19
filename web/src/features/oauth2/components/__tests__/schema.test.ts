@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getOAuth2Schema } from '../schema'
+import { getOAuth2Schema, getImportTokensSchema } from '../schema'
 
 const t = (key: string) => key
 
@@ -8,6 +8,7 @@ describe('OAuth2 Form Schema', () => {
 
   const validData = {
     client_id: 'my-client-id',
+    client_type: 'Confidential' as const,
     auth_url: 'https://accounts.example.com/o/oauth2/auth',
     token_url: 'https://oauth2.example.com/token',
     redirect_uri: 'https://myapp.example.com/oauth2/callback',
@@ -23,6 +24,32 @@ describe('OAuth2 Form Schema', () => {
     it('accepts valid client_id', () => {
       const result = schema.safeParse(validData)
       expect(result.success).toBe(true)
+    })
+  })
+
+  describe('client_type field', () => {
+    const firstMessage = (result: ReturnType<typeof schema.safeParse>) =>
+      result.success ? undefined : result.error.issues[0].message
+
+    it('accepts Confidential', () => {
+      const result = schema.safeParse(validData)
+      expect(result.success).toBe(true)
+    })
+
+    it('accepts Public', () => {
+      const result = schema.safeParse({ ...validData, client_type: 'Public' })
+      expect(result.success).toBe(true)
+    })
+
+    it('rejects a missing client_type', () => {
+      const result = schema.safeParse({ ...validData, client_type: undefined })
+      expect(result.success).toBe(false)
+      expect(firstMessage(result)).toBe('oauth2.clientTypeIsRequired')
+    })
+
+    it('rejects an unknown client type', () => {
+      const result = schema.safeParse({ ...validData, client_type: 'public' })
+      expect(result.success).toBe(false)
     })
   })
 
@@ -184,6 +211,92 @@ describe('OAuth2 Form Schema', () => {
     it('accepts numeric use_proxy', () => {
       const result = schema.safeParse({ ...validData, use_proxy: 1 })
       expect(result.success).toBe(true)
+    })
+  })
+})
+
+describe('Import Tokens Form Schema', () => {
+  const schema = getImportTokensSchema(t)
+
+  const validData = {
+    account_id: 42,
+    access_token: 'ya29.a0AfH6SMBexample',
+    refresh_token: '1//0exampleRefreshToken',
+  }
+
+  const firstMessage = (result: ReturnType<typeof schema.safeParse>) =>
+    result.success ? undefined : result.error.issues[0].message
+
+  it('accepts a complete payload', () => {
+    expect(schema.safeParse(validData).success).toBe(true)
+  })
+
+  describe('account_id field', () => {
+    it('rejects a missing account_id', () => {
+      const result = schema.safeParse({
+        access_token: validData.access_token,
+        refresh_token: validData.refresh_token,
+      })
+      expect(result.success).toBe(false)
+      expect(firstMessage(result)).toBe('oauth2.accountIsRequired')
+    })
+
+    it('rejects an undefined account_id', () => {
+      const result = schema.safeParse({ ...validData, account_id: undefined })
+      expect(result.success).toBe(false)
+      expect(firstMessage(result)).toBe('oauth2.accountIsRequired')
+    })
+
+    it('rejects a non-numeric account_id', () => {
+      const result = schema.safeParse({ ...validData, account_id: '42' })
+      expect(result.success).toBe(false)
+      expect(firstMessage(result)).toBe('oauth2.accountIsRequired')
+    })
+  })
+
+  describe('access_token field', () => {
+    it('rejects an empty access_token', () => {
+      const result = schema.safeParse({ ...validData, access_token: '' })
+      expect(result.success).toBe(false)
+      expect(firstMessage(result)).toBe('oauth2.accessTokenCannotBeEmpty')
+    })
+
+    it('rejects a whitespace-only access_token', () => {
+      const result = schema.safeParse({ ...validData, access_token: '   ' })
+      expect(result.success).toBe(false)
+      expect(firstMessage(result)).toBe('oauth2.accessTokenCannotBeEmpty')
+    })
+
+    it('trims surrounding whitespace off the submitted value', () => {
+      const result = schema.safeParse({
+        ...validData,
+        access_token: '  ya29.token  ',
+      })
+      expect(result.success).toBe(true)
+      expect(result.success && result.data.access_token).toBe('ya29.token')
+    })
+  })
+
+  describe('refresh_token field', () => {
+    it('rejects an empty refresh_token', () => {
+      const result = schema.safeParse({ ...validData, refresh_token: '' })
+      expect(result.success).toBe(false)
+      expect(firstMessage(result)).toBe('oauth2.refreshTokenCannotBeEmpty')
+    })
+
+    it('rejects a whitespace-only refresh_token', () => {
+      const result = schema.safeParse({ ...validData, refresh_token: '\n\t ' })
+      expect(result.success).toBe(false)
+      expect(firstMessage(result)).toBe('oauth2.refreshTokenCannotBeEmpty')
+    })
+
+    it('trims surrounding whitespace off the submitted value', () => {
+      const result = schema.safeParse({
+        ...validData,
+        refresh_token: '\n1//0token\n',
+      })
+      expect(result.success).toBe(true)
+      expect(result.success && result.data.refresh_token).toBe('1//0token')
     })
   })
 })

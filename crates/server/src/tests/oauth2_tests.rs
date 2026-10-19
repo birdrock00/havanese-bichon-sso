@@ -32,6 +32,7 @@ struct OAuth2Config {
 
 #[derive(Debug, Serialize)]
 struct UpdateOAuth2Payload {
+    client_type: Option<String>,
     enabled: Option<bool>,
 }
 
@@ -79,8 +80,9 @@ async fn oauth2_crud() {
         .await;
     resp.assert_status_is_ok();
 
-    // Update
+    // Update: switching to a public client drops the stored secret
     let update = UpdateOAuth2Payload {
+        client_type: Some("Public".into()),
         enabled: Some(true),
     };
     let resp = cli
@@ -90,6 +92,14 @@ async fn oauth2_crud() {
         .send()
         .await;
     resp.assert_status_is_ok();
+    let resp = cli
+        .get(&format!("/api/v1/oauth2/{}", id))
+        .header("Authorization", &format!("Bearer {}", token))
+        .send()
+        .await;
+    let config: serde_json::Value = resp.json().await.value().deserialize();
+    assert_eq!(config["client_type"], "Public");
+    assert!(config["client_secret"].is_null());
 
     // Delete
     let resp = cli

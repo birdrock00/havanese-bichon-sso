@@ -54,7 +54,10 @@ export const check_disk_space = async (): Promise<number> => {
 export const get_nosync_accounts = async (): Promise<AccountModel[]> => {
   const data = await list_accounts();
   return (data.items || []).filter(
-    (a) => a.account_type === 'NoSync' && a.enabled
+    // `View` is a different account type and never stores mail. The journal
+    // archive is a NoSync account but must not receive foreign mail — mixing
+    // imports into it would destroy the provenance the journal exists for.
+    (a) => a.account_type === 'NoSync' && a.enabled && !a.kind
   );
 };
 

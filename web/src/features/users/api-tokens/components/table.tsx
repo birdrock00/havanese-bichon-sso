@@ -41,7 +41,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { DataTablePagination } from './data-table-pagination'
+import { DataTablePagination } from '@/components/data-table-pagination'
 import { DataTableToolbar } from './data-table-toolbar'
 import { useTranslation } from 'react-i18next'
 import { AccessToken } from '@/api/users/api'
@@ -168,7 +168,7 @@ export function ApiTokensTable({ columns, data }: DataTableProps) {
           </TableBody>
         </Table>
       </div>
-      <DataTablePagination table={table} />
+      <DataTablePagination table={table}  storageKey='bichon_apitoken_page_size' />
     </div>
   )
 }

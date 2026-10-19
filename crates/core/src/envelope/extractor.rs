@@ -23,9 +23,9 @@ use tracing::error;
 use uuid::Uuid;
 
 use crate::{
-    account::migration::AccountModel,
+    account::migration::{AccountModel, ExtractionRules},
     archive::imap::mailbox::MailBox,
-    backup::gate::{BACKUP_ACQUIRE_TIMEOUT, WRITE_GATE},
+    backup::gate::{BACKUP_ACQUIRE_TIMEOUT, WRITE_GATE, WriteGate},
     common::AddrVec,
     envelope::{meta::parse_bichon_metadata, utils::normalize_subject},
     error::{code::ErrorCode, BichonResult},
@@ -81,9 +81,17 @@ pub async fn extract_envelope_and_store_it(
         }
     };
     let size = fetch.size.unwrap_or(body.len() as u32);
-    extract_envelope_core(body, uid, size, internal_date, account_id, mailbox_id)
-        .await
-        .map(|_| ())
+    extract_envelope_core(
+        body,
+        uid,
+        size,
+        internal_date,
+        account_id,
+        mailbox_id,
+        None,
+    )
+    .await
+    .map(|_| ())
 }
 
 pub async fn extract_envelope_from_eml(
@@ -92,7 +100,7 @@ pub async fn extract_envelope_from_eml(
     mailbox_id: u64,
 ) -> BichonResult<ExtractOutcome> {
     let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
-    extract_envelope_core(body, 0, body.len() as u32, 0, account_id, mailbox_id).await
+    extract_envelope_core(body, 0, body.len() as u32, 0, account_id, mailbox_id, None).await
 }
 
 pub async fn extract_envelope_from_smtp(
@@ -108,10 +116,74 @@ pub async fn extract_envelope_from_smtp(
         utc_now!(),
         account_id,
         mailbox_id,
+        None,
     )
     .await
 }
 
+/// Archive a journal delivery: `inner` is the original message the journal
+/// report carried, `report` is the report exactly as the tenant delivered it.
+///
+/// The archived email is the **inner** message — that is the mail a user
+/// searches, opens and exports, and it is what the content hash, the Merkle
+/// leaf and the dedup cache refer to. The report is preserved beside it as a
+/// `message/rfc822` attachment, so the artifact the tenant actually sent stays
+/// retrievable byte for byte without polluting every envelope's headers with
+/// the report's outer From/To.
+///
+/// The journal wrapper is vendor-specific in its *body* but not in its
+/// structure: Exchange wraps the original in a `message/rfc822` part, Google's
+/// routing rule forwards it as a plain message. The caller decides which case
+/// applies; this function only assembles the result.
+pub async fn extract_envelope_from_journal(
+    inner: &[u8],
+    report: Option<&[u8]>,
+    account_id: u64,
+    mailbox_id: u64,
+) -> BichonResult<ExtractOutcome> {
+    let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
+    // `size` describes the archived message (the inner one); the report is a
+    // separate attachment and has its own size.
+    extract_envelope_core(
+        inner,
+        0,
+        inner.len() as u32,
+        utc_now!(),
+        account_id,
+        mailbox_id,
+        report,
+    )
+    .await
+}
+
+/// If `raw` is a journal report that wraps the original message in a
+/// `message/rfc822` part, return the wrapped original.
+///
+/// **Standard MIME only.** Exchange puts the original in a `message/rfc822`
+/// part and wraps it in a vendor-specific report body; that body is where the
+/// *envelope* recipients (including BCC) live, and it is deliberately **not**
+/// inspected: its format differs between providers and versions, and a parser
+/// for it would be a liability. The consequence is documented rather than
+/// hidden — a BCC-only recipient is not visible in the original's headers, so
+/// per-recipient discovery cannot find them. Completeness of the journal itself
+/// is unaffected: the message is archived either way.
+///
+/// `None` means the delivery already *is* the original message — Google
+/// Workspace's routing rule forwards a plain copy rather than wrapping it.
+pub fn journal_delivery_inner(raw: &[u8]) -> Option<Vec<u8>> {
+    let message = MessageParser::default().parse(raw)?;
+    // Bound to a local so the iterator temporary is dropped before `message`
+    // is; the returned bytes are a copy.
+    let inner = message
+        .attachments()
+        .find(|att| att.is_message())
+        .map(|att| att.contents().to_vec());
+    inner
+}
+
+/// Archive one message. `journal_report` — present only on the journal path —
+/// is the report the message arrived in; it is stored as an attachment so the
+/// tenant-delivered artifact stays retrievable.
 async fn extract_envelope_core(
     body: &[u8],
     uid: u32,
@@ -119,6 +191,7 @@ async fn extract_envelope_core(
     internal_date: i64,
     account_id: u64,
     mailbox_id: u64,
+    journal_report: Option<&[u8]>,
 ) -> BichonResult<ExtractOutcome> {
     // The content hash of the original raw EML
     let email_content_hash = compute_content_hash(body);
@@ -257,9 +330,15 @@ async fn extract_envelope_core(
         .and_then(|add| add.address)
         .unwrap_or_else(|| "unknown".to_string());
     let attachment_count = message.attachment_count();
-    let attachments =
-        detach_and_store_attachments(body, &message, &email_content_hash, account_id, mailbox_id)
-            .await;
+    let attachments = detach_and_store_attachments(
+        body,
+        &message,
+        &email_content_hash,
+        account_id,
+        mailbox_id,
+        journal_report,
+    )
+    .await;
 
     let envelope_id = Uuid::new_v4().to_string();
     let now = utc_now!();
@@ -459,10 +538,23 @@ pub fn compute_thread_id(
     hex_hash(message_id)
 }
 
+/// Suffix of the synthetic Message-ID minted by [`generate_message_id`] for a
+/// message that carries no `Message-ID` header. Such an id is generated locally
+/// and cannot exist on the IMAP server, so the Message-ID search fallback in
+/// [`fetch_archived_body`] skips it instead of paying a guaranteed-empty round
+/// trip. Kept next to the format string so the two cannot drift apart.
+const SYNTHETIC_MESSAGE_ID_SUFFIX: &str = "@bichon>";
+
 pub fn generate_message_id() -> String {
     let ts = utc_now!();
     let pid = std::process::id();
-    format!("<{:016x}.{}.{}@{}>", id!(128), ts, pid, "bichon")
+    format!(
+        "<{:016x}.{}.{}{}",
+        id!(128),
+        ts,
+        pid,
+        SYNTHETIC_MESSAGE_ID_SUFFIX
+    )
 }
 
 pub fn extract_references(message: &Message<'_>) -> Option<Vec<String>> {
@@ -475,35 +567,80 @@ pub fn extract_references(message: &Message<'_>) -> Option<Vec<String>> {
     }
 }
 
-pub async fn detach_and_store_attachments(
+/// Prefix of the placeholder that replaces an attachment body inside a
+/// stripped EML. Full form: `<<BICHON_DETACH_HASH:{64 hex chars}>>`.
+///
+/// Which hash the 64 hex chars carry depends on when the record was written,
+/// so tooling that scans placeholders must consult the attachment metadata
+/// (`AttachmentInfo::raw_content_hash`) — the prefix alone cannot tell the
+/// domains apart, because both produce 64-character blake3 hex digests:
+///
+/// - **Current records** (`raw_content_hash` is `Some`): the
+///   domain-separated hash of the *original encoded* MIME body
+///   (`compute_raw_attachment_hash`). The blob is stored under the same key.
+/// - **Legacy records** (pre-#375, `raw_content_hash` is `None`): the plain
+///   hash of the *decoded* attachment contents (`compute_content_hash`),
+///   which is also the blob key. `AttachmentInfo::storage_hash()` selects
+///   the right one per record.
+pub const DETACH_PLACEHOLDER_PREFIX: &str = "<<BICHON_DETACH_HASH:";
+
+/// Decoded contents of an attachment selected for text extraction, collected
+/// while detaching so the extraction can run in one background batch.
+pub struct TextCandidate {
+    pub content_hash: String,
+    pub file_type: String,
+    pub ext: String,
+    pub bytes: Vec<u8>,
+}
+
+/// Context deciding which detached attachments are queued for text
+/// extraction. Supplied by the live ingest path; offline tools pass `None`
+/// to [`strip_attachment_bodies`] and skip extraction entirely.
+pub struct ExtractionFilter<'a> {
+    /// Per-account rules; `None` means no rules are configured and the
+    /// default is to extract every supported type.
+    pub rules: Option<&'a ExtractionRules>,
+    pub mailbox_name: Option<&'a str>,
+    pub sender: Option<&'a str>,
+}
+
+/// Output of [`strip_attachment_bodies`].
+pub struct DetachedBody {
+    /// The EML with every valid attachment body replaced by a
+    /// `<<BICHON_DETACH_HASH:...>>` placeholder.
+    pub stripped_eml: Vec<u8>,
+    /// `(storage key, raw encoded MIME body)` pairs to persist in the blob
+    /// store. Invalid attachment ranges contribute a shared empty record in
+    /// the raw key domain.
+    pub blobs: Vec<(String, Bytes)>,
+    /// Attachment metadata, in descending raw-offset order.
+    pub infos: Vec<AttachmentInfo>,
+    /// Attachments selected for text extraction (empty unless an
+    /// [`ExtractionFilter`] was supplied).
+    pub text_candidates: Vec<TextCandidate>,
+}
+
+/// Strips attachment bodies out of a raw message and computes everything the
+/// storage layer needs to persist and later reconstruct it: the stripped EML
+/// with hash placeholders, the raw blob records, attachment metadata, and
+/// text-extraction candidates.
+///
+/// This is the single canonical implementation shared by the live ingest path
+/// ([`detach_and_store_attachments`]) and the offline store migration; the
+/// two must never diverge, or a migrated store stops matching what the
+/// runtime writes and reads back.
+pub fn strip_attachment_bodies(
     original_body: &[u8],
     message: &Message<'_>,
-    eml_content_hash: &str,
-    account_id: u64,
-    mailbox_id: u64,
-) -> Vec<AttachmentInfo> {
-    let rules = if account_id > 0 {
-        AccountModel::get(account_id)
-            .ok()
-            .and_then(|a| a.extraction_rules)
-    } else {
-        None
-    };
-
-    let mailbox_name = match rules.as_ref().map(|r| !r.folders.is_empty()) {
-        Some(true) => MailBox::get(mailbox_id).ok().map(|mb| mb.name),
-        _ => None,
-    };
-
-    let sender = message
-        .from()
-        .and_then(|addr| AddrVec::from(addr).0.into_iter().next())
-        .and_then(|add| add.address);
-
+    filter: Option<&ExtractionFilter<'_>>,
+) -> DetachedBody {
     let mut stripped_eml = original_body.to_vec();
-    let mut attachment_infos = Vec::new();
-    // Step 1: Collect and sort attachment ranges in reverse to maintain offset
-    // integrity
+    let mut infos = Vec::new();
+    let mut blobs = Vec::with_capacity(message.attachment_count());
+    let mut text_candidates = Vec::new();
+
+    // Collect and sort attachment ranges in reverse to maintain offset
+    // integrity while splicing placeholders.
     let mut ranges: Vec<_> = message
         .attachments()
         .map(|att| {
@@ -514,18 +651,7 @@ pub async fn detach_and_store_attachments(
             )
         })
         .collect();
-
     ranges.sort_by(|a, b| b.0.cmp(&a.0));
-    let mut attachments = Vec::with_capacity(ranges.len());
-
-    // Collect candidates for text extraction (non-inline, known document types).
-    struct TextCandidate {
-        content_hash: String,
-        file_type: String,
-        ext: String,
-        bytes: Vec<u8>,
-    }
-    let mut text_candidates: Vec<TextCandidate> = Vec::new();
 
     for (raw_start, raw_end, att) in ranges {
         // mail-parser may report attachment offsets past the body end for
@@ -539,20 +665,23 @@ pub async fn detach_and_store_attachments(
         // which is always available regardless of raw offset validity.
         let content_hash = compute_content_hash(att.contents());
 
-        if range_valid {
+        let raw_content_hash = if range_valid {
             let raw_bytes = &original_body[raw_start..raw_end];
-            // The actual content stored in the blob is the raw undecoded data.
-            attachments.push((content_hash.clone(), Bytes::copy_from_slice(raw_bytes)));
+            // Different transfer encodings of one file must not share a raw blob.
+            let raw_hash = crate::utils::compute_raw_attachment_hash(raw_bytes);
+            blobs.push((raw_hash.clone(), Bytes::copy_from_slice(raw_bytes)));
 
             // Replace raw attachment content with a hash-based placeholder
-            let placeholder = format!("<<BICHON_DETACH_HASH:{}>>", &content_hash);
+            let placeholder = format!("{DETACH_PLACEHOLDER_PREFIX}{raw_hash}>>");
             stripped_eml.splice(raw_start..raw_end, placeholder.as_bytes().iter().cloned());
+            Some(raw_hash)
         } else {
-            // Invalid range: store a zero-length blob so the consistency
-            // check passes; reattachment will log a warning for the missing
-            // blob data but won't panic.
-            attachments.push((content_hash.clone(), Bytes::new()));
-        }
+            // No replacement is needed, but keep the empty storage record in
+            // the raw key domain so it cannot shadow a decoded or email blob.
+            let raw_hash = crate::utils::compute_raw_attachment_hash(b"");
+            blobs.push((raw_hash.clone(), Bytes::new()));
+            Some(raw_hash)
+        };
 
         let inline = att
             .content_disposition()
@@ -580,19 +709,21 @@ pub async fn detach_and_store_attachments(
             })
             .unwrap_or_default();
 
-        let should_extract = rules.as_ref().map_or(true, |r| {
-            r.should_extract(
-                &ext,
-                mailbox_name.as_deref(),
-                att_name.as_deref(),
-                sender.as_deref(),
-            )
-        });
+        // Collect candidates for text extraction (non-inline, known document
+        // types allowed by the filter).
+        if let Some(filter) = filter {
+            let should_extract = filter.rules.map_or(true, |r| {
+                r.should_extract(
+                    &ext,
+                    filter.mailbox_name,
+                    att_name.as_deref(),
+                    filter.sender,
+                )
+            });
 
-        if !inline || !has_cid {
-            let decoded_len = att.contents().len();
-            if should_extract
-                && decoded_len <= crate::ext::text_extractor::max_extract_bytes()
+            if (!inline || !has_cid)
+                && should_extract
+                && att.contents().len() <= crate::ext::text_extractor::max_extract_bytes()
                 && crate::ext::text_extractor::should_try_extract(&file_type, &ext)
             {
                 text_candidates.push(TextCandidate {
@@ -604,23 +735,87 @@ pub async fn detach_and_store_attachments(
             }
         }
 
-        let info = AttachmentInfo {
+        infos.push(AttachmentInfo {
             filename: att.attachment_name().map(|n| n.to_string()),
             size: att.contents().len(),
             inline,
             file_type,
             content_id: att.content_id().map(|id| id.to_string()),
-            content_hash: content_hash.clone(),
+            content_hash,
+            raw_content_hash,
             is_message: att.is_message(),
             extracted_text: None,
             extracted_page_count: None,
             extracted_is_ocr: false,
-        };
-
-        attachment_infos.push(info);
+        });
     }
 
+    DetachedBody {
+        stripped_eml,
+        blobs,
+        infos,
+        text_candidates,
+    }
+}
+
+pub async fn detach_and_store_attachments(
+    original_body: &[u8],
+    message: &Message<'_>,
+    eml_content_hash: &str,
+    account_id: u64,
+    mailbox_id: u64,
+    journal_report: Option<&[u8]>,
+) -> Vec<AttachmentInfo> {
+    let rules = if account_id > 0 {
+        AccountModel::get(account_id)
+            .ok()
+            .and_then(|a| a.extraction_rules)
+    } else {
+        None
+    };
+
+    let mailbox_name = match rules.as_ref().map(|r| !r.folders.is_empty()) {
+        Some(true) => MailBox::get(mailbox_id).ok().map(|mb| mb.name),
+        _ => None,
+    };
+
+    let sender = message
+        .from()
+        .and_then(|addr| AddrVec::from(addr).0.into_iter().next())
+        .and_then(|add| add.address);
+
+    let filter = ExtractionFilter {
+        rules: rules.as_ref(),
+        mailbox_name: mailbox_name.as_deref(),
+        sender: sender.as_deref(),
+    };
+    let mut detached = strip_attachment_bodies(original_body, message, Some(&filter));
+
+    // A journal delivery keeps the tenant's report beside the message it
+    // carried. Stored as an ordinary attachment so it survives export, the
+    // integrity check and the reattach path with no special casing.
+    if let Some(report) = journal_report {
+        let hash = compute_content_hash(report);
+        detached.infos.push(AttachmentInfo {
+            file_type: "message/rfc822".to_string(),
+            inline: false,
+            filename: Some("journal-report.eml".to_string()),
+            size: report.len(),
+            content_id: None,
+            content_hash: hash.clone(),
+            raw_content_hash: None,
+            is_message: true,
+            extracted_text: None,
+            extracted_page_count: None,
+            extracted_is_ocr: false,
+        });
+        detached.blobs.push((hash, Bytes::from(report.to_vec())));
+    }
+
+    let mut attachment_infos = detached.infos;
+
     // Run text extraction in a single spawn_blocking batch.
+    let text_candidates = detached.text_candidates;
     if !text_candidates.is_empty() {
         if let Ok(mut extracted_map) = tokio::task::spawn_blocking(move || {
             let mut map: std::collections::HashMap<String, (String, Option<u32>, bool)> =
@@ -648,8 +843,11 @@ pub async fn detach_and_store_attachments(
     // Step 4: Store the final stripped EML content
     BLOB_MANAGER
         .queue(DetachedEmail {
-            email: (eml_content_hash.to_string(), Bytes::from(stripped_eml)),
-            attachments: Some(attachments),
+            email: (
+                eml_content_hash.to_string(),
+                Bytes::from(detached.stripped_eml),
+            ),
+            attachments: Some(detached.blobs),
         })
         .await;
 
@@ -688,7 +886,6 @@ pub fn reattach_eml_content(
         return Ok((e.envelope, restored_eml));
     }
 
-    let mut restored_eml = restored_eml.to_vec();
     let actual_count = e.attachments.as_ref().map(|a| a.len()).unwrap_or(0);
     if e.envelope.attachment_count != actual_count {
         return Err(raise_error!(
@@ -701,36 +898,96 @@ pub fn reattach_eml_content(
         ));
     }
 
+    let restored = reattach_parts(restored_eml.to_vec(), e.attachments.unwrap(), |hash| {
+        BLOB_MANAGER.get_attachment(hash)
+    })?;
+    Ok((e.envelope, restored))
+}
+
+fn reattach_parts(
+    mut restored_eml: Vec<u8>,
+    attachments: Vec<AttachmentInfo>,
+    load: impl Fn(&str) -> BichonResult<Option<Bytes>>,
+) -> BichonResult<Bytes> {
     let mut tasks = Vec::new();
-    for detail in e.attachments.unwrap() {
-        let placeholder_str = format!("<<BICHON_DETACH_HASH:{}>>", &detail.content_hash);
-        let pattern = placeholder_str.as_bytes();
-        let pattern_len = pattern.len();
+    for detail in attachments {
+        let storage_hash = detail.storage_hash();
 
-        let mut search_cursor = 0;
-        while let Some(pos) = restored_eml[search_cursor..]
-            .windows(pattern_len)
-            .position(|window| window == pattern)
-        {
-            let absolute_start = search_cursor + pos;
-            let absolute_end = absolute_start + pattern_len;
+        // Primary scan: placeholders written by the record's own format
+        // (raw-body hash for new records, decoded hash for legacy records).
+        let found = schedule_placeholder(&mut tasks, &restored_eml, storage_hash, None);
 
-            tasks.push((absolute_start, absolute_end, detail.content_hash.clone()));
-            search_cursor = absolute_end;
+        // Mixed-format recovery: a re-ingest refreshes the envelope metadata
+        // to raw storage keys, but the blob store's `exists` dedup keeps the
+        // previously stored stripped EML, whose placeholders still carry the
+        // legacy decoded hash. When the primary scan finds nothing, retry with
+        // the legacy placeholder; the old blob is still stored under that key.
+        // The raw key is kept as an alternate load target for the case where
+        // the legacy blob was garbage-collected after the original envelope
+        // was deleted (the re-ingest stored the identical bytes under it).
+        if found == 0 && detail.raw_content_hash.is_some() {
+            schedule_placeholder(
+                &mut tasks,
+                &restored_eml,
+                &detail.content_hash,
+                Some(storage_hash),
+            );
         }
     }
 
     tasks.sort_by(|a, b| b.0.cmp(&a.0));
+    tasks.dedup_by(|a, b| a.0 == b.0 && a.1 == b.1);
 
-    for (start, end, hash) in tasks {
-        if let Some(original_data) = BLOB_MANAGER.get_attachment(&hash)? {
+    for (start, end, hash, alt) in tasks {
+        let original_data = match load(&hash)? {
+            Some(data) => Some(data),
+            None => match alt.as_deref() {
+                Some(alt) => load(alt)?,
+                None => None,
+            },
+        };
+        if let Some(original_data) = original_data {
             restored_eml.splice(start..end, original_data.iter().cloned());
         } else {
             error!("[ERROR] Missing attachment blob for hash: {}", hash);
         }
     }
 
-    Ok((e.envelope, Bytes::from(restored_eml)))
+    Ok(Bytes::from(restored_eml))
+}
+
+/// Schedules one replacement task per occurrence of the placeholder carrying
+/// `hash` and returns the number of occurrences found. `alt` is a secondary
+/// storage key tried at load time when the primary blob is absent.
+fn schedule_placeholder(
+    tasks: &mut Vec<(usize, usize, String, Option<String>)>,
+    eml: &[u8],
+    hash: &str,
+    alt: Option<&str>,
+) -> usize {
+    let placeholder_str = format!("{DETACH_PLACEHOLDER_PREFIX}{hash}>>");
+    let pattern = placeholder_str.as_bytes();
+    let pattern_len = pattern.len();
+
+    let mut found = 0;
+    let mut search_cursor = 0;
+    while let Some(pos) = eml[search_cursor..]
+        .windows(pattern_len)
+        .position(|window| window == pattern)
+    {
+        let absolute_start = search_cursor + pos;
+        let absolute_end = absolute_start + pattern_len;
+
+        tasks.push((
+            absolute_start,
+            absolute_end,
+            hash.to_string(),
+            alt.map(str::to_string),
+        ));
+        search_cursor = absolute_end;
+        found += 1;
+    }
+    found
 }
 
 /// Returns the raw EML for an indexed message, self-healing a missing content
@@ -766,7 +1023,7 @@ pub async fn reattach_eml_content_self_healing(
 
     // The blob is missing. Try to recover it directly from the IMAP server.
     match recover_message_blob(&envelope).await {
-        Ok(raw_body) => {
+        Ok((raw_body, _persisted)) => {
             tracing::info!(
                 account_id,
                 envelope_id = %envelope_id,
@@ -796,7 +1053,11 @@ pub async fn reattach_eml_content_self_healing(
 /// not match the archived `content_hash` (the server-side message no longer
 /// matches what Bichon archived, so it cannot be treated as a recovery of that
 /// blob).
-async fn recover_message_blob(envelope: &Envelope) -> BichonResult<Bytes> {
+/// Returns the fetched body together with whether the detached blob was
+/// actually persisted. `false` means the write was skipped because a backup
+/// window was open — the caller still gets the content, but the blob store was
+/// left untouched so the running snapshot stays byte-stable.
+async fn recover_message_blob(envelope: &Envelope) -> BichonResult<(Bytes, bool)> {
     let mailbox =
         MailBox::find_mailbox(envelope.account_id, envelope.mailbox_id)?.ok_or_else(|| {
             raise_error!(
@@ -809,29 +1070,15 @@ async fn recover_message_blob(envelope: &Envelope) -> BichonResult<Bytes> {
         })?;
 
     let mut session = ImapExecutor::create_connection(envelope.account_id).await?;
-    let result = ImapExecutor::fetch_single_message_body(
-        &mut session,
-        &mailbox.encoded_name(),
-        envelope.uid,
-    )
-    .await;
+    let result = fetch_archived_body(&mut session, &mailbox.encoded_name(), envelope).await;
     session.logout().await.ok();
     let raw_body = result?;
-
-    let fetched_hash = compute_content_hash(&raw_body);
-    if fetched_hash != envelope.content_hash {
-        return Err(raise_error!(
-            format!(
-                "Fetched message does not match archived content: expected content_hash={} got={}",
-                envelope.content_hash, fetched_hash
-            ),
-            ErrorCode::ImapUnexpectedResult
-        ));
-    }
+    // `fetch_archived_body` only returns bytes whose content hash equals the
+    // archived one, so the detached EML is queued under the envelope's own hash.
+    let fetched_hash = envelope.content_hash.clone();
 
     // Re-create the detached blob (stripped EML + attachments) so the missing
-    // blob is repopulated for future requests. The detached EML is queued under
-    // `fetched_hash`, which equals `envelope.content_hash`.
+    // blob is repopulated for future requests.
     let message = MessageParser::new()
         .parse(raw_body.as_slice())
         .ok_or_else(|| {
@@ -843,24 +1090,395 @@ async fn recover_message_blob(envelope: &Envelope) -> BichonResult<Bytes> {
     // Persist the recovered blob for future requests — unless a backup window
     // is open, in which case we still return the content to the caller but skip
     // the write so the blob store stays byte-stable for the running snapshot.
-    if !WRITE_GATE.is_paused() {
-        detach_and_store_attachments(
-            &raw_body,
-            &message,
-            &fetched_hash,
-            envelope.account_id,
-            envelope.mailbox_id,
-        )
+    // Reads remain available during a backup. If the gate is open, hold the
+    // admission guard through queueing so the backup cannot race the write.
+    let persisted = persist_recovered_blob_if_allowed(
+        &raw_body,
+        &message,
+        &fetched_hash,
+        envelope.account_id,
+        envelope.mailbox_id,
+        &WRITE_GATE,
+    )
+    .await;
+
+    Ok((Bytes::from(raw_body), persisted))
+}
+
+async fn persist_recovered_blob_if_allowed(
+    raw_body: &[u8],
+    message: &Message<'_>,
+    fetched_hash: &str,
+    account_id: u64,
+    mailbox_id: u64,
+    gate: &WriteGate,
+) -> bool {
+    let Ok(_write_guard) = gate.check() else {
+        return false;
+    };
+    detach_and_store_attachments(raw_body, message, fetched_hash, account_id, mailbox_id, None)
         .await;
+    true
+}
+
+
+/// Fetches the archived message from IMAP and returns it only if its content
+/// hash equals the archived `content_hash`. Tries the stored UID first, then
+/// the UIDs returned by `UID SEARCH HEADER Message-ID` (UID changed or the
+/// message moved within the folder).
+async fn fetch_archived_body(
+    session: &mut async_imap::Session<Box<dyn crate::imap::session::SessionStream>>,
+    encoded_mailbox: &str,
+    envelope: &Envelope,
+) -> BichonResult<Vec<u8>> {
+    let mut last_err =
+        match ImapExecutor::fetch_single_message_body(session, encoded_mailbox, envelope.uid).await {
+            Ok(body) if compute_content_hash(&body) == envelope.content_hash => return Ok(body),
+            Ok(body) => raise_error!(
+                format!(
+                    "Fetched message does not match archived content: expected content_hash={} got={}",
+                    envelope.content_hash,
+                    compute_content_hash(&body)
+                ),
+                ErrorCode::ImapUnexpectedResult
+            ),
+            Err(e) => e,
+        };
+
+    // The stored UID failed, so the message was most likely renumbered or
+    // moved. Search by Message-ID instead — but only when the id can actually
+    // exist on the server (see `searchable_message_id`).
+    //
+    // `uid_search` runs against the mailbox the preceding
+    // `fetch_single_message_body` selected with EXAMINE, so the search and the
+    // fetches below stay in the same folder.
+    let Some(message_id) = searchable_message_id(&envelope.message_id) else {
+        return Err(last_err);
+    };
+    let uids = session
+        .uid_search(format!("HEADER Message-ID \"{}\"", message_id))
+        .await
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::ImapUnexpectedResult))?;
+    let uids = bounded_message_id_candidates(uids, envelope.uid);
+    for uid in uids {
+        match ImapExecutor::fetch_single_message_body(session, encoded_mailbox, uid).await {
+            Ok(body) if recovered_body_matches(&body, envelope) => return Ok(body),
+            Ok(_) => {}
+            Err(e) => last_err = e,
+        }
+    }
+    Err(last_err)
+}
+
+/// The trimmed Message-ID to search for, or `None` when a `UID SEARCH HEADER
+/// Message-ID` cannot possibly match.
+///
+/// Two cases yield nothing: an id minted by [`generate_message_id`] for a
+/// message archived without a `Message-ID` header (no server-side header can
+/// equal it), and an id that would break out of the IMAP quoted string. Both
+/// are skipped rather than sent, so a renumbering repair never pays a
+/// guaranteed-empty round trip.
+fn searchable_message_id(message_id: &str) -> Option<&str> {
+    let message_id = message_id.trim();
+    if message_id.is_empty()
+        || message_id.ends_with(SYNTHETIC_MESSAGE_ID_SUFFIX)
+        || message_id.contains(['"', '\\', '\r', '\n'])
+    {
+        return None;
+    }
+    Some(message_id)
+}
+
+const MAX_MESSAGE_ID_CANDIDATES: usize = 32;
+
+fn bounded_message_id_candidates<I>(uids: I, stored_uid: u32) -> Vec<u32>
+where
+    I: IntoIterator<Item = u32>,
+{
+    let mut candidates: Vec<u32> = uids.into_iter().filter(|&uid| uid != stored_uid).collect();
+    candidates.sort_unstable();
+    candidates.truncate(MAX_MESSAGE_ID_CANDIDATES);
+    candidates
+}
+
+fn recovered_body_matches(body: &[u8], envelope: &Envelope) -> bool {
+    if compute_content_hash(body) != envelope.content_hash {
+        return false;
+    }
+    if envelope.message_id.is_empty() {
+        return true;
+    }
+    MessageParser::new()
+        .parse(body)
+        .and_then(|message| message.message_id().map(String::from))
+        .is_some_and(|message_id| message_id == envelope.message_id)
+}
+
+/// [`BlobRepairReport::status`] for a record that was already intact. Named so
+/// the repair-history ring can skip these without matching a bare literal.
+pub const STATUS_COMPLETE: &str = "complete";
+
+/// Outcome of [`repair_envelope_blobs`].
+#[derive(Clone, Debug, Default, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
+#[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
+pub struct BlobRepairReport {
+    pub envelope_id: String,
+    /// Account that owns the record. Part of the identity carried on the report
+    /// so a caller holding no envelope can still label the outcome — the
+    /// integrity failures table has only a failure row, not an envelope.
+    pub account_id: u64,
+    /// Mailbox the record lives in. See [`Self::account_id`].
+    pub mailbox_id: u64,
+    /// Subject of the record, for display. See [`Self::account_id`].
+    pub subject: String,
+    /// RFC `Message-ID` of the record, for display. See [`Self::account_id`].
+    pub message_id: String,
+    /// `complete` (nothing missing), `repaired`, `partial` or `failed`.
+    pub status: String,
+    /// Whether the email blob was missing before repair.
+    pub email_missing_before: bool,
+    /// Whether the email blob is still missing after repair.
+    pub email_missing_after: bool,
+    /// Mirrors [`Self::email_missing_before`]; kept so a client that reads a
+    /// single email-missing flag keeps working after the before/after split.
+    pub email_blob_missing: bool,
+    /// `true` when the fetched content was validated but the write was skipped
+    /// because a backup window was open. The repair is then reported as
+    /// `partial` even though the source data was recovered — retry once the
+    /// backup finishes.
+    pub skipped_due_to_backup: bool,
+    /// Attachment hashes to suspect before the repair. Best-effort naming only:
+    /// the verdict is [`Self::status`], so this can be empty while the record is
+    /// broken (see [`known_placeholder_hashes`]).
+    pub missing_before: Vec<String>,
+    /// Attachment hashes to suspect after the repair. Same caveat as
+    /// [`Self::missing_before`]: `status: "partial"` with an empty list is a
+    /// valid outcome.
+    pub missing_after: Vec<String>,
+    pub error: Option<String>,
+}
+
+/// Diagnosis of a record's blob store state, from [`diagnose_blobs`].
+struct BlobDiagnosis {
+    /// The email blob is absent from the store.
+    email_missing: bool,
+    /// The archived body cannot be reconstructed byte-for-byte. Authoritative:
+    /// this — not [`Self::unresolved`] — decides whether a repair is attempted.
+    broken: bool,
+    /// Best-effort naming of the attachment hashes to suspect. See
+    /// [`known_placeholder_hashes`] for what it does and does not promise.
+    unresolved: Vec<String>,
+}
+
+/// Inspects a record's blob store state.
+///
+/// The verdict is an *integrity* check, not a presence check: splicing every
+/// stored blob back into the detached EML must reproduce the exact body the
+/// envelope's `content_hash` was taken from. `strip_attachment_bodies` stores
+/// the identical raw bytes it removes, so a healthy record hashes back to
+/// itself and any gap at all — a missing attachment blob, a placeholder the
+/// metadata cannot account for, a blob sitting under an unexpected key —
+/// changes the hash.
+///
+/// Presence alone instead reports a record as complete whenever the parts it
+/// happened to look for are there, which is how a record whose *metadata* is
+/// unreadable slips through as `complete` while nothing is repaired.
+///
+/// Reuses [`reattach_parts`] on purpose, at the cost of materialising the
+/// reattached body: re-deriving the placeholder/alternate-key resolution here
+/// is exactly the duplication that lets the two views drift apart.
+fn diagnose_blobs(
+    envelope: &Envelope,
+    attachments: Option<&[AttachmentInfo]>,
+) -> BichonResult<BlobDiagnosis> {
+    let Some(eml) = BLOB_MANAGER.get_email(&envelope.content_hash)? else {
+        return Ok(BlobDiagnosis {
+            email_missing: true,
+            broken: true,
+            unresolved: Vec::new(),
+        });
+    };
+
+    let attachments = attachments.unwrap_or_default();
+    let restored = reattach_parts(eml.to_vec(), attachments.to_vec(), |hash| {
+        BLOB_MANAGER.get_attachment(hash)
+    })?;
+    let intact = compute_content_hash(&restored) == envelope.content_hash;
+    Ok(BlobDiagnosis {
+        email_missing: false,
+        broken: !intact,
+        unresolved: if intact {
+            Vec::new()
+        } else {
+            known_placeholder_hashes(&eml, attachments)
+        },
+    })
+}
+
+/// Content hashes referenced by `<<BICHON_DETACH_HASH:...>>` placeholders in a
+/// detached EML.
+fn placeholder_hashes(detached_eml: &[u8]) -> Vec<String> {
+    const PREFIX: &[u8] = b"<<BICHON_DETACH_HASH:";
+    let mut hashes = Vec::new();
+    let mut rest = detached_eml;
+    while let Some(pos) = rest.windows(PREFIX.len()).position(|w| w == PREFIX) {
+        rest = &rest[pos + PREFIX.len()..];
+        let Some(end) = rest.windows(2).position(|w| w == b">>") else {
+            break;
+        };
+        if let Ok(h) = std::str::from_utf8(&rest[..end]) {
+            if !hashes.iter().any(|x| x == h) {
+                hashes.push(h.to_string());
+            }
+        }
+        rest = &rest[end + 2..];
+    }
+    hashes
+}
+
+/// Naming aid for a [`BlobDiagnosis`]: the placeholders in a detached EML that
+/// the record's own attachment metadata can account for.
+///
+/// A placeholder carries the *storage* hash — the raw MIME key for records
+/// written since the raw/decoded split, the decoded hash for legacy ones —
+/// while `content_hash` is always the decoded hash. Both domains are indexed
+/// because a re-ingest can leave them mixed: the metadata refreshed to raw keys
+/// while the stored EML still holds legacy decoded placeholders.
+///
+/// Best-effort only, and never a verdict: a placeholder the metadata does not
+/// list is omitted, so a literal `<<BICHON_DETACH_HASH:...>>` in the body can
+/// never be named as a missing attachment. That also means this can return
+/// nothing while the record is genuinely broken — when the attachment metadata
+/// itself is what cannot be read. [`diagnose_blobs`] decides; this only helps a
+/// human see which parts to look at.
+fn known_placeholder_hashes(detached_eml: &[u8], attachments: &[AttachmentInfo]) -> Vec<String> {
+    let indexed = attachments
+        .iter()
+        .flat_map(|item| [item.storage_hash(), item.content_hash.as_str()])
+        .collect::<std::collections::HashSet<_>>();
+    placeholder_hashes(detached_eml)
+        .into_iter()
+        .filter(|hash| indexed.contains(hash.as_str()))
+        .collect()
+}
+
+/// Re-fetches one archived message from IMAP and restores its missing email
+/// or attachment blobs **in place**: the envelope, its id and its index entry
+/// are kept, so no duplicate is created. Nothing is written unless the
+/// fetched message hashes to the archived `content_hash`.
+///
+/// Only *missing* blobs are healable. A blob that is present but corrupt is
+/// reported — `status: "partial"` on every attempt, however often it is
+/// retried — and deliberately left alone: the blob store keeps the first write
+/// for a key, so this path could only overwrite by deleting first, and nothing
+/// has needed that yet. A permanently `partial` record is therefore not
+/// necessarily a bad IMAP fetch; read the diagnosis before assuming so.
+pub async fn repair_envelope_blobs(
+    account_id: u64,
+    envelope_id: &str,
+) -> BichonResult<BlobRepairReport> {
+    let envelope_with_attachments = ENVELOPE_MANAGER
+        .get_envelope_by_id(account_id, envelope_id)?
+        .ok_or_else(|| {
+            raise_error!(
+                format!("Envelope not found: account_id={account_id} envelope_id={envelope_id}"),
+                ErrorCode::ResourceNotFound
+            )
+        })?;
+    let attachments = envelope_with_attachments.attachments;
+    let envelope = envelope_with_attachments.envelope;
+
+    // Attachment metadata that cannot be read back (or no longer matches the
+    // count the envelope records) leaves the record's parts unenumerable, so
+    // the integrity check below could not verify it and this endpoint — which
+    // only ever writes blobs — could not heal it either. Fail loudly instead of
+    // hashing a record we cannot enumerate and reporting the result as
+    // `complete`. `reattach_eml_content` already rejects the same condition on
+    // the read path, so this cannot regress a record that reads back fine.
+    let actual_count = attachments.as_ref().map_or(0, Vec::len);
+    if envelope.attachment_count != actual_count {
+        return Ok(attachment_count_mismatch_report(
+            envelope_id,
+            &envelope,
+            actual_count,
+        ));
     }
 
-    Ok(Bytes::from(raw_body))
+    let diagnosis = diagnose_blobs(&envelope, attachments.as_deref())?;
+    let mut report = BlobRepairReport {
+        envelope_id: envelope_id.to_string(),
+        account_id: envelope.account_id,
+        mailbox_id: envelope.mailbox_id,
+        subject: envelope.subject.clone(),
+        message_id: envelope.message_id.clone(),
+        email_missing_before: diagnosis.email_missing,
+        email_missing_after: diagnosis.email_missing,
+        email_blob_missing: diagnosis.email_missing,
+        missing_before: diagnosis.unresolved,
+        ..Default::default()
+    };
+    if !diagnosis.broken {
+        report.status = STATUS_COMPLETE.into();
+        return Ok(report);
+    }
+    let persisted = match recover_message_blob(&envelope).await {
+        Ok((_, persisted)) => persisted,
+        Err(e) => {
+            report.status = "failed".into();
+            report.error = Some(e.to_string());
+            // Nothing was written, so the post-state is the pre-state: report
+            // the same suspect set instead of leaving the client with an empty
+            // `missing_after` and no way to tell what is still broken.
+            report.missing_after = report.missing_before.clone();
+            return Ok(report);
+        }
+    };
+    report.skipped_due_to_backup = !persisted;
+    // recover_message_blob only queues the write; wait for it to land.
+    let _ = tokio::time::timeout(std::time::Duration::from_secs(30), BLOB_MANAGER.drain()).await;
+    let after = diagnose_blobs(&envelope, attachments.as_deref())?;
+    apply_post_state(&mut report, &after);
+    Ok(report)
+}
+
+/// The report for a record whose attachment metadata cannot be enumerated —
+/// the only thing this endpoint can say about it is that it is broken.
+///
+/// Carries the envelope's identity so the repair-history ring can still label
+/// the failure: a caller opening this from the integrity failures table holds a
+/// failure row, not an envelope.
+fn attachment_count_mismatch_report(
+    envelope_id: &str,
+    envelope: &Envelope,
+    actual_count: usize,
+) -> BlobRepairReport {
+    BlobRepairReport {
+        envelope_id: envelope_id.to_string(),
+        account_id: envelope.account_id,
+        mailbox_id: envelope.mailbox_id,
+        subject: envelope.subject.clone(),
+        message_id: envelope.message_id.clone(),
+        status: "failed".into(),
+        error: Some(format!(
+            "Consistency check failed: envelope.attachment_count ({}) does not match attachments.len ({})",
+            envelope.attachment_count, actual_count
+        )),
+        ..Default::default()
+    }
+}
+
+/// Records the post-repair state. `status` follows the integrity verdict, so a
+/// record that is still broken reads `partial` even when nothing can be named —
+/// `unresolved` is a naming aid, not the verdict.
+fn apply_post_state(report: &mut BlobRepairReport, after: &BlobDiagnosis) {
+    report.email_missing_after = after.email_missing;
+    report.missing_after = after.unresolved.clone();
+    report.status = if after.broken { "partial" } else { "repaired" }.into();
 }
 
 #[cfg(test)]
 mod test {
     use html2text::config;
-
     use std::sync::Once;
 
     /// Extract tests touch the process-global settings/DB/DEDUP_CACHE, so they
@@ -881,6 +1499,208 @@ mod test {
             let _ = &*crate::settings::cli::SETTINGS;
             let _ = &*crate::database::manager::DB_MANAGER;
         });
+    }
+
+    // Keep the blob writer alive across these storage tests.
+    static STORAGE_RUNTIME: std::sync::LazyLock<tokio::runtime::Runtime> =
+        std::sync::LazyLock::new(|| tokio::runtime::Runtime::new().unwrap());
+
+    #[test]
+    fn empty_attachment_uses_the_raw_storage_key_space() {
+        STORAGE_RUNTIME.block_on(async {
+            let _run_guard = crate::backup::BACKUP_STATE_TESTS.lock().await;
+            init_test_env();
+            let raw = b"From: test@example.com\r\nContent-Type: application/octet-stream\r\nContent-Disposition: attachment; filename=empty.bin\r\n\r\n";
+            let message = mail_parser::MessageParser::new().parse(raw).unwrap();
+            let infos = super::detach_and_store_attachments(
+                raw,
+                &message,
+                &crate::utils::compute_content_hash(raw),
+                0,
+                0,
+                None,
+            )
+            .await;
+            assert_ne!(infos[0].storage_hash(), infos[0].content_hash);
+        });
+    }
+
+    // NOTE: a full detach→blob-store→reattach roundtrip test existed here but
+    // was removed: it relied on the process-global BLOB_MANAGER, which other
+    // test modules re-initialize against their own temp data dirs, so it only
+    // passed when run in isolation. The reattach logic is covered by the
+    // `reattach_parts` tests below with injected blob loads.
+
+    /// The journal wrapper is detected by MIME structure, not by a vendor
+    /// header: Exchange wraps the original in a `message/rfc822` part, Google's
+    /// routing rule forwards a plain message. Both must land in the archive
+    /// with the correct envelope, and a plain message must not be wrapped
+    /// around itself.
+    #[test]
+    fn journal_delivery_inner_unwraps_only_a_real_wrapper() {
+        let wrapped = b"From: MicrosoftExchange329e@example.com\r\n\
+To: journal@example.com\r\n\
+Subject: Journal report\r\n\
+MIME-Version: 1.0\r\n\
+Content-Type: multipart/mixed; boundary=\"b\"\r\n\
+\r\n\
+--b\r\n\
+Content-Type: text/plain\r\n\
+\r\n\
+Journal report body\r\n\
+--b\r\n\
+Content-Type: message/rfc822\r\n\
+\r\n\
+From: customer@example.org\r\n\
+To: employee@example.com\r\n\
+Subject: Inner subject\r\n\
+\r\n\
+Inner body\r\n\
+--b--\r\n";
+        let inner =
+            super::journal_delivery_inner(wrapped).expect("a wrapped report must be unwrapped");
+        let text = String::from_utf8_lossy(&inner);
+        assert!(
+            text.contains("Inner subject"),
+            "the inner message was not returned: {text}"
+        );
+        assert!(
+            !text.contains("Journal report body"),
+            "the vendor report body leaked into the archived message: {text}"
+        );
+
+        // A plain message is its own inner. Returning it as a wrapper would
+        // attach the message to itself and double its size.
+        let plain =
+            b"From: a@example.com\r\nTo: b@example.com\r\nSubject: plain\r\n\r\nbody\r\n";
+        assert!(super::journal_delivery_inner(plain).is_none());
+    }
+
+    #[test]
+    fn repeated_attachment_is_restored_once_per_placeholder() {
+        let payload = b"BEGIN:VCALENDAR\r\nDESCRIPTION:Repeated invitation\r\nEND:VCALENDAR\r\n";
+        let hash = crate::utils::compute_content_hash(payload);
+        let placeholder = format!("<<BICHON_DETACH_HASH:{hash}>>");
+        let stripped = format!("part-one\r\n{placeholder}\r\npart-two\r\n{placeholder}");
+        let info = crate::message::content::AttachmentInfo {
+            content_hash: hash,
+            ..Default::default()
+        };
+        let restored =
+            super::reattach_parts(stripped.into_bytes(), vec![info.clone(), info], |_| {
+                Ok(Some(bytes::Bytes::from_static(payload)))
+            })
+            .expect("reattach repeated invitation");
+        let expected = [
+            b"part-one\r\n".as_slice(),
+            payload,
+            b"\r\npart-two\r\n",
+            payload,
+        ]
+        .concat();
+        assert_eq!(restored.as_ref(), expected);
+    }
+
+    #[test]
+    fn distinct_transfer_encodings_keep_their_original_bytes() {
+        let plain = b"BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n";
+        let base64 = b"QkVHSU46VkNBTEVOREFSDQpFTkQ6VkNBTEVOREFSDQo=\r\n";
+        let decoded_hash = crate::utils::compute_content_hash(plain);
+        let plain_hash = crate::utils::compute_raw_attachment_hash(plain);
+        let base64_hash = crate::utils::compute_raw_attachment_hash(base64);
+        let infos = vec![
+            crate::message::content::AttachmentInfo {
+                content_hash: decoded_hash.clone(),
+                raw_content_hash: Some(plain_hash.clone()),
+                ..Default::default()
+            },
+            crate::message::content::AttachmentInfo {
+                content_hash: decoded_hash,
+                raw_content_hash: Some(base64_hash.clone()),
+                ..Default::default()
+            },
+        ];
+        let stripped = format!(
+            "plain\r\n<<BICHON_DETACH_HASH:{plain_hash}>>base64\r\n<<BICHON_DETACH_HASH:{base64_hash}>>"
+        );
+        let restored = super::reattach_parts(stripped.into_bytes(), infos, |hash| {
+            Ok(Some(if hash == plain_hash {
+                bytes::Bytes::from_static(plain)
+            } else {
+                bytes::Bytes::from_static(base64)
+            }))
+        })
+        .expect("reattach independently encoded copies");
+        assert_eq!(
+            restored.as_ref(),
+            [b"plain\r\n".as_slice(), plain, b"base64\r\n", base64].concat()
+        );
+    }
+
+    #[test]
+    fn mixed_format_metadata_falls_back_to_legacy_placeholders() {
+        // A stripped EML written by the pre-#375 format (decoded-hash
+        // placeholders) combined with metadata refreshed by a re-ingest
+        // (raw storage keys) must still reconstruct: the legacy blob under
+        // the decoded key is still present in the blob store.
+        let decoded_hash = "d".repeat(64);
+        let raw_hash = "r".repeat(64);
+        let info = crate::message::content::AttachmentInfo {
+            content_hash: decoded_hash.clone(),
+            raw_content_hash: Some(raw_hash),
+            ..Default::default()
+        };
+        let stripped = format!("head\r\n<<BICHON_DETACH_HASH:{decoded_hash}>>\r\ntail");
+        let restored =
+            super::reattach_parts(stripped.into_bytes(), vec![info], |hash| {
+                Ok(Some(if hash == decoded_hash {
+                    bytes::Bytes::from_static(b"legacy body")
+                } else {
+                    bytes::Bytes::from_static(b"raw body")
+                }))
+            })
+            .expect("reattach mixed-format record");
+        assert_eq!(restored.as_ref(), b"head\r\nlegacy body\r\ntail".as_slice());
+    }
+
+    #[test]
+    fn mixed_format_fallback_also_loads_the_raw_blob() {
+        // Same mixed state, but the legacy blob under the decoded key was
+        // garbage-collected after the original envelope was deleted. The
+        // re-ingest stored the identical bytes under the raw key, which must
+        // be used as the alternate load target.
+        let decoded_hash = "d".repeat(64);
+        let raw_hash = "r".repeat(64);
+        let info = crate::message::content::AttachmentInfo {
+            content_hash: decoded_hash.clone(),
+            raw_content_hash: Some(raw_hash.clone()),
+            ..Default::default()
+        };
+        let stripped = format!("<<BICHON_DETACH_HASH:{decoded_hash}>>");
+        let restored =
+            super::reattach_parts(stripped.into_bytes(), vec![info], |hash| {
+                if hash == raw_hash {
+                    Ok(Some(bytes::Bytes::from_static(b"raw body")))
+                } else {
+                    Ok(None)
+                }
+            })
+            .expect("reattach via raw-key alternate");
+        assert_eq!(restored.as_ref(), b"raw body".as_slice());
+    }
+
+    #[test]
+    fn raw_blob_key_cannot_alias_legacy_attachment_or_email_key() {
+        let payload = b"same bytes in a legacy decoded attachment or original email";
+        assert_ne!(crate::utils::compute_raw_attachment_hash(payload), crate::utils::compute_content_hash(payload));
+    }
+
+    #[test]
+    fn legacy_metadata_uses_the_original_decoded_storage_key() {
+        let info: crate::message::content::AttachmentInfo = serde_json::from_str(
+            r#"{"file_type":"application/pdf","inline":false,"filename":"a.pdf","size":4,"content_id":null,"content_hash":"legacy-hash","is_message":false,"extracted_text":null,"extracted_page_count":null}"#
+        ).expect("read legacy attachment metadata");
+        assert_eq!(info.storage_hash(), "legacy-hash");
     }
 
     /// A body that cannot be parsed must surface as `EmailParseError` (not a
@@ -910,6 +1730,318 @@ mod test {
             "parse failures must classify as EmailParseError, got {err:?}"
         );
     }
+
+    /// The premise of an integrity check that compares the reattached EML's
+    /// content hash against `envelope.content_hash`: splicing every stored blob
+    /// back must reproduce the original body *byte for byte*. Covers an inline
+    /// CID attachment and a regular one, since the two take different branches
+    /// in `strip_attachment_bodies`.
+    #[test]
+    fn reattaching_every_blob_reproduces_the_original_eml_byte_for_byte() {
+        let raw = concat!(
+            "Message-ID: <fixture@example.test>\r\n",
+            "MIME-Version: 1.0\r\n",
+            "Content-Type: multipart/mixed; boundary=fixture\r\n",
+            "\r\n",
+            "--fixture\r\n",
+            "Content-Type: text/plain\r\n\r\n",
+            "hello\r\n",
+            "--fixture\r\n",
+            "Content-Type: image/png\r\n",
+            "Content-ID: <logo@example.test>\r\n",
+            "Content-Disposition: inline; filename=logo.png\r\n",
+            "Content-Transfer-Encoding: base64\r\n\r\n",
+            "aGVsbG8tbG9nbw==\r\n",
+            "--fixture\r\n",
+            "Content-Type: application/octet-stream\r\n",
+            "Content-Disposition: attachment; filename=fixture.bin\r\n\r\n",
+            "fixture bytes\r\n",
+            "--fixture--\r\n",
+        )
+        .as_bytes();
+        let message = super::MessageParser::new().parse(raw).expect("fixture parses");
+        let detached = super::strip_attachment_bodies(raw, &message, None);
+        assert_eq!(detached.infos.len(), 2, "both attachments are detached");
+
+        let stored: std::collections::HashMap<String, bytes::Bytes> =
+            detached.blobs.iter().cloned().collect();
+        let load = |hash: &str| Ok(stored.get(hash).cloned());
+
+        let restored = super::reattach_parts(
+            detached.stripped_eml.clone(),
+            detached.infos.clone(),
+            load,
+        )
+        .expect("reattach with every blob present");
+        assert_eq!(
+            crate::utils::compute_content_hash(&restored),
+            crate::utils::compute_content_hash(raw),
+            "a fully populated store must reconstruct the archived body exactly"
+        );
+
+        // Drop one blob: the placeholder survives into the output, so the hash
+        // can no longer match. This is the signal the integrity check relies on.
+        for dropped in 0..detached.infos.len() {
+            let mut partial = stored.clone();
+            partial.remove(detached.infos[dropped].storage_hash());
+            let restored = super::reattach_parts(
+                detached.stripped_eml.clone(),
+                detached.infos.clone(),
+                |hash| Ok(partial.get(hash).cloned()),
+            )
+            .expect("reattach with one blob missing");
+            assert_ne!(
+                crate::utils::compute_content_hash(&restored),
+                crate::utils::compute_content_hash(raw),
+                "a missing attachment blob must change the reconstructed hash"
+            );
+        }
+
+        // The case a presence check gets wrong: metadata that cannot enumerate
+        // the placeholders (an unreadable attachment list) leaves every one of
+        // them in the output, so the record is still broken even though there is
+        // nothing it could have listed as missing. The verdict has to be the
+        // hash, not a list.
+        let restored = super::reattach_parts(detached.stripped_eml.clone(), Vec::new(), |_| Ok(None))
+            .expect("reattach with no attachment metadata");
+        assert_ne!(
+            crate::utils::compute_content_hash(&restored),
+            crate::utils::compute_content_hash(raw),
+            "unenumerable attachment metadata must not read as intact"
+        );
+    }
+
+    #[test]
+    fn placeholder_hashes_finds_unique_hashes() {
+        let eml = b"a<<BICHON_DETACH_HASH:abc>>b<<BICHON_DETACH_HASH:def>>c<<BICHON_DETACH_HASH:abc>>";
+        assert_eq!(super::placeholder_hashes(eml), vec!["abc", "def"]);
+        assert!(super::placeholder_hashes(b"no placeholders").is_empty());
+        assert!(super::placeholder_hashes(b"<<BICHON_DETACH_HASH:unterminated").is_empty());
+    }
+
+    /// A literal marker in the body must never be named as a missing
+    /// attachment — the record's own metadata is what gates the list.
+    #[test]
+    fn known_placeholder_hashes_ignores_literal_body_markers() {
+        let attachments = vec![super::AttachmentInfo {
+            content_hash: "real".into(),
+            ..Default::default()
+        }];
+        assert_eq!(
+            super::known_placeholder_hashes(
+                b"<<BICHON_DETACH_HASH:literal>><<BICHON_DETACH_HASH:real>>",
+                &attachments,
+            ),
+            vec!["real"]
+        );
+    }
+
+    /// A placeholder spliced into the stripped EML carries the *raw* storage
+    /// key, which is a different hash domain from `AttachmentInfo::content_hash`
+    /// (see `compute_raw_attachment_hash`). Matching on `content_hash` alone
+    /// drops every current-format placeholder, leaving the report unable to name
+    /// what is missing.
+    #[test]
+    fn known_placeholder_hashes_recognise_a_real_detached_attachment() {
+        let raw = concat!(
+            "Message-ID: <fixture@example.test>\r\n",
+            "MIME-Version: 1.0\r\n",
+            "Content-Type: multipart/mixed; boundary=fixture\r\n",
+            "\r\n",
+            "--fixture\r\n",
+            "Content-Type: text/plain\r\n\r\n",
+            "hello\r\n",
+            "--fixture\r\n",
+            "Content-Type: application/octet-stream\r\n",
+            "Content-Disposition: attachment; filename=fixture.bin\r\n\r\n",
+            "fixture bytes\r\n",
+            "--fixture--\r\n",
+        )
+        .as_bytes();
+        let message = super::MessageParser::new().parse(raw).expect("fixture parses");
+        let detached = super::strip_attachment_bodies(raw, &message, None);
+        assert_eq!(detached.infos.len(), 1);
+        let info = &detached.infos[0];
+        // The two domains genuinely differ for a current-format record, which is
+        // what makes the placeholder/inventory comparison below non-trivial.
+        assert_ne!(info.storage_hash(), info.content_hash);
+        assert_eq!(
+            super::known_placeholder_hashes(&detached.stripped_eml, &detached.infos),
+            vec![info.storage_hash().to_string()]
+        );
+    }
+
+    fn diagnosis(email_missing: bool, broken: bool, unresolved: &[&str]) -> super::BlobDiagnosis {
+        super::BlobDiagnosis {
+            email_missing,
+            broken,
+            unresolved: unresolved.iter().map(|h| h.to_string()).collect(),
+        }
+    }
+
+    #[test]
+    fn post_state_marks_a_repaired_record_and_keeps_the_legacy_alias() {
+        let mut report = super::BlobRepairReport {
+            email_missing_before: true,
+            email_blob_missing: true,
+            ..Default::default()
+        };
+        super::apply_post_state(&mut report, &diagnosis(false, false, &[]));
+        assert!(report.email_blob_missing);
+        assert!(report.email_missing_before);
+        assert!(!report.email_missing_after);
+        assert_eq!(report.status, "repaired");
+        // The backup-skip flag is reported separately and stays untouched by a
+        // successful completion.
+        assert!(!report.skipped_due_to_backup);
+    }
+
+    /// The regression this integrity check exists for: a record can be broken
+    /// while nothing can be named, because the part that cannot be read is the
+    /// metadata that would do the naming. `partial` must follow the verdict, not
+    /// the (empty) list.
+    #[test]
+    fn post_state_is_partial_when_broken_even_with_nothing_named() {
+        let mut report = super::BlobRepairReport::default();
+        super::apply_post_state(&mut report, &diagnosis(false, true, &[]));
+        assert!(report.missing_after.is_empty());
+        assert_eq!(report.status, "partial");
+    }
+
+    #[test]
+    fn post_state_reports_the_suspect_hashes_it_can_name() {
+        let mut report = super::BlobRepairReport::default();
+        super::apply_post_state(&mut report, &diagnosis(false, true, &["suspect-hash"]));
+        assert_eq!(report.missing_after, vec!["suspect-hash"]);
+        assert_eq!(report.status, "partial");
+    }
+
+    /// The count-mismatch guard returns before any repair is attempted, so its
+    /// report is the only thing the caller and the repair-history ring get.
+    /// It must carry the full identity — a `failed` record with an empty
+    /// subject is unusable in the history list.
+    #[test]
+    fn mismatch_report_carries_the_envelope_identity() {
+        let envelope = super::Envelope {
+            account_id: 7,
+            mailbox_id: 3,
+            subject: "Quarterly report".into(),
+            message_id: "<abc@example.com>".into(),
+            attachment_count: 2,
+            ..Default::default()
+        };
+        let report = super::attachment_count_mismatch_report("env-1", &envelope, 1);
+        assert_eq!(report.envelope_id, "env-1");
+        assert_eq!(report.status, "failed");
+        assert_eq!(report.account_id, 7);
+        assert_eq!(report.mailbox_id, 3);
+        assert_eq!(report.subject, "Quarterly report");
+        assert_eq!(report.message_id, "<abc@example.com>");
+        assert!(report.error.unwrap().contains("does not match"));
+    }
+
+    /// A paused gate must skip the write outright (and release the admission it
+    /// briefly took), while an open gate admits it and releases it again. Uses a
+    /// private gate so the process-wide `WRITE_GATE` is never paused.
+    ///
+    /// The admitted branch queues into the process-global `BLOB_MANAGER`, so
+    /// this test needs the shared test environment and lock and runs on
+    /// `STORAGE_RUNTIME` — see `init_test_env`.
+    #[test]
+    fn paused_recovery_skips_persistence_and_releases_admission() {
+        STORAGE_RUNTIME.block_on(async {
+            let _run_guard = crate::backup::BACKUP_STATE_TESTS.lock().await;
+            init_test_env();
+
+            let gate = super::WriteGate::new();
+            gate.pause();
+            let raw = b"From: sender@example.test\r\n\r\nbody";
+            let message = super::MessageParser::new().parse(raw).expect("fixture parses");
+
+            assert!(!super::persist_recovered_blob_if_allowed(
+                raw,
+                &message,
+                &crate::utils::compute_content_hash(raw),
+                0,
+                0,
+                &gate,
+            )
+            .await);
+            assert_eq!(gate.in_flight(), 0);
+
+            gate.resume();
+            assert!(super::persist_recovered_blob_if_allowed(
+                raw,
+                &message,
+                &crate::utils::compute_content_hash(raw),
+                0,
+                0,
+                &gate,
+            )
+            .await);
+            assert_eq!(gate.in_flight(), 0);
+            super::BLOB_MANAGER.drain().await;
+        });
+    }
+
+    #[test]
+    fn recovery_guards_reject_wrong_hash_and_message_id() {
+        let body = b"From: sender@example.test\r\nMessage-ID: <original@example.test>\r\n\r\nbody";
+        let parsed_id = super::MessageParser::new()
+            .parse(body)
+            .and_then(|message| message.message_id().map(String::from))
+            .expect("message-id parses");
+        let mut envelope = super::Envelope {
+            message_id: parsed_id.clone(),
+            content_hash: super::compute_content_hash(body),
+            ..Default::default()
+        };
+        assert!(super::recovered_body_matches(body, &envelope));
+        envelope.message_id = "<other@example.test>".into();
+        assert!(!super::recovered_body_matches(body, &envelope));
+        envelope.message_id = parsed_id;
+        envelope.content_hash = super::compute_content_hash(b"different");
+        assert!(!super::recovered_body_matches(body, &envelope));
+    }
+
+    #[test]
+    fn message_id_candidates_are_bounded_and_exclude_stored_uid() {
+        let candidates = super::bounded_message_id_candidates((1..=100).rev(), 50);
+        assert_eq!(candidates.len(), 32);
+        assert_eq!(candidates.first(), Some(&1));
+        assert_eq!(candidates.last(), Some(&32));
+        assert!(!candidates.contains(&50));
+    }
+
+    #[test]
+    fn message_id_search_skips_unsearchable_ids() {
+        // A real Message-ID is searched for, trimmed.
+        assert_eq!(
+            super::searchable_message_id("  <real@example.test> "),
+            Some("<real@example.test>")
+        );
+        assert_eq!(super::searchable_message_id(""), None);
+        assert_eq!(super::searchable_message_id("   "), None);
+        // The synthetic id minted for a message with no Message-ID header can
+        // never match a server-side header. Asserting against the generator
+        // itself keeps the marker constant and the format string in step.
+        assert_eq!(
+            super::searchable_message_id(&super::generate_message_id()),
+            None
+        );
+        // Anything that could break out of the IMAP quoted string.
+        assert_eq!(super::searchable_message_id("<a\"b@example.test>"), None);
+        assert_eq!(super::searchable_message_id("<a\\b@example.test>"), None);
+        assert_eq!(super::searchable_message_id("<a\rb@example.test>"), None);
+        assert_eq!(super::searchable_message_id("<a\nb@example.test>"), None);
+    }
+
+    // The dedup/idempotence contract of the blob store (a re-detach must never
+    // overwrite already-archived bytes) is tested in `crate::store::blob`, where
+    // a private `BlobManager` can be built at a temp dir. It used to live here
+    // and went through the process-global `BLOB_MANAGER`, which made it depend
+    // on which test module initialized that global first and on that module's
+    // runtime still being alive.
 
     #[test]
     fn test_various_html_with_overflow_enabled() {
@@ -961,8 +2093,14 @@ mod test {
     /// Regression test for: "range end index X out of range for slice of
     /// length Y" panic caused by a malformed email whose attachment
     /// `raw_end_offset` exceeded the actual body size.
-    #[tokio::test]
-    async fn detach_attachments_bounds_check() {
+    #[test]
+    fn detach_attachments_bounds_check() {
+        STORAGE_RUNTIME.block_on(check_attachment_bounds());
+    }
+
+    async fn check_attachment_bounds() {
+        let _run_guard = crate::backup::BACKUP_STATE_TESTS.lock().await;
+        init_test_env();
         let raw = concat!(
             "From: sender@example.com\r\n",
             "To: recipient@example.com\r\n",
@@ -996,7 +2134,7 @@ mod test {
 
         // Must not panic.
         let infos =
-            super::detach_and_store_attachments(truncated, &message, "test_content_hash", 0, 0)
+            super::detach_and_store_attachments(truncated, &message, "test_content_hash", 0, 0, None)
                 .await;
 
         // The attachment count must still match so the consistency check

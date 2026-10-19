@@ -176,6 +176,7 @@ impl BackupManager {
             snapshot_id: None,
             summary: None,
             warnings: Vec::new(),
+            target: Some(crate::backup::config::destination()),
         };
         // Written directly (bypassing the gated helpers — we are inside the
         // window). It lands in the memdb snapshot taken by the memdb preparer,
@@ -292,6 +293,7 @@ impl BackupManager {
             snapshot_id: snapshot_id.clone(),
             summary,
             warnings,
+            target: Some(crate::backup::config::destination()),
         };
         write_record(&record);
 
@@ -853,14 +855,69 @@ mod tests {
         );
 
         let records = BackupRecord::list_recent(10);
-        assert!(
-            records.iter().any(|r| {
+        let mine = records
+            .iter()
+            .find(|r| {
                 r.status == BackupRunStatus::Success
                     && r.snapshot_id.as_deref() == Some("fake-manifest-1")
                     && r.trigger == "manual"
-            }),
-            "a Success record must be persisted: {records:?}"
+            })
+            .unwrap_or_else(|| panic!("a Success record must be persisted: {records:?}"));
+        assert_eq!(
+            mine.target.as_deref(),
+            Some(&*crate::backup::config::destination()),
+            "the record must name the destination it wrote to — the history is one \
+             global list, so without this a target change makes it unreadable"
         );
+    }
+
+    /// Records are scoped by destination, so "the last successful backup" is
+    /// always an answer about the target currently configured.
+    #[tokio::test]
+    async fn last_success_is_scoped_to_a_destination() {
+        init_test_env();
+        let _run_guard = crate::backup::BACKUP_STATE_TESTS.lock().await;
+
+        let col = DB_MANAGER.db().collection(BackupRecord::collection());
+        for r in BackupRecord::list_recent(usize::MAX) {
+            col.delete(r.key()).unwrap();
+        }
+
+        let record = |id: &str, target: Option<&str>, at: i64| BackupRecord {
+            id: id.to_string(),
+            trigger: "manual".to_string(),
+            started_at: at,
+            finished_at: Some(at),
+            status: BackupRunStatus::Success,
+            phase: "finalize".to_string(),
+            error: None,
+            snapshot_id: Some(format!("m-{id}")),
+            summary: None,
+            warnings: vec![],
+            target: target.map(str::to_string),
+        };
+        // Newest first: the newest run belongs to *another* destination.
+        write_record(&record("old-here", Some("s3://aws/bucket"), 1_000));
+        write_record(&record("new-there", Some("local:/mnt/backup"), 2_000));
+
+        let here = BackupRecord::last_success_for("s3://aws/bucket").unwrap();
+        assert_eq!(here.id, "old-here", "must skip the other destination's run");
+
+        assert!(
+            BackupRecord::last_success_for("local:/mnt/elsewhere").is_none(),
+            "a destination with no history has no last success"
+        );
+
+        // A record written before `target` existed belongs to whatever is
+        // configured now: those runs predate target switching.
+        write_record(&record("legacy", None, 3_000));
+        let legacy = BackupRecord::last_success_for("s3://aws/bucket").unwrap();
+        assert_eq!(legacy.id, "legacy", "a legacy record must not be dropped");
+
+        // Leave the shared collection as this test found it.
+        for r in BackupRecord::list_recent(usize::MAX) {
+            col.delete(r.key()).unwrap();
+        }
     }
 
     /// The history rolls: writing beyond the cap prunes the oldest records,
@@ -889,6 +946,7 @@ mod tests {
                 snapshot_id: None,
                 summary: None,
                 warnings: vec![],
+                target: None,
             };
             write_record(&record);
         }
@@ -943,6 +1001,7 @@ mod tests {
             snapshot_id: None,
             summary: None,
             warnings: vec![],
+            target: None,
         };
         write_record(&record("stale-running", BackupRunStatus::Running, None));
         write_record(&record(

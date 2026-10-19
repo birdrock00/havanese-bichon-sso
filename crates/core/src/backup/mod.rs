@@ -21,10 +21,12 @@
 //! Bichon owns every byte of its data on local disk (Tantivy indices, the
 //! bichon-blob content store, and the memdb snapshot/WAL). Backups are
 //! **two-phase** (design doc §5): a short capture window produces immutable
-//! artifacts, then a content-addressed upload to S3 persists them without
-//! touching the write gate:
+//! artifacts, then a content-addressed upload persists them without touching
+//! the write gate. The destination is an S3-compatible object store or a
+//! local directory ([`engine::BackupTarget`]) — everything below the target
+//! is backend-agnostic:
 //!
-//! 1. **Preflight** — [`backend::BackupBackend::preflight`] verifies the S3
+//! 1. **Preflight** — [`backend::BackupBackend::preflight`] verifies the
 //!    target before anything is paused.
 //! 2. **Capture** — [`gate::WRITE_GATE`] is paused, every in-flight write
 //!    drains, and each registered contributor
@@ -52,6 +54,7 @@ pub mod gate;
 pub mod manager;
 pub mod manifest;
 pub mod model;
+pub(crate) mod path;
 pub mod prepare;
 pub mod restore;
 pub mod retention;

@@ -249,11 +249,15 @@ struct BackupConfigUpdatePayload {
     schedule: Option<String>,
     prefix: Option<String>,
     retention: Option<serde_json::Value>,
+    /// `"s3"` / `"local"` — kept as a string so the test payload stays a plain
+    /// mirror of the wire format rather than importing a core enum.
+    target_type: Option<String>,
     s3_endpoint: Option<String>,
     s3_region: Option<String>,
     s3_bucket: Option<String>,
     s3_access_key: Option<String>,
     s3_secret_key: Option<String>,
+    local_dir: Option<String>,
 }
 
 /// The config tests write the same process-global config document + cache
@@ -303,13 +307,22 @@ async fn backup_config_get_ok_for_admin_and_masks_secrets() {
     let raw = get_backup_config_raw(&token).await;
     assert_eq!(raw["prefix"], "bichon-backup", "unconfigured prefix is the default");
     assert_eq!(raw["retention"]["keep_last"], 7, "default retention policy");
+    assert_eq!(
+        raw["target_type"], "s3",
+        "an unconfigured install defaults to the s3 target: {raw}"
+    );
+    assert!(
+        raw["local_dir"].is_null(),
+        "no local directory is configured yet: {raw}"
+    );
     assert!(
         raw.get("s3_secret_key").is_none(),
         "secrets must never be serialized: {raw}"
     );
     assert!(
-        raw.get("password").is_none() && raw.get("local_dir").is_none(),
-        "unexpected fields in the S3-only form: {raw}"
+        raw.get("password").is_none() && raw.get("local_dir_volume").is_none(),
+        "unexpected fields in the config view (the volume fingerprint is an internal \
+         invariant, not API surface): {raw}"
     );
 
     cleanup_backup_config();
@@ -407,7 +420,7 @@ async fn backup_config_s3_validation_and_unknown_fields() {
         "s3 without a bucket must be rejected"
     );
 
-    // Unknown fields are ignored (the form no longer accepts target_type).
+    // A complete s3 target is accepted.
     let status = post_backup_config(
         &token,
         &BackupConfigUpdatePayload {
@@ -419,7 +432,107 @@ async fn backup_config_s3_validation_and_unknown_fields() {
     .await;
     assert_eq!(status, StatusCode::OK);
 
+    // A local target without a directory is rejected up front.
+    let status = post_backup_config(
+        &token,
+        &BackupConfigUpdatePayload {
+            target_type: Some("local".into()),
+            ..Default::default()
+        },
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "a local target without local_dir must be rejected"
+    );
+
+    // ...and so is one pointing at a directory that does not exist.
+    let status = post_backup_config(
+        &token,
+        &BackupConfigUpdatePayload {
+            target_type: Some("local".into()),
+            local_dir: Some("/definitely/not/a/real/bichon/backup/dir".into()),
+            ..Default::default()
+        },
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::BAD_REQUEST,
+        "a local target pointing at a missing directory must be rejected"
+    );
+
     cleanup_backup_config();
+}
+
+#[tokio::test]
+async fn backup_config_roundtrips_a_local_target_and_clears_it() {
+    setup().await;
+    let _guard = CONFIG_TEST_LOCK.lock().await;
+    let token = admin_token().await;
+    cleanup_backup_config();
+
+    // Outside the data root (`temp_dir()/bichon-server-test-<pid>`): the
+    // guard refuses a target that touches the live root in either direction.
+    let dir = std::env::temp_dir().join(format!("bichon-backup-local-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+
+    let status = post_backup_config(
+        &token,
+        &BackupConfigUpdatePayload {
+            target_type: Some("local".into()),
+            local_dir: Some(dir.display().to_string()),
+            ..Default::default()
+        },
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "a local target must be accepted");
+
+    let raw = get_backup_config_raw(&token).await;
+    assert_eq!(raw["target_type"], "local");
+    assert_eq!(raw["local_dir"], dir.display().to_string());
+
+    // Switching back to s3 keeps the path, so switching targets is lossless.
+    let status = post_backup_config(
+        &token,
+        &BackupConfigUpdatePayload {
+            target_type: Some("s3".into()),
+            s3_endpoint: Some("http://localhost:9000".into()),
+            s3_bucket: Some("bichon".into()),
+            ..Default::default()
+        },
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let raw = get_backup_config_raw(&token).await;
+    assert_eq!(raw["target_type"], "s3");
+    assert_eq!(
+        raw["local_dir"],
+        dir.display().to_string(),
+        "switching to s3 must not discard the local path"
+    );
+
+    // An empty string clears the path. `local_dir` is not a secret, so it does
+    // not use the `********` keep convention — `None` already means
+    // "unchanged", and without this a path could never be removed.
+    let status = post_backup_config(
+        &token,
+        &BackupConfigUpdatePayload {
+            local_dir: Some(String::new()),
+            ..Default::default()
+        },
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let raw = get_backup_config_raw(&token).await;
+    assert!(
+        raw["local_dir"].is_null(),
+        "an empty local_dir must clear the stored path: {raw}"
+    );
+
+    cleanup_backup_config();
+    let _ = std::fs::remove_dir_all(&dir);
 }
 
 #[tokio::test]

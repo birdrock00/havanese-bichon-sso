@@ -31,6 +31,7 @@ import { EnvelopeDeleteDialog } from './delete-dialog'
 import { MailDisplayDrawer } from './mail-display-dialog'
 import { AttachmentListTable } from './mail-list-table'
 import { NestedEmailDialog } from './nested-email-dialog'
+import { RepairMessageDialog } from '@/features/repair/repair-message-dialog'
 import { RestoreMessageDialog } from './restore-message-dialog'
 
 export default function AttachmentSearch() {
@@ -169,6 +170,15 @@ export default function AttachmentSearch() {
             key='attachment-restore-mail-dialog'
             open={open === 'restore'}
             onOpenChange={() => setOpen('restore')}
+          />
+
+          <RepairMessageDialog
+            key='attachment-repair-mail-dialog'
+            open={open === 'repair'}
+            onOpenChange={() => setOpen('repair')}
+            accountId={currentAttachment?.account_id}
+            envelopeId={currentAttachment?.envelope_id}
+            subject={currentAttachment?.subject}
           />
 
           <NestedEmailDialog

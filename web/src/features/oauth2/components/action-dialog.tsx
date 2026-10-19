@@ -77,6 +77,7 @@ interface Props {
 const defaultValues = {
   description: undefined,
   client_id: '',
+  client_type: 'Confidential' as const,
   client_secret: '',
   auth_url: '',
   token_url: '',
@@ -97,6 +98,7 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
       ? {
         description: currentRow.description ?? undefined,
         client_id: currentRow.client_id,
+        client_type: currentRow.client_type,
         client_secret: undefined,
         auth_url: currentRow.auth_url,
         token_url: currentRow.token_url,
@@ -108,6 +110,7 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
       }
       : defaultValues,
   });
+  const isPublic = form.watch('client_type') === 'Public'
 
   const { proxyOptions } = useProxyList();
 
@@ -162,7 +165,7 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
   }
 
   const onSubmit = (values: OAuth2FormValues) => {
-    if (!isEdit) {
+    if (!isEdit && values.client_type === 'Confidential') {
       if (!values.client_secret) {
         form.setError('client_secret', {
           type: 'manual',
@@ -182,12 +185,14 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
     const prepareClientSecret = (secret: string | undefined) => {
       return secret && secret.trim() !== '' ? secret : undefined;
     };
+    const clientSecret = values.client_type === 'Public' ? undefined : prepareClientSecret(values.client_secret);
 
     if (isEdit) {
       updateMutation.mutate({
         description: values.description,
         client_id: values.client_id,
-        client_secret: prepareClientSecret(values.client_secret),
+        client_type: values.client_type,
+        client_secret: clientSecret,
         auth_url: values.auth_url,
         token_url: values.token_url,
         redirect_uri: values.redirect_uri,
@@ -200,7 +205,8 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
       createMutation.mutate({
         description: values.description,
         client_id: values.client_id,
-        client_secret: values.client_secret!,
+        client_type: values.client_type,
+        client_secret: clientSecret,
         auth_url: values.auth_url,
         token_url: values.token_url,
         redirect_uri: values.redirect_uri,
@@ -289,6 +295,27 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
               />
               <FormField
                 control={form.control}
+                name='client_type'
+                render={({ field }) => (
+                  <FormItem className='flex flex-col gap-y-1 space-y-0'>
+                    <FormLabel className='mb-1'>{t('oauth2.clientTypeLabel')}</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value='Confidential'>{t('oauth2.confidentialClient')}</SelectItem>
+                        <SelectItem value='Public'>{t('oauth2.publicClient')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
                 name='client_id'
                 render={({ field }) => (
                   <FormItem className='flex flex-col gap-y-1 space-y-0'>
@@ -306,27 +333,29 @@ export function ActionDialog({ currentRow, open, onOpenChange }: Props) {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name='client_secret'
-                render={({ field }) => (
-                  <FormItem className='flex flex-col gap-y-1 space-y-0'>
-                    <FormLabel className='mb-1'>{t('oauth2.clientSecretLabel')}</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder={isEdit ? t('oauth2.leaveEmptyToKeepExistingSecret') : t('oauth2.enterYourClientSecret')}
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      {isEdit
-                        ? t('oauth2.leaveEmptyToKeepTheExistingSecret')
-                        : t('oauth2.aSecretKeyProvidedByTheOAuthProvider')}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {!isPublic && (
+                <FormField
+                  control={form.control}
+                  name='client_secret'
+                  render={({ field }) => (
+                    <FormItem className='flex flex-col gap-y-1 space-y-0'>
+                      <FormLabel className='mb-1'>{t('oauth2.clientSecretLabel')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={isEdit ? t('oauth2.leaveEmptyToKeepExistingSecret') : t('oauth2.enterYourClientSecret')}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {isEdit
+                          ? t('oauth2.leaveEmptyToKeepTheExistingSecret')
+                          : t('oauth2.aSecretKeyProvidedByTheOAuthProvider')}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name='auth_url'

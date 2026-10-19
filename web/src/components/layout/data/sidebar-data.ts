@@ -28,11 +28,11 @@ import {
   Lock,
   Paperclip,
   Search,
+  Settings2,
   ShieldCheck,
   Upload,
   Users2,
   ScrollText,
-  Settings2,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/use-current-user'
@@ -75,6 +75,11 @@ export function useSidebarData(): SidebarData {
             icon: Search,
           },
           {
+            title: t('navigation.attachment'),
+            url: '/attachment',
+            icon: Paperclip,
+          },
+          {
             title: t('navigation.analytics', 'Analytics'),
             url: '/analytics',
             icon: BarChart3,
@@ -104,11 +109,6 @@ export function useSidebarData(): SidebarData {
               'data:export:batch',
               'data:export:batch:all',
             ]),
-          },
-          {
-            title: t('navigation.attachment'),
-            url: '/attachment',
-            icon: Paperclip,
           },
         ],
       },
@@ -162,8 +162,11 @@ export function useSidebarData(): SidebarData {
             title: t('navigation.integrity', 'Integrity'),
             url: '/integrity',
             icon: ShieldCheck,
+            // The backend serves integrity checks from the Pro edition up
+            // (bichon-pro integrity.rs) and the page itself gates on isPro;
+            // isEnterprise here hid the entry for plain-Pro installs.
             visible:
-              isEnterprise &&
+              isPro &&
               require_any_permission([
                 'system:root',
                 'account:manage:all',
@@ -237,11 +240,15 @@ export function useSidebarData(): SidebarData {
               ]),
           },
           {
+            // The compliance REST endpoints live on the Pro server only
+            // (see rest/compliance_config.rs there), so the community
+            // edition — which always reports edition=community — never
+            // passes this gate and never shows the entry.
             title: t(
               'navigation.complianceSettings',
-              'Compliance configuration',
+              'Configuration',
             ),
-            url: '/settings/compliance',
+            url: '/configuration',
             icon: Settings2,
             visible:
               (isPro || isEnterprise) &&

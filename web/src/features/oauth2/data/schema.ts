@@ -21,7 +21,8 @@ export interface OAuth2Entity {
   id: number;
   description?: string;
   client_id: string;
-  client_secret: string;
+  client_type: 'Confidential' | 'Public';
+  client_secret?: string;
   auth_url: string;
   token_url: string;
   redirect_uri: string;

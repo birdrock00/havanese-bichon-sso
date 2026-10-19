@@ -28,7 +28,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Loader2, CheckSquare, Square } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from '@/hooks/use-toast'
 import { list_mailboxes, MailboxData } from '@/api/mailbox/api'
 //import { MOCK_MAILBOX_LIST } from '@/api/mailbox/mock-mailboxes'
@@ -40,7 +40,6 @@ import axios, { AxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { RichTreeView } from '@mui/x-tree-view/RichTreeView';
-import { useTheme } from '@/context/theme-context'
 import React from 'react'
 import Collapse from '@mui/material/Collapse';
 import { styled } from '@mui/material/styles';
@@ -139,6 +138,54 @@ interface CustomTreeItemProps
     extends Omit<UseTreeItemParameters, 'rootRef'>,
     Omit<React.HTMLAttributes<HTMLLIElement>, 'onFocus'> { }
 
+const CustomTreeItem = React.forwardRef(function CustomTreeItem(
+    props: CustomTreeItemProps,
+    ref: React.Ref<HTMLLIElement>,
+) {
+    const { id, itemId, label, disabled, children, ...other } = props;
+
+    const {
+        getContextProviderProps,
+        getRootProps,
+        getContentProps,
+        getIconContainerProps,
+        getCheckboxProps,
+        getLabelProps,
+        getGroupTransitionProps,
+        getDragAndDropOverlayProps,
+        status,
+    } = useTreeItem({ id, itemId, children, label, disabled, rootRef: ref });
+
+    const item = useTreeItemModel<ExtendedTreeItemProps>(itemId)!;
+
+    return (
+        <TreeItemProvider {...getContextProviderProps()}>
+            <TreeItemRoot {...getRootProps(other)}>
+                <TreeItemContent {...getContentProps()}>
+                    <TreeItemIconContainer {...getIconContainerProps()}>
+                        <TreeItemIcon status={status} />
+                    </TreeItemIconContainer>
+                    <TreeItemCheckbox {...getCheckboxProps()} sx={{
+                        color: 'hsl(var(--muted-foreground) / 0.4)',
+                        '&.Mui-checked': {
+                            color: 'hsl(var(--primary))',
+                        },
+                    }} />
+                    <CustomLabel
+                        {...getLabelProps({
+                            exists: item.exists,
+                            attributes: item.attributes,
+                            expandable: status.expandable && status.expanded,
+                        })}
+                    />
+                    <TreeItemDragAndDropOverlay {...getDragAndDropOverlayProps()} />
+                </TreeItemContent>
+                {children && <TransitionComponent {...getGroupTransitionProps()} />}
+            </TreeItemRoot>
+        </TreeItemProvider>
+    );
+});
+
 
 interface Props {
     open: boolean
@@ -165,7 +212,6 @@ export function DownloadFoldersDialog({ currentRow, open, onOpenChange }: Props)
     const [fetchProgress, setFetchProgress] = useState<{ examined: number; total: number } | null>(null);
     const queryClient = useQueryClient();
     const { t } = useTranslation()
-    const { theme } = useTheme()
 
     useEffect(() => {
         if (!open) return;
@@ -246,56 +292,6 @@ export function DownloadFoldersDialog({ currentRow, open, onOpenChange }: Props)
             oldExpanded.length === 0 ? itemsWithChildren : [],
         );
     };
-
-    const CustomTreeItem = useMemo(() => {
-        return React.forwardRef(function CustomTreeItem(
-            props: CustomTreeItemProps,
-            ref: React.Ref<HTMLLIElement>,
-        ) {
-            const { id, itemId, label, disabled, children, ...other } = props;
-
-            const {
-                getContextProviderProps,
-                getRootProps,
-                getContentProps,
-                getIconContainerProps,
-                getCheckboxProps,
-                getLabelProps,
-                getGroupTransitionProps,
-                getDragAndDropOverlayProps,
-                status,
-            } = useTreeItem({ id, itemId, children, label, disabled, rootRef: ref });
-
-            const item = useTreeItemModel<ExtendedTreeItemProps>(itemId)!;
-
-            return (
-                <TreeItemProvider {...getContextProviderProps()}>
-                    <TreeItemRoot {...getRootProps(other)}>
-                        <TreeItemContent {...getContentProps()}>
-                            <TreeItemIconContainer {...getIconContainerProps()}>
-                                <TreeItemIcon status={status} />
-                            </TreeItemIconContainer>
-                            <TreeItemCheckbox {...getCheckboxProps()} sx={{
-                                color: 'hsl(var(--muted-foreground) / 0.4)',
-                                '&.Mui-checked': {
-                                    color: 'hsl(var(--primary))',
-                                },
-                            }} />
-                            <CustomLabel
-                                {...getLabelProps({
-                                    exists: item.exists,
-                                    attributes: item.attributes,
-                                    expandable: status.expandable && status.expanded,
-                                })}
-                            />
-                            <TreeItemDragAndDropOverlay {...getDragAndDropOverlayProps()} />
-                        </TreeItemContent>
-                        {children && <TransitionComponent {...getGroupTransitionProps()} />}
-                    </TreeItemRoot>
-                </TreeItemProvider>
-            );
-        });
-    }, [theme]);
 
 
 

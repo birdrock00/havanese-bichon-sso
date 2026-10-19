@@ -124,7 +124,7 @@ interface ManifestBrowserProps {
 /** Browse restore points: pick a manifest, see its object composition, and
  * download the audit delta chain as gzip JSONL (the timestamped compliance
  * export artifact). Restore points can be deleted (the objects only they
- * reference are reclaimed from the bucket); restore itself is deliberately
+ * reference are reclaimed from the target); restore itself is deliberately
  * left to the CLI. On Pro/Enterprise a restore-drill button verifies a
  * restore point against the target without writing anything. */
 export default function ManifestBrowser({ stacked = false }: ManifestBrowserProps) {
@@ -236,7 +236,7 @@ export default function ManifestBrowser({ stacked = false }: ManifestBrowserProp
           objects: result.objects_removed,
           bytes: formatBytes(result.bytes_reclaimed),
           defaultValue:
-            '{{objects}} object(s) removed, {{bytes}} freed from the bucket',
+            '{{objects}} object(s) removed, {{bytes}} freed from the target',
         }),
       })
       setDeleteTarget(null)
@@ -579,7 +579,7 @@ export default function ManifestBrowser({ stacked = false }: ManifestBrowserProp
             <AlertDialogDescription>
               {t(
                 'backup.deleteConfirmBody',
-                'Restore point {{id}} ({{created}} · {{bytes}}) will be permanently deleted. Objects shared with other restore points are kept; the rest are removed from the bucket. This cannot be undone.',
+                'Restore point {{id}} ({{created}} · {{bytes}}) will be permanently deleted. Objects shared with other restore points are kept; the rest are removed from the target. This cannot be undone.',
                 {
                   id: deleteTarget?.id,
                   created: deleteTarget ? formatTime(deleteTarget.created) : '',

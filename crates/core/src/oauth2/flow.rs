@@ -235,12 +235,14 @@ impl OAuth2Flow {
         let redirect_uri = RedirectUrl::new(entity.redirect_uri.clone())
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
 
-        // Create and return the OAuth2 client
-        let client = BasicClient::new(ClientId::new(entity.client_id.clone()))
-            .set_client_secret(ClientSecret::new(decrypt!(&entity.client_secret)?))
+        let mut client = BasicClient::new(ClientId::new(entity.client_id.clone()))
             .set_auth_uri(auth_url)
             .set_token_uri(token_url)
             .set_redirect_uri(redirect_uri);
+        // Public clients have no secret, so the code exchange relies on PKCE alone.
+        if let Some(secret) = &entity.client_secret {
+            client = client.set_client_secret(ClientSecret::new(decrypt!(secret)?));
+        }
 
         Ok(client)
     }
@@ -282,4 +284,68 @@ fn build_http_client(use_proxy: Option<u64>) -> BichonResult<reqwest::Client> {
         .redirect(oauth2::reqwest::redirect::Policy::none())
         .build()
         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::oauth2::entity::OAuth2ClientType;
+    use oauth2::{HttpRequest, HttpResponse};
+    use std::sync::{Mutex, Once};
+
+    static TEST_ENV: Once = Once::new();
+    fn init_test_env() {
+        TEST_ENV.call_once(|| {
+            let root =
+                std::env::temp_dir().join(format!("bichon-core-test-{}", std::process::id()));
+            std::fs::create_dir_all(&root).unwrap();
+            std::env::set_var("BICHON_ROOT_DIR", &root);
+            std::env::set_var("BICHON_ENCRYPT_PASSWORD", "test-password");
+            let _ = &*crate::settings::cli::SETTINGS;
+        });
+    }
+
+    /// Exchanges a code against a stub token endpoint and returns the request it received.
+    async fn captured_code_exchange(entity: &OAuth2) -> HttpRequest {
+        let captured = Mutex::new(None);
+        let http_client = |request: HttpRequest| {
+            *captured.lock().unwrap() = Some(request);
+            let body = r#"{"access_token":"a","token_type":"Bearer","refresh_token":"r"}"#;
+            async move { Ok::<_, std::io::Error>(HttpResponse::new(body.as_bytes().to_vec())) }
+        };
+        OAuth2Flow::new(entity.id)
+            .build_oauth2_client(entity)
+            .unwrap()
+            .exchange_code(AuthorizationCode::new("code".into()))
+            .set_pkce_verifier(PkceCodeVerifier::new("verifier".into()))
+            .request_async(&http_client)
+            .await
+            .unwrap();
+        captured.into_inner().unwrap().unwrap()
+    }
+
+    #[tokio::test]
+    async fn only_confidential_clients_authenticate_with_a_secret() {
+        init_test_env();
+        let mut entity = OAuth2 {
+            client_id: "client".into(),
+            client_type: OAuth2ClientType::Confidential,
+            client_secret: Some(encrypt!("secret").unwrap()),
+            auth_url: "https://provider.example/authorize".into(),
+            token_url: "https://provider.example/token".into(),
+            redirect_uri: "http://127.0.0.1:15630/oauth2/callback".into(),
+            ..Default::default()
+        };
+        let request = captured_code_exchange(&entity).await;
+        assert!(request.headers().contains_key("authorization"));
+
+        entity.client_type = OAuth2ClientType::Public;
+        entity.client_secret = None;
+        let request = captured_code_exchange(&entity).await;
+        let body = String::from_utf8(request.body().clone()).unwrap();
+        assert!(!request.headers().contains_key("authorization"));
+        assert!(!body.contains("client_secret"));
+        assert!(body.contains("client_id=client"));
+        assert!(body.contains("code_verifier=verifier"));
+    }
 }

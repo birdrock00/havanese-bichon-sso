@@ -131,6 +131,8 @@ mod tests {
             archive_rules: None,
             extraction_rules: None,
             retention_days: None,
+            kind: None,
+            view: None,
         };
         let account = AccountModel::new(id, request).unwrap();
         insert_impl(DB_MANAGER.db(), account.clone()).unwrap();

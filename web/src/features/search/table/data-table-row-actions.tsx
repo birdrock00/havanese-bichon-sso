@@ -28,11 +28,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useTranslation } from 'react-i18next'
-import { Clock, MoreVertical, TagIcon, Trash2, Upload } from 'lucide-react'
+import { Clock, MoreVertical, TagIcon, Trash2, Upload, Wrench } from 'lucide-react'
 import { EmailEnvelope } from '@/api'
 import { useSearchContext } from '../context'
 import { OP_MESSAGE_DELETE } from '@/api/approvals/api'
 import { usePendingApprovals } from '@/features/approvals/use-pending-approvals'
+import { useCurrentUser } from '@/hooks/use-current-user'
 
 interface DataTableRowActionsProps {
   row: Row<EmailEnvelope>
@@ -41,6 +42,29 @@ interface DataTableRowActionsProps {
 export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const { setOpen, setCurrentEnvelope, setSelected, setToDelete, setEditTagsOpen } = useSearchContext()
   const { t } = useTranslation()
+  const { require_any_permission } = useCurrentUser()
+  // Gate each action by the permission the server demands, on this message's
+  // own account: `data:manage` for tags/repair, `data:export:batch` for
+  // restore, `data:delete` for deletion.
+  const accountId = row.original.account_id
+  const canEditTags = require_any_permission(['system:root', 'data:manage'], accountId)
+  const canRestore = require_any_permission(
+    ['system:root', 'data:export:batch', 'data:export:batch:all'],
+    accountId
+  )
+  const canDelete = require_any_permission(
+    ['system:root', 'data:delete', 'data:delete:all'],
+    accountId
+  )
+  const noPermission = t('common.noPermission', 'No permission')
+
+  // Repair is non-destructive — it only re-fetches and re-attaches missing
+  // bytes, hash-verified before the write — so unlike deletion it does not go
+  // through the approval flow.
+  const canRepair = require_any_permission(
+    ['system:root', 'data:manage'],
+    row.original.account_id
+  )
 
   // A queued message deletion leaves the message in the list, so the row still
   // offers to delete it. Blocking only *this* message keeps unrelated cleanup
@@ -89,7 +113,9 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align='end' className='w-[160px]'>
           <DropdownMenuItem
-            className='text-xs'
+            className='text-xs data-[disabled]:pointer-events-auto'
+            disabled={!canEditTags}
+            title={!canEditTags ? noPermission : undefined}
             onClick={(e) => {
               e.stopPropagation()
               setCurrentEnvelope(row.original)
@@ -103,7 +129,9 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            className='text-xs'
+            className='text-xs data-[disabled]:pointer-events-auto'
+            disabled={!canRestore}
+            title={!canRestore ? noPermission : undefined}
             onClick={(e) => {
               e.stopPropagation()
               setCurrentEnvelope(row.original)
@@ -116,14 +144,34 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
               <Upload size={16} />
             </DropdownMenuShortcut>
           </DropdownMenuItem>
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              className='text-xs'
+              disabled={!canRepair}
+              title={!canRepair ? noPermission : undefined}
+              onClick={(e) => {
+                  e.stopPropagation()
+                  setCurrentEnvelope(row.original)
+                  setSelected(new Map())
+                setOpen('repair')
+              }}
+            >
+              {t('repair_message.repairAction', 'Repair message')}
+              <DropdownMenuShortcut>
+                <Wrench size={16} />
+              </DropdownMenuShortcut>
+            </DropdownMenuItem>
+          </>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            disabled={deleteQueued}
+            disabled={deleteQueued || !canDelete}
+            title={!canDelete ? noPermission : undefined}
             onClick={(e) => {
               e.stopPropagation()
               handleDelete(row.original)
             }}
-            className='!text-red-500 text-xs'
+            className='!text-red-500 text-xs data-[disabled]:pointer-events-auto'
           >
             {t('common.delete')}
             <DropdownMenuShortcut>

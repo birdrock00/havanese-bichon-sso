@@ -41,7 +41,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { DataTablePagination } from './data-table-pagination'
+import { DataTablePagination } from '@/components/data-table-pagination'
 import { DataTableToolbar } from './data-table-toolbar'
 import { useTranslation } from 'react-i18next'
 import { AccountModel } from '@/api/account/api'
@@ -167,7 +167,7 @@ export function AccountTable({ columns, data }: DataTableProps) {
           </TableBody>
         </Table>
       </div>
-      <DataTablePagination table={table} />
+      <DataTablePagination table={table}  storageKey='bichon_accounts_page_size' />
     </div>
   )
 }

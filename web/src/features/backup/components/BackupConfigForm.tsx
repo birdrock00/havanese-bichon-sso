@@ -30,6 +30,7 @@ import {
   updateBackupTargetConfig,
   type BackupConfigUpdate,
   type BackupConfigView,
+  type BackupTargetType,
 } from '@/api/backup/api'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useToast } from '@/hooks/use-toast'
@@ -167,6 +168,8 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
 
   const [enabled, setEnabled] = useState(false)
   const [prefix, setPrefix] = useState('')
+  const [targetType, setTargetType] = useState<BackupTargetType>('s3')
+  const [localDir, setLocalDir] = useState('')
 
   // Schedule: friendly picker fields are the source of truth; `schedule` is
   // derived. A stored cron a preset can't express is only rewritten once the
@@ -197,8 +200,10 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [savedAt, setSavedAt] = useState<Date | null>(null)
   const [retryNonce, setRetryNonce] = useState(0)
-  const [prefixConfirmOpen, setPrefixConfirmOpen] = useState(false)
-  const pendingPrefixPayload = useRef<BackupConfigUpdate | null>(null)
+  // Changing the target or the prefix starts a fresh backup chain, so that
+  // edit asks before it auto-saves.
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const pendingConfirmPayload = useRef<BackupConfigUpdate | null>(null)
 
   const savingRef = useRef(false)
   const queuedRef = useRef(false)
@@ -221,7 +226,8 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
         setWeeklyHour(s.weeklyHour)
         setScheduleTouched(false)
         setKeepLast(cfg.retention.keep_last)
-        setS3Endpoint(cfg.s3_endpoint ?? '')
+        setTargetType(cfg.target_type)
+        setLocalDir(cfg.local_dir ?? '')
         setS3Endpoint(cfg.s3_endpoint ?? '')
         setS3Region(cfg.s3_region ?? '')
         setS3Bucket(cfg.s3_bucket ?? '')
@@ -271,6 +277,19 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
         keep_monthly: 0,
       }
     }
+    // Switching the target carries the directory in the same request: the
+    // autosave sends only diffs, so a lone `target_type: 'local'` would be
+    // rejected as an incomplete target before the path edit is even typed.
+    // The switch is also held back until the new target's own field is
+    // filled in — an incomplete target is not something to persist, and
+    // saving it would only produce a spurious error on the way.
+    const targetComplete =
+      targetType === 's3' ? !!s3Bucket.trim() : !!localDir.trim()
+    if (current.target_type !== targetType && targetComplete) {
+      payload.target_type = targetType
+      if (targetType === 'local') payload.local_dir = localDir
+    }
+    if (dirty(current.local_dir, localDir)) payload.local_dir = localDir
     if (dirty(current.s3_endpoint, s3Endpoint)) payload.s3_endpoint = s3Endpoint
     if (dirty(current.s3_region, s3Region)) payload.s3_region = s3Region
     if (dirty(current.s3_bucket, s3Bucket)) payload.s3_bucket = s3Bucket
@@ -324,6 +343,8 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
     schedule,
     prefix,
     keepLast,
+    targetType,
+    localDir,
     s3Endpoint,
     s3Region,
     s3Bucket,
@@ -346,10 +367,18 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
     // Don't auto-retry a payload the server just rejected — that would loop.
     // The retry button (or any further edit) clears the block.
     if (sig === lastFailedRef.current) return
-    // A prefix change starts a fresh backup chain — confirm before applying.
-    if (payload.prefix !== undefined && (current.prefix ?? '') !== '') {
-      pendingPrefixPayload.current = payload
-      setPrefixConfirmOpen(true)
+    // A target or prefix change starts a fresh backup chain in a new
+    // location — confirm before applying. Both must be checked: a target
+    // switch does not change the prefix, so the prefix test alone would let
+    // the user switch and then wonder where their restore points went.
+    const switchingTarget =
+      payload.target_type !== undefined &&
+      payload.target_type !== current.target_type
+    const changingPrefix =
+      payload.prefix !== undefined && (current.prefix ?? '') !== ''
+    if (switchingTarget || changingPrefix) {
+      pendingConfirmPayload.current = payload
+      setConfirmOpen(true)
       return
     }
     setSaveState('pending')
@@ -364,18 +393,19 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
     setRetryNonce((n) => n + 1)
   }
 
-  const confirmPrefix = () => {
-    const payload = pendingPrefixPayload.current
-    setPrefixConfirmOpen(false)
-    pendingPrefixPayload.current = null
+  const confirmChainChange = () => {
+    const payload = pendingConfirmPayload.current
+    setConfirmOpen(false)
+    pendingConfirmPayload.current = null
     if (payload) void doSave(payload)
   }
 
-  const cancelPrefix = () => {
-    setPrefixConfirmOpen(false)
-    pendingPrefixPayload.current = null
-    // Revert the edit; the effect then re-runs and saves the rest.
+  const cancelChainChange = () => {
+    setConfirmOpen(false)
+    pendingConfirmPayload.current = null
+    // Revert the edits; the effect then re-runs and saves the rest.
     setPrefix(current?.prefix ?? '')
+    setTargetType(current?.target_type ?? 's3')
   }
 
   if (!canManage) {
@@ -398,20 +428,31 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
   }
 
   const bucketMissing = !s3Bucket.trim()
-  // Pure recompute for the header hint: only nag about the bucket while an
-  // edit batch is actually waiting on it, not on a pristine form.
-  const hasDirtyEdits = buildPayload() !== null
+  const localDirMissing = !localDir.trim()
+  const targetMissing =
+    targetType === 's3' ? bucketMissing : localDirMissing
+  // Pure recompute for the header hint: only nag about the missing target
+  // field while an edit batch is actually waiting on it, not on a pristine
+  // form. A freshly switched target counts as waiting even though
+  // `buildPayload` holds the switch back until the field is filled in —
+  // otherwise the form would look idle while visibly missing the one thing
+  // it needs.
+  const hasDirtyEdits =
+    buildPayload() !== null ||
+    (current?.target_type !== targetType && targetMissing)
   const secretPlaceholder = t(
     'backup.target.secretPlaceholder',
     '******** (unchanged)'
   )
 
   const saveStatus = (() => {
-    if (bucketMissing && (hasDirtyEdits || saveState === 'error')) {
+    if (targetMissing && (hasDirtyEdits || saveState === 'error')) {
       return (
         <span className='flex items-center gap-1.5 text-xs text-destructive'>
           <AlertTriangle className='h-3.5 w-3.5' />
-          {t('backup.target.bucketRequired', 'Bucket is required')}
+          {targetType === 's3'
+            ? t('backup.target.bucketRequired', 'Bucket is required')
+            : t('backup.target.localDirRequired', 'A directory is required')}
         </span>
       )
     }
@@ -488,8 +529,32 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
           <Switch checked={enabled} onCheckedChange={setEnabled} />
         </div>
 
-        {/* ── S3 target ──────────────────────────────────────────── */}
+        {/* ── Target ─────────────────────────────────────────────── */}
         <div className='space-y-4'>
+          <div className='space-y-2'>
+            <Label htmlFor='backup-target-type'>
+              {t('backup.target.targetType', 'Backup target')}
+            </Label>
+            <Select
+              value={targetType}
+              onValueChange={(v) => setTargetType(v as BackupTargetType)}
+            >
+              <SelectTrigger id='backup-target-type' className='w-[240px]'>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value='s3'>
+                  {t('backup.target.targetTypeS3', 'S3-compatible object store')}
+                </SelectItem>
+                <SelectItem value='local'>
+                  {t('backup.target.targetTypeLocal', 'Local directory')}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {targetType === 's3' && (
+            <>
           <div className='grid gap-4 sm:grid-cols-2'>
             <div className='space-y-2'>
               <Label htmlFor='backup-s3-endpoint'>
@@ -532,24 +597,6 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
                 onChange={(e) => setS3Bucket(e.target.value)}
                 aria-invalid={bucketMissing}
               />
-            </div>
-            <div className='space-y-2'>
-              <Label htmlFor='backup-prefix'>
-                {t('backup.target.prefix', 'Prefix')}
-              </Label>
-              <Input
-                id='backup-prefix'
-                value={prefix}
-                placeholder='bichon-backup'
-                onChange={(e) => setPrefix(e.target.value)}
-                className='font-mono'
-              />
-              <p className='text-xs text-muted-foreground'>
-                {t(
-                  'backup.target.prefixHint',
-                  'Object-store prefix under the bucket. Changing it starts a fresh backup chain in a new location.'
-                )}
-              </p>
             </div>
           </div>
           <p className='text-xs text-muted-foreground'>
@@ -618,6 +665,57 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
                 </Button>
               )}
             </div>
+          </div>
+            </>
+          )}
+
+          {targetType === 'local' && (
+            <div className='space-y-2'>
+              <Label htmlFor='backup-local-dir'>
+                {t('backup.target.localDir', 'Directory')}
+              </Label>
+              <Input
+                id='backup-local-dir'
+                value={localDir}
+                placeholder='/mnt/bichon-backup'
+                onChange={(e) => setLocalDir(e.target.value)}
+                className='font-mono'
+                aria-invalid={localDirMissing}
+              />
+              <p className='text-xs text-muted-foreground'>
+                {t(
+                  'backup.target.localDirHint',
+                  'An absolute path that must already exist — create it and mount the volume before configuring it. Bichon never creates it, so a missing mount fails the run instead of quietly filling the underlying filesystem.'
+                )}
+              </p>
+              <p className='text-xs text-muted-foreground'>
+                {t(
+                  'backup.target.localMountHint',
+                  'Point this at a dedicated volume (USB disk, NFS/SMB share, second disk) — a directory on the same disk as the data does not survive that disk failing.'
+                )}
+              </p>
+            </div>
+          )}
+
+          {/* Prefix applies to both targets: the key prefix under the bucket,
+              or the subdirectory of the local directory. */}
+          <div className='space-y-2'>
+            <Label htmlFor='backup-prefix'>
+              {t('backup.target.prefix', 'Prefix')}
+            </Label>
+            <Input
+              id='backup-prefix'
+              value={prefix}
+              placeholder='bichon-backup'
+              onChange={(e) => setPrefix(e.target.value)}
+              className='font-mono'
+            />
+            <p className='text-xs text-muted-foreground'>
+              {t(
+                'backup.target.prefixHint',
+                'Sub-location of the target the backups live under. Changing it starts a fresh backup chain in a new location.'
+              )}
+            </p>
           </div>
         </div>
 
@@ -764,7 +862,7 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
           <p className='text-xs text-muted-foreground'>
             {t(
               'backup.target.retentionHint',
-              'Older restore points are deleted from the bucket after each successful backup. A failed backup never triggers cleanup — your existing restore points always stay intact.'
+              'Older restore points are deleted from the target after each successful backup. A failed backup never triggers cleanup — your existing restore points always stay intact.'
             )}
           </p>
         </div>
@@ -772,9 +870,9 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
 
       {/* Prefix changes start a fresh backup chain — confirm first. */}
       <AlertDialog
-        open={prefixConfirmOpen}
+        open={confirmOpen}
         onOpenChange={(open) => {
-          if (!open) cancelPrefix()
+          if (!open) cancelChainChange()
         }}
       >
         <AlertDialogContent>
@@ -785,7 +883,7 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
             <AlertDialogDescription>
               {t(
                 'backup.target.prefixConfirmBody',
-                'Changing the prefix starts a fresh backup chain at a new location in the bucket. Existing restore points stay under the old prefix. Apply the change?'
+                'Changing the target or the prefix starts a fresh backup chain at a new location. Existing restore points stay where they are, but this page only ever browses the currently configured target. Apply the change?'
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -793,7 +891,7 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
             <AlertDialogCancel>
               {t('backup.cancel', 'Cancel')}
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmPrefix}>
+            <AlertDialogAction onClick={confirmChainChange}>
               {t('backup.target.prefixConfirmAction', 'Apply change')}
             </AlertDialogAction>
           </AlertDialogFooter>

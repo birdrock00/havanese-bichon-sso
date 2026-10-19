@@ -21,6 +21,8 @@ use crate::rest::api::ApiTags;
 use crate::rest::ApiResult;
 use bichon_core::account::migration::AccountModel;
 use bichon_core::common::paginated::DataPage;
+use bichon_core::envelope::extractor::{repair_envelope_blobs, BlobRepairReport};
+use bichon_core::envelope::repair::BlobRepairRecord;
 use bichon_core::error::code::ErrorCode;
 use bichon_core::message::append::restore_emails;
 use bichon_core::message::append::RestoreMessagesRequest;
@@ -34,7 +36,7 @@ use bichon_core::message::delete::{
 };
 use bichon_core::ext::event_bus::{emit, Event};
 use bichon_core::message::list::get_thread_messages;
-use bichon_core::message::search::{search_messages_impl, EmailSearchRequest};
+use bichon_core::message::search::{search_messages_scoped, EmailSearchRequest};
 use bichon_core::message::tags::TagCount;
 use bichon_core::message::tags::TagsRequest;
 use bichon_core::raise_error;
@@ -97,12 +99,6 @@ impl MessageApi {
         payload: Json<EmailSearchRequest>,
         context: WrappedContext,
     ) -> ApiResult<Json<DataPage<Envelope>>> {
-        let authorized_ids: Option<HashSet<u64>> =
-            if context.has_permission(None, Permission::DATA_READ_ALL) {
-                None
-            } else {
-                Some(context.user.account_access_map.keys().cloned().collect())
-            };
         let search_text = payload
             .0
             .filter
@@ -112,7 +108,15 @@ impl MessageApi {
             .trim()
             .to_string();
         let user = context.user.username.clone();
-        let result = search_messages_impl(authorized_ids, payload.0)?;
+        // Resolve view accounts into `(source account AND source filter)`
+        // groups. For an ordinary search this produces the same account set the
+        // old `authorized_ids` did and the query is unchanged; for a view it
+        // *narrows* to the view's sources and filters.
+        let scope = bichon_core::account::access::search_scope(
+            &context,
+            payload.0.filter.account_ids.as_ref(),
+        )?;
+        let result = search_messages_scoped(scope, payload.0)?;
         if !search_text.is_empty() {
             emit(Event::SearchPerformed {
                 query: search_text,
@@ -142,7 +146,16 @@ impl MessageApi {
     ) -> ApiResult<Json<DataPage<Envelope>>> {
         let account_id = account_id.0;
         let thread_id = thread_id.0.trim();
-        context.require_permission(Some(account_id), Permission::DATA_READ)?;
+        // A view reads matching messages, not whole threads: expanding a
+        // thread would list siblings outside the view's filter, and filtering
+        // *after* pagination would misreport the total. Refuse instead of
+        // leaking or lying; the viewer can search.
+        if !context.has_permission(Some(account_id), Permission::DATA_READ) {
+            return Err(raise_error!(
+                "Access denied: the thread view is not available through a view account; use search instead".to_string(),
+                ErrorCode::Forbidden
+            ))?;
+        }
         Ok(Json(get_thread_messages(
             account_id,
             thread_id,
@@ -171,11 +184,15 @@ impl MessageApi {
     ) -> ApiResult<Json<FullMessageContent>> {
         let account_id = account_id.0;
         let block_remote = block_remote_content.0.unwrap_or(false);
-        context.require_permission(Some(account_id), Permission::DATA_READ)?;
         let envelope_id = envelope_id.0.trim().to_string();
-        let envelope = ENVELOPE_MANAGER
-            .get_envelope_by_id(account_id, &envelope_id)?
-            .map(|ea| ea.envelope);
+        // Direct permission, or a view whose filter covers this message. The
+        // view, when there is one, goes into the audit record: "who read this"
+        // is not auditable without "under which delegation".
+        let (envelope, via_view) = bichon_core::account::access::load_readable_with_access(
+            &context,
+            account_id,
+            &envelope_id,
+        )?;
         let content = retrieve_email_content(account_id, envelope_id.clone(), block_remote)?;
         if let Some(ip) = context.ip_addr {
             emit(Event::EmailViewed {
@@ -183,8 +200,9 @@ impl MessageApi {
                 user: context.user.username.clone(),
                 ip,
                 account_id,
-                mailbox_id: envelope.as_ref().map(|e| e.mailbox_id).unwrap_or(0),
-                subject: envelope.as_ref().map(|e| e.subject.clone()),
+                mailbox_id: envelope.mailbox_id,
+                subject: Some(envelope.subject.clone()),
+                via_view,
             });
         }
         Ok(Json(content))
@@ -208,11 +226,14 @@ impl MessageApi {
     ) -> ApiResult<Json<FullNestedMessageContent>> {
         let account_id = account_id.0;
         let block_remote = block_remote_content.0.unwrap_or(false);
-        context.require_permission(Some(account_id), Permission::DATA_READ)?;
+        let envelope_id = envelope_id.0.trim().to_string();
+        // The embedded message belongs to its parent: if the parent is
+        // readable (directly or through a view), so is the nested message.
+        bichon_core::account::access::load_readable(&context, account_id, &envelope_id)?;
         let content_hash = content_hash.0.trim();
         Ok(Json(retrieve_nested_eml_content(
             account_id,
-            envelope_id.0,
+            envelope_id,
             content_hash,
             block_remote,
         )?))
@@ -233,20 +254,13 @@ impl MessageApi {
         context: WrappedContext,
     ) -> ApiResult<Json<Envelope>> {
         let account_id = account_id.0;
-        context.require_permission(Some(account_id), Permission::DATA_READ)?;
         let envelope_id = envelope_id.0;
-        let e = ENVELOPE_MANAGER
-            .get_envelope_by_id(account_id, &envelope_id)?
-            .ok_or_else(|| {
-                raise_error!(
-                    format!(
-                        "Envelope not found: account_id={} envelope_id={}",
-                        account_id, &envelope_id
-                    ),
-                    ErrorCode::ResourceNotFound
-                )
-            })?;
-        Ok(Json(e.envelope))
+        let envelope = bichon_core::account::access::load_readable(
+            &context,
+            account_id,
+            &envelope_id,
+        )?;
+        Ok(Json(envelope))
     }
 
     /// Downloads the raw EML file of a specific email.
@@ -284,6 +298,87 @@ impl MessageApi {
             .attachment_type(AttachmentType::Attachment)
             .filename(format!("{envelope_id}.eml"));
         Ok(attachment)
+    }
+
+    /// Re-fetches one archived message from IMAP and restores missing email or
+    /// attachment blobs in place. The envelope and its id are kept, so no
+    /// duplicate is created; nothing is written unless the fetched message
+    /// hashes to the archived content hash.
+    #[oai(
+        path = "/repair-message/:account_id/:envelope_id",
+        method = "post",
+        operation_id = "repair_message"
+    )]
+    async fn repair_message(
+        &self,
+        /// The ID of the account.
+        account_id: Path<u64>,
+        /// The ID of the message to repair.
+        envelope_id: Path<String>,
+        context: WrappedContext,
+    ) -> ApiResult<Json<BlobRepairReport>> {
+        let account_id = account_id.0;
+        AccountModel::check_account_exists(account_id)?;
+        context.require_permission(Some(account_id), Permission::DATA_MANAGE)?;
+        let report = repair_envelope_blobs(account_id, &envelope_id.0).await?;
+        // Audited before the history record: `emit` is fire-and-forget, while
+        // the persist below can fail, and a repair that is missing from the
+        // history ring still belongs in the audit trail.
+        emit(Event::EmailRepaired {
+            email_id: report.envelope_id.clone(),
+            user: context.user.username.clone(),
+            ip: context.ip_addr,
+            account_id: report.account_id,
+            mailbox_id: report.mailbox_id,
+            subject: report.subject.clone(),
+            status: report.status.clone(),
+            email_missing_before: report.email_missing_before,
+            email_missing_after: report.email_missing_after,
+            missing_before: report.missing_before.len(),
+            missing_after: report.missing_after.len(),
+            skipped_due_to_backup: report.skipped_due_to_backup,
+            error: report.error.clone(),
+        });
+        // Best-effort: failing to record the attempt must not fail the repair,
+        // which has already succeeded by this point.
+        if let Err(e) = BlobRepairRecord::persist(context.user.id, &context.user.username, &report) {
+            tracing::warn!("failed to persist blob repair record: {:#?}", e);
+        }
+        Ok(Json(report))
+    }
+
+    /// Lists recent blob-repair reports, newest first.
+    ///
+    /// Scoped to the accounts the caller may repair: the filter is the same
+    /// `DATA_MANAGE` predicate [`Self::repair_message`] enforces, so a caller
+    /// sees exactly the reports for records they could have repaired
+    /// themselves.
+    #[oai(
+        path = "/repair-reports",
+        method = "get",
+        operation_id = "list_repair_reports"
+    )]
+    async fn list_repair_reports(
+        &self,
+        context: WrappedContext,
+        /// Maximum number of reports to return.
+        limit: Query<Option<usize>>,
+        /// Restrict the result to one account.
+        account_id: Query<Option<u64>>,
+    ) -> ApiResult<Json<Vec<BlobRepairRecord>>> {
+        let limit = limit.0.unwrap_or(50).min(BlobRepairRecord::HISTORY_LIMIT);
+        // Filter before truncating: taking the newest `limit` first and then
+        // filtering would hand a caller who may repair few accounts an
+        // arbitrarily short list — or an empty one.
+        let reports = BlobRepairRecord::list_recent(usize::MAX)
+            .into_iter()
+            .filter(|r| account_id.0.map_or(true, |id| id == r.account_id))
+            .filter(|r| {
+                context.has_permission(Some(r.account_id), Permission::DATA_MANAGE)
+            })
+            .take(limit)
+            .collect();
+        Ok(Json(reports))
     }
 
     /// Restore an email to an account's IMAP server.
@@ -336,7 +431,12 @@ impl MessageApi {
         let account_id = account_id.0;
         let envelope_id = envelope_id.0.trim().to_string();
         AccountModel::check_account_exists(account_id)?;
-        context.require_permission(Some(account_id), Permission::DATA_READ)?;
+        // Direct permission, or a view whose filter covers the parent message.
+        let (_, via_view) = bichon_core::account::access::load_readable_with_access(
+            &context,
+            account_id,
+            &envelope_id,
+        )?;
         let content_hash = content_hash.0.trim();
         let meta = attachment_meta_for_audit(account_id, &envelope_id, content_hash);
         let reader = retrieve_attachment_content(account_id, envelope_id.clone(), content_hash)?;
@@ -350,6 +450,7 @@ impl MessageApi {
             size: meta.size,
             ext: meta.ext,
             parent_content_hash: meta.parent_content_hash,
+            via_view,
         });
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
@@ -378,7 +479,12 @@ impl MessageApi {
         let account_id = account_id.0;
         let envelope_id = envelope_id.0.trim().to_string();
         AccountModel::check_account_exists(account_id)?;
-        context.require_permission(Some(account_id), Permission::DATA_READ)?;
+        // Direct permission, or a view whose filter covers the parent message.
+        let (_, via_view) = bichon_core::account::access::load_readable_with_access(
+            &context,
+            account_id,
+            &envelope_id,
+        )?;
         let content_hash = content_hash.0.trim();
         let meta = attachment_meta_for_audit(account_id, &envelope_id, content_hash);
         let reader = retrieve_attachment_content(account_id, envelope_id.clone(), content_hash)?;
@@ -389,6 +495,7 @@ impl MessageApi {
             account_id,
             mailbox_id: meta.mailbox_id,
             filename: meta.filename,
+            via_view,
         });
         let body = Body::from_async_read(reader);
         Ok(Attachment::new(body).attachment_type(AttachmentType::Inline))
@@ -414,7 +521,12 @@ impl MessageApi {
         let account_id = account_id.0;
         let envelope_id = envelope_id.0.trim().to_string();
         AccountModel::check_account_exists(account_id)?;
-        context.require_permission(Some(account_id), Permission::DATA_READ)?;
+        // Direct permission, or a view whose filter covers the parent message.
+        let (_, via_view) = bichon_core::account::access::load_readable_with_access(
+            &context,
+            account_id,
+            &envelope_id,
+        )?;
         let content_hash = content_hash.0.trim();
         let nested_content_hash = nested_content_hash.0.trim();
         let meta = attachment_meta_for_audit(account_id, &envelope_id, content_hash);
@@ -434,6 +546,7 @@ impl MessageApi {
             size: None,
             ext: None,
             parent_content_hash: meta.parent_content_hash,
+            via_view,
         });
         let body = Body::from_async_read(reader);
         let attachment = Attachment::new(body)
@@ -445,13 +558,13 @@ impl MessageApi {
     /// Returns all facets in the index along with their document counts.
     #[oai(path = "/all-tags", method = "get", operation_id = "get_all_tags")]
     async fn get_all_tags(&self, context: WrappedContext) -> ApiResult<Json<Vec<TagCount>>> {
-        let authorized_ids: Option<HashSet<u64>> =
-            if context.has_permission(None, Permission::DATA_READ_ALL) {
-                None
-            } else {
-                Some(context.user.account_access_map.keys().cloned().collect())
-            };
-        Ok(Json(ENVELOPE_MANAGER.get_all_tags(authorized_ids)?))
+        // Views are expanded into their sources, filters included, and the
+        // counts are taken over the same query a search runs — a view owns no
+        // documents of its own, so aggregating by account id alone would always
+        // return an empty list to a viewer. See
+        // `IndexManager::get_all_tags_scoped`.
+        let scope = bichon_core::account::access::search_scope(&context, None)?;
+        Ok(Json(ENVELOPE_MANAGER.get_all_tags_scoped(scope.as_deref())?))
     }
 
     /// Adds or removes facet tags for multiple emails across accounts.
@@ -500,13 +613,12 @@ impl MessageApi {
         operation_id = "get_all_contacts"
     )]
     async fn get_all_contacts(&self, context: WrappedContext) -> ApiResult<Json<HashSet<String>>> {
-        let authorized_ids: Option<HashSet<u64>> =
-            if context.has_permission(None, Permission::DATA_READ_ALL) {
-                None
-            } else {
-                Some(context.user.account_access_map.keys().cloned().collect())
-            };
-        Ok(Json(ENVELOPE_MANAGER.get_all_contacts(authorized_ids)?))
+        // Views are expanded, and a filtered source is sampled rather than
+        // aggregated — see `contacts_in_scope`, which the MCP tool calls too so
+        // the two cannot answer differently.
+        Ok(Json(bichon_core::message::search::contacts_in_scope(
+            &context,
+        )?))
     }
 }
 

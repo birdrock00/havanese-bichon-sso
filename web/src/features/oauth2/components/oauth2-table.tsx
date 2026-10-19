@@ -42,7 +42,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { OAuth2Entity } from '../data/schema'
-import { DataTablePagination } from './data-table-pagination'
+import { DataTablePagination } from '@/components/data-table-pagination'
 import { DataTableToolbar } from './data-table-toolbar'
 import { useTranslation } from 'react-i18next'
 
@@ -154,7 +154,7 @@ export function Oauth2Table({ columns, data }: DataTableProps) {
           </TableBody>
         </Table>
       </div>
-      <DataTablePagination table={table} showPageSizeSelector={true} />
+      <DataTablePagination table={table} showPageSizeSelector={true}  storageKey='bichon_oauth2_page_size' />
     </div>
   )
 }

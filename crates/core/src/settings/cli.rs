@@ -434,14 +434,16 @@ pub struct Settings {
 /// Arguments for the one-shot disaster-recovery restore (`bichon-admin
 /// restore`). Restore lives in the admin tool, not the server binary: a
 /// fresh box has no data root yet, and the server CLI requires one at the
-/// clap level. The S3 backend connection details come from a JSON config
+/// clap level. The backend connection details come from a JSON config
 /// file (`--config`) — restore deliberately does not read the local
 /// install's metadata store, so it runs unchanged on a fresh box.
 #[derive(Clone, Debug, Args)]
 pub struct RestoreArgs {
-    /// JSON config file with the S3 backup backend settings (`s3_endpoint`,
-    /// `s3_bucket`, `prefix`, `s3_region`, `s3_access_key`,
-    /// `s3_secret_key`; only endpoint and bucket are mandatory).
+    /// JSON config file with the backup backend settings. For an S3 target:
+    /// `s3_endpoint`, `s3_bucket` (both mandatory), `prefix`, `s3_region`,
+    /// `s3_access_key`, `s3_secret_key`. For a local target:
+    /// `"target_type": "local"` plus a mandatory `local_dir`. `prefix` and
+    /// `target_type` are optional; `target_type` defaults to `s3`.
     #[clap(
         long,
         short = 'c',
@@ -453,7 +455,7 @@ pub struct RestoreArgs {
             }
             Ok(s.to_string())
         }),
-        help = "JSON config file with the S3 backup backend settings (s3_endpoint, s3_bucket, prefix, s3_region, s3_access_key, s3_secret_key)"
+        help = "JSON config file with the backup backend settings (s3: s3_endpoint, s3_bucket, prefix, s3_region, s3_access_key, s3_secret_key; local: target_type, local_dir)"
     )]
     pub config: String,
 

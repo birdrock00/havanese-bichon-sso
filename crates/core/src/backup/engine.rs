@@ -16,11 +16,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-//! The native S3 incremental backup engine.
+//! The native incremental backup engine.
 //!
-//! The engine owns upload, commit and GC against an `object_store` backend
-//! (AWS S3 / MinIO / R2 in production, `InMemory` in unit tests,
-//! `LocalFileSystem` for local debugging). Capture — the seconds of write
+//! The engine owns upload, commit and GC against an `object_store` backend.
+//! Which backend is decided by [`BackupTarget`] — an S3-compatible endpoint
+//! (AWS / MinIO / R2) or a directory on a filesystem this host can see
+//! (`InMemory` in unit tests). Nothing below this module is backend-specific:
+//! it only ever sees `Arc<dyn ObjectStore>`. Capture — the seconds of write
 //! pause — is the manager's job; everything this module does runs with the
 //! write gate already reopened, because every artifact it uploads is an
 //! immutable file or an offline export.
@@ -47,15 +49,13 @@
 //! ```
 
 use std::collections::HashSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use futures::StreamExt;
 use object_store::path::Path as StorePath;
 use object_store::{ObjectStore, ObjectStoreExt, PutPayload};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-#[cfg(test)]
-use std::path::PathBuf;
 
 use crate::backup::artifact::Artifact;
 use crate::backup::manifest::{Manifest, ObjectRef, LATEST_NAME, MANIFEST_PREFIX};
@@ -71,6 +71,16 @@ const UPLOAD_PART_SIZE: usize = 16 * 1024 * 1024;
 /// Small objects go through a single PUT; above this they stream via
 /// `put_multipart` so a multi-hundred-MB segment never sits in memory.
 const SINGLE_PUT_MAX: u64 = UPLOAD_PART_SIZE as u64;
+
+/// Layout directory under the configured prefix: everything the engine writes
+/// lives under `<prefix>/<LAYOUT_DIR>/`. A local target's directory therefore
+/// holds `<local_dir>/<prefix>/<LAYOUT_DIR>/{obj,meta}`.
+pub(crate) const LAYOUT_DIR: &str = "v1";
+
+/// Abandoned `#<n>` staging files older than this are swept before a run.
+/// Long enough that a concurrent run's in-flight staging file is never
+/// deleted out from under it.
+const STAGING_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(24 * 60 * 60);
 
 /// Per-component transfer stats for one run — which *part* of the archive was
 /// new vs skipped (dedup), grouped by [`crate::backup::artifact::ArtifactKey::label`].
@@ -166,6 +176,90 @@ pub fn s3_store(opts: &S3Options) -> BichonResult<Arc<dyn ObjectStore>> {
     Ok(Arc::new(store))
 }
 
+/// Where a backup lands.
+///
+/// The two arms are interchangeable to everything downstream — [`BackupEngine`]
+/// only ever holds `Arc<dyn ObjectStore>` — so this type exists purely to
+/// carry the connection details and to run the target-specific checks that
+/// must happen before a store is opened.
+#[derive(Debug, Clone)]
+pub enum BackupTarget {
+    S3(S3Options),
+    /// A directory on a filesystem this host can see, normally a mount point.
+    Local(PathBuf),
+}
+
+impl BackupTarget {
+    /// Open the `object_store` this target names.
+    ///
+    /// Opening is deliberately **not** cached anywhere. The backup manager
+    /// rebuilds its backend on every run (`manager::request_run`), so a local
+    /// target's directory is re-canonicalized each time and a target that is
+    /// not currently attached fails the run synchronously, before anything is
+    /// paused. Caching the store would silently remove that probe.
+    pub fn build_store(&self) -> BichonResult<Arc<dyn ObjectStore>> {
+        match self {
+            BackupTarget::S3(opts) => s3_store(opts),
+            BackupTarget::Local(root) => BackupEngine::local_store(root),
+        }
+    }
+
+    /// Short backend name for logs and status views.
+    pub fn kind(&self) -> &'static str {
+        match self {
+            BackupTarget::S3(_) => "s3",
+            BackupTarget::Local(_) => "local",
+        }
+    }
+
+    /// Where this target points, for logs and error messages. The object-store
+    /// prefix is *not* included — it is a layout concern, not a target one.
+    pub fn display(&self) -> String {
+        match self {
+            BackupTarget::S3(o) => {
+                let host = if o.endpoint.is_empty() {
+                    "aws"
+                } else {
+                    o.endpoint.as_str()
+                };
+                format!("s3://{host}/{}", o.bucket)
+            }
+            BackupTarget::Local(p) => p.display().to_string(),
+        }
+    }
+}
+
+/// Map an `object_store` local-backend failure onto a message an operator can
+/// act on.
+///
+/// The raw errors are precise but not instructive ("Unable to canonicalize
+/// path"), and the question behind almost every local-target failure is "is
+/// the volume still mounted, writable, and not full?". Keyed on the rendered
+/// error text, matching `admin::restore::diagnose_connection_error`.
+fn local_store_err(what: &str, root: &Path, e: object_store::Error) -> crate::error::BichonError {
+    let text = e.to_string().to_lowercase();
+    let hint = if text.contains("canonicalize") || text.contains("no such file") {
+        "the directory does not exist or is not reachable — is the volume still mounted?"
+    } else if text.contains("permission denied") || text.contains("os error 13") {
+        "the directory is not writable by the Bichon process"
+    } else if text.contains("read-only") || text.contains("os error 30") {
+        "the filesystem is mounted read-only"
+    } else if text.contains("no space left") || text.contains("os error 28") {
+        "the filesystem is full"
+    } else if text.contains("stale file handle") || text.contains("os error 116") {
+        "the network filesystem handle went stale — remount the target"
+    } else {
+        "check that the volume is mounted, writable and has free space"
+    };
+    raise_error!(
+        format!(
+            "backup: {what} failed for {}: {e} — {hint}",
+            root.display()
+        ),
+        ErrorCode::InternalError
+    )
+}
+
 /// Content-addressed backup engine. All state lives under `<prefix>/v1/`.
 pub struct BackupEngine {
     store: Arc<dyn ObjectStore>,
@@ -178,7 +272,7 @@ pub struct BackupEngine {
 
 impl BackupEngine {
     pub fn new(store: Arc<dyn ObjectStore>, prefix: &str) -> Self {
-        let base = StorePath::parse(format!("{prefix}/v1")).unwrap_or_else(|e| {
+        let base = StorePath::parse(format!("{prefix}/{LAYOUT_DIR}")).unwrap_or_else(|e| {
             // Unreachable through the validated config path (`config::validate`
             // rejects unusable prefixes at save time); a legacy value can still
             // land here. Never silently operate at the fallback location.
@@ -198,23 +292,41 @@ impl BackupEngine {
         }
     }
 
-    /// A local `object_store` over a directory — the development/debug
-    /// channel. The product UI stays S3-only; this exists so a full round
-    /// trip can run on a laptop without a bucket.
+    /// Open a local `object_store` over a directory.
+    ///
+    /// The directory **must already exist**. `LocalFileSystem::new_with_prefix`
+    /// canonicalizes it and fails otherwise, and that failure is load-bearing:
+    /// it must never be papered over by creating the directory here, because
+    /// doing so silently redirects backups onto whatever filesystem happens to
+    /// be under the path. Note this only covers a path that is *absent* — a
+    /// mount point whose volume is not mounted still exists, so
+    /// `config::target` adds the volume-fingerprint check that `canonicalize`
+    /// alone cannot make.
+    ///
+    /// Durability is on unconditionally — a backup target must not lose a
+    /// write it reported as successful to a power cut. `with_fsync` also
+    /// fsyncs the parent directory after each publish (on Unix), and
+    /// `with_automatic_cleanup` prunes directories emptied by GC. Neither
+    /// can ever remove the configured root itself.
     pub fn local_store(root: &Path) -> BichonResult<Arc<dyn ObjectStore>> {
+        let store = object_store::local::LocalFileSystem::new_with_prefix(root)
+            .map_err(|e| local_store_err("open local store", root, e))?
+            .with_fsync(true)
+            .with_automatic_cleanup(true);
+        Ok(Arc::new(store))
+    }
+
+    /// Test/dev helper: create the directory, then open it exactly as
+    /// production does, so tests exercise the same fsync path.
+    #[cfg(test)]
+    pub fn local_store_for_test(root: &Path) -> BichonResult<Arc<dyn ObjectStore>> {
         std::fs::create_dir_all(root).map_err(|e| {
             raise_error!(
                 format!("backup: cannot create local store {}: {e}", root.display()),
                 ErrorCode::InternalError
             )
         })?;
-        let store = object_store::local::LocalFileSystem::new_with_prefix(root).map_err(|e| {
-            raise_error!(
-                format!("backup: cannot open local store {}: {e}", root.display()),
-                ErrorCode::InternalError
-            )
-        })?;
-        Ok(Arc::new(store))
+        Self::local_store(root)
     }
 
     /// An in-memory store for tests.
@@ -945,15 +1057,92 @@ impl BackupEngine {
     }
 }
 
+impl BackupTarget {
+    /// Remove abandoned staging files left behind by an interrupted put.
+    ///
+    /// `object_store` writes each object to `<dest>#<n>` beside its
+    /// destination and renames it into place. If the process is killed, the
+    /// volume goes away, or the box loses power mid-put, that file stays — and it
+    /// stays forever: `LocalFileSystem` treats `*#<digits>` as an invalid
+    /// object name, so it is invisible to `list` and neither
+    /// `list_meta_names` nor `reclaim_unreferenced_objects` will ever see it.
+    /// Walking the tree directly is the only way to reclaim that space.
+    ///
+    /// Best-effort by design — a sweep that fails must never fail the run.
+    /// Returns the number of files removed (0 for an S3 target).
+    pub fn sweep_staging(&self, prefix: &str) -> u64 {
+        let BackupTarget::Local(root) = self else {
+            return 0;
+        };
+        let base = root.join(prefix).join(LAYOUT_DIR);
+        let mut removed = 0;
+        for sub in ["obj", "meta"] {
+            removed += sweep_staging_in(&base.join(sub));
+        }
+        if removed > 0 {
+            tracing::info!(
+                "backup: reclaimed {removed} abandoned staging file(s) under {}",
+                base.display()
+            );
+        }
+        removed
+    }
+}
+
+/// Recursively remove `*#<digits>` files under `dir` whose mtime is older than
+/// [`STAGING_MAX_AGE`]. A file whose age cannot be read is left alone.
+fn sweep_staging_in(dir: &Path) -> u64 {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return 0;
+    };
+    let mut removed = 0;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Ok(meta) = entry.metadata() else { continue };
+        if meta.is_dir() {
+            removed += sweep_staging_in(&path);
+            continue;
+        }
+        if !is_staging_name(&path) {
+            continue;
+        }
+        let old_enough = meta
+            .modified()
+            .ok()
+            .and_then(|m| m.elapsed().ok())
+            .is_some_and(|age| age >= STAGING_MAX_AGE);
+        if old_enough && std::fs::remove_file(&path).is_ok() {
+            removed += 1;
+        }
+    }
+    removed
+}
+
+/// `object_store` stages an upload at `<dest>#<n>` (see `staged_upload_path`
+/// in its `local.rs`).
+fn is_staging_name(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .and_then(|n| n.rsplit_once('#'))
+        .is_some_and(|(_, suffix)| !suffix.is_empty() && suffix.bytes().all(|b| b.is_ascii_digit()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::backup::artifact::ArtifactKey;
 
     fn write_temp(name: &str, bytes: &[u8]) -> PathBuf {
+        // Unique per call: the directory only keys on pid + name, so parallel
+        // tests writing the same file name would share one path and truncate
+        // each other's file mid-capture, surfacing as spurious "changed size
+        // during capture" upload failures.
+        static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let seq = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let dir = std::env::temp_dir().join(format!(
-            "bichon-engine-test-{}-{}",
+            "bichon-engine-test-{}-{}-{}",
             std::process::id(),
+            seq,
             name
         ));
         std::fs::create_dir_all(&dir).unwrap();
@@ -1449,5 +1638,164 @@ mod tests {
         let chain = e.load_chain().await.unwrap();
         let ids: Vec<String> = chain.iter().map(|m| m.id.clone()).collect();
         assert_eq!(ids, vec!["2".to_string(), "1".to_string()]);
+    }
+
+    // ── local target ──────────────────────────────────────────────────────
+
+    /// A unique directory path that does **not** exist.
+    fn missing_dir(tag: &str) -> PathBuf {
+        static SEQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        let seq = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        std::env::temp_dir().join(format!(
+            "bichon-local-{}-{seq}-{tag}",
+            std::process::id()
+        ))
+    }
+
+    #[test]
+    fn local_store_refuses_a_directory_that_does_not_exist() {
+        let dir = missing_dir("absent");
+        let err = BackupEngine::local_store(&dir).unwrap_err();
+        let msg = format!("{err:?}");
+        assert!(
+            msg.contains("does not exist") || msg.contains("mount"),
+            "the message must tell the operator what to check: {msg}"
+        );
+        assert!(
+            !dir.exists(),
+            "the store must never create the directory — that is what turns a \
+             dropped mount into backups written onto the root filesystem"
+        );
+    }
+
+    /// `new_with_prefix` only canonicalizes, so it happily accepts a path that
+    /// is a *file*. Pinned here because it is the reason `config::validate`
+    /// must keep its own `is_dir()` check — removing that check on the
+    /// assumption that the store rejects non-directories would let the first
+    /// put fail with an opaque `UnableToCreateFile` instead.
+    #[test]
+    fn local_store_alone_does_not_reject_a_file_path() {
+        let file = write_temp("not-a-dir.txt", b"x");
+        assert!(
+            BackupEngine::local_store(&file).is_ok(),
+            "if this ever starts failing, config::validate's is_dir() check may \
+             be redundant — but do not remove it without checking"
+        );
+    }
+
+    #[tokio::test]
+    async fn local_store_round_trips_an_object() {
+        let dir = missing_dir("roundtrip");
+        let store = BackupEngine::local_store_for_test(&dir).unwrap();
+        let e = engine(store);
+        let p = write_temp("local-roundtrip.txt", b"local payload");
+        let art = artifact_at(p, ArtifactKey::Memdb, 0x31);
+        let mut sum = EngineSummary::default();
+        e.upload_artifact(&art, &mut sum).await.unwrap();
+
+        // Reopen from scratch: the bytes must be there, and no `#<n>` staging
+        // file may be left beside them.
+        let reopened = BackupEngine::local_store(&dir).unwrap();
+        let got = reopened
+            .get(&store_path(&Manifest::object_key(&art.sha256)))
+            .await
+            .unwrap()
+            .bytes()
+            .await
+            .unwrap();
+        assert_eq!(
+            &got[..],
+            b"local payload",
+            "the object must survive a reopen"
+        );
+
+        let mut staging = 0;
+        for entry in walk_files(&dir) {
+            if is_staging_name(&entry) {
+                staging += 1;
+            }
+        }
+        assert_eq!(staging, 0, "a completed put must leave no staging file");
+    }
+
+    #[test]
+    fn sweep_staging_removes_only_old_staging_files() {
+        let dir = missing_dir("sweep");
+        let base = dir.join("test").join(LAYOUT_DIR);
+        let obj = base.join("obj").join("sha256");
+        std::fs::create_dir_all(&obj).unwrap();
+
+        // Three shapes: a stale staging file (the target), a fresh staging
+        // file (a concurrent run's, must survive), and a real object.
+        let stale = obj.join("aa#1");
+        let fresh = obj.join("bb#2");
+        let real = obj.join("cc");
+        std::fs::write(&stale, b"stale").unwrap();
+        std::fs::write(&fresh, b"fresh").unwrap();
+        std::fs::write(&real, b"real").unwrap();
+
+        // Age the stale one past the threshold.
+        let old = std::time::SystemTime::now() - (STAGING_MAX_AGE + std::time::Duration::from_secs(60));
+        set_mtime(&stale, old);
+
+        let target = BackupTarget::Local(dir.clone());
+        assert_eq!(target.sweep_staging("test"), 1);
+        assert!(!stale.exists(), "the stale staging file must be removed");
+        assert!(fresh.exists(), "a fresh staging file may belong to a live put");
+        assert!(real.exists(), "real objects are never touched");
+
+        // An S3 target has no directory tree and must be a no-op.
+        let s3 = BackupTarget::S3(S3Options::default());
+        assert_eq!(s3.sweep_staging("test"), 0);
+    }
+
+    #[test]
+    fn is_staging_name_matches_only_the_staging_suffix() {
+        assert!(is_staging_name(Path::new("/x/ab#1")));
+        assert!(is_staging_name(Path::new("/x/ab#12")));
+        assert!(!is_staging_name(Path::new("/x/ab")));
+        assert!(!is_staging_name(Path::new("/x/ab#")));
+        assert!(!is_staging_name(Path::new("/x/ab#c")));
+        // A `#` that is not a suffix must not match either.
+        assert!(!is_staging_name(Path::new("/x/a#1/b")));
+    }
+
+    #[test]
+    fn backup_target_kind_and_display() {
+        let local = BackupTarget::Local(PathBuf::from("/mnt/backup"));
+        assert_eq!(local.kind(), "local");
+        assert_eq!(local.display(), "/mnt/backup");
+
+        let s3 = BackupTarget::S3(S3Options {
+            endpoint: "http://minio:9000".to_string(),
+            bucket: "bichon".to_string(),
+            ..Default::default()
+        });
+        assert_eq!(s3.kind(), "s3");
+        assert_eq!(s3.display(), "s3://http://minio:9000/bichon");
+    }
+
+    /// Every file under `dir`, recursively (test helper).
+    fn walk_files(dir: &Path) -> Vec<PathBuf> {
+        let mut out = Vec::new();
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return out;
+        };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                out.extend(walk_files(&path));
+            } else {
+                out.push(path);
+            }
+        }
+        out
+    }
+
+    /// Backdate a file's mtime. `filetime` is not a dependency, so this uses
+    /// the platform API directly.
+    fn set_mtime(path: &Path, when: std::time::SystemTime) {
+        let file = std::fs::OpenOptions::new().write(true).open(path).unwrap();
+        file.set_modified(when).unwrap();
     }
 }

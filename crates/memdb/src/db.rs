@@ -207,7 +207,7 @@ impl MemDb {
         }
 
         if replayed > 0 {
-            eprintln!("[memdb] replayed {replayed} WAL entries after seq={after_seq}");
+            tracing::debug!("[memdb] replayed {replayed} WAL entries after seq={after_seq}");
         }
 
         // 3. Open WAL file handle for subsequent writes.

@@ -1,7 +1,6 @@
 use std::{path::PathBuf, time::Instant};
 
 use bytes::Bytes;
-use mail_parser::MimeHeaders;
 
 use bichon_core::{
     envelope::extractor::extract_references, message::content::AttachmentInfo,
@@ -76,68 +75,22 @@ pub fn detach_attachments_standalone(
     original_body: &[u8],
     message: &mail_parser::Message<'_>,
 ) -> (Vec<u8>, DetachOutput) {
-    let mut stripped_eml = original_body.to_vec();
-    let mut infos = Vec::new();
-    let mut blobs = Vec::new();
-
-    let mut ranges: Vec<_> = message
-        .attachments()
-        .map(|att| {
-            (
-                att.raw_body_offset() as usize,
-                att.raw_end_offset() as usize,
-                att,
-            )
-        })
-        .collect();
-    ranges.sort_by(|a, b| b.0.cmp(&a.0));
-
-    for (raw_start, raw_end, att) in ranges {
-        let content_hash = compute_content_hash(att.contents());
-        let body_len = original_body.len();
-        let raw_start = raw_start.min(body_len);
-        let raw_end = raw_end.min(body_len);
-        let range_valid = raw_start < raw_end;
-
-        if range_valid {
-            blobs.push((
-                content_hash.clone(),
-                Bytes::copy_from_slice(&original_body[raw_start..raw_end]),
-            ));
-        }
-
-        if range_valid {
-            let placeholder = format!("<<BICHON_DETACH_HASH:{}>>", &content_hash);
-            stripped_eml.splice(raw_start..raw_end, placeholder.as_bytes().iter().cloned());
-        }
-
-        infos.push(AttachmentInfo {
-            filename: att.attachment_name().map(|n| n.to_string()),
-            size: att.contents().len(),
-            inline: att
-                .content_disposition()
-                .map(|d| d.is_inline())
-                .unwrap_or_else(|| att.content_id().is_some()),
-            file_type: att
-                .content_type()
-                .map(|ct| {
-                    format!(
-                        "{}/{}",
-                        ct.c_type.as_ref(),
-                        ct.c_subtype.as_deref().unwrap_or("")
-                    )
-                })
-                .unwrap_or_else(|| "application/octet-stream".to_string()),
-            content_id: att.content_id().map(|id| id.to_string()),
-            content_hash,
-            is_message: att.is_message(),
-            extracted_text: None,
-            extracted_page_count: None,
-            extracted_is_ocr: false,
-        });
-    }
-
-    (stripped_eml, DetachOutput { infos, blobs })
+    // Delegate to the single canonical implementation shared with the live
+    // ingest path, so a migrated store always matches what the runtime
+    // writes and reads back. No extraction filter: offline migration does
+    // not run text extraction.
+    let detached = bichon_core::envelope::extractor::strip_attachment_bodies(
+        original_body,
+        message,
+        None,
+    );
+    (
+        detached.stripped_eml,
+        DetachOutput {
+            infos: detached.infos,
+            blobs: detached.blobs,
+        },
+    )
 }
 
 pub struct NewIndexWriterV2 {

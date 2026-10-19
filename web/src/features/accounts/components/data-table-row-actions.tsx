@@ -65,6 +65,10 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
 
   const isDeleting = row.original.deleting === true;
 
+  // Editing a view is gated by management of the *view account* itself, which
+  // `hasPermission` already checks. Individual sources the operator does not
+  // manage are grayed out inside the dialog instead of blocking the entry.
+
   const canShowAnyAction =
     !isDeleting && (
       (hasPermission) ||
@@ -109,6 +113,9 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             onClick={() => {
               if (account_type === "IMAP") {
                 navigate({ to: '/accounts/$id/settings', params: { id: String(row.original.id) } });
+              } else if (account_type === "View") {
+                setCurrentRow(row.original)
+                setOpen("edit-view");
               } else {
                 setCurrentRow(row.original)
                 setOpen("edit-nosync");

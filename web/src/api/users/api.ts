@@ -128,14 +128,12 @@ export interface User {
     sso_provider?: string | null;
 }
 
-type Theme = 'dark' | 'light'
-
-
 export interface LoginResult {
     success: boolean;
     error_message?: string | null;
     access_token?: string | null;
-    theme?: Theme,
+    /** The profile's saved theme; check it with `isTheme` before applying. */
+    theme?: string,
     language?: string,
     mfa_required?: boolean,
     mfa_challenge?: string | null,

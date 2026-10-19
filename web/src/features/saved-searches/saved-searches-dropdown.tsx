@@ -48,10 +48,15 @@ import {
   createExport,
   downloadExport,
   getExportJob,
+  is_queued_export,
   previewExport,
   ExportJobView,
   ExportPreviewView,
 } from '@/api/export/api'
+import { OP_EXPORT_BATCH } from '@/api/approvals/api'
+import { useGatedOp } from '@/features/approvals/use-gated-op'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { IconAlertCircle } from '@tabler/icons-react'
 
 interface SavedSearchesDropdownProps {
   kind: SavedSearchKind
@@ -103,6 +108,7 @@ export function SavedSearchesDropdown({ kind, filter, onApply }: SavedSearchesDr
   const [exportPreview, setExportPreview] = React.useState<ExportPreviewView | null>(null)
   const [exportJob, setExportJob] = React.useState<ExportJobView | null>(null)
   const [exportBusy, setExportBusy] = React.useState(false)
+  const { gated, announceIfQueued } = useGatedOp(OP_EXPORT_BATCH)
   const filtered = query.trim()
     ? searches.filter((s) => s.name.toLowerCase().includes(query.trim().toLowerCase()))
     : searches
@@ -151,7 +157,18 @@ export function SavedSearchesDropdown({ kind, filter, onApply }: SavedSearchesDr
     if (!exportTarget || !exportPreview) return
     setExportBusy(true)
     createExport(exportTarget.id)
-      .then((job) => {
+      .then((result) => {
+        // Dual control is on for batch exports: the server queued the request
+        // and answered 202. There is no job to poll and nothing has been
+        // exported — polling `undefined` here would show a failure for a
+        // request that is in fact waiting on a second person.
+        if (is_queued_export(result)) {
+          announceIfQueued(result)
+          setExportBusy(false)
+          closeExport()
+          return
+        }
+        const job = result
         setExportJob(job)
         pollRef.current = setInterval(() => {
           getExportJob(job.job_id)
@@ -528,12 +545,30 @@ export function SavedSearchesDropdown({ kind, filter, onApply }: SavedSearchesDr
                   </div>
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground break-words">
-                {t('exports.confirm', {
-                  count: exportPreview.total_emails,
-                  name: exportTarget?.name ?? '',
-                })}
-              </p>
+              {gated ? (
+                <Alert>
+                  <IconAlertCircle className="h-4 w-4" />
+                  <AlertTitle>
+                    {t(
+                      'approvals.gatedExportTitle',
+                      'Dual control is on for this operation'
+                    )}
+                  </AlertTitle>
+                  <AlertDescription>
+                    {t(
+                      'approvals.gatedExportDesc',
+                      'This will NOT export anything now. It submits a request that a second person must approve, and only then does the export run.'
+                    )}
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <p className="text-sm text-muted-foreground break-words">
+                  {t('exports.confirm', {
+                    count: exportPreview.total_emails,
+                    name: exportTarget?.name ?? '',
+                  })}
+                </p>
+              )}
               <DialogFooter>
                 <Button
                   variant="outline"
@@ -546,7 +581,9 @@ export function SavedSearchesDropdown({ kind, filter, onApply }: SavedSearchesDr
                   {exportBusy && (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   )}
-                  {t('exports.export')}
+                  {gated
+                    ? t('approvals.submitForApproval', 'Submit for approval')
+                    : t('exports.export')}
                 </Button>
               </DialogFooter>
             </div>

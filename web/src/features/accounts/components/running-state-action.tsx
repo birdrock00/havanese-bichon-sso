@@ -43,6 +43,9 @@ export function RunningStateCellAction({ row }: Props) {
   const { data: state } = useQuery({
     queryKey: ['running-state', row.original.id],
     queryFn: () => download_state(row.original.id),
+    // Only a synced account has download state; asking for a local or view
+    // account would be a request with no meaning behind it.
+    enabled: row.original.account_type === 'IMAP',
     refetchInterval: (query) => {
       const s = query.state.data?.active_session
       return s && s.status === DownloadStatus.Running ? 5000 : false
@@ -54,7 +57,9 @@ export function RunningStateCellAction({ row }: Props) {
   }
 
 
-  if (row.original.account_type === "NoSync") {
+  // Only IMAP accounts sync from a server. Local and view accounts show the
+  // same "n/a" — a view has no runtime state at all.
+  if (row.original.account_type !== 'IMAP') {
     return <span className="text-xs text-muted-foreground">n/a</span>
   }
 

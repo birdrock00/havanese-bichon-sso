@@ -127,7 +127,7 @@ function ContactSelectorField({
 }) {
     const { t } = useTranslation()
     const [searchTerm, setSearchTerm] = React.useState("")
-    const { contacts, isLoading } = useContacts(searchTerm)
+    const { contacts, isLoading, isError } = useContacts(searchTerm)
 
     const handleToggle = (email: string) => {
         if (value === email) {
@@ -148,7 +148,7 @@ function ContactSelectorField({
                     )}
                 >
                     <div className="flex flex-col items-start pr-6">
-                        <span className="text-[10px] font-bold uppercase opacity-50 tracking-tight leading-none">
+                        <span className="text-xs font-bold uppercase opacity-50 tracking-tight leading-none">
                             {label}
                         </span>
                         <span
@@ -200,7 +200,14 @@ function ContactSelectorField({
                         {isLoading && (
                             <div className="p-4 text-xs text-center opacity-50">{t('search_contacts.loading')}</div>
                         )}
-                        <CommandEmpty>{t('search_contacts.no_contact_found')}</CommandEmpty>
+                        {isError && (
+                            <div className="p-4 text-xs text-center text-destructive">
+                                {t('address_select.loadFailed', 'Could not load contacts.')}
+                            </div>
+                        )}
+                        {!isError && (
+                            <CommandEmpty>{t('search_contacts.no_contact_found')}</CommandEmpty>
+                        )}
                         <CommandGroup>
                             {contacts.slice(0, 100).map((email) => (
                                 <CommandItem
@@ -212,7 +219,7 @@ function ContactSelectorField({
                                         <span className="font-medium">
                                             {email.split('@')[0]}
                                         </span>
-                                        <span className="text-[10px] text-muted-foreground truncate max-w-[360px]">
+                                        <span className="text-xs text-muted-foreground truncate max-w-[360px]">
                                             {email}
                                         </span>
                                     </div>
@@ -222,7 +229,7 @@ function ContactSelectorField({
                                 </CommandItem>
                             ))}
                             {contacts.length > 100 && (
-                                <div className="px-3 py-2 text-[10px] text-center text-muted-foreground border-t border-border/50">
+                                <div className="px-3 py-2 text-xs text-center text-muted-foreground border-t border-border/50">
                                     {t('search_contacts.showing_limit', { total: contacts.length })}
                                 </div>
                             )}

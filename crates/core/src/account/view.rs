@@ -72,6 +72,12 @@ pub struct AccountResp {
     /// Epoch millis when the hold was placed.
     pub hold_placed_at: Option<i64>,
     pub deleting: bool,
+    /// Optional special role (journal); `None` = ordinary account or view.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<crate::account::migration::AccountKind>,
+    /// Sources and filters of a `View` account; `None` for every other type.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub view: Option<crate::account::migration::ViewConfig>,
 }
 
 impl AccountResp {
@@ -116,6 +122,8 @@ impl AccountResp {
             hold_placed_by: account.hold_placed_by,
             hold_placed_at: account.hold_placed_at,
             deleting: account.deleting,
+            kind: account.kind,
+            view: account.view,
         }
     }
 }

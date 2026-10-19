@@ -119,5 +119,65 @@ export function TargetDescription({ target }: { target: ApprovalTarget }) {
           </div>
         </div>
       )
+
+    case 'erasure': {
+      const accounts = Object.keys(target.by_account)
+      return (
+        <div>
+          <div className='font-medium'>
+            {t('approvals.targetErasure', 'GDPR erasure — {{subject}}', {
+              subject: target.subject,
+            })}
+          </div>
+          <div className='text-muted-foreground'>
+            {t(
+              'approvals.targetErasureCount',
+              '{{count}} message(s) across {{accounts}} account(s), identified by: {{criteria}}',
+              {
+                count: target.messages,
+                accounts: accounts.length,
+                criteria: target.criteria,
+              }
+            )}
+          </div>
+          {/* The requester's assessment is shown on the card, not hidden behind
+              a detail view: it is the half of the argument the approver is
+              being asked to accept. */}
+          <div className='text-muted-foreground italic'>{target.assessment}</div>
+        </div>
+      )
+    }
+
+    case 'export':
+      return (
+        <div>
+          <div className='font-medium'>{target.saved_search_name}</div>
+          <div className='text-muted-foreground'>
+            {t(
+              'approvals.targetExport',
+              'Export approximately {{count}} message(s) as {{format}}',
+              { count: target.messages, format: target.format }
+            )}
+          </div>
+          {/* The scope is the part the approver is actually signing off on:
+              a request queued by an administrator covers every account, one
+              from a scoped role covers a named subset. `null` is the unscoped
+              form — the server sends it rather than an empty list, so an empty
+              list here would mean "no accounts", which is not a state the
+              backend produces. */}
+          <div className='text-muted-foreground'>
+            {target.account_ids === null
+              ? t('approvals.targetExportAllAccounts', 'from all accounts')
+              : t(
+                  'approvals.targetExportAccounts',
+                  'from {{count}} account(s): {{ids}}',
+                  {
+                    count: target.account_ids.length,
+                    ids: target.account_ids.slice(0, 5).join(', '),
+                  }
+                )}
+          </div>
+        </div>
+      )
   }
 }

@@ -41,7 +41,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { DataTablePagination } from './data-table-pagination'
+import { DataTablePagination } from '@/components/data-table-pagination'
 import { DataTableToolbar } from './data-table-toolbar'
 import { useTranslation } from 'react-i18next'
 import { Proxy } from '@/api/system/api'
@@ -156,7 +156,7 @@ export function ProxyTable({ columns, data }: DataTableProps) {
           </TableBody>
         </Table>
       </div>
-      {data.length > 10 && <DataTablePagination table={table} />}
+      {data.length > 10 && <DataTablePagination table={table}  storageKey='bichon_proxy_page_size' />}
     </div>
   )
 }

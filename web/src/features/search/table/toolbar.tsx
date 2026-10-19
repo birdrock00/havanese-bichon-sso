@@ -1,8 +1,10 @@
 import { type Table } from '@tanstack/react-table'
-import { Sparkles } from 'lucide-react'
+import { History, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { SearchRefreshButton } from '@/components/search-refresh-button'
+import { useCurrentUser } from '@/hooks/use-current-user'
 import { SavedSearchesDropdown } from '../../saved-searches/saved-searches-dropdown'
 import { AccountPopover } from '../account-popover'
 import { MailFilterPopover } from '../contact-popover'
@@ -22,9 +24,23 @@ type DataTableToolbarProps<TData> = {
 export function DataTableToolbar<TData>({
   table,
 }: DataTableToolbarProps<TData>) {
-  const { filter, setFilter, effectiveSort, refetch, isFetching } =
-    useSearchContext()
+  const {
+    filter,
+    setFilter,
+    effectiveSort,
+    refetch,
+    isFetching,
+    setRepairHistoryOpen,
+  } = useSearchContext()
   const { t } = useTranslation()
+  const { require_any_permission } = useCurrentUser()
+
+  // No accountId: the drawer is global, so any account the caller may repair
+  // is enough to make the button meaningful.
+  const canSeeRepairHistory = require_any_permission([
+    'system:root',
+    'data:manage',
+  ])
   return (
     <div className='flex flex-col gap-1 p-1 bg-background'>
       <div className='mb-4 flex items-center justify-center w-full'>
@@ -61,6 +77,17 @@ export function DataTableToolbar<TData>({
           )}
           <TimePopover />
           <DataTableViewOptions table={table} />
+          {canSeeRepairHistory && (
+            <Button
+              variant='outline'
+              size='sm'
+              className='h-6 gap-1 px-2 text-xs rounded-none'
+              onClick={() => setRepairHistoryOpen(true)}
+            >
+              <History className='h-3.5 w-3.5' />
+              {t('repair_message.history', 'Repair history')}
+            </Button>
+          )}
           <SearchRefreshButton onRefresh={refetch} isRefreshing={isFetching} />
         </div>
       </div>

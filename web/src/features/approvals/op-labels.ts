@@ -48,4 +48,12 @@ export const OP_LABELS: Record<string, { key: string; fallback: string }> = {
     key: 'settings.approvals.opTokenRevoke',
     fallback: 'Revoke an API token',
   },
+  'export.batch': {
+    key: 'settings.approvals.opExportBatch',
+    fallback: 'Export a batch of archived mail',
+  },
+  'gdpr.erasure': {
+    key: 'settings.approvals.opGdprErasure',
+    fallback: 'Execute a GDPR erasure request',
+  },
 }

@@ -28,9 +28,6 @@
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/license-AGPLv3-blue.svg" alt="License">
   </a>
-  <a href="https://deepwiki.com/rustmailer/bichon">
-    <img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki">
-  </a>
   <a href="https://discord.gg/Bq4M2cDmF4">
     <img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?logo=discord&logoColor=white" alt="Discord">
   </a>
@@ -698,6 +695,10 @@ location /bichon/ {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 }
 ```
+
+### Can I use an OAuth app that has no client secret?
+
+Yes. Native/desktop apps (public clients) have no secret. Microsoft Entra apps on the "Mobile and desktop applications" platform are the common case. Set **Client type** to **Public/native client** in the OAuth2 configuration and leave the secret out. Bichon then relies on PKCE for the code exchange. The redirect URI must match the app registration exactly, e.g. `http://127.0.0.1:15630/oauth2/callback`.
 
 ### Can havanese-bichon-sso send emails?
 

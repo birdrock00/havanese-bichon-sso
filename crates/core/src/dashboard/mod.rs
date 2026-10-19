@@ -62,11 +62,21 @@ pub struct DashboardStats {
 
 impl DashboardStats {
     pub async fn get(context: ClientContext) -> BichonResult<Self> {
-        let has_all_accounts = context.has_permission(None, Permission::ACCOUNT_MANAGE_ALL);
+        // Unrestricted for a caller who administers every account *or* may read
+        // every account — the two globals the other account-level endpoints
+        // accept. `access::aggregate_accounts` only knows the second one, so
+        // the first is decided here.
+        let has_all_accounts = context.has_permission(None, Permission::ACCOUNT_MANAGE_ALL)
+            || context.has_permission(None, Permission::DATA_READ_ALL);
+        // Views are expanded: a view owns no documents, so aggregating over its
+        // id alone reported an empty archive to every viewer. Every figure
+        // below is account-level — none of them can evaluate a view source's
+        // participant filter — so a *filtered* source counts for nothing rather
+        // than for its whole account; see `access::aggregate_accounts`.
         let authorized_ids: Option<HashSet<u64>> = if has_all_accounts {
             None
         } else {
-            Some(context.user.account_access_map.keys().cloned().collect())
+            crate::account::access::aggregate_accounts(&context)?
         };
 
         let mut stat = ENVELOPE_MANAGER.get_dashboard_stats(&authorized_ids)?;
@@ -78,6 +88,9 @@ impl DashboardStats {
         stat.account_count = if has_all_accounts {
             AccountModel::count()?
         } else {
+            // The accounts counted are the same ones the figures cover, so a
+            // viewer whose only access is a filtered view sees "0 accounts and
+            // 0 messages" rather than "1 account and 0 messages".
             authorized_ids.as_ref().map(|ids| ids.len()).unwrap_or(0)
         };
 

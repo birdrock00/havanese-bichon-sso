@@ -108,7 +108,10 @@ impl AccountApi {
         context: WrappedContext,
     ) -> ApiResult<Json<AccountModel>> {
         context.require_permission(None, Permission::ACCOUNT_CREATE)?;
-        let account = AccountModel::create_account(context.user.id, payload.0).await?;
+        // The view rule (a view delegates read access, so every source needs
+        // `account:manage`) is enforced inside `create_account`, where a second
+        // caller cannot skip it.
+        let account = AccountModel::create_account(context.user.id, payload.0, &context).await?;
         emit(Event::AccountCreated {
             created_by: context.user.username.clone(),
             account_id: account.id,
@@ -133,14 +136,25 @@ impl AccountApi {
     ) -> ApiResult<()> {
         let account_id = account_id.0;
         context.require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)?;
-        AccountModel::update(account_id, payload.0, true)?;
-        let email = AccountModel::find(account_id)?
-            .map(|a| a.email)
+        // Read the scope *before* the write: the audit record has to say what
+        // the view looked like beforehand, and after the update that value is
+        // gone. `AccountModel::update` enforces the source-management rule
+        // (editing a view can widen it), so a second caller cannot skip it.
+        let before_view = AccountModel::get(account_id)?.view;
+        AccountModel::update(account_id, payload.0, &context)?;
+        let updated = AccountModel::find(account_id)?;
+        let email = updated
+            .as_ref()
+            .map(|a| a.email.clone())
             .unwrap_or_else(|| format!("account-{account_id}"));
         emit(Event::AccountUpdated {
             updated_by: context.user.username.clone(),
             account_id,
             email,
+            view_change: bichon_core::account::migration::ViewConfigChange::between(
+                before_view.as_ref(),
+                updated.as_ref().and_then(|a| a.view.as_ref()),
+            ),
         });
         Ok(())
     }

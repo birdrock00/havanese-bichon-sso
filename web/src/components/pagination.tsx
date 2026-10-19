@@ -81,29 +81,29 @@ export function TablePagination({
 
   return (
     <div className='flex items-center justify-between space-x-2 overflow-auto px-2'>
-      <div className='hidden flex-1 text-sm text-muted-foreground sm:block'>
+      <div className='hidden flex-1 text-xs text-muted-foreground sm:block'>
         {totalItems} {t("table.results")}
       </div>
       <div className='flex items-center sm:space-x-6 lg:space-x-4'>
         <div className='flex items-center space-x-2'>
-          <p className='hidden text-sm font-medium sm:block'>{t("table.rowsPerPage")}</p>
+          <p className='hidden text-xs font-medium sm:block'>{t("table.rowsPerPage")}</p>
           <Select
             value={`${pageSize}`}
             onValueChange={handlePageSizeChange}
           >
-            <SelectTrigger className='h-8 w-[70px]'>
+            <SelectTrigger className='h-8 w-[70px] text-xs'>
               <SelectValue placeholder={pageSize} />
             </SelectTrigger>
             <SelectContent side='top'>
               {[10, 20, 30, 40, 50, 100, 200].map((size) => (
-                <SelectItem key={size} value={`${size}`}>
+                <SelectItem key={size} value={`${size}`} className='text-xs'>
                   {size}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        <div className='hidden items-center justify-center text-sm font-medium sm:flex'>
+        <div className='hidden items-center justify-center text-xs font-medium sm:flex'>
           {t("table.page")}
           <Input
             type="number"
@@ -114,7 +114,7 @@ export function TablePagination({
               else setPageIndex(0)
             }}
             onChange={(e) => setPageInput(Number(e.target.value))}
-            className='mx-2 h-8 w-20'
+            className='mx-2 h-8 w-20 text-xs'
           />
           {t("table.of")} {pageCount}
         </div>
@@ -140,11 +140,11 @@ export function TablePagination({
           {pageNumbers.map((pageNumber, index) => (
             <div key={`${pageNumber}-${index}`} className='flex items-center'>
               {pageNumber === '...' ? (
-                <span className='px-1 text-sm text-muted-foreground'>...</span>
+                <span className='px-1 text-xs text-muted-foreground'>...</span>
               ) : (
                 <Button
                   variant={currentPage === pageNumber ? 'default' : 'outline'}
-                  className='h-8 min-w-8 px-2'
+                  className='h-8 min-w-8 px-2 text-xs'
                   onClick={() => setPageIndex((pageNumber as number) - 1)}
                 >
                   {pageNumber}

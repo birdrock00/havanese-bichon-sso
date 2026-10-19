@@ -31,6 +31,7 @@ export type AttachmentDialogType =
   | 'edit-tags'
   | 'update-tags'
   | 'restore'
+  | 'repair'
   | 'delete-mailbox'
   | 'nested-eml'
 

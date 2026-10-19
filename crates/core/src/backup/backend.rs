@@ -37,10 +37,14 @@ use tracing::{info, warn};
 
 use crate::backup::artifact::Artifact;
 use crate::backup::config;
-use crate::backup::engine::{self, ArtifactStat, BackupEngine, EngineSummary};
+use crate::backup::engine::{ArtifactStat, BackupEngine, EngineSummary};
 use crate::backup::manifest::Manifest;
+use crate::backup::model::BackupRecord;
+use crate::backup::path::{available_space_on, DISK_SAFETY_FACTOR};
 use crate::backup::retention::RetentionPolicy;
+use crate::error::code::ErrorCode;
 use crate::error::BichonResult;
+use crate::raise_error;
 
 /// Audit-chain facts the backend stamps on a restore point's manifest,
 /// forwarded verbatim from the audit contributor's upload-phase delivery. The
@@ -107,48 +111,124 @@ pub trait BackupBackend: Send + Sync {
     ) -> Pin<Box<dyn Future<Output = BichonResult<BackupSummary>> + Send + 'a>>;
 }
 
-/// The native S3 backend: content-addressed upload, manifest commit, GC.
+/// The native backend: content-addressed upload, manifest commit, GC. Serves
+/// both target types — [`BackupTarget::build_store`] picks the
+/// `object_store` implementation.
 pub struct EngineBackend {
     engine: BackupEngine,
+    /// Backend name for logs and status (`"s3"` / `"local"`).
+    kind: &'static str,
 }
 
 impl EngineBackend {
-    /// Build the backend from the effective S3 configuration (WebUI
-    /// overrides). Errors when the target is not fully configured.
+    /// Build the backend from the effective configuration (WebUI overrides).
+    /// Errors when the target is not fully configured, or — for a local
+    /// target — when the directory is gone or no longer on the volume it was
+    /// configured on.
     pub fn from_settings() -> BichonResult<Self> {
-        let opts = config::s3_options()?;
-        let store = engine::s3_store(&opts)?;
+        let target = config::target()?;
+        let store = target.build_store()?;
         let prefix = config::prefix();
+        // Reclaim staging files an interrupted put left behind. They are
+        // invisible to the object-store listing (`LocalFileSystem` rejects
+        // `*#<n>` as an object name), so nothing downstream would ever see
+        // them and the space would never come back. A no-op for S3.
+        target.sweep_staging(&prefix);
         Ok(Self {
             engine: BackupEngine::new(store, &prefix),
+            kind: target.kind(),
         })
     }
 
     /// Wrap an existing engine (tests use an in-memory or local store).
     #[cfg(test)]
     pub fn with_engine(engine: BackupEngine) -> Self {
-        Self { engine }
+        Self {
+            engine,
+            kind: "s3",
+        }
     }
 
     /// A read-only engine handle over the configured target (manifest
     /// browser: list/detail/audit download). Same store + prefix as the
     /// run-time backend, so what the browser shows is what a run wrote.
     pub fn browser_engine() -> BichonResult<BackupEngine> {
-        let opts = config::s3_options()?;
-        let store = engine::s3_store(&opts)?;
+        let target = config::target()?;
+        let store = target.build_store()?;
         Ok(BackupEngine::new(store, &config::prefix()))
+    }
+
+    /// Refuse a local run the target cannot plausibly hold.
+    ///
+    /// The estimate is the **previous successful run's uploaded bytes** rather
+    /// than the size of this run's artifacts. Objects are content-addressed,
+    /// so an unchanged archive captures tens of GB and uploads almost nothing;
+    /// checking against the capture size would reject exactly the runs that
+    /// write least. The last run's actual new bytes is the number that has
+    /// proven meaningful.
+    ///
+    /// It is still only an estimate, and the message says so: after a large
+    /// initial import the next run is usually far smaller, so a target with
+    /// less free space than the last run consumed is refused even though that
+    /// particular run might have fit. Erring that way is deliberate — a target
+    /// that cannot absorb another change of the size it just took is one whose
+    /// retention and GC have no room left either, and refusing before the
+    /// first byte is cheaper to recover from than an `ENOSPC` half-way through
+    /// an upload.
+    ///
+    /// Skipped when this destination has no history yet — the first run has
+    /// nothing to extrapolate from, and a full write is expected then (a
+    /// resulting `ENOSPC` reaches the operator through
+    /// [`engine::local_store_err`]'s errno hints instead).
+    fn check_local_capacity(&self) -> BichonResult<()> {
+        if self.kind != "local" {
+            return Ok(());
+        }
+        let Some(dir) = config::local_dir() else {
+            return Ok(());
+        };
+        let Some(estimate) = BackupRecord::last_success_for(&config::destination())
+            .and_then(|r| r.summary)
+            .map(|s| s.uploaded_bytes)
+        else {
+            return Ok(());
+        };
+        // A run that uploaded nothing new says nothing about the next one.
+        if estimate == 0 {
+            return Ok(());
+        }
+        let dir = std::path::Path::new(&dir);
+        let free = available_space_on(dir);
+        let required = (estimate as f64 * DISK_SAFETY_FACTOR) as u64;
+        if free >= required {
+            return Ok(());
+        }
+        Err(raise_error!(
+            format!(
+                "backup: the local target {} has {free} bytes free, but the last \
+                 successful run wrote {estimate}. A comparable run would need about \
+                 {required}. Free space on the volume (or lower the retention) before \
+                 backing up. The figure comes from the previous run, so it errs on the \
+                 safe side.",
+                dir.display()
+            ),
+            ErrorCode::InvalidParameter
+        ))
     }
 }
 
 impl BackupBackend for EngineBackend {
     fn name(&self) -> &'static str {
-        "s3"
+        self.kind
     }
 
     fn preflight<'a>(
         &'a self,
     ) -> Pin<Box<dyn Future<Output = BichonResult<()>> + Send + 'a>> {
-        Box::pin(async move { self.engine.preflight().await })
+        Box::pin(async move {
+            self.check_local_capacity()?;
+            self.engine.preflight().await
+        })
     }
 
     fn previous_manifest<'a>(

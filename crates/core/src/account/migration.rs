@@ -28,7 +28,7 @@ use crate::{
         state::DownloadState,
     },
     archive::imap::{mailbox::MailBox, task::SYNC_TASKS},
-    common::paginated::DataPage,
+    common::{auth::ClientContext, paginated::DataPage},
     context::controller::DOWNLOAD_CONTROLLER,
     database::{
         count_impl, delete_impl, find_impl, insert_impl, list_all_impl, manager::DB_MANAGER,
@@ -51,7 +51,16 @@ pub type AccountModel = Account;
 pub enum AccountType {
     #[default]
     IMAP,
+    /// A local account that stores its own mail (import target, journal
+    /// archive, or a hand-made local mailbox).
     NoSync,
+    /// A read-only, filter-scoped view over one or more other accounts.
+    ///
+    /// A *type*, not a flag: a view stores nothing, is never synced, receives
+    /// no SMTP, and every "is this a storage account?" check must answer "no"
+    /// without remembering a special case. Its sources and filters live in
+    /// [`Account::view`].
+    View,
 }
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
@@ -289,6 +298,142 @@ fn validate_non_empty(patterns: &[String], field_name: &str) -> Result<(), Strin
     Ok(())
 }
 
+/// What `kind.role` says the account is. `AccountType` stays the storage type
+/// (IMAP / NoSync); this is the *special role* on top of it.
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "web-api", derive(poem_openapi::Enum))]
+#[serde(rename_all = "snake_case")]
+pub enum AccountKindRole {
+    /// The account SMTP journal deliveries are filed into. Reserved for the
+    /// journaling configuration — it cannot be chosen when creating an
+    /// account by hand.
+    ///
+    /// `view` is deliberately **not** a role: it is an [`AccountType`] of its
+    /// own, because a view stores nothing and every storage-related check must
+    /// exclude it by type rather than by remembering a flag.
+    #[default]
+    #[cfg_attr(feature = "web-api", oai(rename = "journal"))]
+    Journal,
+}
+
+/// A view's restriction on one source account.
+///
+/// Every condition set here is **ANDed** with whatever the viewer searches
+/// for: a view can only ever narrow, never widen. An empty filter exposes the
+/// whole source read-only — a deliberate, administrator-chosen delegation.
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
+pub struct ViewSource {
+    pub account_id: u64,
+    /// The message must have **at least one** of these addresses in From, To,
+    /// Cc or Bcc (OR within the field).
+    ///
+    /// A person with several addresses, or a view over a small team, needs more
+    /// than one. The serde adapter also accepts a single string, so a row
+    /// written against the first version of this field (one address) still
+    /// parses.
+    #[serde(
+        default,
+        deserialize_with = "one_or_many",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    #[cfg_attr(feature = "web-api", oai(default))]
+    pub any_participant: Vec<String>,
+    /// The message must have **at least one** of these addresses in To, Cc or
+    /// Bcc (OR within the field).
+    #[serde(
+        default,
+        deserialize_with = "one_or_many",
+        skip_serializing_if = "Vec::is_empty"
+    )]
+    #[cfg_attr(feature = "web-api", oai(default))]
+    pub any_recipient: Vec<String>,
+}
+
+impl ViewSource {
+    /// A source without any condition: the whole account is delegated.
+    ///
+    /// The distinction matters wherever a caller can only work with *account
+    /// ids* — the attachment index, the aggregate endpoints, the dashboard —
+    /// because those cannot evaluate a participant filter and must therefore
+    /// leave a filtered source out entirely rather than expose all of it.
+    pub fn is_unfiltered(&self) -> bool {
+        self.any_participant.is_empty() && self.any_recipient.is_empty()
+    }
+}
+
+/// Accept both `"a@b.de"` and `["a@b.de", "c@d.de"]` (and `null`).
+fn one_or_many<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum OneOrMany {
+        One(String),
+        Many(Vec<String>),
+    }
+
+    Ok(
+        match Option::<OneOrMany>::deserialize(deserializer)? {
+            None => Vec::new(),
+            Some(OneOrMany::One(address)) => vec![address],
+            Some(OneOrMany::Many(addresses)) => addresses,
+        },
+    )
+}
+
+/// Optional special role of an account.
+///
+/// Kept separate from [`AccountType`] on purpose: a journal archive and a view
+/// are both `NoSync` accounts, and overloading the type would have made every
+/// existing `account_type` check wrong. `None` — the default, and what every
+/// row written before this field existed deserializes to — is an ordinary
+/// account.
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
+pub struct AccountKind {
+    pub role: AccountKindRole,
+    /// Journal: the address the tenant's journaling rule delivers to.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_address: Option<String>,
+}
+
+/// Configuration of an [`AccountType::View`] account.
+#[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
+pub struct ViewConfig {
+    /// The accounts the view reads from, each with its own filter.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sources: Vec<ViewSource>,
+}
+
+/// What an account update did to a view's scope, for the audit trail.
+///
+/// A bare `account.updated` line cannot distinguish renaming a view from
+/// dropping its filters — and the second is a widening of someone's visibility
+/// that nobody could reconstruct afterwards. Both sides are recorded, because
+/// "from what" is half the answer.
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct ViewConfigChange {
+    pub before: Option<ViewConfig>,
+    pub after: Option<ViewConfig>,
+}
+
+impl ViewConfigChange {
+    /// `None` when the scope is unchanged, so a rename or an unrelated field
+    /// leaves no view record behind.
+    pub fn between(before: Option<&ViewConfig>, after: Option<&ViewConfig>) -> Option<Self> {
+        if before == after {
+            return None;
+        }
+        Some(Self {
+            before: before.cloned(),
+            after: after.cloned(),
+        })
+    }
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct Account {
@@ -359,6 +504,19 @@ pub struct Account {
     /// Epoch millis when the hold was released.
     #[serde(default)]
     pub hold_released_at: Option<i64>,
+    /// Optional special role — journal archive or read-only view.
+    ///
+    /// `None` is an ordinary account, and it is also what every row written
+    /// before this field existed deserializes to, so the field is additive and
+    /// backward compatible. `AccountType` is deliberately untouched: a journal
+    /// account and a view are both `NoSync` accounts, and overloading the type
+    /// would have made every existing `account_type` check wrong.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kind: Option<AccountKind>,
+    /// Sources and per-source filters of an [`AccountType::View`] account.
+    /// `None` for every other account type.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub view: Option<ViewConfig>,
 }
 
 impl MemDbModel for Account {
@@ -381,6 +539,24 @@ fn normalize_optional_name(name: Option<String>) -> Option<String> {
 }
 
 impl Account {
+    /// The account SMTP journal deliveries are filed into.
+    pub fn is_journal_account(&self) -> bool {
+        matches!(
+            self.kind.as_ref().map(|k| &k.role),
+            Some(AccountKindRole::Journal)
+        )
+    }
+
+    /// A read-only, filter-scoped view over other accounts.
+    pub fn is_view_account(&self) -> bool {
+        matches!(self.account_type, AccountType::View)
+    }
+
+    /// Whether the account stores mail of its own (as opposed to a view).
+    pub fn stores_mail(&self) -> bool {
+        !self.is_view_account()
+    }
+
     pub fn new(user_id: u64, request: AccountCreateRequest) -> BichonResult<Self> {
         Ok(Self {
             id: id!(64),
@@ -417,6 +593,8 @@ impl Account {
             hold_placed_at: None,
             hold_released_by: None,
             hold_released_at: None,
+            kind: request.kind,
+            view: request.view,
         })
     }
 
@@ -450,10 +628,27 @@ impl Account {
         Ok(result)
     }
 
+    /// Create an account on `context`'s user's behalf.
+    ///
+    /// Takes the `ClientContext`, not a bare user id, because the view rule is
+    /// a permission check — creating a view delegates read access to the
+    /// accounts it names, so the caller must hold `account:manage` on every
+    /// source. Enforcing it *here* rather than in the REST handler means a
+    /// second caller (a CLI, an approval executor, an MCP tool) cannot create a
+    /// view without it.
     pub async fn create_account(
         user_id: u64,
         request: AccountCreateRequest,
+        context: &ClientContext,
     ) -> BichonResult<AccountModel> {
+        if matches!(request.account_type, AccountType::View) {
+            let sources = request
+                .view
+                .as_ref()
+                .map(|view| view.sources.as_slice())
+                .unwrap_or(&[]);
+            crate::account::access::require_view_source_management(context, sources)?;
+        }
         let entity = request.create_entity(user_id)?;
         let cloned = entity.clone();
 
@@ -495,14 +690,37 @@ impl Account {
         Ok(cloned)
     }
 
+    /// Update an account on `context`'s user's behalf.
+    ///
+    /// Validation is unconditional and the view rule is enforced here, not by
+    /// the caller: editing a view can widen what it exposes, so every source in
+    /// the submitted configuration must be one the caller manages (or be kept
+    /// exactly as it was). See
+    /// [`crate::account::access::require_view_source_management_for_update`].
+    ///
+    /// This returns `()`, so a caller that needs to *audit* a scope change has
+    /// to read the old view first — as the REST handler does before emitting
+    /// `Event::AccountUpdated` with its `view_change`. The permission rule is
+    /// enforced here; the record is not, because the record needs an actor
+    /// name this function does not receive.
     pub fn update(
         account_id: u64,
         request: AccountUpdateRequest,
-        validate: bool,
+        context: &ClientContext,
     ) -> BichonResult<()> {
         let account = AccountModel::get(account_id)?;
-        if validate {
-            request.validate_update_request(&account)?;
+        request.validate_update_request(&account)?;
+        if let Some(view) = &request.view {
+            let old_sources = account
+                .view
+                .as_ref()
+                .map(|old| old.sources.as_slice())
+                .unwrap_or(&[]);
+            crate::account::access::require_view_source_management_for_update(
+                context,
+                old_sources,
+                &view.sources,
+            )?;
         }
         update_impl(
             DB_MANAGER.db(),
@@ -513,7 +731,14 @@ impl Account {
         Ok(())
     }
 
+    /// Mark an account for deletion; the purge runs in the background.
+    ///
+    /// The refusal checks live in [`Self::delete_and_wait`], which this spawns —
+    /// but they are repeated here first, because the spawned task's error can
+    /// only be logged: without this the HTTP caller would get a success for a
+    /// deletion that never happened.
     pub async fn delete(account_id: u64) -> BichonResult<()> {
+        Self::ensure_deletable(&Self::get(account_id)?)?;
         // Spawn background cleanup — heavy work (Tantivy, attachments) runs off the request path
         tokio::spawn(async move {
             if let Err(error) = Self::delete_and_wait(account_id).await {
@@ -524,6 +749,64 @@ impl Account {
                 );
             }
         });
+        Ok(())
+    }
+
+    /// The conditions under which an account may not be deleted at all.
+    ///
+    /// Pure and synchronous so both delete paths (`delete` for HTTP,
+    /// `delete_and_wait` for the dual-control executor) refuse for exactly the
+    /// same reasons, and so the rules are testable without a database.
+    pub fn ensure_deletable(account: &AccountModel) -> BichonResult<()> {
+        // Legal hold: an account under a hold is frozen — deleting the account
+        // would cascade-purge every message and attachment it holds, defeating
+        // the purpose of the hold. Refuse before any state is mutated. In the
+        // community edition `legal_hold` is always false, so this guard is a
+        // no-op there.
+        if account.is_on_hold() {
+            return Err(raise_error!(
+                format!(
+                    "Account {} ({}) is under a legal hold; deleting the account is disabled while the hold is active",
+                    account.id, account.email
+                ),
+                ErrorCode::Forbidden
+            ));
+        }
+
+        // Journal archive: this account is the one complete copy of everything
+        // the customer's journaling rule produced. There is no way to rebuild
+        // it — the rule only carries mail from the moment it was configured,
+        // and the source mailboxes may long be gone. Refuse unconditionally;
+        // unlike a view, it is not an access wrapper but the archive itself.
+        if account.is_journal_account() {
+            return Err(raise_error!(
+                format!(
+                    "Account {} ({}) is a journal archive and cannot be deleted; \
+                     point journaling at another address instead and keep this record",
+                    account.id, account.email
+                ),
+                ErrorCode::Forbidden
+            ));
+        }
+
+        // A view source: deleting it would leave the view pointing at an id
+        // that no longer exists — its results silently shrink, and the row
+        // cannot be repaired from the UI (there is no account left to select).
+        // The operator removes it from the view first, then deletes.
+        let views = crate::account::access::views_referencing(&Self::list_all()?, account.id);
+        if !views.is_empty() {
+            let listed: Vec<String> = views.iter().map(|id| id.to_string()).collect();
+            return Err(raise_error!(
+                format!(
+                    "Account {} ({}) is a source of view account(s) {}; remove it from those views first",
+                    account.id,
+                    account.email,
+                    listed.join(", ")
+                ),
+                ErrorCode::Forbidden
+            ));
+        }
+
         Ok(())
     }
 
@@ -546,21 +829,7 @@ impl Account {
     /// than only logged.
     pub async fn delete_and_wait(account_id: u64) -> BichonResult<()> {
         let account = Self::get(account_id)?;
-
-        // Legal hold: an account under a hold is frozen — deleting the account
-        // would cascade-purge every message and attachment it holds, defeating
-        // the purpose of the hold. Refuse before any state is mutated. In the
-        // community edition `legal_hold` is always false, so this guard is a
-        // no-op there.
-        if account.is_on_hold() {
-            return Err(raise_error!(
-                format!(
-                    "Account {} ({}) is under a legal hold; deleting the account is disabled while the hold is active",
-                    account.id, account.email
-                ),
-                ErrorCode::Forbidden
-            ));
-        }
+        Self::ensure_deletable(&account)?;
 
         // Immediately stop scheduling to prevent new downloads
         if matches!(account.account_type, AccountType::IMAP) {
@@ -735,13 +1004,21 @@ impl Account {
         list_all_impl::<AccountModel>(DB_MANAGER.db())
     }
 
+    /// Resolve a delivery target by address. Used by the SMTP server's RCPT TO.
+    ///
+    /// **Views are skipped.** A view is commonly created with the same address
+    /// as the person it shows (the WebUI suggests it), and it never receives
+    /// mail. Without this filter a duplicate email could resolve to the view
+    /// depending on iteration order, and SMTP delivery to a real mailbox would
+    /// start failing with "not a local account". A view is not a delivery
+    /// target, so it must not shadow a real one.
     pub fn find_by_email(email: &str) -> BichonResult<Option<AccountModel>> {
         let all: Vec<AccountModel> = list_all_impl::<AccountModel>(DB_MANAGER.db())?;
         let target_email = email.trim().to_lowercase();
 
-        let first_match = all
-            .into_iter()
-            .find(|acc| acc.email.to_lowercase() == target_email);
+        let first_match = all.into_iter().find(|acc| {
+            !acc.is_view_account() && acc.email.to_lowercase() == target_email
+        });
 
         Ok(first_match)
     }
@@ -756,6 +1033,9 @@ impl Account {
                 id: account.id,
                 email: account.email,
                 name: account.account_name,
+                auth_type: account.imap.map(|imap| imap.auth.auth_type),
+                account_type: account.account_type,
+                kind: account.kind.as_ref().map(|k| k.role.clone()),
             })
             .collect::<Vec<MinimalAccount>>();
         Ok(result)
@@ -872,6 +1152,13 @@ impl Account {
         if request.extraction_rules.is_some() {
             new.extraction_rules = request.extraction_rules;
         }
+        if let Some(view) = request.view {
+            // Type and source validation happened in
+            // `validate_update_request`; assigning here keeps the view's
+            // filters editable without recreating the account (which would
+            // change its id and drop every permission granted on it).
+            new.view = Some(view);
+        }
         if request.archive_rules.is_some() {
             new.archive_rules = request.archive_rules;
         }
@@ -895,6 +1182,72 @@ impl Account {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ── Deletion guards ─────────────────────────────────────────────
+
+    /// The two account kinds that can never be deleted, and the reason the
+    /// caller gets back.
+    ///
+    /// Both branches return before the account collection is read, which is why
+    /// this test needs no database — deliberately: the third rule (a view
+    /// source) is covered by
+    /// `access::tests::views_referencing_finds_only_views_that_name_the_account`,
+    /// and a test that reached `list_all` could not run under a cargo filter
+    /// (`SETTINGS` is parsed from argv, so a filtered run has no data root).
+    #[test]
+    fn a_held_or_journal_account_is_never_deletable() {
+        let mut held = AccountModel::new(1, AccountCreateRequest::default()).unwrap();
+        held.legal_hold = true;
+        let error = AccountModel::ensure_deletable(&held).unwrap_err().to_string();
+        assert!(error.contains("legal hold"), "{error}");
+
+        let journal = AccountModel::new(
+            1,
+            AccountCreateRequest {
+                kind: Some(AccountKind {
+                    role: AccountKindRole::Journal,
+                    target_address: None,
+                }),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let error = AccountModel::ensure_deletable(&journal).unwrap_err().to_string();
+        assert!(error.contains("journal archive"), "{error}");
+    }
+
+    /// An audit record of a view edit exists only when the scope actually
+    /// moved: a rename must not leave a "view changed" line behind.
+    #[test]
+    fn view_config_change_is_recorded_only_when_the_scope_moved() {
+        let source = ViewSource {
+            account_id: 1,
+            any_participant: vec!["a@example.com".into()],
+            any_recipient: Vec::new(),
+        };
+        let narrow = ViewConfig {
+            sources: vec![source.clone()],
+        };
+        let wide = ViewConfig {
+            sources: vec![ViewSource {
+                account_id: 1,
+                any_participant: Vec::new(),
+                any_recipient: Vec::new(),
+            }],
+        };
+
+        assert!(ViewConfigChange::between(Some(&narrow), Some(&narrow)).is_none());
+        assert!(ViewConfigChange::between(None, None).is_none());
+
+        let widening = ViewConfigChange::between(Some(&narrow), Some(&wide))
+            .expect("dropping a filter is a change");
+        assert_eq!(widening.before, Some(narrow.clone()));
+        assert_eq!(widening.after, Some(wide.clone()));
+
+        // Attaching a view configuration to an account that had none.
+        let attached = ViewConfigChange::between(None, Some(&narrow)).expect("a change");
+        assert_eq!(attached.before, None);
+    }
 
     // ── Account name normalization ──────────────────────────────────
 
@@ -1388,10 +1741,148 @@ mod tests {
             archive_rules: None,
             extraction_rules: None,
             retention_days: None,
+            kind: None,
+            view: None,
         };
         let account = AccountModel::new(id, request).unwrap();
         insert_impl(DB_MANAGER.db(), account.clone()).unwrap();
         account
+    }
+
+    /// **Upgrade compatibility.** Rows written before `kind` and `view`
+    /// existed must deserialize into the current model. Both fields are
+    /// `Option` + `#[serde(default)]`, and this pins that: a backup restored
+    /// from an older release, or an in-place upgrade, must not fail to load an
+    /// account because a newer field is absent.
+    #[test]
+    fn account_rows_without_new_fields_deserialize() {
+        let account = AccountModel::new(
+            1,
+            AccountCreateRequest {
+                email: "legacy@test.example".to_string(),
+                enabled: true,
+                account_type: AccountType::NoSync,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        let mut value = serde_json::to_value(&account).unwrap();
+        let object = value.as_object_mut().unwrap();
+        // What an older build wrote: the keys simply are not there.
+        object.remove("kind");
+        object.remove("view");
+
+        let parsed: AccountModel = serde_json::from_value(value)
+            .expect("an account row from an older release must still parse");
+        assert!(parsed.kind.is_none());
+        assert!(parsed.view.is_none());
+        assert!(matches!(parsed.account_type, AccountType::NoSync));
+    }
+
+    /// The existing storage values are part of the on-disk format: an upgrade
+    /// must read `"IMAP"` and `"NoSync"` exactly as before.
+    #[test]
+    fn account_type_storage_names_are_stable() {
+        for (value, expected) in [
+            ("\"IMAP\"", AccountType::IMAP),
+            ("\"NoSync\"", AccountType::NoSync),
+            ("\"View\"", AccountType::View),
+        ] {
+            let parsed: AccountType = serde_json::from_str(value).unwrap();
+            assert_eq!(parsed, expected);
+            assert_eq!(serde_json::to_string(&expected).unwrap(), value);
+        }
+    }
+
+    /// A view shares its address with the person it shows (the WebUI suggests
+    /// exactly that), and it never receives mail. SMTP delivery resolution must
+    /// therefore skip views, or a real mailbox could become undeliverable
+    /// depending on iteration order.
+    #[tokio::test]
+    async fn a_view_never_shadows_a_delivery_target() {
+        init_test_env();
+        let email = "shadow-check@test.example";
+
+        let view = AccountModel::new(
+            1,
+            AccountCreateRequest {
+                email: email.to_string(),
+                enabled: true,
+                account_type: AccountType::View,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        insert_impl(DB_MANAGER.db(), view).unwrap();
+        assert!(
+            AccountModel::find_by_email(email).unwrap().is_none(),
+            "a view is not a delivery target"
+        );
+
+        let local = AccountModel::new(
+            2,
+            AccountCreateRequest {
+                email: email.to_string(),
+                enabled: true,
+                account_type: AccountType::NoSync,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        insert_impl(DB_MANAGER.db(), local).unwrap();
+        let found = AccountModel::find_by_email(email)
+            .unwrap()
+            .expect("the local account must be found despite the view sharing its address");
+        assert!(matches!(found.account_type, AccountType::NoSync));
+    }
+
+    /// The REST extractor does **not** use serde: it uses the `poem_openapi`
+    /// parser generated from the field types. That parser is what rejected an
+    /// array sent to a field still typed as `Option<String>`, so the accepted
+    /// wire shape is pinned here: arrays (including empty ones) are the format,
+    /// and an absent filter defaults to an empty list.
+    #[test]
+    fn view_source_arrays_parse_through_the_openapi_parser() {
+        use poem_openapi::types::ParseFromJSON;
+
+        let parsed = <ViewSource as ParseFromJSON>::parse_from_json(Some(
+            serde_json::json!({
+                "account_id": 7,
+                "any_participant": ["a@example.com", "b@example.com"],
+                "any_recipient": []
+            }),
+        ))
+        .expect("arrays must be accepted");
+        assert_eq!(parsed.account_id, 7);
+        assert_eq!(
+            parsed.any_participant,
+            vec!["a@example.com", "b@example.com"]
+        );
+        assert!(parsed.any_recipient.is_empty());
+
+        let absent = <ViewSource as ParseFromJSON>::parse_from_json(Some(
+            serde_json::json!({ "account_id": 8 }),
+        ))
+        .expect("an absent filter must default to an empty list");
+        assert!(absent.any_participant.is_empty());
+        assert!(absent.any_recipient.is_empty());
+    }
+
+    /// An older client (or a script) that predates `kind`/`view` keeps
+    /// working: both are optional on the request.
+    #[test]
+    fn create_request_without_new_fields_parses() {
+        let request: AccountCreateRequest = serde_json::from_str(
+            r#"{"email":"legacy-client@test.example","enabled":true,"use_dangerous":false,"account_type":"NoSync"}"#,
+        )
+        .expect("a request from an older client must still parse");
+        assert!(request.kind.is_none());
+        assert!(request.view.is_none());
+
+        let update: AccountUpdateRequest = serde_json::from_str(r#"{"enabled":false}"#)
+            .expect("an update from an older client must still parse");
+        assert!(update.view.is_none());
     }
 
     #[tokio::test]

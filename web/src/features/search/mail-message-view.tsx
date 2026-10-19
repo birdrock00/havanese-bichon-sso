@@ -40,6 +40,7 @@ import { useSearchContext } from './context';
 import { MailThreadDialog } from './thread-dialog';
 import useMinimalAccountList from '@/hooks/use-minimal-account-list';
 import { useTranslation } from 'react-i18next';
+import { useCurrentUser } from '@/hooks/use-current-user';
 import { NestedEmailDialog } from './nested-email-dialog';
 import AttachmentPreview, { type PreviewAttachment } from '@/features/attachment/attachment-preview';
 
@@ -124,6 +125,31 @@ export function MailMessageView({
 }: MailMessageViewProps) {
   const { t } = useTranslation()
   const { setToDelete, setOpen, setSelected, setEditTagsOpen } = useSearchContext();
+  // Actions are gated by the permission the server demands, on this message's
+  // own account. Missing ones stay visible but disabled, with the reason in
+  // the tooltip.
+  const { require_any_permission } = useCurrentUser();
+  const canEditTags = require_any_permission(
+    ['system:root', 'data:manage'],
+    envelope.account_id
+  );
+  const canDelete = require_any_permission(
+    ['system:root', 'data:delete', 'data:delete:all'],
+    envelope.account_id
+  );
+  const canDownload = require_any_permission(
+    ['system:root', 'data:raw:download', 'data:raw:download:all'],
+    envelope.account_id
+  );
+  const canThread = require_any_permission(
+    ['system:root', 'data:read', 'data:read:all'],
+    envelope.account_id
+  );
+  const canRestore = require_any_permission(
+    ['system:root', 'data:export:batch', 'data:export:batch:all'],
+    envelope.account_id
+  );
+  const noPermission = t('common.noPermission', 'No permission');
   const [content, setContent] = useState<string | null>(null);
   const [contentType, setContentType] = useState<'Plain' | 'Html' | null>(null);
   const [attachments, setAttachments] = useState<AttachmentInfo[] | null>(null);
@@ -282,6 +308,8 @@ export function MailMessageView({
               variant="ghost"
               size="icon"
               className="h-5 w-5 ml-0.5"
+              disabled={!canEditTags}
+              title={!canEditTags ? noPermission : undefined}
               onClick={() => setEditTagsOpen(true)}
             >
               <Pencil className="h-3 w-3" />
@@ -298,40 +326,66 @@ export function MailMessageView({
           <div className="flex items-center justify-start gap-3 text-xs text-gray-500">
             <Tooltip delayDuration={800}>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={handleDelete} className="hover:text-destructive">
+<span className="inline-flex">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDelete}
+                  disabled={!canDelete}
+                  className="hover:text-destructive"
+                >
                   <Trash2 className="h-4 w-4" />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('mail.delete')}</TooltipContent>
+              </span>
+</TooltipTrigger>
+              <TooltipContent>
+                {canDelete ? t('mail.delete') : noPermission}
+              </TooltipContent>
             </Tooltip>
             <Separator orientation="vertical" className="h-5" />
             <Tooltip delayDuration={800}>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={downloadEmlFile}>
+<span className="inline-flex">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={downloadEmlFile}
+                  disabled={!canDownload}
+                >
                   <Download className="h-4 w-4" />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('mail.download')}</TooltipContent>
+              </span>
+</TooltipTrigger>
+              <TooltipContent>
+                {canDownload ? t('mail.download') : noPermission}
+              </TooltipContent>
             </Tooltip>
             <Separator orientation="vertical" className="h-5" />
             <Tooltip delayDuration={800}>
               <TooltipTrigger asChild>
+<span className="inline-flex">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setThreadOpen(true)}
+                  disabled={!canThread}
                 >
                   <MessageSquareMore className="h-4 w-4" />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('mail.viewThread')}</TooltipContent>
+              </span>
+</TooltipTrigger>
+              <TooltipContent>
+                {canThread ? t('mail.viewThread') : noPermission}
+              </TooltipContent>
             </Tooltip>
             <Separator orientation="vertical" className="h-5" />
             <Tooltip delayDuration={800}>
               <TooltipTrigger asChild>
+<span className="inline-flex">
                 <Button
                   variant="ghost"
                   size="icon"
+                  disabled={!canRestore}
                   onClick={() => {
                     setSelected(new Map())
                     setOpen('restore')
@@ -339,8 +393,13 @@ export function MailMessageView({
                 >
                   <Upload className="h-4 w-4" />
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('restore_message.restore_to_imap', 'Restore Mail')}</TooltipContent>
+              </span>
+</TooltipTrigger>
+              <TooltipContent>
+                {canRestore
+                  ? t('restore_message.restore_to_imap', 'Restore Mail')
+                  : noPermission}
+              </TooltipContent>
             </Tooltip>
           </div>
         </>
@@ -392,6 +451,7 @@ export function MailMessageView({
                         {is_message && (
                           <Tooltip>
                             <TooltipTrigger asChild>
+<span className="inline-flex">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -402,7 +462,8 @@ export function MailMessageView({
                               >
                                 <MessageSquareMore className="h-4 w-4" />
                               </Button>
-                            </TooltipTrigger>
+                            </span>
+</TooltipTrigger>
                             <TooltipContent>{t('mail.viewNestedEmail', 'View Embedded Email')}</TooltipContent>
                           </Tooltip>
                         )}

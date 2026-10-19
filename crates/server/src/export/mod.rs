@@ -24,6 +24,12 @@
 //! raw messages into an mbox artifact under the data-dir temp folder,
 //! writing a per-message manifest for later compliance workflows.
 //!
+//! The scope is a set of account ids, **not** the search scope groups: a batch
+//! export is also what the dual-control gate queues, and the approval record
+//! carries those ids — the filter a view would add cannot be stored there yet,
+//! so an export through a filtered view is refused rather than run against the
+//! whole source account. See `rest::api::export::export_scope`.
+//!
 //! Jobs live in an in-memory registry; artifacts on disk. A TTL sweep
 //! (`sweep_expired`) reclaims artifacts after `EXPORT_TTL_SECS`.
 
@@ -1110,20 +1116,24 @@ async fn read_blob_content_hash(
 
 /// True when `raw` still contains a detached-attachment placeholder.
 fn contains_detach_placeholder(raw: &[u8]) -> bool {
-    const PREFIX: &[u8] = b"<<BICHON_DETACH_HASH:";
+    const PREFIX: &[u8] =
+        bichon_core::envelope::extractor::DETACH_PLACEHOLDER_PREFIX.as_bytes();
     raw.windows(PREFIX.len()).any(|window| window == PREFIX)
 }
 
 /// Returns the hashes of any `<<BICHON_DETACH_HASH:...>>` placeholders still
 /// present in `raw` whose blob is genuinely absent from the blob store.
 ///
-/// Placeholders whose blob exists are intentionally not reported: the blob
-/// store is keyed by the hash of the decoded attachment content while values
-/// hold the undecoded raw bytes, so reattaching can yield the same decoded
-/// content without byte-identical output (e.g. base64 line folding). Only a
-/// placeholder whose blob is truly missing is a real defect.
+/// Placeholders whose blob exists are intentionally not reported: legacy
+/// records store raw bytes under the hash of the decoded attachment
+/// content, so reattaching them can yield the same decoded content without
+/// byte-identical output (e.g. base64 line folding). Only a placeholder
+/// whose blob is truly missing is a real defect. Which hash domain a
+/// placeholder belongs to is documented on
+/// [`bichon_core::envelope::extractor::DETACH_PLACEHOLDER_PREFIX`].
 fn missing_attachment_hashes(raw: &[u8]) -> Vec<String> {
-    const PREFIX: &[u8] = b"<<BICHON_DETACH_HASH:";
+    const PREFIX: &[u8] =
+        bichon_core::envelope::extractor::DETACH_PLACEHOLDER_PREFIX.as_bytes();
     let mut missing = Vec::new();
     let mut search_cursor = 0;
     while let Some(pos) = raw[search_cursor..]

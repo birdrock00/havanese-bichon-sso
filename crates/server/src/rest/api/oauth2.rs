@@ -119,6 +119,7 @@ impl OAuth2Api {
             user: context.user.username.clone(),
             oauth2_id: id,
             name,
+            client_type: entity.client_type,
         });
         Ok(())
     }
@@ -145,11 +146,12 @@ impl OAuth2Api {
         let name = OAuth2::get(id)?
             .map(|o| o.description.unwrap_or_default())
             .unwrap_or_else(|| format!("oauth2-{id}"));
-        OAuth2::update(id, payload.0)?;
+        let updated = OAuth2::update(id, payload.0)?;
         emit(Event::OAuth2ConfigUpdated {
             user: context.user.username.clone(),
             oauth2_id: id,
             name,
+            client_type: updated.client_type,
         });
         Ok(())
     }

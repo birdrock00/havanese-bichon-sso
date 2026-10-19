@@ -198,10 +198,20 @@ export function MailboxPopover() {
         }
     }, [localOpen, activeAccountId, filter.account_ids, filter.mailbox_ids]);
 
+    // A view is not an account with folders: it stores nothing, so it has no
+    // mailbox list to ask for — and asking would be refused anyway (the
+    // endpoint needs `account:read:details` on the account, which a viewer
+    // holds on the view, not on the source). Folders therefore stay a filter
+    // for accounts the viewer can name directly.
+    const viewAccountIds = new Set(
+        minimalList.filter(a => a.account_type === 'View').map(a => a.id)
+    );
+    const isViewAccount = (id: number | undefined) => id !== undefined && viewAccountIds.has(id);
+
     const { data: activeMailboxes = [], isLoading: activeIsLoading } = useQuery({
         queryKey: ['search-mailboxes', activeAccountId],
         queryFn: async () => (await list_mailboxes(activeAccountId!, false)).mailboxes,
-        enabled: !!activeAccountId,      
+        enabled: !!activeAccountId && !isViewAccount(activeAccountId),
     });
 
     const treeData = React.useMemo(() => {
@@ -211,7 +221,7 @@ export function MailboxPopover() {
         return buildTree(filtered);
     }, [activeMailboxes, search]);
 
-    const disabled = accountIds.length === 0;
+    const disabled = accountIds.length === 0 || accountIds.every(isViewAccount);
 
     const handleApply = () => {
         setFilter(prev => ({
@@ -382,7 +392,7 @@ export function MailboxPopover() {
                                             <div key={i} className="h-3 bg-muted animate-pulse rounded w-full" />
                                         ))}
                                     </div>
-                                ) : activeAccountId ? (
+                                ) : activeAccountId && !isViewAccount(activeAccountId) ? (
                                     <RichTreeView
                                         multiSelect
                                         items={treeData}

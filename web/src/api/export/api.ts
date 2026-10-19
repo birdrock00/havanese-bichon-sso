@@ -108,10 +108,32 @@ export const previewExport = async (savedSearchId: string) => {
   return response.data;
 };
 
-export const createExport = async (savedSearchId: string) => {
-  const response = await axiosInstance.post<ExportJobView>("api/v1/exports", {
-    saved_search_id: savedSearchId,
-  });
+/** A queued acknowledgement, returned instead of a job when dual control is on
+ *  for `export.batch`. Nothing has been exported — `pending` is the
+ *  discriminator, because the ungated path never sets it. */
+export interface QueuedExport {
+  ok: false;
+  pending: true;
+  request_id: string;
+  expires_at?: number | null;
+}
+
+/** What starting an export returns: a job, or the queued acknowledgement. */
+export type ExportStartResult = ExportJobView | QueuedExport;
+
+export const is_queued_export = (
+  result: ExportStartResult
+): result is QueuedExport => (result as QueuedExport).pending === true;
+
+export const createExport = async (
+  savedSearchId: string
+): Promise<ExportStartResult> => {
+  const response = await axiosInstance.post<ExportStartResult>(
+    "api/v1/exports",
+    {
+      saved_search_id: savedSearchId,
+    }
+  );
   return response.data;
 };
 

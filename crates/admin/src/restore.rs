@@ -16,20 +16,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Disaster recovery: restore a backup point from S3 into an empty
-//! directory. Restore lives in `bichon-admin` (not the server binary) so a
-//! fresh disaster-recovery box — which has no data root yet — can run it.
+//! Disaster recovery: restore a backup point from the configured backup
+//! target into an empty directory. Restore lives in `bichon-admin` (not the
+//! server binary) so a fresh disaster-recovery box — which has no data root
+//! yet — can run it.
 //!
-//! The S3 backend connection details come from a JSON config file
-//! (`--config` / interactive prompt); restore deliberately does not read the
-//! local install's metadata store, so it needs no encryption password and
-//! runs unchanged on a fresh box.
+//! The backend connection details come from a JSON config file
+//! (`--config` / interactive prompt) — either an S3-compatible endpoint or a
+//! local directory. Restore deliberately does not read the local install's
+//! metadata store, so it needs no encryption password and runs unchanged on a
+//! fresh box.
 //!
 //! The interactive flow validates everything up front and tells the operator
-//! exactly which item is wrong: the config file, the S3 connection
-//! (endpoint / credentials / bucket / prefix are individually diagnosed), the
-//! target directories (R7 clean + disjoint), and the free space on each
-//! target's mount point — all before a single byte is written.
+//! exactly which item is wrong: the config file, the backend connection
+//! (an S3 endpoint's credentials/bucket/prefix, or a local directory's mount;
+//! each diagnosed individually), the target directories (R7 clean +
+//! disjoint), and the free space on each target's mount point — all before a
+//! single byte is written.
 //!
 //! The engine is the shared core restore ([`bichon_core::backup::restore`]):
 //! the community edition ships no audit replayer, so Pro/Enterprise audit
@@ -94,14 +97,15 @@ pub async fn run_cli(args: RestoreArgs, verify_only: bool) -> i32 {
 pub async fn run_interactive(theme: &ColorfulTheme, verify_only: bool) -> i32 {
     println!(
         "\n{}",
-        style("Restore a backup point from S3 into an empty directory.").bold()
+        style("Restore a backup point from the configured backup target into an empty directory.")
+            .bold()
     );
     println!(
         "{}\n",
         style("The target must be empty and disjoint from any live data root (R7).").dim()
     );
 
-    // ── 1+2: config file, then the S3 connection test ─────────────────────
+    // ── 1+2: config file, then the target connection test ─────────────────
     let (pre, mut opts) = loop {
         let path: String = Input::with_theme(theme)
             .with_prompt("Path to the restore config file (JSON, see README)")
@@ -121,7 +125,10 @@ pub async fn run_interactive(theme: &ColorfulTheme, verify_only: bool) -> i32 {
             .unwrap_or_default();
         let point = point.trim().to_string();
         let opts = RestoreOptions {
+            target_type: cfg.target_type,
             s3_uri: cfg.s3_uri(),
+            local_dir: cfg.local_dir.as_deref().map(PathBuf::from),
+            prefix: cfg.prefix.clone(),
             point: if point.is_empty() { None } else { Some(point) },
             into: Default::default(),
             index_dir: None,
@@ -134,7 +141,7 @@ pub async fn run_interactive(theme: &ColorfulTheme, verify_only: bool) -> i32 {
         };
         println!(
             "\n{}",
-            style(format!("Testing connection to {} ...", cfg.s3_uri())).dim()
+            style(format!("Testing connection to {} ...", cfg.target_display())).dim()
         );
         match restore_preflight(&opts).await {
             Ok(pre) => break (pre, opts),
@@ -264,9 +271,45 @@ fn diagnose_connection_error(e: &impl std::fmt::Debug) -> String {
     let msg = format!("{e:?}").to_lowercase();
     if msg.contains("no restore point found") {
         return format!(
-            "The S3 backend is reachable, but no restore point was found at the given \
+            "The backup target is reachable, but no restore point was found at the given \
              prefix. Check `prefix` in the config file (default: bichon-backup) and \
              make sure a backup has actually run.\nDetails: {e:?}"
+        );
+    }
+    // Local target: the failures are filesystem ones, and the actionable
+    // question behind each is "is the mount attached, writable, and not
+    // full?" — none of which the S3 branches below would say.
+    if msg.contains("canonicalize")
+        || msg.contains("no such file")
+        || msg.contains("does not exist")
+        || msg.contains("not a directory")
+    {
+        return format!(
+            "The local backup directory could not be opened. If it is a mount point, check \
+             that the volume is attached and mounted before running this.\nDetails: {e:?}"
+        );
+    }
+    if msg.contains("permission denied") || msg.contains("os error 13") {
+        return format!(
+            "The local backup directory is not readable by this user. Check the mount's \
+             permissions.\nDetails: {e:?}"
+        );
+    }
+    if msg.contains("read-only") || msg.contains("os error 30") {
+        return format!(
+            "The local backup directory is on a read-only mount. Remount it read-write.\n\
+             Details: {e:?}"
+        );
+    }
+    if msg.contains("no space left") || msg.contains("os error 28") {
+        return format!(
+            "The filesystem holding the local backup directory is full.\nDetails: {e:?}"
+        );
+    }
+    if msg.contains("stale file handle") || msg.contains("os error 116") {
+        return format!(
+            "The network filesystem handle went stale — the share was probably remounted. \
+             Remount the target and retry.\nDetails: {e:?}"
         );
     }
     if msg.contains("403")

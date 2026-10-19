@@ -20,15 +20,15 @@ use std::{io, net::SocketAddr, time::Duration};
 use base64::{prelude::BASE64_STANDARD, Engine as _};
 use bichon_core::{
     account::migration::{AccountModel, AccountType},
-    archive::imap::mailbox::{Attribute, AttributeEnum, MailBox},
+    archive::imap::mailbox::MailBox,
     backup::gate::WRITE_GATE,
     common::{auth::ClientContext, signal::SIGNAL_MANAGER},
     envelope::extractor::extract_envelope_from_smtp,
     error::BichonResult,
+    ext::journal,
     settings::cli::{EncryptionMode, SETTINGS},
     token::AccessTokenModel,
     users::{permissions::Permission, UserModel},
-    utils::create_hash,
 };
 use tokio::{
     io::{AsyncBufReadExt, AsyncRead, AsyncWrite, AsyncWriteExt},
@@ -94,7 +94,8 @@ pub async fn run_smtps_server(
                         tokio::spawn(async move {
                             match acceptor.accept(stream).await {
                                 Ok(tls_stream) => {
-                                    let res = timeout(GLOBAL_SESSION_TIMEOUT, handle_tls_connection(tls_stream, config)).await;
+                                    let peer_ip = addr.ip();
+                                    let res = timeout(GLOBAL_SESSION_TIMEOUT, handle_tls_connection(tls_stream, config, Some(peer_ip))).await;
                                     match res {
                                         Ok(Ok(_)) => tracing::debug!("SMTPS session from {addr} finished"),
                                         Ok(Err(e)) => tracing::debug!("SMTPS session error from {addr}: {e}"),
@@ -133,10 +134,21 @@ struct Session {
     auth_required: bool,
     tls_active: bool,
     auth_state: AuthState,
+    /// The peer address, used by the journaling gate. `None` when the
+    /// transport could not report one — which the gate treats as "not
+    /// allowed", never as "local and trusted".
+    peer_ip: Option<std::net::IpAddr>,
+    /// This transaction is a journal delivery to the configured target, not a
+    /// delivery to a local account.
+    journal: bool,
 }
 
 impl Session {
-    const fn new(auth_required: bool, tls_active: bool) -> Self {
+    const fn new(
+        auth_required: bool,
+        tls_active: bool,
+        peer_ip: Option<std::net::IpAddr>,
+    ) -> Self {
         Self {
             mail_from: None,
             rcpt_to: Vec::new(),
@@ -145,12 +157,28 @@ impl Session {
             auth_required,
             tls_active,
             auth_state: AuthState::None,
+            peer_ip,
+            journal: false,
         }
     }
 
     fn reset(&mut self) {
         self.mail_from = None;
         self.rcpt_to.clear();
+        self.journal = false;
+    }
+
+    /// Whether an **unauthenticated** peer may deliver at all.
+    ///
+    /// Only consulted when journaling is enabled: with the feature off this is
+    /// always true, so the community server's behaviour is unchanged even for
+    /// peers that would fail an allow-list. Authenticated submissions are
+    /// never affected — the gate exists to protect the unauthenticated
+    /// journaling inlet, not to second-guess an authenticated user.
+    fn peer_allowed(&self) -> bool {
+        !journal::enabled()
+            || self.authenticated
+            || journal::allow_peer(self.peer_ip, self.tls_active)
     }
 }
 
@@ -165,7 +193,8 @@ enum AuthState {
 
 /// Handle a plain TCP connection with optional STARTTLS upgrade.
 async fn handle_connection(stream: TcpStream, config: SmtpConfig) -> io::Result<()> {
-    let mut session = Session::new(config.auth_required, false);
+    let peer_ip = stream.peer_addr().ok().map(|a| a.ip());
+    let mut session = Session::new(config.auth_required, false, peer_ip);
 
     // Use buffered I/O over the raw stream
     let mut stream = BufStream::new(stream);
@@ -202,11 +231,15 @@ async fn handle_connection(stream: TcpStream, config: SmtpConfig) -> io::Result<
     Ok(())
 }
 
-async fn handle_tls_connection<S>(stream: S, config: SmtpConfig) -> io::Result<()>
+async fn handle_tls_connection<S>(
+    stream: S,
+    config: SmtpConfig,
+    peer_ip: Option<std::net::IpAddr>,
+) -> io::Result<()>
 where
     S: AsyncRead + AsyncWrite + Unpin,
 {
-    let session = Session::new(config.auth_required, true);
+    let session = Session::new(config.auth_required, true, peer_ip);
     handle_tls_session(stream, session, config).await
 }
 
@@ -356,6 +389,20 @@ where
     } else if cmd.starts_with("MAIL FROM:") {
         if session.auth_required && !session.authenticated {
             stream.write_all(b"530 Authentication required\r\n").await?;
+        } else if !session.peer_allowed() {
+            // Journaling is enabled and this unauthenticated peer is neither
+            // TLS-protected nor on the allow-list. Refusing here rather than
+            // at RCPT keeps the rejection visible to the sending server with
+            // the address it tried to use.
+            tracing::warn!(
+                "SMTP: refused journal-era delivery from unauthenticated peer {:?}",
+                session.peer_ip
+            );
+            stream
+                .write_all(
+                    b"554 5.7.1 Delivery not authorized for this client address\r\n",
+                )
+                .await?;
         } else {
             let addr = extract_address(&trimmed[10..]);
             let mut allowed = true;
@@ -366,6 +413,11 @@ where
             }
 
             if allowed {
+                // A new transaction always starts clean. Without this, a
+                // journal transaction that failed with 451 would leave the
+                // flag set and the client's retry would be refused as a
+                // second recipient.
+                session.journal = false;
                 session.mail_from = Some(addr);
                 stream.write_all(b"250 OK\r\n").await?;
             } else {
@@ -373,7 +425,7 @@ where
             }
         }
     } else if cmd.starts_with("RCPT TO:") {
-        if !session.rcpt_to.is_empty() {
+        if !session.rcpt_to.is_empty() || session.journal {
             stream
                 .write_all(b"452 4.5.3 Too many recipients, try again in a new transaction\r\n")
                 .await?;
@@ -386,8 +438,28 @@ where
             stream
                 .write_all(b"503 MAIL FROM required first\r\n")
                 .await?;
+        } else if !session.peer_allowed() {
+            stream
+                .write_all(
+                    b"554 5.7.1 Delivery not authorized for this client address\r\n",
+                )
+                .await?;
         } else {
             let addr = extract_address(&trimmed[8..]);
+
+            // The journaling target is not a local mailbox and must never be
+            // resolved through `find_by_email`: it is a routing decision, and
+            // resolving it as an account would either 550 (no such account, or
+            // an IMAP account — the old "journaling is not supported" case) or
+            // file the firehose into whatever account happens to share the
+            // address.
+            if journal::is_target(&addr) {
+                session.journal = true;
+                stream.write_all(b"250 OK\r\n").await?;
+                stream.flush().await?;
+                return Ok(CommandResult::Continue);
+            }
+
             let account_result = AccountModel::find_by_email(addr.as_str());
 
             match account_result {
@@ -423,13 +495,18 @@ where
                     }
 
                     if is_allowed {
+                        // Only a local (NoSync) account accepts SMTP delivery.
+                        // An IMAP account is synced from its own server, and a
+                        // view stores nothing at all — refusing both keeps the
+                        // archive from acquiring a second, unsynced copy.
                         if !matches!(account.account_type, AccountType::NoSync) {
                             tracing::warn!(
-                                "SMTP: Rejected journaling attempt to IMAP account <{}>",
-                                addr
+                                "SMTP: Rejected delivery to non-local account <{}> (type {:?})",
+                                addr,
+                                account.account_type
                             );
                             let err = format!(
-                                "550 5.7.1 <{}>: Not a Bichon local account, journaling is not supported\r\n",
+                                "550 5.7.1 <{}>: Not a local account that accepts SMTP delivery\r\n",
                                 account.email
                             );
                             stream.write_all(err.as_bytes()).await?;
@@ -460,8 +537,14 @@ where
             stream
                 .write_all(b"503 MAIL FROM required first\r\n")
                 .await?;
-        } else if session.rcpt_to.is_empty() {
+        } else if session.rcpt_to.is_empty() && !session.journal {
             stream.write_all(b"503 RCPT TO required first\r\n").await?;
+        } else if !session.peer_allowed() {
+            stream
+                .write_all(
+                    b"554 5.7.1 Delivery not authorized for this client address\r\n",
+                )
+                .await?;
         } else {
             stream
                 .write_all(b"354 End data with <CR><LF>.<CR><LF>\r\n")
@@ -484,19 +567,47 @@ where
                     return Err(e);
                 }
             };
-            match parse_email(&data, session).await {
+            // Journal deliveries take a different path: the handler decides
+            // which account they belong to, and the raw bytes are exactly what
+            // the tenant sent (a 250 here means "recorded", not "delivered to
+            // a mailbox").
+            let outcome = if session.journal {
+                journal::ingest(&data).await.map(|ingest| {
+                    tracing::debug!(
+                        account_id = ingest.account_id,
+                        duplicate = ingest.duplicate,
+                        "SMTP: journal delivery archived"
+                    );
+                })
+            } else {
+                parse_email(&data, session).await
+            };
+
+            match outcome {
                 Ok(_) => {
                     stream
                         .write_all(b"250 2.0.0 OK: queued in Bichon\r\n")
                         .await?;
-                    tracing::debug!(
-                        "SMTP: Message accepted and archived for {} recipients",
-                        session.rcpt_to.len()
-                    );
+                    if !session.journal {
+                        tracing::debug!(
+                            "SMTP: Message accepted and archived for {} recipients",
+                            session.rcpt_to.len()
+                        );
+                    }
                     session.reset();
                 }
                 Err(e) => {
-                    tracing::error!("SMTP: Critical error during parse_email: {:?}", e);
+                    let context = if session.journal {
+                        "journal ingest"
+                    } else {
+                        "parse_email"
+                    };
+                    tracing::error!("SMTP: Critical error during {context}: {:?}", e);
+                    // A failure is transient by default: the sending server
+                    // retries with 451, which is what we want for a backup
+                    // window or a momentarily unavailable database. A retry of
+                    // the same report is idempotent (the content hash is
+                    // already in the dedup cache), so no duplicate is created.
                     stream
                         .write_all(
                             b"451 4.3.0 Error: local error in processing, try again later\r\n",
@@ -632,41 +743,13 @@ async fn parse_email(data: &[u8], session: &Session) -> BichonResult<()> {
             return Ok(());
         }
     };
-    let mailbox_id = create_hash(rcpt.id, "INBOX");
-
-    // The INBOX row is owned by the IMAP sync, which maintains `uid_validity`,
-    // `highest_uid` and `uid_next` on it. `batch_upsert` replaces the *whole*
-    // row, so blindly upserting here (with those fields = None) clobbers the
-    // IMAP-maintained state back to None. The next reconcile then sees
-    // `uid_validity` change from Some -> None, treats the mailbox as invalid,
-    // and wipes + rebuilds it — silently losing the local copy of a large
-    // mailbox when that rebuild is interrupted (see #297).
-    //
-    // We only need the row to *exist* so the journaled envelope can attach to
-    // it, so create it only when it is missing and otherwise leave the
-    // IMAP-owned row untouched.
-    if MailBox::find_mailbox(rcpt.id, mailbox_id)?.is_none() {
-        let mailbox = MailBox {
-            id: mailbox_id,
-            account_id: rcpt.id,
-            name: "INBOX".into(),
-            delimiter: Some("/".to_string()),
-            attributes: vec![Attribute {
-                attr: AttributeEnum::Extension,
-                extension: Some("CreatedByBichon".into()),
-            }],
-            exists: 0,
-            unseen: None,
-            uid_next: None,
-            uid_validity: None,
-            highest_uid: None,
-        };
-
-        if let Err(e) = MailBox::batch_upsert(&[mailbox]) {
-            tracing::error!("SMTP: Failed to upsert mailbox for {}: {:?}", rcpt.email, e);
-            return Err(e.into());
-        }
-    }
+    // Create the INBOX row only when it is missing — see
+    // `MailBox::ensure_local_inbox` for why a blind upsert would corrupt an
+    // IMAP-maintained mailbox.
+    let mailbox_id = MailBox::ensure_local_inbox(rcpt.id).map_err(|e| {
+        tracing::error!("SMTP: Failed to upsert mailbox for {}: {:?}", rcpt.email, e);
+        e
+    })?;
 
     extract_envelope_from_smtp(data, rcpt.id, mailbox_id)
         .await

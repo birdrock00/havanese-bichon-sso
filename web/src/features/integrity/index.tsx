@@ -30,6 +30,7 @@ import {
   Play,
   RefreshCw,
   ShieldCheck,
+  Wrench,
   X,
   XCircle,
 } from 'lucide-react'
@@ -51,6 +52,7 @@ import {
 } from '@/api/integrity/api'
 import { cn } from '@/lib/utils'
 import { useCurrentUser } from '@/hooks/use-current-user'
+import { RepairMessageDialog } from '@/features/repair/repair-message-dialog'
 import { useEdition } from '@/hooks/use-edition'
 import { toast } from '@/hooks/use-toast'
 import {
@@ -796,9 +798,27 @@ function FailuresTable({
   const { t } = useTranslation()
   const failures = report.failures
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [repairTarget, setRepairTarget] = useState<FailureRow | null>(null)
+  const { require_any_permission } = useCurrentUser()
 
   const toggle = (key: string) =>
     setExpanded((prev) => ({ ...prev, [key]: !prev[key] }))
+
+  // Only the two missing-blob kinds can be repaired. `attachment_count_mismatch`
+  // returns `failed` before a repair is ever attempted, and `blob_read_error`
+  // (present but corrupt) is deliberately not touched by the repair path — a
+  // button for either would only ever write a meaningless history entry.
+  //
+  // Gated per row rather than by the page-level `canManage`: that one checks
+  // account:manage, while repairing needs data:manage, so a compliance officer
+  // holding only compliance:audit must not see the button.
+  const canRepair = (f: FailureRow) =>
+    (f.failure_type === 'missing_email_blob' ||
+      f.failure_type === 'missing_attachment_blob') &&
+    require_any_permission(
+      ['system:root', 'data:manage'],
+      f.account_id
+    )
 
   return (
     <div className='flex min-h-0 flex-1 flex-col gap-2'>
@@ -857,6 +877,9 @@ function FailuresTable({
                   <TableHead className='text-right'>
                     {t('integrity.size', 'Size')}
                   </TableHead>
+                  <TableHead className='text-right'>
+                    {t('integrity.actions', 'Actions')}
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -901,10 +924,23 @@ function FailuresTable({
                         <TableCell className='text-right'>
                           {formatBytes(f.size)}
                         </TableCell>
+                        <TableCell className='text-right'>
+                          {canRepair(f) && (
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              className='h-7 gap-1 px-2 text-xs'
+                              onClick={() => setRepairTarget(f)}
+                            >
+                              <Wrench className='h-3.5 w-3.5' />
+                              {t('repair_message.confirm', 'Repair')}
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                       {isOpen && (
                         <TableRow className='bg-muted/40'>
-                          <TableCell colSpan={5} className='p-4'>
+                          <TableCell colSpan={6} className='p-4'>
                             <FailureDetail f={f} />
                           </TableCell>
                         </TableRow>
@@ -927,6 +963,16 @@ function FailuresTable({
           </div>
         </>
       )}
+
+      {/* The report is a stored snapshot in integrity.db; a repair does not
+          change it, so there is nothing to refetch here. */}
+      <RepairMessageDialog
+        open={repairTarget !== null}
+        onOpenChange={(open) => !open && setRepairTarget(null)}
+        accountId={repairTarget?.account_id}
+        envelopeId={repairTarget?.envelope_id}
+        subject={repairTarget?.subject ?? undefined}
+      />
     </div>
   )
 }

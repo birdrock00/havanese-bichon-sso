@@ -199,6 +199,8 @@ mod tests {
             archive_rules: None,
             extraction_rules: None,
             retention_days: None,
+            kind: None,
+            view: None,
         };
         let mut account = AccountModel::new(1, request).unwrap();
         account.retention_days = retention_days;
@@ -299,6 +301,30 @@ mod tests {
     /// Same shared root as the migration tests so the globals freeze once
     /// regardless of which test module touches them first. Unique per process
     /// so a previous `cargo test` run can never leak index state in here.
+    /// The four sweep tests share one memdb and one Tantivy index. Committing
+    /// to that index from several test threads at once makes Windows refuse the
+    /// files (`PermissionDenied`), so they are serialized — the same convention
+    /// as `backup::BACKUP_STATE_TESTS` and `repair::DB_TESTS`.
+    static SWEEP_TESTS: std::sync::LazyLock<tokio::sync::Mutex<()>> =
+        std::sync::LazyLock::new(|| tokio::sync::Mutex::new(()));
+
+    /// Wait (bounded) for a backup window to close.
+    ///
+    /// `retention_sweep` deliberately does nothing while one is open
+    /// (`WRITE_GATE.is_paused()`), and the backup tests in this binary open
+    /// one; a skipped round looks exactly like a round that found nothing, so
+    /// an assertion on the count cannot tell them apart.
+    async fn wait_for_gate_open() -> bool {
+        use crate::backup::gate::WRITE_GATE;
+        for _ in 0..300 {
+            if !WRITE_GATE.is_paused() {
+                return true;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        false
+    }
+
     static TEST_ENV: Once = Once::new();
     fn init_sweep_env() {
         TEST_ENV.call_once(|| {
@@ -356,6 +382,7 @@ mod tests {
 
     #[tokio::test]
     async fn sweep_purges_old_envelopes_and_keeps_recent() {
+        let _serial = SWEEP_TESTS.lock().await;
         init_sweep_env();
         let account =
             insert_account_with_retention(9101, "sweep-purge@test.example", Some(30));
@@ -366,17 +393,30 @@ mod tests {
         write_envelope("sweep-old-1", account.id, old, old).await;
         write_envelope("sweep-new-1", account.id, recent, recent).await;
 
-        retention_sweep().await.unwrap();
-
-        assert_eq!(
-            envelope_count(account.id).await,
-            1,
-            "old envelope must be purged, recent kept"
+        // A skipped round and a round that found nothing are indistinguishable
+        // from the count alone, so wait for the backup window to close and give
+        // it a couple of rounds (the gate can be paused between the check and
+        // the call). Bounded, and serialized by `SWEEP_TESTS`, so this cannot
+        // become a commit storm against the shared index.
+        let mut purged = false;
+        for _ in 0..3 {
+            assert!(wait_for_gate_open().await, "a backup window stayed open");
+            retention_sweep().await.unwrap();
+            if envelope_count(account.id).await == 1 {
+                purged = true;
+                break;
+            }
+        }
+        assert!(
+            purged,
+            "old envelope must be purged and the recent one kept (the sweep was skipped by a \
+             backup window on every attempt)"
         );
     }
 
     #[tokio::test]
     async fn sweep_skips_account_on_legal_hold() {
+        let _serial = SWEEP_TESTS.lock().await;
         init_sweep_env();
         let account = insert_account_with_retention(9102, "sweep-held@test.example", Some(30));
         AccountModel::place_legal_hold(account.id, 7, Some("test hold".into())).unwrap();
@@ -396,6 +436,7 @@ mod tests {
 
     #[tokio::test]
     async fn sweep_skips_account_with_retention_disabled() {
+        let _serial = SWEEP_TESTS.lock().await;
         init_sweep_env();
         let account = insert_account_with_retention(9103, "sweep-disabled@test.example", None);
 

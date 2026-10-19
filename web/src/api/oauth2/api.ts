@@ -60,3 +60,15 @@ export const get_oauth2_tokens = async (accountId: number) => {
     const response = await axiosInstance.get<OAuth2Tokens>(`api/v1/oauth2-tokens/${accountId}`);
     return response.data;
 };
+
+
+export interface ExternalOAuth2TokenRequest {
+    oauth2_id: number;
+    access_token: string;
+    refresh_token: string;
+}
+
+export const store_external_oauth2_token = async (accountId: number, data: ExternalOAuth2TokenRequest) => {
+    const response = await axiosInstance.post(`api/v1/store-external-oauth2-token/${accountId}`, data);
+    return response.data;
+};

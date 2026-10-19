@@ -25,7 +25,7 @@ use std::{
 };
 
 use crate::{
-    account::{migration::AccountModel, stats::AccountStats},
+    account::{access::ViewScopeGroup, migration::AccountModel, stats::AccountStats},
     backup::gate::{BACKUP_ACQUIRE_TIMEOUT, WRITE_GATE},
     common::{paginated::DataPage, signal::SIGNAL_MANAGER},
     dashboard::{DashboardStats, Group, LargestEmail, TimeBucket},
@@ -71,7 +71,10 @@ use tantivy::{
     },
     collector::{Count, DocSetCollector, FacetCollector, TopDocs},
     indexer::{LogMergePolicy, UserOperation},
-    query::{AllQuery, BooleanQuery, EmptyQuery, Occur, Query, QueryParser, RangeQuery, TermQuery},
+    query::{
+        AllQuery, BooleanQuery, EmptyQuery, Occur, Query, QueryParser, RangeQuery, RegexQuery,
+        TermQuery,
+    },
     schema::{IndexRecordOption, Value},
     DocAddress, Index, IndexReader, IndexWriter, Order, TantivyDocument, Term,
 };
@@ -549,33 +552,142 @@ impl IndexManager {
         Box::new(boolean_query)
     }
 
+    /// Build the query for one search.
+    ///
+    /// `scope` replaces the old "authorized account ids" set: each group is
+    /// `(account_id, optional exact participant filter)`, ORed together and
+    /// ANDed with everything else. An ordinary search passes one unbounded
+    /// group per readable account and behaves exactly as before; a view search
+    /// passes one filtered group per view source (see
+    /// `crate::account::access::search_scope`).
+/// Exact, case-insensitive address match on the stored address fields.
+///
+/// `f_from` / `f_to` / `f_cc` / `f_bcc` are `STRING` fields holding one value
+/// per address, so an anchored case-insensitive regex matches exactly that
+/// address. This is deliberately *not* the full-text `any_participant` filter:
+/// that one tokenizes and stems, so `zhang@firma.de` would also match unrelated
+/// mail mentioning `firma.de` — acceptable for a convenience filter, not for
+/// an authorization boundary. `crate::account::access` compares the same way,
+/// so a hit the search returns is a message the viewer may open.
+fn participant_exact_query(
+    addresses: &[String],
+    include_sender: bool,
+) -> BichonResult<Box<dyn Query>> {
+    let f = SchemaTools::email_fields();
+    // Each address is matched against the requested address fields; addresses
+    // within one field-filter are ORed (a view may name several people or
+    // several addresses of one person). The caller ANDs the participant group
+    // with the recipient group.
+    //
+    // Blank addresses are dropped rather than compiled: the empty pattern
+    // matches *every* term, so a malformed row would turn a filter into a
+    // wildcard and offer messages the read check refuses. Creation and update
+    // reject such a value, but a row can predate that check or be written by
+    // hand, and the two sides must still agree. See
+    // `tests::view_filter_and_read_check_agree`.
+    let addresses: Vec<&String> = addresses
+        .iter()
+        .filter(|address| !address.trim().is_empty())
+        .collect();
+    if addresses.is_empty() {
+        return Ok(Self::match_nothing());
+    }
+    let mut address_queries: Vec<(Occur, Box<dyn Query>)> = Vec::with_capacity(addresses.len());
+    for address in addresses {
+        let pattern = format!("(?i){}", Self::regex_escape(address.trim()));
+        let fields = if include_sender {
+            vec![f.f_from, f.f_to, f.f_cc, f.f_bcc]
+        } else {
+            vec![f.f_to, f.f_cc, f.f_bcc]
+        };
+        let mut field_queries: Vec<(Occur, Box<dyn Query>)> = Vec::with_capacity(fields.len());
+        for field in fields {
+            let query = RegexQuery::from_pattern(&pattern, field)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            field_queries.push((Occur::Should, Box::new(query)));
+        }
+        address_queries.push((
+            Occur::Should,
+            Box::new(BooleanQuery::new(field_queries)) as Box<dyn Query>,
+        ));
+    }
+    Ok(Box::new(BooleanQuery::new(address_queries)))
+}
+
+/// A query that matches nothing.
+///
+/// Used where a filter degenerates to no usable constraint: the read check
+/// refuses those messages, so the index must not offer them. `u64::MAX` is not
+/// an account id any account can have (`id!` hashes a token), and the same
+/// trick is used for an empty scope in `filter_query`.
+fn match_nothing() -> Box<dyn Query> {
+    let f = SchemaTools::email_fields();
+    Box::new(TermQuery::new(
+        Term::from_field_u64(f.f_account_id, u64::MAX),
+        IndexRecordOption::Basic,
+    ))
+}
+
+/// Escape regex metacharacters so an address is matched literally.
+fn regex_escape(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for ch in text.chars() {
+        if matches!(
+            ch,
+            '\\' | '.' | '^' | '$' | '*' | '+' | '?' | '(' | ')' | '[' | ']' | '{' | '}' | '|' | '/'
+        ) {
+            out.push('\\');
+        }
+        out.push(ch);
+    }
+    out
+}
+
     fn filter_query(
         &self,
-        accounts: Option<HashSet<u64>>,
+        scope: Option<&[ViewScopeGroup]>,
         filter: EmailSearchFilter,
     ) -> BichonResult<Box<dyn Query>> {
         let f = SchemaTools::email_fields();
         let mut subqueries: Vec<(Occur, Box<dyn Query>)> = Vec::new();
 
-        if let Some(authorized_ids) = accounts {
-            if authorized_ids.is_empty() {
+        if let Some(groups) = scope {
+            if groups.is_empty() {
                 let term = Term::from_field_u64(f.f_account_id, u64::MAX);
                 subqueries.push((
                     Occur::Must,
                     Box::new(TermQuery::new(term, IndexRecordOption::Basic)),
                 ));
             } else {
-                let mut account_must_queries = Vec::new();
-                for id in authorized_ids {
-                    let term = Term::from_field_u64(f.f_account_id, id);
-                    account_must_queries.push((
-                        Occur::Should,
+                let mut group_queries: Vec<(Occur, Box<dyn Query>)> = Vec::new();
+                for group in groups {
+                    let term = Term::from_field_u64(f.f_account_id, group.account_id);
+                    let mut must: Vec<(Occur, Box<dyn Query>)> = vec![(
+                        Occur::Must,
                         Box::new(TermQuery::new(term, IndexRecordOption::Basic)) as Box<dyn Query>,
+                    )];
+                    // A view source's filter is ANDed with the caller's own
+                    // search: a view can only narrow, never widen.
+                    if !group.any_participant.is_empty() {
+                        must.push((
+                            Occur::Must,
+                            Self::participant_exact_query(&group.any_participant, true)?,
+                        ));
+                    }
+                    if !group.any_recipient.is_empty() {
+                        must.push((
+                            Occur::Must,
+                            Self::participant_exact_query(&group.any_recipient, false)?,
+                        ));
+                    }
+                    group_queries.push((
+                        Occur::Should,
+                        Box::new(BooleanQuery::new(must)) as Box<dyn Query>,
                     ));
                 }
                 subqueries.push((
                     Occur::Must,
-                    Box::new(BooleanQuery::new(account_must_queries)),
+                    Box::new(BooleanQuery::new(group_queries)),
                 ));
             }
         }
@@ -1509,6 +1621,29 @@ impl IndexManager {
         Ok(all_facets)
     }
 
+    /// Facet counts over a **resolved view scope**.
+    ///
+    /// The counts are taken over the same query a scoped search runs, so a
+    /// filtered view source contributes exactly the tags of the messages the
+    /// view exposes — a tag that appears on no visible message is not listed,
+    /// and no tag is counted that the viewer cannot see. That is why this is
+    /// not [`Self::get_all_tags`] with an account list: account ids alone would
+    /// either miss a view (it owns no documents) or report a filtered source's
+    /// whole account.
+    pub fn get_all_tags_scoped(
+        &self,
+        scope: Option<&[ViewScopeGroup]>,
+    ) -> BichonResult<Vec<TagCount>> {
+        let searcher = self.reader.searcher();
+        // `account_ids` is empty by construction: the scope encodes the
+        // accounts, and `filter_query` would AND a second constraint on top.
+        let query = self.filter_query(scope, EmailSearchFilter::default())?;
+
+        let mut all_facets = Vec::new();
+        Self::collect_facets_recursive(&query, &searcher, "/", &mut all_facets)?;
+        Ok(all_facets)
+    }
+
     pub fn get_all_contacts(
         &self,
         accounts: Option<HashSet<u64>>,
@@ -1762,9 +1897,46 @@ impl IndexManager {
         desc: bool,
         sort_by: SortBy,
     ) -> BichonResult<DataPage<Envelope>> {
+        let scope: Option<Vec<ViewScopeGroup>> = accounts.map(|ids| {
+            ids.into_iter()
+                .map(ViewScopeGroup::unbounded)
+                .collect::<Vec<_>>()
+        });
+        self.search_inner(scope.as_deref(), filter, page, page_size, desc, sort_by)
+    }
+
+    /// Search with an explicit scope, as produced by
+    /// `crate::account::access::search_scope`.
+    ///
+    /// The scope already encodes which accounts may be read and with which
+    /// per-source filter, so `filter.account_ids` is cleared here — leaving it
+    /// set would apply a second, conflicting account constraint (and would
+    /// contain the view's own id, which matches no document).
+    pub fn search_scoped(
+        &self,
+        scope: Option<Vec<ViewScopeGroup>>,
+        mut filter: EmailSearchFilter,
+        page: u64,
+        page_size: u64,
+        desc: bool,
+        sort_by: SortBy,
+    ) -> BichonResult<DataPage<Envelope>> {
+        filter.account_ids = None;
+        self.search_inner(scope.as_deref(), filter, page, page_size, desc, sort_by)
+    }
+
+    fn search_inner(
+        &self,
+        scope: Option<&[ViewScopeGroup]>,
+        filter: EmailSearchFilter,
+        page: u64,
+        page_size: u64,
+        desc: bool,
+        sort_by: SortBy,
+    ) -> BichonResult<DataPage<Envelope>> {
         assert!(page > 0, "Page number must be greater than 0");
         assert!(page_size > 0, "Page size must be greater than 0");
-        let query = self.filter_query(accounts, filter)?;
+        let query = self.filter_query(scope, filter)?;
         let searcher = self.create_searcher()?;
         let total = searcher
             .search(&query, &Count)
@@ -3129,6 +3301,12 @@ mod tests {
 
     #[tokio::test]
     async fn update_envelope_tags_guard_fires_for_held_account() {
+        // The account insert and tag update write through the backup write
+        // gate, which backup tests pause during their capture window;
+        // serialize against them via the shared state-test lock (see the
+        // note on BACKUP_STATE_TESTS in backup/manager.rs).
+        let _run_guard = crate::backup::BACKUP_STATE_TESTS.lock().await;
+
         use std::sync::Once;
 
         use crate::account::migration::{AccountModel, AccountType};
@@ -3173,6 +3351,8 @@ mod tests {
             archive_rules: None,
             extraction_rules: None,
             retention_days: None,
+            kind: None,
+            view: None,
         };
         let account = AccountModel::new(9021, request).unwrap();
         insert_impl(DB_MANAGER.db(), account.clone()).unwrap();
@@ -3185,9 +3365,11 @@ mod tests {
 
         // No hold: the guard passes and the call returns Ok (the envelope id
         // simply does not exist) — proving the guard is what blocks the held case.
+        let result = ENVELOPE_MANAGER.update_envelope_tags(req.clone()).await;
         assert!(
-            ENVELOPE_MANAGER.update_envelope_tags(req.clone()).await.is_ok(),
-            "tag update for a non-held account should reach the index path"
+            result.is_ok(),
+            "tag update for a non-held account should reach the index path: {:?}",
+            result.err()
         );
 
         // Under a hold: refused with Forbidden before touching the index.
@@ -3307,5 +3489,244 @@ mod tests {
             score_top[0].0,
             score_top[1].0
         );
+    }
+
+    /// The view filter must match **exactly one address**, case-insensitively,
+    /// and only in the requested fields. This is the authorization-relevant
+    /// half of view support: the full-text `any_participant` filter tokenizes
+    /// and stems, so it would also match unrelated mail from the same domain.
+    #[test]
+    fn participant_exact_query_matches_only_the_address() {
+        fn doc(id: &str, from: &str, to: &str) -> TantivyDocument {
+            let f = SchemaTools::email_fields();
+            let mut doc = TantivyDocument::new();
+            doc.add_text(f.f_id, id);
+            doc.add_text(f.f_from, from);
+            doc.add_text(f.f_to, to);
+            doc
+        }
+
+        let index = Index::create_in_ram(SchemaTools::email_schema());
+        index.tokenizers().register("euro", EuroTokenizer::new());
+        {
+            let mut writer = index.writer_with_num_threads(1, 15_000_000).unwrap();
+            // Sent by the person, to someone else.
+            writer
+                .add_document(doc("sent", "Zhang@Firma.DE", "other@example.com"))
+                .unwrap();
+            // Received by the person (mixed case on purpose).
+            writer
+                .add_document(doc("received", "someone@firma.de", "ZHANG@firma.de"))
+                .unwrap();
+            // Same domain, different local part: must not match.
+            writer
+                .add_document(doc("other", "someone@firma.de", "not-zhang@firma.de"))
+                .unwrap();
+            // Matches only through the second address in the multi-address
+            // filter below.
+            writer
+                .add_document(doc("second-address", "x@elsewhere.example", "other@example.com"))
+                .unwrap();
+            writer.commit().unwrap();
+        }
+
+        let reader = index.reader().unwrap();
+        reader.reload().unwrap();
+        let searcher = reader.searcher();
+
+        let recipients = IndexManager::participant_exact_query(&["zhang@firma.de".to_string()], false).unwrap();
+        assert_eq!(
+            searcher.search(&recipients, &Count).unwrap(),
+            1,
+            "recipient filter must match exactly the message addressed to the person"
+        );
+
+        let participants = IndexManager::participant_exact_query(&["ZHANG@FIRMA.DE".to_string()], true).unwrap();
+        assert_eq!(
+            searcher.search(&participants, &Count).unwrap(),
+            2,
+            "participant filter must match both sent and received mail, case-insensitively"
+        );
+
+        // A bare domain is not an address and must match nothing.
+        let domain_only = IndexManager::participant_exact_query(&["firma.de".to_string()], true).unwrap();
+        assert_eq!(searcher.search(&domain_only, &Count).unwrap(), 0);
+
+        // Several addresses are ORed within the field: a view over a team (or
+        // a person with two addresses) matches every named participant.
+        let two_people = IndexManager::participant_exact_query(
+            &["zhang@firma.de".to_string(), "other@example.com".to_string()],
+            true,
+        )
+        .unwrap();
+        assert_eq!(
+            searcher.search(&two_people, &Count).unwrap(),
+            3,
+            "each named address must match: sent, received, and the second address's mail"
+        );
+    }
+
+    /// The index folds case the way `crate::account::access` does, including
+    /// **outside ASCII**.
+    ///
+    /// `(?i)` in the regex is Unicode-aware while `eq_ignore_ascii_case` is
+    /// not, so folding only ASCII in the read check would let a search return a
+    /// message that opening then refuses — the one thing the two
+    /// implementations are not allowed to disagree on. Pinned from this side
+    /// with the same address pair as
+    /// `access::tests::participant_matching_folds_case_like_the_index`.
+    #[test]
+    fn participant_exact_query_folds_case_the_same_way() {
+        fn doc(id: &str, from: &str, to: &str) -> TantivyDocument {
+            let f = SchemaTools::email_fields();
+            let mut doc = TantivyDocument::new();
+            doc.add_text(f.f_id, id);
+            doc.add_text(f.f_from, from);
+            doc.add_text(f.f_to, to);
+            doc
+        }
+
+        let index = Index::create_in_ram(SchemaTools::email_schema());
+        index.tokenizers().register("euro", EuroTokenizer::new());
+        {
+            let mut writer = index.writer_with_num_threads(1, 15_000_000).unwrap();
+            writer
+                .add_document(doc("umlaut-sender", "JÜRGEN@firma.de", "other@example.com"))
+                .unwrap();
+            writer
+                .add_document(doc("umlaut-recipient", "someone@firma.de", "info@MÜNCHEN.de"))
+                .unwrap();
+            writer.commit().unwrap();
+        }
+
+        let reader = index.reader().unwrap();
+        reader.reload().unwrap();
+        let searcher = reader.searcher();
+
+        let sender = IndexManager::participant_exact_query(&["jürgen@firma.de".to_string()], true).unwrap();
+        assert_eq!(
+            searcher.search(&sender, &Count).unwrap(),
+            1,
+            "the index must fold non-ASCII case, or the read check cannot agree with it"
+        );
+
+        let recipient = IndexManager::participant_exact_query(&["info@münchen.de".to_string()], false).unwrap();
+        assert_eq!(searcher.search(&recipient, &Count).unwrap(), 1);
+
+        // Folding must not become a substring match.
+        let partial = IndexManager::participant_exact_query(&["ürgen@firma.de".to_string()], true).unwrap();
+        assert_eq!(searcher.search(&partial, &Count).unwrap(), 0);
+    }
+
+    /// **The view invariant, checked across both layers.**
+    ///
+    /// A message the search returns must be a message the read check accepts —
+    /// otherwise a viewer sees a row and gets a `403` when opening it, which is
+    /// exactly what a permission boundary must never do. The two sides are
+    /// independent implementations (a tantivy regex over the address fields;
+    /// exact comparison against the envelope), so each fixture is pushed
+    /// through both and the answers are compared.
+    ///
+    /// The fixtures are the shapes the two could disagree on: ASCII and
+    /// non-ASCII case, an address that is a prefix of another, a bare domain, a
+    /// blank address (an empty regex matches *every* term), and an address that
+    /// appears only in Cc/Bcc.
+    #[test]
+    fn view_filter_and_read_check_agree() {
+        use crate::account::access::participant_matches;
+        use crate::store::envelope::Envelope;
+
+        // (from, to, cc, bcc)
+        let fixtures: [(&str, &str, &str, &str); 7] = [
+            ("zhang@firma.de", "other@example.com", "", ""),
+            ("Zhang@Firma.DE", "ZHANG@firma.de", "", ""),
+            ("JÜRGEN@firma.de", "other@example.com", "", ""),
+            ("someone@firma.de", "info@MÜNCHEN.de", "", ""),
+            ("not-zhang@firma.de", "other@example.com", "", ""),
+            ("other@example.com", "zhang@firma.de", "cc@firma.de", "bcc@firma.de"),
+            ("other@example.com", "", "", ""),
+        ];
+        // Filters a view can carry, plus the values that must match nothing.
+        let filters = [
+            "zhang@firma.de",
+            "ZHANG@FIRMA.DE",
+            "jürgen@firma.de",
+            "JÜRGEN@FIRMA.DE",
+            "info@münchen.de",
+            "cc@firma.de",
+            "bcc@firma.de",
+            "other@example.com",
+            "firma.de",
+            "zhang",
+            "not-zhang@firma.de",
+            "unknown@firma.de",
+            "",
+            "   ",
+        ];
+
+        let f = SchemaTools::email_fields();
+        let index = Index::create_in_ram(SchemaTools::email_schema());
+        index.tokenizers().register("euro", EuroTokenizer::new());
+        {
+            let mut writer = index.writer_with_num_threads(1, 15_000_000).unwrap();
+            for (i, (from, to, cc, bcc)) in fixtures.iter().enumerate() {
+                let mut doc = TantivyDocument::new();
+                doc.add_text(f.f_id, format!("doc{i}"));
+                doc.add_text(f.f_from, *from);
+                for (field, value) in [(f.f_to, to), (f.f_cc, cc), (f.f_bcc, bcc)] {
+                    if !value.is_empty() {
+                        doc.add_text(field, *value);
+                    }
+                }
+                writer.add_document(doc).unwrap();
+            }
+            writer.commit().unwrap();
+        }
+
+        let reader = index.reader().unwrap();
+        reader.reload().unwrap();
+        let searcher = reader.searcher();
+
+        for (i, (from, to, cc, bcc)) in fixtures.iter().enumerate() {
+            let list = |value: &&str| {
+                if value.is_empty() {
+                    Vec::new()
+                } else {
+                    vec![value.to_string()]
+                }
+            };
+            let envelope = Envelope {
+                from: from.to_string(),
+                to: list(to),
+                cc: list(cc),
+                bcc: list(bcc),
+                ..Default::default()
+            };
+
+            for filter in filters {
+                for include_sender in [true, false] {
+                    let address_query =
+                        IndexManager::participant_exact_query(&[filter.to_string()], include_sender)
+                            .unwrap();
+                    let id_query = TermQuery::new(
+                        Term::from_field_text(f.f_id, &format!("doc{i}")),
+                        IndexRecordOption::Basic,
+                    );
+                    let both: Box<dyn Query> = Box::new(BooleanQuery::new(vec![
+                        (Occur::Must, Box::new(id_query) as Box<dyn Query>),
+                        (Occur::Must, address_query),
+                    ]));
+                    let indexed = searcher.search(&both, &Count).unwrap() == 1;
+                    let checked = participant_matches(&envelope, filter, include_sender);
+
+                    assert_eq!(
+                        indexed, checked,
+                        "doc{i} {from:?}/{to:?}/{cc:?}/{bcc:?} with filter {filter:?} \
+                         (include_sender={include_sender}): the index says {indexed}, \
+                         the read check says {checked}"
+                    );
+                }
+            }
+        }
     }
 }

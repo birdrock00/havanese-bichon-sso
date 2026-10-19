@@ -23,7 +23,7 @@ use bichon_core::common::paginated::DataPage;
 use bichon_core::error::code::ErrorCode;
 use bichon_core::ext::event_bus::{emit, Event};
 use bichon_core::message::attachment::AttachmentMetadata;
-use bichon_core::message::search::search_attachment_impl;
+use bichon_core::message::search::search_attachment_scoped;
 use bichon_core::message::search::AttachmentSearchRequest;
 use bichon_core::message::tags::TagCount;
 use bichon_core::message::tags::TagsRequest;
@@ -53,12 +53,6 @@ impl AttachmentApi {
         payload: Json<AttachmentSearchRequest>,
         context: WrappedContext,
     ) -> ApiResult<Json<DataPage<AttachmentModel>>> {
-        let authorized_ids: Option<HashSet<u64>> =
-            if context.has_permission(None, Permission::DATA_READ_ALL) {
-                None
-            } else {
-                Some(context.user.account_access_map.keys().cloned().collect())
-            };
         let search_text = payload
             .0
             .filter()
@@ -67,7 +61,15 @@ impl AttachmentApi {
             .unwrap_or_default()
             .trim()
             .to_string();
-        let result = search_attachment_impl(authorized_ids, payload.0)?;
+        // Expand view accounts like the message search does. Only sources
+        // without a participant filter can contribute: the attachment index
+        // carries the parent's sender but not its recipients, so a filtered
+        // source is excluded rather than guessed at.
+        let scope = bichon_core::account::access::search_scope(
+            &context,
+            payload.0.filter().account_ids.as_ref(),
+        )?;
+        let result = search_attachment_scoped(scope, payload.0)?;
         if !search_text.is_empty() {
             emit(Event::SearchPerformed {
                 query: search_text,
@@ -118,12 +120,11 @@ impl AttachmentApi {
         &self,
         context: WrappedContext,
     ) -> ApiResult<Json<Vec<TagCount>>> {
-        let authorized_ids: Option<HashSet<u64>> =
-            if context.has_permission(None, Permission::DATA_READ_ALL) {
-                None
-            } else {
-                Some(context.user.account_access_map.keys().cloned().collect())
-            };
+        // Views are expanded to their **unfiltered** sources: these aggregates
+        // are account-level queries that cannot evaluate a source's participant
+        // filter, so a filtered source contributes nothing rather than its
+        // whole account (see `account::access::aggregate_accounts`).
+        let authorized_ids = bichon_core::account::access::aggregate_accounts(&context)?;
         Ok(Json(ATTACHMENT_MANAGER.get_all_tags(authorized_ids)?))
     }
 
@@ -176,12 +177,11 @@ impl AttachmentApi {
         &self,
         context: WrappedContext,
     ) -> ApiResult<Json<HashSet<String>>> {
-        let authorized_ids: Option<HashSet<u64>> =
-            if context.has_permission(None, Permission::DATA_READ_ALL) {
-                None
-            } else {
-                Some(context.user.account_access_map.keys().cloned().collect())
-            };
+        // Views are expanded to their **unfiltered** sources: these aggregates
+        // are account-level queries that cannot evaluate a source's participant
+        // filter, so a filtered source contributes nothing rather than its
+        // whole account (see `account::access::aggregate_accounts`).
+        let authorized_ids = bichon_core::account::access::aggregate_accounts(&context)?;
         Ok(Json(ATTACHMENT_MANAGER.get_all_senders(authorized_ids)?))
     }
 
@@ -195,12 +195,11 @@ impl AttachmentApi {
         &self,
         context: WrappedContext,
     ) -> ApiResult<Json<AttachmentMetadata>> {
-        let authorized_ids: Option<HashSet<u64>> =
-            if context.has_permission(None, Permission::DATA_READ_ALL) {
-                None
-            } else {
-                Some(context.user.account_access_map.keys().cloned().collect())
-            };
+        // Views are expanded to their **unfiltered** sources: these aggregates
+        // are account-level queries that cannot evaluate a source's participant
+        // filter, so a filtered source contributes nothing rather than its
+        // whole account (see `account::access::aggregate_accounts`).
+        let authorized_ids = bichon_core::account::access::aggregate_accounts(&context)?;
         Ok(Json(
             ATTACHMENT_MANAGER.collect_attachment_metadata(authorized_ids)?,
         ))

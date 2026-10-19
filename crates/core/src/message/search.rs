@@ -21,6 +21,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
 use crate::{
+    common::auth::ClientContext,
     common::paginated::DataPage,
     error::{code::ErrorCode, BichonResult},
     raise_error,
@@ -155,6 +156,29 @@ pub fn search_messages_impl(
     )
 }
 
+/// Search with a pre-resolved scope (account + per-source filter groups).
+///
+/// Used by the REST layer after `crate::account::access::search_scope`, which
+/// expands view accounts into their sources with the view's filters. The
+/// request's own `account_ids` are ignored: the scope already encodes them,
+/// and a view id would otherwise be applied as a second constraint that
+/// matches no document.
+pub fn search_messages_scoped(
+    scope: Option<Vec<crate::account::access::ViewScopeGroup>>,
+    request: EmailSearchRequest,
+) -> BichonResult<DataPage<Envelope>> {
+    request.validate()?;
+    let sort_by = resolve_sort_by(request.sort_by, has_text_filter(&request.filter));
+    ENVELOPE_MANAGER.search_scoped(
+        scope,
+        request.filter,
+        request.page,
+        request.page_size,
+        request.desc.unwrap_or(true),
+        sort_by,
+    )
+}
+
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct AttachmentSearchFilter {
@@ -232,6 +256,86 @@ pub fn search_attachment_impl(
         request.desc.unwrap_or(true),
         sort_by,
     )
+}
+
+/// Attachment search with a scope resolved from view accounts. See
+/// `AttachmentManager::search_scoped` for why filtered sources are excluded.
+pub fn search_attachment_scoped(
+    scope: Option<Vec<crate::account::access::ViewScopeGroup>>,
+    request: AttachmentSearchRequest,
+) -> BichonResult<DataPage<AttachmentModel>> {
+    request.validate()?;
+    let has_text = request.filter().text.is_some() || request.filter().subject.is_some();
+    let sort_by = resolve_sort_by(request.sort_by, has_text);
+    ATTACHMENT_MANAGER.search_scoped(
+        scope,
+        request.filter,
+        request.page,
+        request.page_size,
+        request.desc.unwrap_or(true),
+        sort_by,
+    )
+}
+
+/// The contact addresses a caller can see — the search UI's suggestion list.
+///
+/// Views are expanded, because a view owns no documents: aggregating by the
+/// caller's account ids alone returned an empty list to every viewer. One
+/// implementation for the REST endpoint and the MCP tool, so the two cannot
+/// answer differently.
+///
+/// * An **unfiltered** source is aggregated straight from the index.
+/// * A **filtered** source is sampled instead (the most recent matching
+///   messages): the filter is part of the authorization boundary, so addresses
+///   that appear only in messages the view does not expose must not be
+///   suggested. This is a suggestion list, not a completeness claim — which is
+///   why sampling is acceptable here and would not be in a search result.
+pub fn contacts_in_scope(context: &ClientContext) -> BichonResult<HashSet<String>> {
+    let Some(groups) = crate::account::access::search_scope(context, None)? else {
+        // Unrestricted reader: every account.
+        return ENVELOPE_MANAGER.get_all_contacts(None);
+    };
+
+    let mut contacts: HashSet<String> = HashSet::new();
+
+    let unbounded: HashSet<u64> = groups
+        .iter()
+        .filter(|group| group.is_unfiltered())
+        .map(|group| group.account_id)
+        .collect();
+    if !unbounded.is_empty() {
+        contacts.extend(ENVELOPE_MANAGER.get_all_contacts(Some(unbounded))?);
+    }
+
+    const CONTACT_SAMPLE: u64 = 2_000;
+    for group in groups.iter().filter(|group| !group.is_unfiltered()) {
+        let page = ENVELOPE_MANAGER.search_scoped(
+            Some(vec![group.clone()]),
+            EmailSearchFilter::default(),
+            1,
+            CONTACT_SAMPLE,
+            true,
+            SortBy::DATE,
+        )?;
+        for envelope in page.items {
+            collect_contacts(&envelope, &mut contacts);
+        }
+    }
+
+    Ok(contacts)
+}
+
+/// Collect every address that appears in an envelope's participant headers.
+fn collect_contacts(envelope: &Envelope, out: &mut HashSet<String>) {
+    for address in std::iter::once(&envelope.from)
+        .chain(envelope.to.iter())
+        .chain(envelope.cc.iter())
+        .chain(envelope.bcc.iter())
+    {
+        if !address.is_empty() {
+            out.insert(address.clone());
+        }
+    }
 }
 
 #[cfg(test)]

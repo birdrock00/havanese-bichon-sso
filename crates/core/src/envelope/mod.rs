@@ -18,4 +18,5 @@
 
 pub mod extractor;
 pub mod meta;
+pub mod repair;
 pub mod utils;

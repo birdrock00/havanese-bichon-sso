@@ -80,14 +80,10 @@ pub struct ImportEmls;
 
 impl ImportEmls {
     pub async fn do_import(mut request: BatchEmlRequest) -> BichonResult<BatchEmlResult> {
-        let account = AccountModel::check_account_exists(request.account_id)?;
-
-        if !account.enabled {
-            return Err(raise_error!(
-                "The account is disabled and cannot be used for this operation.".into(),
-                ErrorCode::InvalidParameter
-            ));
-        }
+        // One validator for every import entry point: enabled, plain `NoSync`,
+        // and neither the journal archive nor a view. The EML batch path used
+        // to duplicate part of this inline and missed the journal check.
+        let account = validate_import_account(request.account_id)?;
 
         let mailbox_id = match account.account_type {
             AccountType::IMAP => {
@@ -105,6 +101,14 @@ impl ImportEmls {
                         ErrorCode::ResourceNotFound
                     )),
                 }
+            }
+            // A view is rejected by `validate_import_account`; this arm keeps
+            // the match exhaustive and fails closed if that ever changes.
+            AccountType::View => {
+                return Err(raise_error!(
+                    "Import is not allowed into a view account.".into(),
+                    ErrorCode::InvalidParameter
+                ));
             }
             AccountType::NoSync => {
                 let mailbox = MailBox {
@@ -370,7 +374,8 @@ pub fn detect_text_file(bytes: &[u8]) -> bool {
     printable as f64 / total as f64 >= 0.90
 }
 
-/// Validate that the target account exists, is enabled, and is NoSync type.
+/// Validate that the target account exists, is enabled, and is a plain NoSync
+/// account.
 fn validate_import_account(account_id: u64) -> BichonResult<AccountModel> {
     let account = AccountModel::check_account_exists(account_id)?;
     if !account.enabled {
@@ -386,12 +391,35 @@ fn validate_import_account(account_id: u64) -> BichonResult<AccountModel> {
             ErrorCode::InvalidParameter
         ));
     }
+    // Accounts with a special role have no storage of their own to import
+    // into:
+    //
+    // * A **view** is an authorization/query construct. Its searches are
+    //   expanded to its source accounts and its read checks authorize against
+    //   those sources, so messages written under the view's own account id
+    //   would never be found by a search and never pass a read check — a data
+    //   black hole.
+    // * A **journal** archive is the one complete copy of what the customer's
+    //   mail system journaled. Importing into it would mix foreign mail into
+    //   that record and destroy exactly the provenance the journal exists to
+    //   provide.
+    if account.kind.is_some() {
+        return Err(raise_error!(
+            "Import is not allowed into the journal archive; import into a plain local account instead."
+                .into(),
+            ErrorCode::InvalidParameter
+        ));
+    }
     Ok(account)
 }
 
 /// Resolve or create a mailbox/folder for the given account.
 pub(super) fn resolve_mailbox(account: &AccountModel, folder: &str) -> BichonResult<u64> {
     match account.account_type {
+        AccountType::View => Err(raise_error!(
+            "Import is not allowed into a view account.".into(),
+            ErrorCode::InvalidParameter
+        )),
         AccountType::IMAP => {
             // Shouldn't reach here (validated above), but handle gracefully
             let all_mailboxes = MailBox::list_all(account.id)?;

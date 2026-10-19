@@ -29,7 +29,13 @@ export type SearchDialogType =
   | 'edit-tags'
   | 'update-tags'
   | 'restore'
+  | 'repair'
   | 'delete-mailbox'
+  /// The GDPR Art. 17 erasure request form. Its own dialog rather than a mode
+  /// of the delete dialog: the two ask for different things (a typed
+  /// confirmation versus a recorded assessment) and one of them leaves a
+  /// record a supervisory authority can read.
+  | 'gdpr-erasure'
 
 export type { DateDisplayMode }
 
@@ -61,6 +67,11 @@ interface SearchContextType {
   handleTagToggle: (tag: string) => void
   editTagsOpen: boolean
   setEditTagsOpen: (open: boolean) => void
+  /// Kept out of `SearchDialogType` on purpose: that union is driven by
+  /// `useDialogState`, whose setter toggles, so the history drawer would
+  /// become mutually exclusive with the dialogs instead of layering over them.
+  repairHistoryOpen: boolean
+  setRepairHistoryOpen: (open: boolean) => void
   dateDisplay: DateDisplayMode
   setDateDisplay: (mode: DateDisplayMode) => void
 }

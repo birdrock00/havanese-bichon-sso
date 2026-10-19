@@ -72,6 +72,39 @@ impl MemDbModel for MailBox {
 }
 
 impl MailBox {
+    /// Ensure an account has an INBOX row and return its id.
+    ///
+    /// Shared by the SMTP ingest path and the journal handler. The row is
+    /// created **only when it is missing**: on a synced account the INBOX row
+    /// is owned by the IMAP sync, which maintains `uid_validity`,
+    /// `highest_uid` and `uid_next`; a blind upsert with those fields `None`
+    /// would make the next reconcile treat the mailbox as invalid and rebuild
+    /// it, losing the local copy of a large mailbox if the rebuild is
+    /// interrupted (#297). For a local (NoSync) account there is no IMAP owner,
+    /// so creating the row is the whole job.
+    pub fn ensure_local_inbox(account_id: u64) -> BichonResult<u64> {
+        let mailbox_id = crate::utils::create_hash(account_id, "INBOX");
+        if Self::find_mailbox(account_id, mailbox_id)?.is_none() {
+            let mailbox = MailBox {
+                id: mailbox_id,
+                account_id,
+                name: "INBOX".into(),
+                delimiter: Some("/".to_string()),
+                attributes: vec![Attribute {
+                    attr: AttributeEnum::Extension,
+                    extension: Some("CreatedByBichon".into()),
+                }],
+                exists: 0,
+                unseen: None,
+                uid_next: None,
+                uid_validity: None,
+                highest_uid: None,
+            };
+            Self::batch_upsert(&[mailbox])?;
+        }
+        Ok(mailbox_id)
+    }
+
     pub fn encoded_name(&self) -> String {
         encode_mailbox_name!(&self.name)
     }

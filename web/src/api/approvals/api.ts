@@ -28,6 +28,8 @@ export const OP_ACCOUNT_DELETE = 'account.delete'
 export const OP_MAILBOX_DELETE = 'mailbox.delete'
 export const OP_MESSAGE_DELETE = 'message.delete'
 export const OP_TOKEN_REVOKE = 'token.revoke'
+export const OP_EXPORT_BATCH = 'export.batch'
+export const OP_GDPR_ERASURE = 'gdpr.erasure'
 
 /**
  * A request's lifecycle.
@@ -77,6 +79,37 @@ export type ApprovalTarget =
        *  is read by approvers, exported as evidence and forwarded to a SIEM, and
        *  a live credential must not reach any of those. */
       fingerprint: string
+    }
+  | {
+      kind: 'export'
+      saved_search_id: string
+      saved_search_name: string
+      /** `mbox`. A string, not an enum: the ledger stays readable to whoever
+       *  opens the raw row. */
+      format: string
+      /** The accounts the requester could export from when the request was
+       *  made. `null` means all accounts (the unscoped permission). Frozen at
+       *  request time, so a role change while it waits cannot widen what the
+       *  approval covers. */
+      account_ids: number[] | null
+      /** Approximate, from the export preview the requester saw. */
+      messages: number
+      size_bytes: number
+    }
+  | {
+      kind: 'erasure'
+      /** The data subject the request is about, as the operator recorded it. */
+      subject: string
+      /** How the affected messages were identified. */
+      criteria: string
+      /** The operator's written reason for believing no statutory retention
+       *  obligation applies. Required at submission — the approver is being
+       *  asked to sign a deletion, and this is what they are signing. */
+      assessment: string
+      /** The frozen message set. The erasure deletes exactly what was
+       *  assessed, not whatever matches the criteria later. */
+      by_account: Record<string, string[]>
+      messages: number
     }
 
 /** One approval request. `result` is only present once an approval executed. */
@@ -134,6 +167,25 @@ export type ApprovalOutcomeItem =
       error?: string | null
     }
   | { kind: 'token'; user_id: number; username: string; ok: boolean; error?: string | null }
+  | {
+      kind: 'export'
+      /** Empty when the export never started — there is no job to name. */
+      export_id: string
+      saved_search_name: string
+      ok: boolean
+      error?: string | null
+    }
+  | {
+      kind: 'erasure'
+      /** The data subject, so the exported evidence reads as a person rather
+       *  than as an account number. */
+      subject: string
+      account_id: number
+      requested: number
+      deleted: number
+      ok: boolean
+      error?: string | null
+    }
 
 /** Either shape, since a request's op decides which one it produced. */
 export type ApprovalResultItem = BatchReleaseItem | ApprovalOutcomeItem
@@ -196,6 +248,38 @@ export async function list_approvals(
 export async function get_approval(id: string): Promise<ApprovalRequest> {
   const { data } = await axiosInstance.get<ApprovalRequest>(
     `api/v1/approvals/${encodeURIComponent(id)}`
+  )
+  return data
+}
+
+/** The outcome of submitting a GDPR erasure request.
+ *
+ *  `pending` is the discriminator, exactly as on the gated community
+ *  endpoints: dual control queued the request and nothing has been erased.
+ *  With the policy off the server runs the erasure on this one signature and
+ *  answers `ok: true` with the per-account result. */
+export interface ErasureSubmitResult {
+  ok: boolean
+  pending: boolean
+  request_id?: string
+  expires_at?: number | null
+  result?: ApprovalOutcomeItem[] | null
+}
+
+/** Record a GDPR Art. 17 erasure request.
+ *
+ *  `messages` maps account id to the message ids the operator selected. The
+ *  server freezes that set: the erasure covers exactly what was assessed, not
+ *  whatever matches the criteria later. */
+export async function create_erasure_request(payload: {
+  subject: string
+  criteria: string
+  assessment: string
+  messages: Record<number, string[]>
+}): Promise<ErasureSubmitResult> {
+  const { data } = await axiosInstance.post<ErasureSubmitResult>(
+    'api/v1/approvals/erasure-requests',
+    payload
   )
   return data
 }

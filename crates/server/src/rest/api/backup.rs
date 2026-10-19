@@ -24,16 +24,16 @@
 //! enabled. Both are gated on `system:root` **or** `backup:manage` (admins
 //! pass automatically), so an existing install needs no role migration.
 //!
-//! The browser shows restore points straight from the S3 engine
+//! The browser shows restore points straight from the configured target
 //! ([`BackupEngine`], design doc §9): every committed manifest with its
 //! object composition, plus direct download of the audit delta JSONL.gz —
 //! the timestamped compliance export artifact.
 
 use bichon_core::backup::backend::EngineBackend;
-use bichon_core::backup::config::{self, BackupConfig};
+use bichon_core::backup::config::{self, BackupConfig, BackupTargetType};
 use bichon_core::backup::manager::{self, BackupTrigger, BACKUP_MANAGER};
 use bichon_core::backup::manifest::Manifest;
-use bichon_core::backup::model::{BackupRecord, BackupRunStatus};
+use bichon_core::backup::model::BackupRecord;
 use bichon_core::backup::retention::RetentionPolicy;
 use bichon_core::backup::schedule;
 use bichon_core::error::code::ErrorCode;
@@ -81,26 +81,34 @@ struct BackupStatusView {
     schedule: String,
     /// RFC 3339 of the next scheduled occurrence (or `None` if invalid).
     next_run_at: Option<String>,
+    /// Which backend runs write to (`s3` / `local`), and where it points.
+    /// After a target change the history below belongs to the *previous*
+    /// target, so this is how the status card answers "where are my backups
+    /// going right now?".
+    target: String,
 }
 
 /// Effective backup configuration for the WebUI form. Secrets never
 /// round-trip: credentials are exposed only as `*_set` flags.
 ///
-/// The form is **S3-only** (design doc §9): endpoint / bucket / region /
-/// prefix / access key / secret key, plus enabled, schedule and the
-/// structured retention policy. The search indices are always part of every
-/// backup point (no toggle).
+/// The form covers both target types (design doc §9): an S3-compatible
+/// endpoint (endpoint / bucket / region / access key / secret key) or a local
+/// directory, plus enabled, schedule and the structured retention policy. The
+/// search indices are always part of every backup point (no toggle).
 #[derive(serde::Serialize, poem_openapi::Object)]
 struct BackupConfigView {
     /// Whether the backup feature is enabled.
     enabled: bool,
     /// Cron expression (UTC) for scheduled backups.
     schedule: String,
-    /// Object-store prefix under the bucket (`bichon-backup` by default).
+    /// Object-store prefix — under the bucket for an S3 target, or under the
+    /// local directory (`bichon-backup` by default).
     prefix: String,
     /// Structured retention policy (`keep_last` / `keep_daily` /
     /// `keep_weekly` / `keep_monthly`).
     retention: RetentionPolicy,
+    /// Which target the fields below describe: `s3` or `local`.
+    target_type: BackupTargetType,
     /// S3 endpoint (`http://…` for MinIO/R2/Wasabi style, empty for AWS).
     s3_endpoint: Option<String>,
     /// S3 region.
@@ -111,22 +119,28 @@ struct BackupConfigView {
     s3_access_key_set: bool,
     /// Whether an S3 secret key is configured (page override or env).
     s3_secret_key_set: bool,
+    /// Absolute path of the local backup directory. Not a secret — the
+    /// operator has to see and edit it. Retained while the active target is
+    /// S3 so switching back and forth is lossless.
+    local_dir: Option<String>,
 }
 
 /// WebUI backup-configuration update. `None` leaves a field unchanged; secrets
 /// follow the SIEM convention: `""` clears, `"********"` keeps, anything else
-/// replaces.
+/// replaces. `local_dir` is not a secret, so `""` clears it directly.
 #[derive(serde::Deserialize, poem_openapi::Object)]
 struct BackupConfigUpdate {
     enabled: Option<bool>,
     schedule: Option<String>,
     prefix: Option<String>,
     retention: Option<RetentionPolicy>,
+    target_type: Option<BackupTargetType>,
     s3_endpoint: Option<String>,
     s3_region: Option<String>,
     s3_bucket: Option<String>,
     s3_access_key: Option<String>,
     s3_secret_key: Option<String>,
+    local_dir: Option<String>,
 }
 
 /// One restore point in the manifest browser.
@@ -461,17 +475,23 @@ fn status_view() -> BackupStatusView {
         last_skipped_objects: last_skipped,
         schedule: config::schedule(),
         next_run_at: schedule::next_run(&config::schedule()),
+        target: config::destination(),
     }
 }
 
-/// Summary fields of the last successful run, read from the persisted record
-/// (the manager state tracks the snapshot id only).
+/// Summary fields of the most recent successful run **against the currently
+/// configured destination**.
+///
+/// Scoped on purpose: the run history is one global list, but a restore point
+/// only exists on the target that wrote it. Without the scope, changing the
+/// target would leave the status card reporting a manifest id that the
+/// manifest browser — which reads the current target only — cannot find.
 fn last_success_summary() -> (Option<String>, Option<u64>, Option<u64>, Option<u64>) {
-    let mut records = BackupRecord::list_recent(20);
-    records.retain(|r| r.status == BackupRunStatus::Success);
-    match records.first().and_then(|r| r.summary.as_ref()) {
+    match BackupRecord::last_success_for(&config::destination())
+        .and_then(|r| r.summary)
+    {
         Some(s) => (
-            Some(s.manifest_id.clone()),
+            Some(s.manifest_id),
             Some(s.uploaded_bytes),
             Some(s.new_objects),
             Some(s.skipped_objects),
@@ -489,11 +509,13 @@ fn backup_config_view() -> BackupConfigView {
         schedule: config::schedule(),
         prefix: config::prefix(),
         retention: config::retention_policy_struct(),
+        target_type: config::target_type(),
         s3_endpoint: config::s3_endpoint(),
         s3_region: config::s3_region(),
         s3_bucket: config::s3_bucket(),
         s3_access_key_set: config::s3_access_key_set(),
         s3_secret_key_set: config::s3_secret_key_set(),
+        local_dir: config::local_dir(),
     }
 }
 
@@ -514,6 +536,9 @@ fn apply_backup_config(update: BackupConfigUpdate) -> bichon_core::error::Bichon
     if let Some(v) = update.retention {
         cfg.retention = v;
     }
+    if let Some(v) = update.target_type {
+        cfg.target_type = v;
+    }
     if let Some(v) = update.s3_endpoint {
         cfg.s3_endpoint = Some(v);
     }
@@ -522,6 +547,13 @@ fn apply_backup_config(update: BackupConfigUpdate) -> bichon_core::error::Bichon
     }
     if let Some(v) = update.s3_bucket {
         cfg.s3_bucket = Some(v);
+    }
+    // Unlike the S3 fields, an empty `local_dir` must mean "unset" rather than
+    // `Some("")`: `None` already means "unchanged", so without this a path
+    // could never be cleared and switching s3 → local → s3 would leave the
+    // stale path behind.
+    if let Some(v) = update.local_dir {
+        cfg.local_dir = if v.trim().is_empty() { None } else { Some(v) };
     }
     apply_secret_field(&mut cfg.s3_access_key, update.s3_access_key);
     apply_secret_field(&mut cfg.s3_secret_key, update.s3_secret_key);
@@ -540,14 +572,29 @@ fn apply_secret_field(target: &mut Option<String>, value: Option<String>) {
     }
 }
 
-/// Reject an obviously unusable S3 target up front, so the form gives a
-/// clear error instead of the run failing later.
+/// Reject an obviously unusable target up front, so the form gives a clear
+/// error instead of the run failing later.
+///
+/// The shape checks here mirror `config::validate` (which `config::save` runs
+/// immediately afterwards) — they must agree, or the same input would produce
+/// two different errors. What this adds is the data-root guard, which
+/// `validate` deliberately leaves out because it needs server context.
 fn validate_effective_target(cfg: &BackupConfig) -> bichon_core::error::BichonResult<()> {
-    if cfg.s3_bucket.as_deref().unwrap_or("").is_empty() {
-        return Err(raise_error!(
-            "an s3 target requires a bucket".into(),
-            ErrorCode::InvalidParameter
-        ));
+    match cfg.target_type {
+        BackupTargetType::S3 => {
+            if cfg.s3_bucket.as_deref().unwrap_or("").is_empty() {
+                return Err(raise_error!(
+                    "an s3 target requires a bucket".into(),
+                    ErrorCode::InvalidParameter
+                ));
+            }
+        }
+        BackupTargetType::Local => {
+            config::validate_local_target(
+                cfg,
+                Some(&bichon_core::settings::dir::DATA_DIR_MANAGER.root_dir),
+            )?;
+        }
     }
     Ok(())
 }

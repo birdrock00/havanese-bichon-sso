@@ -28,7 +28,7 @@ import { useEdition } from '@/hooks/use-edition'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useToast } from '@/hooks/use-toast'
 
-const CATEGORY_KEYS = ['login', 'delete', 'export', 'admin'] as const
+const CATEGORY_KEYS = ['login', 'delete', 'export', 'admin', 'repair'] as const
 
 const FORMAT_OPTIONS: { value: string; i18nKey: string; fallback: string }[] = [
   {

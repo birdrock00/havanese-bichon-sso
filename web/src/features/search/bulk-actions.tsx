@@ -19,7 +19,7 @@
 
 
 import { useRef } from 'react'
-import { X, Trash2, Upload, TagIcon } from 'lucide-react'
+import { X, Trash2, Upload, TagIcon, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -32,8 +32,10 @@ import {
 import { useSearchContext } from './context'
 import { useTranslation } from 'react-i18next'
 import { toast } from '@/hooks/use-toast'
-import { OP_MESSAGE_DELETE } from '@/api/approvals/api'
+import { OP_GDPR_ERASURE, OP_MESSAGE_DELETE } from '@/api/approvals/api'
 import { usePendingApprovals } from '@/features/approvals/use-pending-approvals'
+import { useEdition } from '@/hooks/use-edition'
+import { useCurrentUser } from '@/hooks/use-current-user'
 
 type MailBulkActionsProps = {
     children?: React.ReactNode
@@ -44,6 +46,32 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
     const toolbarRef = useRef<HTMLDivElement>(null)
     const { t } = useTranslation()
     const { countPendingMessages, hasPendingMessage } = usePendingApprovals()
+    // GDPR erasure requests are an Enterprise feature — the record they leave
+    // is part of the compliance suite. Hidden rather than shown-and-refused:
+    // a button that only ever answers 403 teaches operators that the archive
+    // is broken.
+    const { isEnterprise } = useEdition()
+    const erasureQueuedCount = countPendingMessages(OP_GDPR_ERASURE, selected)
+    // Every selected message must be actionable: the toolbar acts on the whole
+    // selection, so one account without the permission would make the request
+    // fail. Judged per message's account, skipping the action otherwise.
+    const { require_any_permission } = useCurrentUser()
+    const selectedAccountIds = Array.from(selected.keys())
+    const canForAll = (perms: string[]) =>
+        selectedAccountIds.length > 0 &&
+        selectedAccountIds.every((id) => require_any_permission(perms, id))
+    const canRestoreAll = canForAll([
+        'system:root',
+        'data:export:batch',
+        'data:export:batch:all',
+    ])
+    const canTagAll = canForAll(['system:root', 'data:manage'])
+    const canDeleteAll = canForAll([
+        'system:root',
+        'data:delete',
+        'data:delete:all',
+    ])
+    const noPermission = t('common.noPermission', 'No permission')
 
     const selectedCount = Array.from(selected.values())
         .reduce((sum, set) => sum + set.size, 0)
@@ -110,6 +138,50 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
     const handleRestore = () => {
         setCurrentEnvelope(undefined);
         setOpen('restore')
+    }
+
+    /** Open the GDPR erasure form for the current selection, leaving out
+     *  anything that already has an erasure request waiting.
+     *
+     *  Same reasoning as `handleDeleteSkippingQueued`: the server has no
+     *  dedup, so a message already awaiting an erasure decision would be
+     *  recorded a second time and two approvers would each authorize erasing
+     *  it — two records for one erasure, which is worse than an untidy queue
+     *  because the records are the evidence.
+     *
+     *  Reuses `toDelete` for the same reason the delete dialog does — the
+     *  dialog reads one "what was selected" slot — but nothing is erased until
+     *  the request is decided, so the two never run at once. */
+    const handleErasureRequest = () => {
+        if (erasureQueuedCount === 0) {
+            setToDelete(new Map(selected))
+            setOpen('gdpr-erasure')
+            return
+        }
+        const remaining = new Map<number, Set<string>>()
+        selected.forEach((ids, accountId) => {
+            const keep = new Set(
+                Array.from(ids).filter(
+                    (id) => !hasPendingMessage(OP_GDPR_ERASURE, accountId, id)
+                )
+            )
+            if (keep.size > 0) remaining.set(accountId, keep)
+        })
+        if (remaining.size === 0) {
+            toast({
+                title: t(
+                    'approvals.allQueuedTitle',
+                    'Nothing to submit — every selected message already awaits approval'
+                ),
+                description: t(
+                    'approvals.allQueuedDesc',
+                    'A second person has to decide on those requests before they can be asked for again.'
+                ),
+            })
+            return
+        }
+        setToDelete(remaining)
+        setOpen('gdpr-erasure')
     }
 
 
@@ -191,6 +263,7 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
                 >
                     <Tooltip>
                         <TooltipTrigger asChild>
+<span className="inline-flex">
                             <Button
                                 variant="outline"
                                 size="icon"
@@ -201,7 +274,8 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
                                 <X className="h-3 w-3" />
                                 <span className="sr-only">{t('search.bulkActions.clear')}</span>
                             </Button>
-                        </TooltipTrigger>
+                        </span>
+</TooltipTrigger>
                     </Tooltip>
                     <Separator orientation="vertical" className="h-5" />
                     <div className="flex items-center gap-x-1 text-sm">
@@ -212,42 +286,89 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
                     <Separator orientation="vertical" className="h-5" />
                     <Tooltip>
                         <TooltipTrigger asChild>
+<span className="inline-flex">
                             <Button
                                 variant="secondary"
                                 size="sm"
                                 onClick={handleRestore}
+                                disabled={!canRestoreAll}
                                 className="gap-1"
                             >
                                 <Upload className="h-3.5 w-3.5" />
                             </Button>
-                        </TooltipTrigger>
+                        </span>
+</TooltipTrigger>
                         <TooltipContent>
-                            {t('restore_message.restore_to_imap', 'Restore Mail')}
+                            {canRestoreAll
+                                ? t('restore_message.restore_to_imap', 'Restore Mail')
+                                : noPermission}
                         </TooltipContent>
                     </Tooltip>
                     <Separator orientation="vertical" className="h-5" />
                     <Tooltip>
                         <TooltipTrigger asChild>
+<span className="inline-flex">
                             <Button
                                 variant="secondary"
                                 size="sm"
                                 onClick={handleUpdateTags}
+                                disabled={!canTagAll}
                                 className="gap-1"
                             >
                                 <TagIcon className="h-3.5 w-3.5" />
                             </Button>
-                        </TooltipTrigger>
+                        </span>
+</TooltipTrigger>
                         <TooltipContent>
-                            {t('search.bulkActions.manageTags')}
+                            {canTagAll ? t('search.bulkActions.manageTags') : noPermission}
                         </TooltipContent>
                     </Tooltip>
                     <Separator orientation="vertical" className="h-5" />
+                    {isEnterprise && (
+                        <>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+<span className="inline-flex">
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={handleErasureRequest}
+                                        disabled={!canDeleteAll}
+                                        className="gap-1"
+                                    >
+                                        <ShieldAlert className="h-3.5 w-3.5" />
+                                    </Button>
+                                </span>
+</TooltipTrigger>
+                                <TooltipContent>
+                                    {!canDeleteAll
+                                        ? noPermission
+                                        : erasureQueuedCount > 0
+                                        ? t(
+                                              'approvals.bulkPartlyQueued',
+                                              '{{queued}} of {{total}} selected message(s) already await approval and will be skipped',
+                                              {
+                                                  queued: erasureQueuedCount,
+                                                  total: selectedCount,
+                                              }
+                                          )
+                                        : t(
+                                              'search.bulkActions.gdprErasure',
+                                              'Record a GDPR erasure request'
+                                          )}
+                                </TooltipContent>
+                            </Tooltip>
+                            <Separator orientation="vertical" className="h-5" />
+                        </>
+                    )}
                     <Tooltip>
                         <TooltipTrigger asChild>
+<span className="inline-flex">
                             <Button
                                 variant="destructive"
                                 size="sm"
                                 onClick={handleDeleteSkippingQueued}
+                                disabled={!canDeleteAll}
                                 className="gap-1"
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -257,9 +378,12 @@ export function MailBulkActions({ children }: MailBulkActionsProps) {
                                     </span>
                                 )}
                             </Button>
-                        </TooltipTrigger>
+                        </span>
+</TooltipTrigger>
                         <TooltipContent>
-                            {queuedCount > 0
+                            {!canDeleteAll
+                                ? noPermission
+                                : queuedCount > 0
                                 ? t(
                                       'approvals.bulkPartlyQueued',
                                       '{{queued}} of {{total}} selected message(s) already await approval and will be skipped',

@@ -68,6 +68,18 @@ pub struct BackupRecord {
     /// nothing to flag.
     #[serde(default)]
     pub warnings: Vec<String>,
+    /// Which backup chain this run wrote to — the target plus the prefix, as
+    /// [`crate::backup::config::destination`] renders it.
+    ///
+    /// The run history is a single global list, but a restore point only
+    /// exists on the target that wrote it. Without this the list mixes runs
+    /// from two different destinations and the status card can point at a
+    /// manifest the browser (which reads the *current* target only) cannot
+    /// find. `None` on records written before this field existed — those can
+    /// only have come from the single target configured at the time, so
+    /// readers treat `None` as "belongs to whatever is configured now".
+    #[serde(default)]
+    pub target: Option<String>,
 }
 
 impl MemDbModel for BackupRecord {
@@ -94,6 +106,24 @@ impl BackupRecord {
         all.sort_by_key(|r| std::cmp::Reverse(r.started_at));
         all.truncate(limit);
         all
+    }
+
+    /// The most recent successful run against `destination`.
+    ///
+    /// The history is one global list, but a restore point only exists on the
+    /// target that wrote it, so anything asking "what did the last backup do?"
+    /// must scope to a destination — otherwise a target change makes the
+    /// answer describe a target the caller cannot see.
+    ///
+    /// A record with no `target` (written before the field existed) is treated
+    /// as belonging to any destination: those runs predate target switching,
+    /// so they can only have come from the single target configured at the
+    /// time.
+    pub fn last_success_for(destination: &str) -> Option<BackupRecord> {
+        Self::list_recent(20).into_iter().find(|r| {
+            r.status == BackupRunStatus::Success
+                && r.target.as_deref().is_none_or(|t| t == destination)
+        })
     }
 
     /// Delete run records beyond the most recent `limit` (newest first by

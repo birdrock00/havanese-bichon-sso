@@ -20,7 +20,7 @@
 import React from 'react'
 import { OAuth2Entity } from '../data/schema'
 
-export type OAuth2DialogType = 'add' | 'edit' | 'delete' | 'authorize'
+export type OAuth2DialogType = 'add' | 'edit' | 'delete' | 'authorize' | 'import-tokens'
 
 interface OAuth2ContextType {
   open: OAuth2DialogType | null

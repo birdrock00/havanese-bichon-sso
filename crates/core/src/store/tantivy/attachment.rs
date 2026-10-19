@@ -25,6 +25,7 @@ use std::{
 };
 
 use crate::{
+    account::access::ViewScopeGroup,
     backup::gate::{BACKUP_ACQUIRE_TIMEOUT, WRITE_GATE},
     common::{paginated::DataPage, signal::SIGNAL_MANAGER},
     dashboard::{Group, LargestAttachment},
@@ -907,6 +908,30 @@ impl IndexManager {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         Ok(())
+    }
+
+    /// Search with a scope resolved from view accounts.
+    ///
+    /// Filtered sources are dropped — see
+    /// `crate::account::access::unfiltered_source_accounts` — and the request's
+    /// own `account_ids` are cleared because the scope already encodes them (a
+    /// view id matches no attachment document).
+    pub fn search_scoped(
+        &self,
+        scope: Option<Vec<ViewScopeGroup>>,
+        mut filter: AttachmentSearchFilter,
+        page: u64,
+        page_size: u64,
+        desc: bool,
+        sort_by: SortBy,
+    ) -> BichonResult<DataPage<AttachmentModel>> {
+        filter.account_ids = None;
+        let accounts: Option<HashSet<u64>> = scope.map(|groups| {
+            crate::account::access::unfiltered_source_accounts(&groups)
+                .into_iter()
+                .collect()
+        });
+        self.search(accounts, filter, page, page_size, desc, sort_by)
     }
 
     pub fn search(

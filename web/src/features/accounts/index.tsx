@@ -28,7 +28,7 @@ import { AccountTable } from './components/table'
 import AccountProvider, {
   type AccountDialogType,
 } from './context'
-import { Mail, Database } from 'lucide-react'
+import { Mail, Database, Eye } from 'lucide-react'
 import Logo from '@/assets/logo.svg'
 import { AccountDetailDrawer } from './components/account-detail'
 import { AccountModel, list_accounts } from '@/api/account/api'
@@ -39,6 +39,8 @@ import { RunningStateDialog } from './components/running-state-dialog'
 import { FixedHeader } from '@/components/layout/fixed-header'
 import { DownloadFoldersDialog } from './components/download-folders'
 import { NoSyncAccountDialog } from './components/nosync-dialog'
+import { ViewAccountDialog } from './components/view-dialog'
+import { useEdition } from '@/hooks/use-edition'
 import { useTranslation } from 'react-i18next'
 import { AccountAccessAssignmentDialog } from './components/access-assignment-dialog'
 import { useCurrentUser } from '@/hooks/use-current-user'
@@ -51,6 +53,14 @@ export default function Accounts() {
   const [currentRow, setCurrentRow] = useState<AccountModel | null>(null)
   const [open, setOpen] = useDialogState<AccountDialogType>(null)
   const { require_any_permission } = useCurrentUser()
+  const { isPro } = useEdition()
+  // A view delegates read access, so the backend requires account management
+  // on every source. Do not offer the entry to someone who manages none.
+  const canManageAccounts = require_any_permission([
+    'system:root',
+    'account:manage',
+    'account:manage:all',
+  ])
 
   const { data: accountList, isLoading } = useQuery({
     queryKey: ['account-list'],
@@ -85,6 +95,26 @@ export default function Accounts() {
                 <Database className="mr-1.5 h-4 w-4" />
                 {t('accounts.noSyncAccount')}
               </Button>
+              {isPro && (
+                // Rendered even without permission, but disabled: a missing
+                // button gives no hint that the capability exists.
+                <Button
+                  variant="outline"
+                  disabled={!canManageAccounts}
+                  title={
+                    canManageAccounts
+                      ? undefined
+                      : t(
+                          'accounts.viewNeedsAccountManage',
+                          'Requires account management permission on at least one account'
+                        )
+                  }
+                  onClick={() => setOpen("add-view")}
+                >
+                  <Eye className="mr-1.5 h-4 w-4" />
+                  {t('accounts.viewAccount', 'View account')}
+                </Button>
+              )}
             </div>}
           </div>
 
@@ -126,6 +156,22 @@ export default function Accounts() {
         key='nosync-account-add'
         open={open === 'add-nosync'}
         onOpenChange={() => setOpen('add-nosync')}
+      />
+
+      <ViewAccountDialog
+        key='view-account-add'
+        open={open === 'add-view'}
+        onOpenChange={() => setOpen('add-view')}
+      />
+
+      <ViewAccountDialog
+        key={`view-account-edit-${currentRow?.id ?? 'none'}`}
+        open={open === 'edit-view'}
+        onOpenChange={() => {
+          setOpen('edit-view')
+          setTimeout(() => setCurrentRow(null), 500)
+        }}
+        currentRow={currentRow}
       />
 
       {currentRow && (

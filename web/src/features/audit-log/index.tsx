@@ -45,6 +45,7 @@ const EVENT_TYPES = [
   'email.deleted',
   'email.exported',
   'email.restored',
+  'email.repaired',
   'email.tagged',
   'attachment.downloaded',
   'attachment.previewed',
@@ -101,6 +102,7 @@ function eventTypeLabel(t: (key: string, defaultValue: string) => string, et: st
     'email.deleted': t('audit.eventTypes.emailDeleted', 'Email deleted'),
     'email.exported': t('audit.eventTypes.emailExported', 'Email exported'),
     'email.restored': t('audit.eventTypes.emailRestored', 'Email restored'),
+    'email.repaired': t('audit.eventTypes.emailRepaired', 'Email repaired'),
     'email.tagged': t('audit.eventTypes.emailTagged', 'Email tags changed'),
     'attachment.downloaded': t('audit.eventTypes.attachmentDownloaded', 'Attachment downloaded'),
     'attachment.previewed': t('audit.eventTypes.attachmentPreviewed', 'Attachment previewed'),
@@ -201,13 +203,24 @@ function formatTime(ts: number): string {
 function describeEvent(rec: AuditRecord): string {
   const p = rec.payload ?? {}
   switch (rec.event_type) {
-    case 'email.viewed':
-      return typeof p.subject === 'string' ? p.subject : rec.email_id ?? ''
+    case 'email.viewed': {
+      const subject = typeof p.subject === 'string' ? p.subject : rec.email_id ?? ''
+      // Name the delegation when there was one: "who read this" is only half
+      // the record, the other half is whether they were entitled to it. The
+      // full before/after scope is in the payload below.
+      return typeof p.via_view === 'string' ? `${subject} · via ${p.via_view}` : subject
+    }
     case 'email.deleted':
       return typeof p.subject === 'string' ? p.subject : rec.email_id ?? ''
     case 'email.exported':
     case 'email.restored':
       return typeof p.subject === 'string' ? p.subject : rec.email_id ?? ''
+    case 'email.repaired': {
+      // The outcome belongs in the detail, not just the label: a `failed`
+      // repair rewrote nothing and must not read like a successful one.
+      const subject = typeof p.subject === 'string' ? p.subject : rec.email_id ?? ''
+      return typeof p.status === 'string' ? `${subject} · ${p.status}` : subject
+    }
     case 'email.tagged':
       return typeof p.count === 'number' ? `${p.count} email(s)` : ''
     case 'attachment.downloaded':
@@ -226,8 +239,15 @@ function describeEvent(rec: AuditRecord): string {
     case 'role.updated':
     case 'role.removed':
       return typeof p.role === 'string' ? p.role : ''
+    case 'account.updated': {
+      const email = typeof p.email === 'string' ? p.email : ''
+      // Both sides of the scope are in the payload; the line only has to mark
+      // that a view's visibility moved, so it is not read as a rename.
+      return 'view_after' in p || 'view_before' in p
+        ? `${email} · view scope changed`
+        : email
+    }
     case 'account.created':
-    case 'account.updated':
     case 'account.removed':
       return typeof p.email === 'string' ? p.email : ''
     case 'account.download_started':

@@ -23,6 +23,8 @@ import React from 'react'
 export type AccountDialogType =
   | 'add-nosync'
   | 'edit-nosync'
+  | 'add-view'
+  | 'edit-view'
   | 'delete'
   | 'detail'
   | 'oauth2'

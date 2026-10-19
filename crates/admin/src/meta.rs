@@ -273,6 +273,10 @@ impl From<AccountV3> for AccountModel {
             hold_placed_at: None,
             hold_released_by: None,
             hold_released_at: None,
+            // Migrated accounts are ordinary accounts; no special role and
+            // no view configuration.
+            kind: None,
+            view: None,
         }
     }
 }
@@ -326,7 +330,8 @@ impl From<OAuth2> for bichon_core::oauth2::entity::OAuth2 {
             id: value.id,
             description: value.description,
             client_id: value.client_id,
-            client_secret: value.client_secret,
+            client_type: Default::default(),
+            client_secret: Some(value.client_secret),
             auth_url: value.auth_url,
             token_url: value.token_url,
             redirect_uri: value.redirect_uri,

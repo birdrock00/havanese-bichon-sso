@@ -44,6 +44,7 @@ import i18n from '@/i18n'
 import { KeyRound, Loader2, LogIn, Shield } from 'lucide-react'
 import { ldapLogin, login, mfaVerify, type LoginResult } from '@/api/users/api'
 import { useTheme } from '@/context/theme-context'
+import { isTheme } from '@/lib/theme'
 import { useEdition } from '@/hooks/use-edition'
 
 type UserAuthFormProps = HTMLAttributes<HTMLDivElement>
@@ -130,7 +131,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     if (result.success && result.access_token) {
       setToken(result);
 
-      if (result.theme) {
+      if (isTheme(result.theme)) {
         setTheme(result.theme);
       }
 

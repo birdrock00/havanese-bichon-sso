@@ -121,6 +121,16 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         <DataTableColumnHeader column={column} title={t('accounts.type')} />
       ),
       cell: ({ row }) => {
+        // The type column stays in English for every type (IMAP / NoSync /
+        // View) — the storage type is a protocol term, not UI copy. Only the
+        // journal *role* is badged, because it is not visible in the type.
+        if (row.original.kind?.role === 'journal') {
+          return (
+            <Badge className='border-sky-200 bg-sky-100 text-sky-800'>
+              {t('accounts.journalBadge', 'Journal')}
+            </Badge>
+          )
+        }
         return <LongText className='text-xs'>{row.original.account_type}</LongText>
       },
       meta: { className: 'text-center max-w-[60px]' },
@@ -133,8 +143,9 @@ export function useColumns(): ColumnDef<AccountModel>[] {
         <DataTableColumnHeader column={column} title={t('accounts.incSync')} className="justify-center" />
       ),
       cell: ({ row }) => {
-        let account_type = row.original.account_type;
-        if (account_type === "NoSync") {
+        // Only IMAP accounts have a sync interval; local and view accounts
+        // show "n/a" like NoSync always has.
+        if (row.original.account_type !== 'IMAP') {
           return <LongText className="text-center text-xs">n/a</LongText>
         }
         if (row.original.download_schedule) {

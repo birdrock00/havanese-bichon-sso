@@ -23,11 +23,22 @@ use crate::{
         MemDbModel,
     },
     encrypt,
-    error::BichonResult,
-    id, utc_now,
+    error::{code::ErrorCode, BichonResult},
+    id, raise_error, utc_now,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
+
+/// Whether the OAuth2 client authenticates at the token endpoint with a secret.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "web-api", derive(poem_openapi::Enum))]
+pub enum OAuth2ClientType {
+    /// A client with a provider-issued secret.
+    #[default]
+    Confidential,
+    /// A public/native client without a secret. Authorization relies on PKCE.
+    Public,
+}
 
 /// Represents the OAuth2 configuration for a client, including initialization and runtime values.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -39,12 +50,15 @@ pub struct OAuth2 {
     pub description: Option<String>,
     /// The client ID used for authenticating the application with the OAuth2 provider.
     pub client_id: String,
-    /// The client secret used in conjunction with the client ID.
+    /// The client type. Records without one are confidential.
+    #[serde(default)]
+    pub client_type: OAuth2ClientType,
+    /// The client secret used in conjunction with the client ID. `None` for public clients.
     ///
     /// Users should provide a plaintext secret.
     /// The server will encrypt it using AES-256-GCM and securely store it.
     /// The plaintext secret is never stored, so users must ensure it is valid for OAuth2 authentication.
-    pub client_secret: String,
+    pub client_secret: Option<String>,
     /// The URL to redirect users to for OAuth2 authorization.
     pub auth_url: String,
     /// The URL to exchange authorization codes for access tokens.
@@ -76,12 +90,14 @@ impl MemDbModel for OAuth2 {
 
 impl OAuth2 {
     pub fn new(request: OAuth2CreateRequest) -> BichonResult<Self> {
-        let request = request.encrypt()?;
+        let client_secret =
+            resolve_client_secret(request.client_type, request.client_secret.as_deref(), None)?;
         Ok(OAuth2 {
             id: id!(64),
             description: request.description,
             client_id: request.client_id,
-            client_secret: request.client_secret,
+            client_type: request.client_type,
+            client_secret,
             auth_url: request.auth_url,
             token_url: request.token_url,
             redirect_uri: request.redirect_uri,
@@ -106,7 +122,7 @@ impl OAuth2 {
         self.description = Some(format!("{}{}", original_desc, notice));
 
         self.client_id = mask.to_string();
-        self.client_secret = mask.to_string();
+        self.client_secret = self.client_secret.as_ref().map(|_| mask.to_string());
         self.auth_url = self.auth_url.clone();
         self.token_url = self.token_url.clone();
         self.redirect_uri = self.redirect_uri.clone();
@@ -138,12 +154,13 @@ impl OAuth2 {
         delete_impl::<OAuth2>(DB_MANAGER.db(), &id.to_string())
     }
 
-    pub fn update(id: u64, request: OAuth2UpdateRequest) -> BichonResult<()> {
+    /// Applies a partial update and returns the configuration as stored, so
+    /// callers can report the effective values (e.g. the client type) rather
+    /// than re-deriving them from the request.
+    pub fn update(id: u64, request: OAuth2UpdateRequest) -> BichonResult<OAuth2> {
         update_impl(DB_MANAGER.db(), &id.to_string(), |current| {
             apply_update(&current, request)
-        })?;
-
-        Ok(())
+        })
     }
 }
 
@@ -156,8 +173,13 @@ pub struct OAuth2CreateRequest {
     /// The client ID used for authenticating the application with the OAuth2 provider.
     pub client_id: String,
 
-    /// The client secret used in conjunction with the client ID.
-    pub client_secret: String,
+    /// The client type. Defaults to confidential when omitted.
+    #[serde(default)]
+    #[cfg_attr(feature = "web-api", oai(default))]
+    pub client_type: OAuth2ClientType,
+
+    /// The client secret used in conjunction with the client ID. Required for confidential clients.
+    pub client_secret: Option<String>,
 
     /// The URL to redirect users to for OAuth2 authorization.
     pub auth_url: String,
@@ -181,23 +203,6 @@ pub struct OAuth2CreateRequest {
     pub use_proxy: Option<u64>,
 }
 
-impl OAuth2CreateRequest {
-    pub fn encrypt(self) -> BichonResult<Self> {
-        Ok(Self {
-            description: self.description,
-            client_id: self.client_id,
-            client_secret: encrypt!(&self.client_secret)?,
-            auth_url: self.auth_url,
-            token_url: self.token_url,
-            redirect_uri: self.redirect_uri,
-            scopes: self.scopes,
-            extra_params: self.extra_params,
-            enabled: self.enabled,
-            use_proxy: self.use_proxy,
-        })
-    }
-}
-
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct OAuth2UpdateRequest {
@@ -206,6 +211,9 @@ pub struct OAuth2UpdateRequest {
 
     /// The client ID used for authenticating the application with the OAuth2 provider.
     pub client_id: Option<String>,
+
+    /// The client type. Switching to public clears the stored secret.
+    pub client_type: Option<OAuth2ClientType>,
 
     /// The client secret used in conjunction with the client ID.
     pub client_secret: Option<String>,
@@ -234,14 +242,17 @@ pub struct OAuth2UpdateRequest {
 
 fn apply_update(old: &OAuth2, request: OAuth2UpdateRequest) -> BichonResult<OAuth2> {
     let mut new = old.clone();
+    new.client_type = request.client_type.unwrap_or(old.client_type);
+    new.client_secret = resolve_client_secret(
+        new.client_type,
+        request.client_secret.as_deref(),
+        old.client_secret.as_deref(),
+    )?;
     if request.description.is_some() {
         new.description = request.description;
     }
     if let Some(client_id) = request.client_id {
         new.client_id = client_id;
-    }
-    if let Some(client_secret) = request.client_secret {
-        new.client_secret = encrypt!(&client_secret)?;
     }
     if let Some(auth_url) = request.auth_url {
         new.auth_url = auth_url;
@@ -266,4 +277,82 @@ fn apply_update(old: &OAuth2, request: OAuth2UpdateRequest) -> BichonResult<OAut
     }
     new.updated_at = utc_now!();
     Ok(new)
+}
+
+/// Returns the encrypted secret to store: a supplied secret replaces `current`,
+/// confidential clients must end up with one and public clients never have one.
+fn resolve_client_secret(
+    client_type: OAuth2ClientType,
+    supplied: Option<&str>,
+    current: Option<&str>,
+) -> BichonResult<Option<String>> {
+    let supplied = supplied.filter(|secret| !secret.trim().is_empty());
+    match (client_type, supplied) {
+        (OAuth2ClientType::Confidential, Some(secret)) => Ok(Some(encrypt!(secret)?)),
+        (OAuth2ClientType::Confidential, None) => {
+            current.map(ToOwned::to_owned).map(Some).ok_or_else(|| {
+                raise_error!(
+                    "A client secret is required for confidential OAuth2 clients.".into(),
+                    ErrorCode::InvalidParameter
+                )
+            })
+        }
+        (OAuth2ClientType::Public, Some(_)) => Err(raise_error!(
+            "Public OAuth2 clients must not include a client secret.".into(),
+            ErrorCode::InvalidParameter
+        )),
+        (OAuth2ClientType::Public, None) => Ok(None),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Once;
+
+    static TEST_ENV: Once = Once::new();
+    fn init_test_env() {
+        TEST_ENV.call_once(|| {
+            let root =
+                std::env::temp_dir().join(format!("bichon-core-test-{}", std::process::id()));
+            std::fs::create_dir_all(&root).unwrap();
+            std::env::set_var("BICHON_ROOT_DIR", &root);
+            std::env::set_var("BICHON_ENCRYPT_PASSWORD", "test-password");
+            let _ = &*crate::settings::cli::SETTINGS;
+        });
+    }
+
+    #[test]
+    fn stored_records_without_client_type_are_confidential() {
+        let oauth2: OAuth2 = serde_json::from_value(serde_json::json!({
+            "id": 1, "description": null, "client_id": "id", "client_secret": "encrypted",
+            "auth_url": "a", "token_url": "t", "redirect_uri": "r", "scopes": null,
+            "extra_params": null, "enabled": true, "use_proxy": null,
+            "created_at": 1, "updated_at": 1
+        }))
+        .unwrap();
+        assert_eq!(oauth2.client_type, OAuth2ClientType::Confidential);
+        assert_eq!(oauth2.client_secret.as_deref(), Some("encrypted"));
+    }
+
+    #[test]
+    fn client_secret_follows_client_type() {
+        use OAuth2ClientType::{Confidential, Public};
+        init_test_env();
+        let stored = "stored".to_string();
+
+        assert!(resolve_client_secret(Confidential, Some("new"), None)
+            .unwrap()
+            .is_some_and(|secret| secret != "new"));
+        assert_eq!(
+            resolve_client_secret(Confidential, Some(" "), Some(stored.as_str())).unwrap(),
+            Some(stored.clone())
+        );
+        assert!(resolve_client_secret(Confidential, None, None).is_err());
+        assert_eq!(
+            resolve_client_secret(Public, None, Some(stored.as_str())).unwrap(),
+            None
+        );
+        assert!(resolve_client_secret(Public, Some("new"), None).is_err());
+    }
 }

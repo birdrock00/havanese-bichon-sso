@@ -120,8 +120,15 @@ impl BlobManager {
     }
 
     pub fn new() -> Self {
-        let blob_dir = DATA_DIR_MANAGER.storage_dir.join("blobs");
+        Self::open(DATA_DIR_MANAGER.storage_dir.join("blobs"))
+    }
 
+    /// Opens a manager rooted at `blob_dir`. Split out from [`Self::new`] so a
+    /// test can run against a private directory: the writer task below is bound
+    /// to whichever runtime created the manager, so a test that used the
+    /// process-global `BLOB_MANAGER` would silently depend on which other test
+    /// initialized it first and on that test's runtime still being alive.
+    fn open(blob_dir: std::path::PathBuf) -> Self {
         let mut config = Config::default();
         config.default_codec = Codec::Zstd;
         config.compress_threshold = 1024;
@@ -305,4 +312,124 @@ impl BlobManager {
 pub async fn get_reader(account_id: u64, eid: String) -> BichonResult<Cursor<Bytes>> {
     let (_, data) = reattach_eml_content_self_healing(account_id, eid).await?;
     Ok(Cursor::new(data))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A private manager rooted at its own temp dir. The process-global
+    /// `BLOB_MANAGER` is deliberately avoided: its writer is a spawned task
+    /// bound to whichever runtime first dereferenced the `LazyLock`, so sharing
+    /// it across test modules makes the outcome depend on execution order (and
+    /// on that first runtime still being alive).
+    fn temp_manager(suffix: &str) -> (BlobManager, std::path::PathBuf) {
+        let dir = std::env::temp_dir().join(format!("bichon-blob-{suffix}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        (BlobManager::open(dir.clone()), dir)
+    }
+
+    /// Drop the manager and let the writer loop notice the closed channel, so
+    /// the engine releases its file handles before the temp dir is removed.
+    async fn close(manager: BlobManager, dir: std::path::PathBuf) -> std::path::PathBuf {
+        drop(manager);
+        for _ in 0..8 {
+            tokio::task::yield_now().await;
+        }
+        dir
+    }
+
+    /// First write wins: re-queueing an existing key must not replace the
+    /// archived bytes. This is what makes a repeated detach (re-ingest, repair)
+    /// idempotent rather than a way to overwrite the archive.
+    #[test]
+    fn queued_blobs_are_deduplicated_and_never_overwritten() {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let dir = runtime.block_on(async {
+            let (manager, dir) = temp_manager("dedup");
+
+            let email_hash = crate::utils::compute_content_hash(b"original email");
+            let attachment_hash = crate::utils::compute_content_hash(b"original attachment");
+
+            manager
+                .queue(DetachedEmail {
+                    email: (email_hash.clone(), Bytes::from_static(b"original email")),
+                    attachments: Some(vec![(
+                        attachment_hash.clone(),
+                        Bytes::from_static(b"original attachment"),
+                    )]),
+                })
+                .await;
+            manager.drain().await;
+            assert_eq!(manager.pending(), 0);
+
+            assert_eq!(
+                manager.get_email(&email_hash).unwrap(),
+                Some(Bytes::from_static(b"original email"))
+            );
+            assert_eq!(
+                manager.get_attachment(&attachment_hash).unwrap(),
+                Some(Bytes::from_static(b"original attachment"))
+            );
+
+            // Same keys, different bytes.
+            manager
+                .queue(DetachedEmail {
+                    email: (email_hash.clone(), Bytes::from_static(b"tampered email")),
+                    attachments: Some(vec![(
+                        attachment_hash.clone(),
+                        Bytes::from_static(b"tampered attachment"),
+                    )]),
+                })
+                .await;
+            manager.drain().await;
+
+            assert_eq!(
+                manager.get_email(&email_hash).unwrap(),
+                Some(Bytes::from_static(b"original email"))
+            );
+            assert_eq!(
+                manager.get_attachment(&attachment_hash).unwrap(),
+                Some(Bytes::from_static(b"original attachment"))
+            );
+
+            close(manager, dir).await
+        });
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A malformed hash (a corrupt envelope field) must be dropped on the floor
+    /// rather than panic — and must not take the rest of the batch with it.
+    #[test]
+    fn a_malformed_hash_is_skipped_without_dropping_the_batch() {
+        let runtime = tokio::runtime::Runtime::new().unwrap();
+        let dir = runtime.block_on(async {
+            let (manager, dir) = temp_manager("badkey");
+
+            let good_hash = crate::utils::compute_content_hash(b"good email");
+            manager
+                .queue(DetachedEmail {
+                    email: ("not-hex".to_string(), Bytes::from_static(b"junk")),
+                    attachments: None,
+                })
+                .await;
+            manager
+                .queue(DetachedEmail {
+                    email: (good_hash.clone(), Bytes::from_static(b"good email")),
+                    attachments: None,
+                })
+                .await;
+            manager.drain().await;
+            assert_eq!(manager.pending(), 0);
+
+            assert_eq!(
+                manager.get_email(&good_hash).unwrap(),
+                Some(Bytes::from_static(b"good email"))
+            );
+
+            close(manager, dir).await
+        });
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
