@@ -42,6 +42,7 @@ import { OP_TOKEN_REVOKE } from "@/api/approvals/api";
 import { useGatedOp } from "@/features/approvals/use-gated-op";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/hooks/use-toast";
+import { copyToClipboard } from "@/lib/clipboard";
 
 interface Props {
     tokens: AccessToken[];
@@ -103,6 +104,11 @@ export const TokenCardList: React.FC<Props> = ({ tokens, userId }) => {
                                             >
                                                 {expired ? t('users.tokens_action.list.status_expired') : t('users.tokens_action.list.status_active')}
                                             </Badge>
+                                            {token.metrics_only && (
+                                                <Badge variant="outline" className="text-xs">
+                                                    {t('apiTokens.list.metricsOnlyBadge')}
+                                                </Badge>
+                                            )}
                                         </div>
                                     </div>
 
@@ -133,7 +139,12 @@ export const TokenCardList: React.FC<Props> = ({ tokens, userId }) => {
                                                 variant="ghost"
                                                 className="h-7 w-7"
                                                 onClick={() =>
-                                                    navigator.clipboard.writeText(token.token)
+                                                    copyToClipboard(token.token).catch(() =>
+                                                        toast({
+                                                            title: t('settings.failedToCopyText'),
+                                                            variant: 'destructive',
+                                                        })
+                                                    )
                                                 }
                                             >
                                                 <Copy className="h-4 w-4" />

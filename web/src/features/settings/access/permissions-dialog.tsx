@@ -49,6 +49,7 @@ function getGlobalCategories(t: (key: string) => string, isEnterprise: boolean) 
       keys: [
         'system:access',
         'system:root',
+        'system:metrics',
         'user:manage',
         'user:view',
         'token:manage',

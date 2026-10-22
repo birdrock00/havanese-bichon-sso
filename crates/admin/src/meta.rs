@@ -277,6 +277,10 @@ impl From<AccountV3> for AccountModel {
             // no view configuration.
             kind: None,
             view: None,
+            // Legacy accounts predate the stable-UID counter: leave both
+            // uninitialized, the reindex assigns UIDs and seeds the counter.
+            imap_uid_next: 0,
+            imap_uid_generation: 0,
         }
     }
 }
@@ -636,6 +640,8 @@ impl From<AccessTokenModel> for bichon_core::token::AccessTokenModel {
             updated_at: value.updated_at,
             expire_at: value.expire_at,
             last_access_at: value.last_access_at,
+            // Legacy tokens predate the metrics-only scope.
+            metrics_only: false,
         }
     }
 }

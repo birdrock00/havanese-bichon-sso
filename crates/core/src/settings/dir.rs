@@ -117,6 +117,56 @@ impl DataDirManager {
     }
 }
 
+/// Resolved index / data directories, shared with admin commands that do not
+/// parse `Settings` so they see exactly the same layout as [`DataDirManager`].
+#[derive(Debug, Clone)]
+pub struct ResolvedDirs {
+    /// `<index_parent>/bichon-indices` — the root that holds both indexes.
+    pub index_root: PathBuf,
+    pub envelope_dir: PathBuf,
+    pub attachment_dir: PathBuf,
+    pub blobs_dir: PathBuf,
+}
+
+/// Resolve the index and blob directories from a root plus optional index/data
+/// parent directories.
+///
+/// Uses the same constants as [`DataDirManager::new`] so admin and server never
+/// disagree on the layout. `index_parent` / `data_parent` fall back to `root`.
+pub fn resolve_dirs(
+    root: &Path,
+    index_parent: Option<&Path>,
+    data_parent: Option<&Path>,
+) -> ResolvedDirs {
+    let index_dir = index_parent
+        .map(|p| p.join(INDICES))
+        .unwrap_or_else(|| root.join(INDICES));
+    let storage_dir = data_parent
+        .map(|p| p.join(STORAGE))
+        .unwrap_or_else(|| root.join(STORAGE));
+
+    ResolvedDirs {
+        envelope_dir: index_dir.join(MAIL_METADATA),
+        attachment_dir: index_dir.join(ATTACHMENT_METADATA),
+        blobs_dir: storage_dir.join("blobs"),
+        index_root: index_dir,
+    }
+}
+
+/// Free bytes on the mount point holding `dir`; `u64::MAX` (optimistic) when the
+/// mount point cannot be located. Mirrors `import::check_temp_disk_space`.
+pub fn available_space(dir: &Path) -> u64 {
+    use sysinfo::Disks;
+    let disks = Disks::new_with_refreshed_list();
+    let canonical = std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_path_buf());
+    for disk in disks.list() {
+        if canonical.starts_with(disk.mount_point()) {
+            return disk.available_space();
+        }
+    }
+    u64::MAX
+}
+
 /// Resolve the on-disk path for a feature-owned embedded database under its own
 /// subdirectory, migrating a pre-existing root-level database (plus any live
 /// sidecars) there on first use.

@@ -19,6 +19,7 @@
 use crate::common::auth::ApiGuard;
 use crate::common::error::ErrorCapture;
 use crate::common::log::Tracing;
+use crate::common::recorder::Recorder;
 use crate::common::tls::rustls_config;
 use crate::common::timeout::{Timeout, TIMEOUT_HEADER};
 use crate::error::handler::error_handler;
@@ -53,6 +54,7 @@ use {
 pub mod api;
 pub mod assets;
 pub mod maintenance;
+pub mod metrics;
 pub mod public;
 
 pub type ApiResult<T, E = ApiErrorResponse> = std::result::Result<T, E>;
@@ -77,7 +79,8 @@ pub fn build_routes() -> impl Endpoint {
         .with(ApiGuard)
         .with(ErrorCapture)
         .with(Timeout)
-        .with(Tracing);
+        .with(Tracing)
+        .with(Recorder);
 
     let cors_origins: Option<HashSet<String>> = SETTINGS.bichon_cors_origins.clone();
     let cors_origins: Vec<String> = cors_origins.unwrap_or_default().into_iter().collect();
@@ -114,6 +117,13 @@ pub fn build_routes() -> impl Endpoint {
         .nest("/api-docs/spec.json", spec_json)
         .nest("/api-docs/spec.yaml", spec_yaml)
         .nest("/oauth2/callback", get(oauth2_callback))
+        // `.at` (not `.nest`) so the inner endpoint sees the full request path:
+        // `ApiGuard` uses it to decide whether a metrics-only token may be
+        // used, and `nest` would strip the prefix before the guard runs.
+        .at(
+            "/api/v1/metrics",
+            get(crate::rest::metrics::get_metrics).with(ApiGuard),
+        )
         .nest("/api/v1/features", get(get_features))
         .nest("/api/status", get(get_status))
         .nest("/api/login", post(login))

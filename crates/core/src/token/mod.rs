@@ -25,8 +25,10 @@ use crate::database::{
 };
 use crate::error::code::ErrorCode;
 use crate::raise_error;
+use crate::common::auth::ClientContext;
 use crate::settings::cli::SETTINGS;
 use crate::token::view::AccessTokenResp;
+use crate::users::permissions::Permission;
 use crate::users::UserModel;
 use crate::{
     error::BichonResult, generate_token, token::payload::AccessTokenCreateRequest, utc_now,
@@ -66,6 +68,13 @@ pub struct AccessTokenModel {
     pub expire_at: Option<i64>,
     /// The timestamp (in milliseconds since epoch) when the token was last used.
     pub last_access_at: i64,
+    /// When true, this API token may only be used on the metrics endpoint
+    /// (`GET /api/v1/metrics`). It is otherwise a normal API token: it has
+    /// the same expiry, revocation and last-access semantics, and the user
+    /// behind it must still hold the `system:metrics` permission. Older
+    /// records deserialize as `false` via `#[serde(default)]`.
+    #[serde(default)]
+    pub metrics_only: bool,
 }
 
 impl MemDbModel for AccessTokenModel {
@@ -89,6 +98,7 @@ impl AccessTokenModel {
         user_id: u64,
         name: Option<String>,
         expire_at: Option<i64>,
+        metrics_only: bool,
     ) -> Self {
         Self {
             token,
@@ -99,6 +109,7 @@ impl AccessTokenModel {
             user_id,
             token_type: TokenType::Api,
             expire_at,
+            metrics_only,
         }
     }
 
@@ -113,6 +124,7 @@ impl AccessTokenModel {
             user_id,
             token_type: TokenType::WebUI,
             expire_at: None,
+            metrics_only: false,
         }
     }
 
@@ -164,6 +176,7 @@ impl AccessTokenModel {
             user_id,
             token_type: TokenType::MfaChallenge,
             expire_at: Some(expire_at),
+            metrics_only: false,
         };
         let token_str = token.token.clone();
         insert_impl(DB_MANAGER.db(), token)?;
@@ -187,7 +200,9 @@ impl AccessTokenModel {
             .collect())
     }
 
-    pub fn resolve_user_from_token(token: &str) -> BichonResult<UserModel> {
+    /// Validate a token's lifecycle (type and expiry) and refresh its
+    /// last-access timestamp. Returns the stored token record.
+    fn resolve_token(token: &str) -> BichonResult<AccessTokenModel> {
         let token_str = token.to_string();
         let token_model = find_impl::<AccessTokenModel>(DB_MANAGER.db(), &token_str)?
             .ok_or_else(|| {
@@ -241,10 +256,41 @@ impl AccessTokenModel {
             Ok(updated)
         })?;
 
-        let user = UserModel::find(token_model.user_id)
-            ?
-            .ok_or_else(|| raise_error!("The user associated with this access token does not exist or may have been deleted.".into(), ErrorCode::ResourceNotFound))?;
-        Ok(user)
+        Ok(token_model)
+    }
+
+    fn user_for_token(token_model: &AccessTokenModel) -> BichonResult<UserModel> {
+        UserModel::find(token_model.user_id)?
+            .ok_or_else(|| raise_error!("The user associated with this access token does not exist or may have been deleted.".into(), ErrorCode::ResourceNotFound))
+    }
+
+    /// Resolve a user from a general-purpose access token.
+    ///
+    /// Metrics-only tokens are rejected here: every caller of this function
+    /// (SMTP authentication, login helpers, the REST guard on non-metrics
+    /// routes) must not accept a credential that is scoped to the metrics
+    /// endpoint. The metrics endpoint uses
+    /// [`Self::resolve_user_from_token_for_metrics`] instead.
+    pub fn resolve_user_from_token(token: &str) -> BichonResult<UserModel> {
+        let token_model = Self::resolve_token(token)?;
+        if token_model.metrics_only {
+            return Err(raise_error!(
+                "Permission denied: this token is restricted to the metrics endpoint."
+                    .into(),
+                ErrorCode::Forbidden
+            ));
+        }
+        Self::user_for_token(&token_model)
+    }
+
+    /// Resolve a user from a token presented on the metrics endpoint.
+    ///
+    /// Accepts both normal tokens and metrics-only tokens. The caller must
+    /// still check the user's `system:metrics` permission — the token scope
+    /// only decides *where* it may be used, not *what* it may read.
+    pub fn resolve_user_from_token_for_metrics(token: &str) -> BichonResult<UserModel> {
+        let token_model = Self::resolve_token(token)?;
+        Self::user_for_token(&token_model)
     }
 
     pub fn create_api_token(
@@ -253,12 +299,39 @@ impl AccessTokenModel {
     ) -> BichonResult<String> {
         // Validate request parameters first
         request.validate()?;
+
+        // A metrics-only token is useless — and misleading — for a user who
+        // cannot read metrics. Resolve the owner's effective permissions now
+        // so the failure is reported where the token is created. The metrics
+        // endpoint re-checks at use time as well.
+        if request.metrics_only {
+            let user = UserModel::find(user_id)?.ok_or_else(|| {
+                raise_error!(
+                    format!("Cannot create a token for user {}: user not found", user_id),
+                    ErrorCode::ResourceNotFound
+                )
+            })?;
+            if !ClientContext::check_has_permission(&user, None, Permission::SYSTEM_METRICS) {
+                return Err(raise_error!(
+                    "Cannot create a metrics-only token for a user without the \
+                     system:metrics permission."
+                        .into(),
+                    ErrorCode::Forbidden
+                ));
+            }
+        }
+
         let expire_at = request
             .expire_in
             .map(|hours| utc_now!() + (hours as i64) * 60 * 60 * 1000);
         let token = generate_token!(128);
-        let access_token =
-            AccessTokenModel::new_api_token(token.clone(), user_id, request.name, expire_at);
+        let access_token = AccessTokenModel::new_api_token(
+            token.clone(),
+            user_id,
+            request.name,
+            expire_at,
+            request.metrics_only,
+        );
         insert_impl(DB_MANAGER.db(), access_token)?;
         Ok(token)
     }
@@ -302,10 +375,35 @@ impl AccessTokenModel {
                     updated_at: token.updated_at,
                     expire_at: token.expire_at,
                     last_access_at: token.last_access_at,
+                    metrics_only: token.metrics_only,
                 }
             })
             .collect();
 
         Ok(resp)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AccessTokenModel;
+
+    /// Tokens written before the metrics-only scope existed carry no
+    /// `metrics_only` field and must still deserialize — as unrestricted
+    /// tokens, preserving their previous behavior.
+    #[test]
+    fn legacy_token_records_default_to_not_metrics_only() {
+        let json = r#"{
+            "user_id": 1,
+            "token": "legacy-token",
+            "name": null,
+            "token_type": "Api",
+            "created_at": 0,
+            "updated_at": 0,
+            "expire_at": null,
+            "last_access_at": 0
+        }"#;
+        let model: AccessTokenModel = serde_json::from_str(json).unwrap();
+        assert!(!model.metrics_only);
     }
 }

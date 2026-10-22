@@ -35,8 +35,6 @@ pub enum ArtifactKey {
     /// Full memdb in-memory snapshot (gzip `snapshot.json`), streamed from
     /// memory during capture.
     Memdb,
-    /// Consistent copy of the IMAP stable-UID redb store.
-    ImapUid,
     /// A sealed, immutable blob segment file.
     BlobSegment(u32),
     /// Tantivy envelope index copy (always captured).
@@ -61,7 +59,6 @@ impl ArtifactKey {
     pub fn label(&self) -> &'static str {
         match self {
             ArtifactKey::Memdb => "memdb",
-            ArtifactKey::ImapUid => "imap-uid",
             ArtifactKey::BlobSegment(_) => "blob",
             ArtifactKey::TantivyEnvelope => "envelope-index",
             ArtifactKey::TantivyAttachment => "attachment-index",

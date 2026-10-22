@@ -55,7 +55,7 @@ export const getColumns = (t: (key: string) => string): ColumnDef<AccessToken>[]
         />
       ),
       cell: ({ row }) => (
-        <div className="flex justify-center">
+        <div className="flex items-center justify-center gap-1">
           <Badge
             variant={row.original.token_type === 'Api' ? 'default' : 'secondary'}
             className="font-normal shadow-none"
@@ -64,9 +64,28 @@ export const getColumns = (t: (key: string) => string): ColumnDef<AccessToken>[]
               ? t('users.api_tokens.table.api_key')
               : t('users.api_tokens.table.web_ui')}
           </Badge>
+          {row.original.metrics_only && (
+            <Badge variant="outline" className="font-normal shadow-none">
+              {t('apiTokens.list.metricsOnlyBadge')}
+            </Badge>
+          )}
         </div>
       ),
       meta: { className: 'text-center' },
+    },
+    {
+      // Virtual column: not rendered, used by the toolbar's metrics-only
+      // filter (hidden via the table's initial column visibility).
+      id: 'metrics_only',
+      accessorFn: (row) => (row.metrics_only ? 'metrics' : 'regular'),
+      filterFn: (row, _id, value) => {
+        if (!value || value === 'all') return true
+        return value === 'metrics' ? !!row.original.metrics_only : !row.original.metrics_only
+      },
+      enableSorting: false,
+      enableHiding: false,
+      header: () => null,
+      cell: () => null,
     },
     {
       accessorKey: 'last_access_at',

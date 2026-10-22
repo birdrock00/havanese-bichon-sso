@@ -62,6 +62,9 @@ export function MoreFiltersPopover() {
         attachment_category: filter?.attachment_category || '',
         attachment_content_type: filter?.attachment_content_type || '',
         message_id: filter?.message_id || '',
+        // The envelope id is `filter.id` — the message's own id, not the
+        // Message-ID header above it.
+        envelope_id: filter?.id || '',
         size_preset: getPresetFromSize(filter?.min_size, filter?.max_size),
         has_attachment: filter?.has_attachment || false
     });
@@ -74,6 +77,7 @@ export function MoreFiltersPopover() {
                 attachment_category: filter?.attachment_category || '',
                 attachment_content_type: filter?.attachment_content_type || '',
                 message_id: filter?.message_id || '',
+                envelope_id: filter?.id || '',
                 size_preset: getPresetFromSize(filter?.min_size, filter?.max_size),
                 has_attachment: filter?.has_attachment || false
             });
@@ -99,6 +103,13 @@ export function MoreFiltersPopover() {
             if (localState.message_id) next.message_id = localState.message_id;
             else delete next.message_id;
 
+            // Trimmed, because an id pasted from the detail view often carries
+            // a trailing newline. Otherwise verbatim: the backend matches the
+            // stored value exactly, and lower-casing here would silently stop
+            // matching if the id format ever became case-sensitive.
+            if (localState.envelope_id.trim()) next.id = localState.envelope_id.trim();
+            else delete next.id;
+
             if (localState.has_attachment) next.has_attachment = true;
             else delete next.has_attachment;
 
@@ -116,6 +127,7 @@ export function MoreFiltersPopover() {
         filter?.min_size,
         filter?.max_size,
         filter?.message_id,
+        filter?.id,
         filter?.has_attachment,
         filter?.attachment_extension,
         filter?.attachment_category,
@@ -143,7 +155,7 @@ export function MoreFiltersPopover() {
                 </Button>
             </PopoverTrigger>
 
-            <PopoverContent align="end" className="w-72 p-4 flex flex-col gap-4">
+            <PopoverContent align="end" className="w-80 p-4 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                     <h4 className="text-xs font-medium">{t('search_more.title')}</h4>
                     {activeCount > 0 && (
@@ -157,6 +169,7 @@ export function MoreFiltersPopover() {
                                     delete next.min_size;
                                     delete next.max_size;
                                     delete next.message_id;
+                                    delete next.id;
                                     delete next.has_attachment;
                                     delete next.attachment_extension;
                                     delete next.attachment_category;
@@ -266,6 +279,22 @@ export function MoreFiltersPopover() {
                     />
                     <p className="text-[10px] text-muted-foreground opacity-70 leading-tight">
                         {t('search_more.message_id_description')}
+                    </p>
+                </div>
+
+                <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">{t('search_more.envelope_id_label')}</Label>
+                    <Input
+                        // The example id is 36 characters: at the size of the
+                        // text it would read as a value rather than a hint, so
+                        // it is set at the same size as the description below.
+                        className="h-8 text-xs placeholder:text-[10px]"
+                        value={localState.envelope_id}
+                        onChange={(e) => setLocalState(prev => ({ ...prev, envelope_id: e.target.value }))}
+                        placeholder="550e8400-e29b-41d4-a716-446655440000"
+                    />
+                    <p className="text-[10px] text-muted-foreground opacity-70 leading-tight">
+                        {t('search_more.envelope_id_description')}
                     </p>
                 </div>
 

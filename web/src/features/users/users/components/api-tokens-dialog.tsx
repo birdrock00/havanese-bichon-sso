@@ -29,6 +29,13 @@ import { TokensActionDialog } from './access-token-action'
 import { Plus } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useTranslation } from 'react-i18next'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface Props {
   currentRow?: User
@@ -39,11 +46,18 @@ interface Props {
 export function UserApiTokensDialog({ currentRow, open, onOpenChange }: Props) {
   const { t } = useTranslation()
   const [addOpen, setAddOpen] = useState(false)
+  const [filter, setFilter] = useState<'all' | 'metrics' | 'regular'>('all')
 
   const { data: tokens = [], isLoading: tokensLoading } = useQuery({
     queryKey: ['user-tokens', currentRow?.id!],
     queryFn: () => get_user_tokens(currentRow?.id!),
     enabled: !!currentRow?.id,
+  })
+
+  const filteredTokens = tokens.filter((token) => {
+    if (filter === 'metrics') return !!token.metrics_only
+    if (filter === 'regular') return !token.metrics_only
+    return true
   })
 
   return (
@@ -84,14 +98,39 @@ export function UserApiTokensDialog({ currentRow, open, onOpenChange }: Props) {
           </div>
         ) : (
           <>
-            <div className="flex justify-end mb-4">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <Select
+                value={filter}
+                onValueChange={(value) =>
+                  setFilter(value as 'all' | 'metrics' | 'regular')
+                }
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder={t('apiTokens.filters.label')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('apiTokens.filters.all')}</SelectItem>
+                  <SelectItem value="metrics">
+                    {t('apiTokens.filters.metricsOnly')}
+                  </SelectItem>
+                  <SelectItem value="regular">
+                    {t('apiTokens.filters.regular')}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
               <Button onClick={() => setAddOpen(true)}>
                 <span>{t('users.tokens_action.buttons.add')}</span> <Plus size={18} />
               </Button>
             </div>
-            <ScrollArea className='h-[32rem] w-full pr-4 -mr-4 py-1'>
-              <TokenCardList tokens={tokens} userId={currentRow?.id!} />
-            </ScrollArea>
+            {filteredTokens.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                {t('apiTokens.list.filterEmpty')}
+              </p>
+            ) : (
+              <ScrollArea className='h-[32rem] w-full pr-4 -mr-4 py-1'>
+                <TokenCardList tokens={filteredTokens} userId={currentRow?.id!} />
+              </ScrollArea>
+            )}
           </>
         )}
 

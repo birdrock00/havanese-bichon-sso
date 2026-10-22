@@ -19,6 +19,7 @@
 use crate::{
     database::{delete_impl, find_impl, manager::DB_MANAGER, update_impl, upsert_impl, MemDbModel},
     error::BichonResult,
+    metrics::classify::{classify_error, ErrorKind},
     utc_now,
 };
 use serde::{Deserialize, Serialize};
@@ -162,6 +163,23 @@ impl MemDbModel for DownloadState {
 pub struct AccountError {
     pub error: String,
     pub at: i64,
+    /// Classified kind of this error. Older persisted entries deserialize
+    /// as Internal via `#[serde(default)]`.
+    #[serde(default)]
+    pub kind: ErrorKind,
+}
+
+/// Record a finished download session in the metrics registry (session
+/// counter, duration histogram). Terminal-state bookkeeping only; call
+/// exactly once per session that leaves the Running state.
+fn record_finished_session(account_id: u64, session: &DownloadSession) {
+    let duration_ms = session.end_time.unwrap_or(session.start_time) - session.start_time;
+    crate::metrics::count_sync_session(
+        account_id,
+        crate::metrics::trigger_label(&session.trigger),
+        crate::metrics::download_status_label(&session.status),
+        duration_ms,
+    );
 }
 
 impl DownloadState {
@@ -203,6 +221,7 @@ impl DownloadState {
                     old_session.status = DownloadStatus::Cancelled;
                     old_session.end_time = Some(utc_now!());
                     old_session.message = Some("Interrupted by a new download session.".into());
+                    record_finished_session(account_id, &old_session);
                 }
                 updated.history.push(old_session);
                 if updated.history.len() > 30 {
@@ -240,6 +259,7 @@ impl DownloadState {
                     let now = utc_now!();
                     session.end_time = Some(now);
                     updated.last_finished_at = Some(now);
+                    record_finished_session(account_id, &session);
                     updated.history.push(session);
                     let to_remove = updated.history.len().saturating_sub(10);
                     if to_remove > 0 {
@@ -281,6 +301,7 @@ impl DownloadState {
                             "Previous sync did not finish cleanly; marked as cancelled on startup."
                                 .into(),
                         );
+                        record_finished_session(account_id, &session);
                         updated.history.push(session);
                         updated.last_finished_at = Some(utc_now!());
                         updated.active_session = None;
@@ -358,11 +379,16 @@ impl DownloadState {
     }
 
     pub fn append_session_error(account_id: u64, error: String) -> BichonResult<()> {
+        let kind = classify_error(&error);
+        // Count before persisting: the error did happen even if the session
+        // record cannot be written (e.g. the database is unavailable).
+        crate::metrics::count_sync_error(account_id, kind);
         Self::update_state(account_id, move |current| {
             let mut updated = current.clone();
             let new_error = AccountError {
                 error,
                 at: utc_now!(),
+                kind,
             };
             let target = updated
                 .active_session
@@ -565,5 +591,33 @@ impl GapFillState {
             update_impl(DB_MANAGER.db(), &account_id.to_string(), updater)?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{AccountError, ErrorKind};
+
+    /// Download history written by an older version has no `kind` field. It
+    /// must keep deserializing (as Internal) instead of breaking the account
+    /// state.
+    #[test]
+    fn legacy_account_error_without_kind_deserializes_as_internal() {
+        let error: AccountError =
+            serde_json::from_str(r#"{"error":"connection reset","at":123}"#)
+                .expect("legacy AccountError must deserialize");
+        assert_eq!(error.kind, ErrorKind::Internal);
+    }
+
+    #[test]
+    fn account_error_round_trips_with_kind() {
+        let error = AccountError {
+            error: "authentication failed".into(),
+            at: 123,
+            kind: ErrorKind::Auth,
+        };
+        let json = serde_json::to_string(&error).unwrap();
+        assert!(json.contains("\"kind\":\"auth\""));
+        assert_eq!(serde_json::from_str::<AccountError>(&json).unwrap(), error);
     }
 }

@@ -133,7 +133,7 @@ export function AccountPopover() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder={t('search_accounts.search_placeholder')}
-            className="h-8 text-sm"
+            className="h-8 text-xs md:text-xs"
           />
         </div>
         {!search && selectedIds.length > 0 && (

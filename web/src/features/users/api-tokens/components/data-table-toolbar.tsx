@@ -20,6 +20,13 @@
 import { Table } from '@tanstack/react-table'
 import { Input } from '@/components/ui/input'
 import { useTranslation } from 'react-i18next'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 // import { useTranslation } from 'react-i18next'
 
 interface DataTableToolbarProps<TData> {
@@ -30,6 +37,8 @@ export function DataTableToolbar<TData>({
   table,
 }: DataTableToolbarProps<TData>) {
   const { t } = useTranslation()
+  const metricsColumn = table.getColumn('metrics_only')
+  const metricsFilter = (metricsColumn?.getFilterValue() as string) ?? 'all'
   return (
     <div className='flex items-center justify-between'>
       <div className='flex flex-1 flex-col-reverse items-start gap-y-2 sm:flex-row sm:items-center sm:space-x-2'>
@@ -41,6 +50,25 @@ export function DataTableToolbar<TData>({
           }}
           className='h-8 w-80'
         />
+        <Select
+          value={metricsFilter}
+          onValueChange={(value) =>
+            metricsColumn?.setFilterValue(value === 'all' ? undefined : value)
+          }
+        >
+          <SelectTrigger className='h-8 w-[180px]'>
+            <SelectValue placeholder={t('apiTokens.filters.label')} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value='all'>{t('apiTokens.filters.all')}</SelectItem>
+            <SelectItem value='metrics'>
+              {t('apiTokens.filters.metricsOnly')}
+            </SelectItem>
+            <SelectItem value='regular'>
+              {t('apiTokens.filters.regular')}
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
   )

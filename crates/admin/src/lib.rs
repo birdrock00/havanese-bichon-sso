@@ -34,6 +34,7 @@ pub mod meta;
 pub mod migrate_store_v2;
 pub mod migrate_v037;
 pub mod migrate_v1;
+pub mod reindex;
 pub mod reset;
 pub mod restore;
 
@@ -57,6 +58,10 @@ pub enum AdminCommand {
     /// (disaster recovery). The S3 backend settings come from a JSON config
     /// file (`--config`), never from the local install's metadata store.
     Restore(RestoreArgs),
+    /// Rebuild the search indexes from the existing indexes + blobs, then exit.
+    /// Required after a tokenizer/format change (the old index terms no longer
+    /// match new queries). Reads the old indexes as an immutable source.
+    Reindex(reindex::ReindexArgs),
 }
 
 /// Interactive main menu. `verify_only` makes the restore entries run the
@@ -78,6 +83,7 @@ pub fn run_interactive(verify_only: bool) {
         "Migrate Legacy v0.3.7 Storage to v2.x (bichon-blob)",
         "Migrate v1.x Storage to v2.x (Fjall → bichon-blob)",
         "Restore a Backup Point (Disaster Recovery)",
+        "Rebuild Search Indexes",
         "Exit",
     ];
 
@@ -96,6 +102,10 @@ pub fn run_interactive(verify_only: bool) {
             let code = tokio::runtime::Runtime::new()
                 .expect("tokio runtime")
                 .block_on(restore::run_interactive(&theme, verify_only));
+            std::process::exit(code);
+        }
+        4 => {
+            let code = reindex::run_cli(reindex::ReindexArgs::default());
             std::process::exit(code);
         }
         _ => {

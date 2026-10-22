@@ -167,8 +167,18 @@ export default function BackupPage() {
   const [rebasing, setRebasing] = React.useState(false)
   const [historyOpen, setHistoryOpen] = React.useState(false)
   const [historyPage, setHistoryPage] = React.useState(1)
+  /** Set when a run finishes successfully, so the restore-point list can be
+   *  flagged as out of date. The list is not refetched automatically: listing
+   *  the backup target costs a request per call (billable on S3), so the user
+   *  decides when to refresh via the browser's refresh button. */
+  const [manifestsStale, setManifestsStale] = React.useState(false)
   const pollRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
   const idlePollsRef = React.useRef(0)
+  /** Id of the newest successful run already reflected in the restore-point
+   *  list (`''` when that list was fetched against an empty history). A new
+   *  successful run commits a restore point, so its record id changing is the
+   *  signal to flag the list as stale. */
+  const acknowledgedSuccessRef = React.useRef<string | null>(null)
 
   const stopPolling = () => {
     if (pollRef.current) {
@@ -192,6 +202,22 @@ export default function BackupPage() {
         ])
         setStatus(statusData)
         setRecords(recordsData)
+        // A successful run commits a restore point. Flag the list as stale
+        // instead of refetching it — each fetch is a list call against the
+        // backup target (billable on S3), so the refresh is left to the user.
+        // Comparing record ids also catches runs that start and finish
+        // between two polls.
+        const latestSuccess = recordsData.find((r) => r.status === 'success')
+        if (acknowledgedSuccessRef.current === null) {
+          // First load: whatever is already committed is in the mounted list.
+          acknowledgedSuccessRef.current = latestSuccess?.id ?? ''
+        } else if (
+          latestSuccess &&
+          latestSuccess.id !== acknowledgedSuccessRef.current
+        ) {
+          acknowledgedSuccessRef.current = latestSuccess.id
+          setManifestsStale(true)
+        }
         if (statusData.running) {
           idlePollsRef.current = 0
           if (!pollRef.current) {
@@ -587,7 +613,11 @@ export default function BackupPage() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <ManifestBrowser stacked />
+                      <ManifestBrowser
+                        stacked
+                        stale={manifestsStale}
+                        onRefreshed={() => setManifestsStale(false)}
+                      />
                     </CardContent>
                   </Card>
                 )}

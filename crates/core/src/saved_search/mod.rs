@@ -82,6 +82,25 @@ pub struct SavedSearchRenameRequest {
     pub name: String,
 }
 
+/// Stamp the semantics a **newly created** saved search is authored under, so a
+/// later replay does not depend on whatever the default happens to be.
+fn with_current_semantics(mut filter: Value) -> Value {
+    if let Value::Object(map) = &mut filter {
+        map.entry("match_all").or_insert(Value::Bool(true));
+    }
+    filter
+}
+
+/// Fill in `match_all` for a **stored** filter that predates the key. Those were
+/// authored under the old OR semantics, so they are replayed with `false` and
+/// keep behaving as their owner expects.
+fn with_legacy_semantics(mut model: SavedSearchModel) -> SavedSearchModel {
+    if let Value::Object(map) = &mut model.filter {
+        map.entry("match_all").or_insert(Value::Bool(false));
+    }
+    model
+}
+
 impl SavedSearchModel {
     /// Create a saved search for `user_id`. Conditions are immutable; only the
     /// name can change afterwards.
@@ -115,7 +134,7 @@ impl SavedSearchModel {
             user_id,
             name,
             kind,
-            filter,
+            filter: with_current_semantics(filter),
             created_at: now,
             updated_at: now,
         };
@@ -129,7 +148,7 @@ impl SavedSearchModel {
         let mut items =
             filter_impl::<SavedSearchModel, _>(DB_MANAGER.db(), move |s| s.user_id == uid)?;
         items.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
-        Ok(items)
+        Ok(items.into_iter().map(with_legacy_semantics).collect())
     }
 
     /// Fetch a saved search and verify the caller owns it.
@@ -146,7 +165,7 @@ impl SavedSearchModel {
                 ErrorCode::PermissionDenied
             ));
         }
-        Ok(found)
+        Ok(with_legacy_semantics(found))
     }
 
     /// Rename a saved search. The condition itself is immutable.
@@ -168,6 +187,7 @@ impl SavedSearchModel {
             current.updated_at = utc_now!();
             Ok(current)
         })
+        .map(with_legacy_semantics)
     }
 
     /// Delete a saved search, enforcing ownership.

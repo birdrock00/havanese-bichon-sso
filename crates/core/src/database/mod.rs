@@ -138,8 +138,31 @@ pub fn update_impl<M: MemDbModel>(
     Ok(updated)
 }
 
-// ─── Delete ────────────────────────────────────────────────────────────────
+/// [`update_impl`] with the read and the write performed atomically under the
+/// memdb lock (see `MemDb::collection(..).update`).
+///
+/// Use this — not `update_impl` — when a lost update would corrupt an
+/// invariant. `update_impl` reads and writes in two separate commits, so two
+/// concurrent writers on the same key can interleave and the later one silently
+/// reverts the earlier one. That is unacceptable for a monotonic counter (the
+/// IMAP UID counter): a reverted value reissues UIDs that clients have already
+/// seen.
+///
+/// `update_fn` is deliberately infallible: all fallible work (index probes,
+/// space checks) must happen *before* the call, otherwise it would have to run
+/// inside the lock.
+pub fn update_atomic_impl<M: MemDbModel>(
+    db: &MemDb,
+    key: &str,
+    update_fn: impl FnOnce(M) -> M,
+) -> BichonResult<M> {
+    let _write_guard = gate_guard::<M>()?;
+    db.collection(M::collection())
+        .update(key, update_fn)
+        .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))
+}
 
+// ─── Delete ────────────────────────────────────────────────────────────────
 pub fn delete_impl<M: MemDbModel>(db: &MemDb, key: &str) -> BichonResult<()> {
     let _write_guard = gate_guard::<M>()?;
     let coll = db.collection(M::collection());

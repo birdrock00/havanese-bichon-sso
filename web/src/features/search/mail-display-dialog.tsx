@@ -48,7 +48,9 @@ export function MailDisplayDrawer({ open, onOpenChange }: Props) {
               </DialogTitle>
             </div>
           </DialogHeader>
-          <ScrollArea className="flex-1">
+          {/* Force Radix's `display: table` content wrapper back to a block so
+              the compact header's truncation works in the drawer too. */}
+          <ScrollArea className="flex-1 [&_[data-radix-scroll-area-viewport]>div]:!block">
             <div className='m-5'>
               {currentEnvelope ? (
                 <MailMessageView envelope={currentEnvelope} />

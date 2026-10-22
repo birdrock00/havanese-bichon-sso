@@ -7,7 +7,7 @@ use bichon_core::{
     raise_error,
 };
 use console::style;
-use dialoguer::{theme::ColorfulTheme, Input};
+use dialoguer::{theme::ColorfulTheme, Confirm, Input};
 use fjall::{Config as FjallConfig, Database};
 use indicatif::{ProgressBar, ProgressStyle};
 
@@ -285,6 +285,29 @@ pub fn handle_migrate_v1(theme: &ColorfulTheme) {
         return;
     }
 
+    // The 2.x search analyzer differs from the one that built the v1.x indexes,
+    // and this migration leaves those indexes untouched. Offer the one-time
+    // rebuild now, so the operator does not have to go through a second
+    // maintenance stop; declining keeps the indexes intact and the warning below
+    // tells them what to run later.
+    let want_rebuild = Confirm::with_theme(theme)
+        .with_prompt(
+            "The search analyzer changed, so the indexes must be rebuilt once. Rebuild the search indexes now?",
+        )
+        .default(true)
+        .interact()
+        .unwrap_or(false);
+
+    let rebuilt = want_rebuild
+        && crate::reindex::run_without_confirm(crate::reindex::ReindexArgs {
+            root: Some(root_dir.to_string_lossy().into_owned()),
+            // Same env names the server reads, so a customized index/data
+            // directory is picked up automatically.
+            index_parent: std::env::var("BICHON_INDEX_DIR").ok(),
+            data_parent: std::env::var("BICHON_DATA_DIR").ok(),
+            ..Default::default()
+        }) == 0;
+
     println!(
         "\n{}",
         style(format!(
@@ -309,6 +332,19 @@ pub fn handle_migrate_v1(theme: &ColorfulTheme) {
         .green()
         .bold()
     );
+
+    if !rebuilt {
+        println!(
+            "\n{}",
+            style(if want_rebuild {
+                "⚠️  The search index rebuild did not finish. Run `bichon-admin reindex` before starting the server, or search will not work."
+            } else {
+                "🔁 Search indexes still need a one-time rebuild. Run `bichon-admin reindex` before starting the server, otherwise the server will ask you to."
+            })
+            .yellow()
+            .bold()
+        );
+    }
 }
 
 #[cfg(test)]

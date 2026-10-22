@@ -67,8 +67,6 @@ use crate::settings::cli::RestoreArgs;
 /// Mirrors `settings::dir` / `feature_db_path` so a fresh install pointed at
 /// the restored directory finds everything where it expects it.
 pub(crate) const MEMDB_DIR: &str = "memdb";
-pub(crate) const IMAP_UID_SUBDIR: &str = "imap-uid";
-pub(crate) const IMAP_UID_FILE: &str = "imap-uid.redb";
 pub(crate) const STORAGE_DIR: &str = "bichon-storage";
 pub(crate) const BLOBS_DIR: &str = "blobs";
 pub(crate) const SEGMENTS_DIR: &str = "segments";
@@ -204,7 +202,9 @@ pub struct RestoreReport {
     /// Bytes downloaded and verified (verify-only: bytes streamed).
     pub bytes_checked: u64,
     pub memdb_restored: bool,
-    pub imap_uid_restored: bool,
+    /// Accounts whose IMAP UIDVALIDITY generation was bumped so clients drop
+    /// their caches (see `archive::imap::stable_uid::bump_all_generations`).
+    pub generations_bumped: usize,
     pub segments_restored: usize,
     pub audit_restored: bool,
     pub audit_deltas_replayed: usize,
@@ -617,6 +617,44 @@ pub(crate) async fn restore_with_engine(
     let _ = std::fs::remove_dir_all(&work);
     result?;
 
+    // Invalidate every IMAP client cache for the restored accounts. A restore
+    // point is internally consistent, so the restored counter/index pair looks
+    // healthy while clients still hold UIDs from the generation they last saw —
+    // bumping the UIDVALIDITY generation is the only way to make them resync
+    // instead of trusting a cache that no longer matches. See
+    // `archive::imap::stable_uid::bump_all_generations`.
+    if report.memdb_restored {
+        let memdb_dir = targets.root.join(MEMDB_DIR);
+        match bichon_memdb::MemDb::open_with(&memdb_dir, bichon_memdb::Durability::Full)
+            .map_err(|e| {
+                raise_error!(
+                    format!("restore: cannot open the restored memdb: {e}"),
+                    ErrorCode::InternalError
+                )
+            })
+            .and_then(|db| crate::archive::imap::stable_uid::bump_all_generations(&db))
+        {
+            Ok(bumped) => {
+                report.generations_bumped = bumped;
+                if bumped > 0 {
+                    warn!(
+                        accounts = bumped,
+                        "restore: bumped the IMAP UIDVALIDITY generation of every account so \
+                         clients resynchronize instead of trusting stale UID caches"
+                    );
+                }
+            }
+            Err(e) => {
+                // Not fatal: the server's startup reconcile repairs a counter
+                // that ends up behind the index, and a client that keeps a
+                // stale cache is a correctness problem the operator can still
+                // resolve by removing the account's cache. Refusing an
+                // otherwise-complete restore would be worse.
+                warn!("restore: could not invalidate IMAP client caches: {e:#?}");
+            }
+        }
+    }
+
     // The commit marker: without STORAGE_VERSION, `check_data_status` treats
     // the directory as a fresh (empty) install and `initialize()` would
     // refuse to touch existing data.
@@ -682,13 +720,6 @@ async fn restore_into(
             )
         })?;
         report.memdb_restored = true;
-    }
-
-    // imap-uid: stable UID store, a single redb file.
-    if let Some(obj) = &manifest.objects.imap_uid {
-        let dest = targets.root.join(IMAP_UID_SUBDIR).join(IMAP_UID_FILE);
-        download(engine, obj, &dest, report).await?;
-        report.imap_uid_restored = true;
     }
 
     // blob: sealed segments, back in the layout the engine discovers on open.
@@ -817,7 +848,6 @@ fn manifest_refs(m: &Manifest) -> Vec<(&str, &str, u64)> {
     let mut out = Vec::new();
     for slot in [
         &m.objects.memdb,
-        &m.objects.imap_uid,
         &m.objects.integrity,
         &m.objects.timestamp,
     ]
@@ -909,7 +939,6 @@ fn assert_clean_restore_target(dir: &Path, root: &Path) -> BichonResult<()> {
 /// (→ data target) and tantivy copies (→ index target).
 fn assert_sufficient_space(targets: &RestoreTargets, m: &Manifest) -> BichonResult<()> {
     let root_needed = m.objects.memdb.as_ref().map_or(0, |o| o.bytes)
-        + m.objects.imap_uid.as_ref().map_or(0, |o| o.bytes)
         + m.objects.integrity.as_ref().map_or(0, |o| o.bytes)
         + m.objects.timestamp.as_ref().map_or(0, |o| o.bytes)
         + m.objects.audit.as_ref().map_or(0, |a| {
@@ -966,10 +995,6 @@ pub fn format_restore_report(report: &RestoreReport) -> String {
         out.push_str(&format!(
             "  memdb           : {}\n",
             yes(report.memdb_restored)
-        ));
-        out.push_str(&format!(
-            "  imap-uid        : {}\n",
-            yes(report.imap_uid_restored)
         ));
         out.push_str(&format!(
             "  blob segments   : {}\n",
@@ -1108,7 +1133,6 @@ mod tests {
                 ),
                 bytes: memdb_gz.len() as u64,
             }),
-            imap_uid: Some(obj.clone()),
             blob_segments: vec![SegmentRef {
                 seg_id: 3,
                 obj: obj.clone(),
@@ -1301,7 +1325,6 @@ mod tests {
         let report = restore_with_engine(&opts, &engine).await.unwrap();
 
         assert!(report.memdb_restored);
-        assert!(report.imap_uid_restored);
         assert_eq!(report.segments_restored, 1);
         assert!(report.audit_restored);
         assert_eq!(report.audit_deltas_replayed, 2);
@@ -1313,10 +1336,6 @@ mod tests {
         // On-disk layout matches the production mapping.
         assert_eq!(
             std::fs::read(into.join("memdb/snapshot.json")).unwrap(),
-            b"hello"
-        );
-        assert_eq!(
-            std::fs::read(into.join("imap-uid/imap-uid.redb")).unwrap(),
             b"hello"
         );
         assert_eq!(
@@ -1426,10 +1445,6 @@ mod tests {
         // Root-owned data lands under `into`...
         assert_eq!(
             std::fs::read(into.join("memdb/snapshot.json")).unwrap(),
-            b"hello"
-        );
-        assert_eq!(
-            std::fs::read(into.join("imap-uid/imap-uid.redb")).unwrap(),
             b"hello"
         );
         // ...blob segments land under the data parent, indices under the index
@@ -1557,7 +1572,7 @@ mod tests {
 
         let report = restore_with_engine(&opts, &engine).await.unwrap();
         assert!(report.verify_only);
-        assert_eq!(report.objects_total, 9);
+        assert_eq!(report.objects_total, 8);
         assert!(
             report.bytes_checked > 35,
             "at least the 7 hello-sized slots"

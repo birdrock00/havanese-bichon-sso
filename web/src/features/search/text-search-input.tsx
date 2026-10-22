@@ -161,7 +161,7 @@ export function TextSearchInput() {
                         onFocus={() => setShowHistory(true)}
                         onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                         placeholder={t("search_input.placeholder")}
-                        className="h-9 border-none shadow-none focus-visible:ring-0 pl-9 pr-10 text-sm bg-transparent w-full"
+                        className="h-9 border-none shadow-none focus-visible:ring-0 pl-9 pr-10 text-xs md:text-xs bg-transparent w-full"
                     />
                     {value && (
                         <Button
@@ -183,6 +183,9 @@ export function TextSearchInput() {
                     {t("search_input.button")}
                 </Button>
             </div>
+            <p className="mt-1 px-1 text-[10px] leading-relaxed text-muted-foreground/70">
+                {t("search_input.hint")}
+            </p>
             {showHistory && (
                 <div className="absolute top-full left-0 w-full mt-1 bg-popover border rounded-md shadow-lg z-50 max-h-[300px] overflow-hidden flex flex-col">
                     <div className="py-2 px-3 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold border-b flex items-center justify-between bg-muted/30">

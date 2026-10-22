@@ -30,6 +30,7 @@ use crate::error::code::IntoStatusCode;
 pub mod auth;
 pub mod error;
 pub mod log;
+pub mod recorder;
 pub mod status;
 pub mod timeout;
 pub mod tls;

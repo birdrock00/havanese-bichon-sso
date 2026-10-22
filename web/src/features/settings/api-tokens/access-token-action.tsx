@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/form'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ToastAction } from '@/components/ui/toast'
 import { AxiosError } from 'axios'
@@ -68,6 +69,7 @@ const getAccessTokenSchema = (t: any) => z.object({
     .int(t('apiTokens.form.errorInt'))
     .positive(t('apiTokens.form.errorPositive'))
     .optional(),
+  metrics_only: z.boolean(),
 })
 
 export type AccessTokenForm = z.infer<ReturnType<typeof getAccessTokenSchema>>
@@ -82,6 +84,7 @@ interface Props {
 const defaultValues: AccessTokenForm = {
   name: '',
   expire_in: undefined,
+  metrics_only: false,
 }
 
 export function TokensActionDialog({
@@ -100,6 +103,7 @@ export function TokensActionDialog({
       ? {
         name: currentRow.name ?? '',
         expire_in: undefined,
+        metrics_only: currentRow.metrics_only ?? false,
       }
       : defaultValues,
   })
@@ -165,6 +169,7 @@ export function TokensActionDialog({
       user_id: userId,
       name: values.name?.trim() || undefined,
       expire_in: values.expire_in || undefined,
+      metrics_only: values.metrics_only,
     }
 
     isEdit
@@ -194,7 +199,7 @@ export function TokensActionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="h-[14rem] w-full pr-4 -mr-4">
+        <ScrollArea className="h-[23rem] w-full pr-4 -mr-4">
           <Form {...form}>
             <form
               id="token-form"
@@ -259,6 +264,27 @@ export function TokensActionDialog({
                       {t('apiTokens.form.expirationDescription')}
                     </FormDescription>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {/* metrics_only */}
+              <FormField
+                control={form.control}
+                name="metrics_only"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>{t('apiTokens.form.metricsOnlyLabel')}</FormLabel>
+                      <FormDescription>
+                        {t('apiTokens.form.metricsOnlyDescription')}
+                      </FormDescription>
+                    </div>
                   </FormItem>
                 )}
               />

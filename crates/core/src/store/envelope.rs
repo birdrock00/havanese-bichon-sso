@@ -31,6 +31,9 @@ pub struct Envelope {
     pub mailbox_id: u64,
     pub mailbox_name: Option<String>,
     pub uid: u32,
+    /// Archive-side stable IMAP UID (see `archive::imap::stable_uid`). 0 = not
+    /// yet assigned; assignment happens exactly once at ingest.
+    pub imap_uid: u32,
     pub subject: String,
     pub preview: String,
     pub from: String,

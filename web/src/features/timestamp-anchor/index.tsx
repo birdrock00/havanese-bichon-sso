@@ -45,6 +45,7 @@ import {
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useEdition } from '@/hooks/use-edition'
 import { toast } from '@/hooks/use-toast'
+import { copyToClipboard } from '@/lib/clipboard'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -152,7 +153,7 @@ function ProofPanel({ proof }: { proof: EmailProof }) {
 
   const copyToken = async () => {
     if (!proof.tsa_token_b64) return
-    await navigator.clipboard.writeText(proof.tsa_token_b64)
+    await copyToClipboard(proof.tsa_token_b64)
     toast({ title: t('timestampAnchor.tokenCopied', 'Token copied to clipboard') })
   }
 

@@ -1369,7 +1369,7 @@ mod tests {
         // Orphan manifest + its object, referencing nothing committed.
         let mut mo = Manifest::new("orphan".to_string(), "manual", None);
         let po = write_temp("orphan.txt", b"orphan object");
-        mo.add_artifact(&artifact_at(po, ArtifactKey::ImapUid, 0x59))
+        mo.add_artifact(&artifact_at(po, ArtifactKey::TantivyEnvelope, 0x59))
             .unwrap();
         let bytes = mo.encode_gz().unwrap();
         let op = StorePath::parse("test/v1/meta/m-orphan.json.gz").unwrap();
@@ -1606,9 +1606,9 @@ mod tests {
         let p1 = write_temp("v1.txt", b"ok object");
         m.add_artifact(&artifact_at(p1.clone(), ArtifactKey::Memdb, 0x61))
             .unwrap();
-        // A reference to an object we never upload (imap_uid).
+        // A reference to an object we never upload.
         let p2 = write_temp("v2.txt", b"missing object");
-        m.add_artifact(&artifact_at(p2, ArtifactKey::ImapUid, 0x62))
+        m.add_artifact(&artifact_at(p2, ArtifactKey::TantivyEnvelope, 0x62))
             .unwrap();
         let mut s = EngineSummary::default();
         e.upload_artifact(&artifact_at(p1.clone(), ArtifactKey::Memdb, 0x61), &mut s)

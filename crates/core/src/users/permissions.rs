@@ -50,6 +50,11 @@ impl Permission {
     /// Manage core system configurations (OAuth Client ID/Secret, Proxy settings).
     pub const ROOT: &str = "system:root";
 
+    /// Read server-wide operational metrics (Prometheus/OpenMetrics endpoint).
+    /// Intended for a dedicated monitoring token; exposes per-account counts
+    /// and error rates across ALL accounts regardless of the Account Access List.
+    pub const SYSTEM_METRICS: &str = "system:metrics";
+
     /// Create, modify, and delete all users and their roles (Admin only).
     pub const USER_MANAGE: &str = "user:manage";
 
@@ -151,6 +156,10 @@ impl Permission {
                 "Basic platform access for dashboard and personal settings.",
             ),
             (Self::ROOT, "Full system access and configuration."),
+            (
+                Self::SYSTEM_METRICS,
+                "Read server-wide operational metrics (Prometheus endpoint).",
+            ),
             (Self::USER_MANAGE, "Create, update, and delete users."),
             (
                 Self::USER_VIEW,

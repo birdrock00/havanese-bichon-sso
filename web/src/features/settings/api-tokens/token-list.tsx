@@ -41,6 +41,7 @@ import { OP_TOKEN_REVOKE } from "@/api/approvals/api";
 import { useGatedOp } from "@/features/approvals/use-gated-op";
 import { useTranslation } from "react-i18next";
 import { toast } from "@/hooks/use-toast";
+import { copyToClipboard } from "@/lib/clipboard";
 
 interface Props {
     tokens: AccessToken[];
@@ -81,11 +82,18 @@ export const TokenCardList: React.FC<Props> = ({ tokens, userId }) => {
         }
     });
 
-    const handleCopy = (text: string) => {
-        navigator.clipboard.writeText(text);
-        toast({
-            description: t('apiTokens.notifications.copied'),
-        });
+    const handleCopy = async (text: string) => {
+        try {
+            await copyToClipboard(text);
+            toast({
+                description: t('apiTokens.notifications.copied'),
+            });
+        } catch {
+            toast({
+                variant: "destructive",
+                description: t('settings.failedToCopyText'),
+            });
+        }
     };
 
     return (
@@ -118,6 +126,11 @@ export const TokenCardList: React.FC<Props> = ({ tokens, userId }) => {
                                             >
                                                 {expired ? t('apiTokens.list.statusExpired') : t('apiTokens.list.statusActive')}
                                             </Badge>
+                                            {token.metrics_only && (
+                                                <Badge variant="outline" className="text-xs">
+                                                    {t('apiTokens.list.metricsOnlyBadge')}
+                                                </Badge>
+                                            )}
                                         </div>
                                     </div>
 

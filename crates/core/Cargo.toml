@@ -68,7 +68,6 @@ uuid.workspace = true
 bichon-blob.workspace = true
 tracing-log.workspace = true
 tokio-util.workspace = true
-whichlang = "0.1.1"
 deunicode = "1.6.2"
 scopeguard = "1.2.0"
 cron = "0.17"
@@ -81,3 +80,4 @@ codepage-strings = "1.0.2"
 hex.workspace = true
 object_store = { version = "0.14.2", features = ["aws", "http"] }
 flate2 = "1.1.10"
+prometheus.workspace = true

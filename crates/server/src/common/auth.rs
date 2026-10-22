@@ -78,6 +78,14 @@ impl<'a> FromRequest<'a> for WrappedContext {
     }
 }
 
+/// The one endpoint a metrics-only token may be used on.
+///
+/// The route is nested under the configured base path (e.g. `/bichon`), so
+/// match by suffix instead of an exact path.
+fn is_metrics_endpoint(path: &str) -> bool {
+    path.trim_end_matches('/').ends_with("/api/v1/metrics")
+}
+
 pub async fn extract_client_context(req: &Request) -> Result<ClientContext> {
     let ip_addr = RealIp::from_request_without_body(req)
         .await
@@ -105,10 +113,15 @@ pub async fn extract_client_context(req: &Request) -> Result<ClientContext> {
         create_api_error_response("Valid access token not found", ErrorCode::PermissionDenied)
     })?;
 
-    // Validate and update access token
-    let user = AccessTokenModel::resolve_user_from_token(&token).map_err(|e| {
-        create_api_error_response(&format!("{:#?}", e), ErrorCode::PermissionDenied)
-    })?;
+    // Validate and update the access token. A metrics-only token is accepted
+    // only on the metrics endpoint; every other route uses the strict
+    // resolver, which rejects it even though the token itself is valid.
+    let user = if is_metrics_endpoint(req.uri().path()) {
+        AccessTokenModel::resolve_user_from_token_for_metrics(&token)
+    } else {
+        AccessTokenModel::resolve_user_from_token(&token)
+    }
+    .map_err(|e| create_api_error_response(&format!("{:#?}", e), ErrorCode::PermissionDenied))?;
 
     return Ok(ClientContext {
         ip_addr: Some(ip_addr),

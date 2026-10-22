@@ -26,6 +26,7 @@ use bichon_core::{
     envelope::extractor::extract_envelope_from_smtp,
     error::BichonResult,
     ext::journal,
+    metrics,
     settings::cli::{EncryptionMode, SETTINGS},
     token::AccessTokenModel,
     users::{permissions::Permission, UserModel},
@@ -57,6 +58,7 @@ pub async fn run_smtp_server(
                         tracing::debug!("SMTP connection from {addr}");
                         let config = config.clone();
                         tokio::spawn(async move {
+                            let _connection = metrics::SmtpConnectionGuard::new();
                             let res = timeout(GLOBAL_SESSION_TIMEOUT, handle_connection(stream, config)).await;
                             match res {
                                 Ok(Ok(_)) => tracing::debug!("SMTP session from {addr} finished"),
@@ -92,6 +94,7 @@ pub async fn run_smtps_server(
                         let config = config.clone();
                         let acceptor = tls_acceptor.clone();
                         tokio::spawn(async move {
+                            let _connection = metrics::SmtpConnectionGuard::new();
                             match acceptor.accept(stream).await {
                                 Ok(tls_stream) => {
                                     let peer_ip = addr.ip();
@@ -320,6 +323,7 @@ where
                             .await?;
                     }
                     Err(error) => {
+                        metrics::count_smtp_rejection("auth");
                         tracing::error!(
                             "SMTP Auth failed for user '{}' (AUTH LOGIN): {:?}",
                             username,
@@ -388,6 +392,7 @@ where
         }
     } else if cmd.starts_with("MAIL FROM:") {
         if session.auth_required && !session.authenticated {
+            metrics::count_smtp_rejection("auth");
             stream.write_all(b"530 Authentication required\r\n").await?;
         } else if !session.peer_allowed() {
             // Journaling is enabled and this unauthenticated peer is neither
@@ -433,6 +438,7 @@ where
         }
 
         if session.auth_required && !session.authenticated {
+            metrics::count_smtp_rejection("auth");
             stream.write_all(b"530 Authentication required\r\n").await?;
         } else if session.mail_from.is_none() {
             stream
@@ -505,6 +511,7 @@ where
                                 addr,
                                 account.account_type
                             );
+                            metrics::count_smtp_rejection("not_local_account");
                             let err = format!(
                                 "550 5.7.1 <{}>: Not a local account that accepts SMTP delivery\r\n",
                                 account.email
@@ -517,6 +524,7 @@ where
                     }
                 }
                 Ok(None) => {
+                    metrics::count_smtp_rejection("not_local_account");
                     let err = format!("550 5.1.1 <{}>: Bichon account not found\r\n", addr);
                     stream.write_all(err.as_bytes()).await?;
                 }
@@ -532,6 +540,7 @@ where
         }
     } else if cmd == "DATA" {
         if session.auth_required && !session.authenticated {
+            metrics::count_smtp_rejection("auth");
             stream.write_all(b"530 Authentication required\r\n").await?;
         } else if session.mail_from.is_none() {
             stream
@@ -555,6 +564,7 @@ where
                 Ok(d) => d,
                 Err(e) => {
                     if e.to_string().contains("552") {
+                        metrics::count_smtp_rejection("size_limit");
                         let error_msg = format!(
                             "552 5.3.4 Message size exceeds limit of {} bytes ({}MB)\r\n",
                             MAX_MAIL_SIZE,
@@ -585,6 +595,7 @@ where
 
             match outcome {
                 Ok(_) => {
+                    metrics::count_smtp_message("accepted");
                     stream
                         .write_all(b"250 2.0.0 OK: queued in Bichon\r\n")
                         .await?;
@@ -597,6 +608,16 @@ where
                     session.reset();
                 }
                 Err(e) => {
+                    // The write gate rejects delivery with a retryable error
+                    // while a backup holds it closed; everything else is an
+                    // archive-side failure.
+                    let reason = if e.code() == bichon_core::error::code::ErrorCode::TooManyRequest
+                    {
+                        "backup_active"
+                    } else {
+                        "other"
+                    };
+                    metrics::count_smtp_rejection(reason);
                     let context = if session.journal {
                         "journal ingest"
                     } else {
@@ -661,6 +682,7 @@ async fn verify_plain_auth<S: AsyncRead + AsyncWrite + Unpin>(
         }
     }
 
+    metrics::count_smtp_rejection("auth");
     stream.write_all(b"535 Authentication failed\r\n").await?;
     stream.flush().await?;
     Ok(())

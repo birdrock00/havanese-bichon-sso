@@ -40,4 +40,8 @@ pub struct AccessTokenResp {
 
     pub user_name: String,
     pub user_email: String,
+
+    /// Whether this token may only be used on the metrics endpoint.
+    #[serde(default)]
+    pub metrics_only: bool,
 }

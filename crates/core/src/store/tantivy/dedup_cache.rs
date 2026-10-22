@@ -227,7 +227,7 @@ mod tests {
     use super::*;
     use crate::store::tantivy::fields::EmailFields;
     use crate::store::tantivy::schema::SchemaTools;
-    use crate::store::tantivy::tokenizers::EuroTokenizer;
+    use crate::store::tantivy::tokenizers::{tri_analyzer, EuroTokenizer};
     use std::fs;
     use tantivy::{Index, TantivyDocument};
 
@@ -363,6 +363,7 @@ mod tests {
         let fields = SchemaTools::email_fields();
         let index = Index::create_in_dir(&dir, schema).unwrap();
         index.tokenizers().register("euro", EuroTokenizer::new());
+        index.tokenizers().register("tri", tri_analyzer());
         (index, fields)
     }
 

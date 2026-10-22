@@ -23,6 +23,7 @@
 //
 // Used in: crates/core/src/envelope/extractor.rs
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{LazyLock, RwLock};
 
 pub struct ExtractedText {
@@ -48,9 +49,20 @@ impl AttachmentTextExtractor for NoopExtractor {
 static EXTRACTOR: LazyLock<RwLock<Box<dyn AttachmentTextExtractor>>> =
     LazyLock::new(|| RwLock::new(Box::new(NoopExtractor)));
 
+/// Stays `true` until [`set_extractor`] installs a real extractor (always
+/// `true` in the community edition). The reindex command uses this to skip the
+/// whole blob / parent lookup path for attachment text re-extraction.
+static EXTRACTOR_IS_NOOP: AtomicBool = AtomicBool::new(true);
+
+/// Whether the default noop extractor is still installed.
+pub fn is_noop() -> bool {
+    EXTRACTOR_IS_NOOP.load(Ordering::Relaxed)
+}
+
 /// Called by Pro/Enterprise at startup to replace the noop default.
 pub fn set_extractor(extractor: Box<dyn AttachmentTextExtractor>) {
     *EXTRACTOR.write().unwrap() = extractor;
+    EXTRACTOR_IS_NOOP.store(false, Ordering::Relaxed);
 }
 
 /// Attachments larger than this are skipped (10 MiB). Avoids excessive memory

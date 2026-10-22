@@ -35,6 +35,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from '@/hooks/use-toast'
 import { useEdition } from '@/hooks/use-edition'
+import { copyToClipboard } from '@/lib/clipboard'
 import { mfaConfirm, mfaDisable, mfaEnroll, mfaStatus } from '@/api/users/api'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Info } from 'lucide-react'
@@ -137,7 +138,7 @@ export function MfaSettings() {
   const copyText = useCallback(
     async (text: string) => {
       try {
-        await navigator.clipboard.writeText(text)
+        await copyToClipboard(text)
         toast({ title: t('settings.mfa.copied', 'Copied to clipboard') })
       } catch {
         toast({

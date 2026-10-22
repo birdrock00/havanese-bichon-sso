@@ -156,7 +156,6 @@ struct ManifestView {
     /// Total object count referenced by this restore point.
     object_count: usize,
     memdb: Option<ObjectView>,
-    imap_uid: Option<ObjectView>,
     segments: Vec<ObjectView>,
     audit: Option<AuditView>,
     integrity: Option<ObjectView>,
@@ -551,12 +550,17 @@ fn apply_backup_config(update: BackupConfigUpdate) -> bichon_core::error::Bichon
     // Unlike the S3 fields, an empty `local_dir` must mean "unset" rather than
     // `Some("")`: `None` already means "unchanged", so without this a path
     // could never be cleared and switching s3 → local → s3 would leave the
-    // stale path behind.
+    // stale path behind. `normalize` below performs that unset, along with
+    // trimming the paths and the schedule expression.
     if let Some(v) = update.local_dir {
-        cfg.local_dir = if v.trim().is_empty() { None } else { Some(v) };
+        cfg.local_dir = Some(v);
     }
     apply_secret_field(&mut cfg.s3_access_key, update.s3_access_key);
     apply_secret_field(&mut cfg.s3_secret_key, update.s3_secret_key);
+    // Before the target guard rather than only before the save: the guard has
+    // to evaluate the same path that ends up stored, or `local_dir =
+    // " /data "` would be checked as `/data` and written as `" /data "`.
+    config::normalize(&mut cfg);
     validate_effective_target(&cfg)?;
     config::save(&cfg)
 }
@@ -609,7 +613,6 @@ fn manifest_view(m: Manifest) -> ManifestView {
         created: m.created,
         trigger: m.trigger,
         memdb: objects.memdb.as_ref().map(object_view),
-        imap_uid: objects.imap_uid.as_ref().map(object_view),
         segments: objects
             .blob_segments
             .iter()

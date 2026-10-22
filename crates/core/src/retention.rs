@@ -305,8 +305,10 @@ mod tests {
     /// to that index from several test threads at once makes Windows refuse the
     /// files (`PermissionDenied`), so they are serialized — the same convention
     /// as `backup::BACKUP_STATE_TESTS` and `repair::DB_TESTS`.
-    static SWEEP_TESTS: std::sync::LazyLock<tokio::sync::Mutex<()>> =
-        std::sync::LazyLock::new(|| tokio::sync::Mutex::new(()));
+    // Serialized with every other test that writes the process-global index
+    // (not just the sweep tests): concurrent commits to the same tantivy
+    // directory make Windows refuse the files with `PermissionDenied`.
+    use crate::test_support::GLOBAL_INDEX_LOCK as SWEEP_TESTS;
 
     /// Wait (bounded) for a backup window to close.
     ///
@@ -328,11 +330,7 @@ mod tests {
     static TEST_ENV: Once = Once::new();
     fn init_sweep_env() {
         TEST_ENV.call_once(|| {
-            let root = std::env::temp_dir().join(format!(
-                "bichon-core-test-{}",
-                std::process::id()
-            ));
-            std::fs::create_dir_all(&root).unwrap();
+            let root = crate::test_support::unique_test_root("bichon-core-test");
             std::env::set_var("BICHON_ROOT_DIR", &root);
             std::env::set_var("BICHON_ENCRYPT_PASSWORD", "test-password");
             let _ = &*SETTINGS;

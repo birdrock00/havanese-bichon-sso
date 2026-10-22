@@ -470,6 +470,13 @@ pub fn handle_migration_v037(theme: &ColorfulTheme) {
         return;
     }
 
+    pb.set_message(style("Persisting stable IMAP UID counters...").dim().to_string());
+    if let Err(e) = writer.finish_uids(&root_path) {
+        pb.finish_with_message(format!("{}", style("Migration failed.").red()));
+        eprintln!("\n{} {:?}", style("✘").red().bold(), e);
+        return;
+    }
+
     pb.set_message(style("Shutting down blob engine...").dim().to_string());
     if let Err(e) = writer.shutdown_engine() {
         pb.finish_with_message(format!("{}", style("Migration failed.").red()));

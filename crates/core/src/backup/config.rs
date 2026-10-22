@@ -290,6 +290,44 @@ fn load_from_store() -> Option<BackupConfig> {
     }
 }
 
+/// Canonicalise the free-text fields of a configuration document.
+///
+/// Call this wherever values are merged in — the WebUI update and the legacy
+/// migration — *before* they are validated or used. Every field here ends up
+/// somewhere stray whitespace is not cosmetic: the schedule is parsed as a
+/// cron expression, the prefix and the local directory are joined into a
+/// filesystem path (the prefix also into the object key), and the S3 trio
+/// becomes the endpoint, bucket and region of the object-store client. The
+/// checks elsewhere compare with `trim` (`validate` below, the data-root guard
+/// in the API layer, `s3_store`'s `is_empty`), so an untrimmed value would be
+/// *checked* as one string and *stored and used* as another: `local_dir =
+/// " /data "` passes the guard as `/data` and then writes to a directory
+/// literally named `" /data "`, and a whitespace-only `s3_endpoint` is not
+/// empty, so it takes the custom-endpoint branch and fails to build the client
+/// instead of meaning "the SDK default endpoint".
+///
+/// The credentials are deliberately left alone: whitespace inside a secret can
+/// be significant, and they carry their own `""` / `"********"` conventions.
+pub fn normalize(cfg: &mut BackupConfig) {
+    cfg.schedule = cfg.schedule.trim().to_string();
+    cfg.prefix = cfg.prefix.trim().to_string();
+    // A whitespace-only path is "unset", not a directory named " ".
+    cfg.local_dir = cfg
+        .local_dir
+        .as_deref()
+        .map(str::trim)
+        .filter(|dir| !dir.is_empty())
+        .map(str::to_string);
+    // `s3_options` reads these with `unwrap_or_default`, so `Some("")` and
+    // `None` already mean the same thing downstream: trimming is enough, and
+    // an empty string stays empty rather than becoming `None`.
+    for field in [&mut cfg.s3_endpoint, &mut cfg.s3_region, &mut cfg.s3_bucket] {
+        if let Some(value) = field {
+            *value = value.trim().to_string();
+        }
+    }
+}
+
 /// Validate a configuration document before it is persisted. A value that
 /// fails here would otherwise fail *silently* at run time: an unparsable cron
 /// disables scheduled backups with no user-visible error, an unusable prefix
@@ -571,6 +609,9 @@ fn migrate_legacy() -> BackupConfig {
     }
 
     if touched {
+        // Legacy values come from a different store and were never checked by
+        // `validate`, so they get the same treatment as a WebUI update.
+        normalize(&mut cfg);
         if let Err(e) = save(&cfg) {
             tracing::warn!(
                 "backup: legacy config migration could not be saved ({e}); it will retry next start"
@@ -964,11 +1005,7 @@ mod tests {
     /// `BACKUP_STATE_TESTS` lock.
     fn init_test_env() {
         TEST_ENV.call_once(|| {
-            let root = std::env::temp_dir().join(format!(
-                "bichon-core-test-{}",
-                std::process::id()
-            ));
-            std::fs::create_dir_all(&root).unwrap();
+            let root = crate::test_support::unique_test_root("bichon-core-test");
             std::env::set_var("BICHON_ROOT_DIR", &root);
             std::env::set_var("BICHON_ENCRYPT_PASSWORD", "test-password");
             let _ = &*SETTINGS;
@@ -1167,6 +1204,45 @@ mod tests {
         assert_eq!(back.s3_access_key.as_deref(), Some("test-access-key-0001"));
         assert_eq!(back.s3_secret_key.as_deref(), Some("test-secret-key-0001"));
     }
+
+    #[test]
+    fn normalize_trims_the_free_text_fields() {
+        let mut cfg = BackupConfig {
+            schedule: "  0 0 3 * * *  ".to_string(),
+            prefix: "  bichon-backup  ".to_string(),
+            local_dir: Some("  /data/backups  ".to_string()),
+            s3_endpoint: Some("  http://minio.internal:9000  ".to_string()),
+            s3_region: Some("  us-east-1  ".to_string()),
+            s3_bucket: Some("  bichon  ".to_string()),
+            ..Default::default()
+        };
+        normalize(&mut cfg);
+        assert_eq!(cfg.schedule, "0 0 3 * * *");
+        assert_eq!(cfg.prefix, "bichon-backup");
+        assert_eq!(cfg.local_dir.as_deref(), Some("/data/backups"));
+        assert_eq!(
+            cfg.s3_endpoint.as_deref(),
+            Some("http://minio.internal:9000")
+        );
+        assert_eq!(cfg.s3_region.as_deref(), Some("us-east-1"));
+        assert_eq!(cfg.s3_bucket.as_deref(), Some("bichon"));
+
+        // A whitespace-only value is "unset", not a directory, an object key or
+        // an endpoint made of spaces. `Some("")` stays `Some("")`: `s3_options`
+        // reads these with `unwrap_or_default`, so it already means the same as
+        // `None` downstream.
+        let mut cfg = BackupConfig {
+            local_dir: Some("   ".to_string()),
+            schedule: "  ".to_string(),
+            s3_endpoint: Some("   ".to_string()),
+            ..Default::default()
+        };
+        normalize(&mut cfg);
+        assert_eq!(cfg.local_dir, None);
+        assert_eq!(cfg.schedule, "");
+        assert_eq!(cfg.s3_endpoint.as_deref(), Some(""));
+    }
+
     #[test]
     fn validate_rejects_unusable_values() {
         let ok = || BackupConfig {

@@ -32,6 +32,7 @@ use crate::{
     id,
     imap::executor::ImapExecutor,
     message::content::AttachmentInfo,
+    metrics,
     raise_error,
     store::{
         blob::{DetachedEmail, BLOB_MANAGER},
@@ -77,20 +78,26 @@ pub async fn extract_envelope_and_store_it(
                 uid = fetch.uid,
                 "FETCH response has no body, skipping message"
             );
+            // The message was not archived, so it counts as a failed ingest.
+            metrics::count_email_ingested(account_id, "imap", "failed");
             return Ok(());
         }
     };
     let size = fetch.size.unwrap_or(body.len() as u32);
-    extract_envelope_core(
-        body,
-        uid,
-        size,
-        internal_date,
+    record_ingest_outcome(
         account_id,
-        mailbox_id,
-        None,
+        "imap",
+        extract_envelope_core(
+            body,
+            uid,
+            size,
+            internal_date,
+            account_id,
+            mailbox_id,
+            None,
+        )
+        .await,
     )
-    .await
     .map(|_| ())
 }
 
@@ -100,7 +107,11 @@ pub async fn extract_envelope_from_eml(
     mailbox_id: u64,
 ) -> BichonResult<ExtractOutcome> {
     let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
-    extract_envelope_core(body, 0, body.len() as u32, 0, account_id, mailbox_id, None).await
+    record_ingest_outcome(
+        account_id,
+        "import",
+        extract_envelope_core(body, 0, body.len() as u32, 0, account_id, mailbox_id, None).await,
+    )
 }
 
 pub async fn extract_envelope_from_smtp(
@@ -109,16 +120,20 @@ pub async fn extract_envelope_from_smtp(
     mailbox_id: u64,
 ) -> BichonResult<ExtractOutcome> {
     let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
-    extract_envelope_core(
-        body,
-        0,
-        body.len() as u32,
-        utc_now!(),
+    record_ingest_outcome(
         account_id,
-        mailbox_id,
-        None,
+        "smtp",
+        extract_envelope_core(
+            body,
+            0,
+            body.len() as u32,
+            utc_now!(),
+            account_id,
+            mailbox_id,
+            None,
+        )
+        .await,
     )
-    .await
 }
 
 /// Archive a journal delivery: `inner` is the original message the journal
@@ -144,16 +159,40 @@ pub async fn extract_envelope_from_journal(
     let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
     // `size` describes the archived message (the inner one); the report is a
     // separate attachment and has its own size.
-    extract_envelope_core(
-        inner,
-        0,
-        inner.len() as u32,
-        utc_now!(),
+    record_ingest_outcome(
         account_id,
-        mailbox_id,
-        report,
+        "journal",
+        extract_envelope_core(
+            inner,
+            0,
+            inner.len() as u32,
+            utc_now!(),
+            account_id,
+            mailbox_id,
+            report,
+        )
+        .await,
     )
-    .await
+}
+
+/// Count one ingestion attempt by its final outcome, then hand the result
+/// back unchanged. The counter helpers are infallible, so this never alters
+/// the ingest path's behavior.
+fn record_ingest_outcome(
+    account_id: u64,
+    source: &str,
+    result: BichonResult<ExtractOutcome>,
+) -> BichonResult<ExtractOutcome> {
+    match &result {
+        Ok(ExtractOutcome::Imported) => {
+            metrics::count_email_ingested(account_id, source, "imported")
+        }
+        Ok(ExtractOutcome::Duplicate) => {
+            metrics::count_email_ingested(account_id, source, "duplicate")
+        }
+        Err(_) => metrics::count_email_ingested(account_id, source, "failed"),
+    }
+    result
 }
 
 /// If `raw` is a journal report that wraps the original message in a
@@ -401,12 +440,19 @@ async fn extract_envelope_core(
         .map(|a| a.into_document())
         .collect();
 
+    // Assign the stable archive-side UID here — the last point before a
+    // document exists, and after every path that can decide not to create one
+    // (dedup, archive rules, retention floor). Write-once: every later
+    // reconstruction carries it from the document instead of recomputing.
+    let imap_uid = crate::archive::imap::stable_uid::next_uid(account_id)?;
+
     let envelope = Envelope {
         id: envelope_id,
         message_id,
         account_id,
         mailbox_id,
         uid,
+        imap_uid,
         subject,
         preview,
         from,
@@ -504,6 +550,7 @@ pub fn extract_envelope_from_nested_message(
         account_id,
         mailbox_id: Default::default(),
         uid: Default::default(),
+        imap_uid: Default::default(),
         subject,
         preview: text,
         from,
@@ -1489,11 +1536,7 @@ mod test {
 
     fn init_test_env() {
         TEST_ENV.call_once(|| {
-            let root = std::env::temp_dir().join(format!(
-                "bichon-extractor-test-{}",
-                std::process::id()
-            ));
-            std::fs::create_dir_all(&root).unwrap();
+            let root = crate::test_support::unique_test_root("bichon-extractor-test");
             std::env::set_var("BICHON_ROOT_DIR", &root);
             std::env::set_var("BICHON_ENCRYPT_PASSWORD", "test-password");
             let _ = &*crate::settings::cli::SETTINGS;
@@ -1522,6 +1565,76 @@ mod test {
             )
             .await;
             assert_ne!(infos[0].storage_hash(), infos[0].content_hash);
+        });
+    }
+
+    /// Ingest must hand every archived message a stable UID, and a duplicate
+    /// must not consume one.
+    ///
+    /// The assertions are on the counter, not on the index: `ENVELOPE_MANAGER`
+    /// is process-global and its writer task belongs to whichever test's runtime
+    /// initialized it, so a document queued here is not reliably committed (the
+    /// same coupling that retired the blob roundtrip test below). The document
+    /// side is covered where it can be observed deterministically:
+    /// `to_document` refuses an unassigned UID, `rebuild_envelope_doc` carries
+    /// it (see `store::tantivy::envelope`), and the IMAP-side ordering reads it
+    /// back (see `bichon-imap::uid_map`).
+    #[test]
+    fn ingest_assigns_a_stable_uid_and_dedup_does_not_burn_one() {
+        use crate::account::migration::{Account, AccountType};
+        use crate::database::{manager::DB_MANAGER, upsert_impl};
+
+        STORAGE_RUNTIME.block_on(async {
+            let _run_guard = crate::backup::BACKUP_STATE_TESTS.lock().await;
+            // Ingest queues into the process-global envelope index, so hold the
+            // lock that serializes every test writing it (concurrent commits to
+            // one tantivy directory are refused by Windows).
+            let _index_guard = crate::test_support::GLOBAL_INDEX_LOCK.lock().await;
+            init_test_env();
+
+            let account_id = 9_300_501;
+            let mailbox_id = 77;
+            // Ingest requires the account row: the UID counter lives on it.
+            upsert_impl(
+                DB_MANAGER.db(),
+                Account {
+                    id: account_id,
+                    account_type: AccountType::IMAP,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+
+            let eml = b"From: alice@example.com\r\n\
+                        To: bob@example.com\r\n\
+                        Subject: stable uid\r\n\
+                        Date: Thu, 01 Jan 2023 00:00:00 +0000\r\n\
+                        Message-ID: <uid-t5@example.com>\r\n\
+                        \r\n\
+                        body of the archived message\r\n";
+
+            let first = super::extract_envelope_from_eml(eml, account_id, mailbox_id)
+                .await
+                .expect("first ingest");
+            assert!(matches!(first, super::ExtractOutcome::Imported));
+            let after_first = Account::get(account_id).unwrap().imap_uid_next;
+            assert_eq!(
+                after_first,
+                crate::archive::imap::stable_uid::UID_BLOCK + 1,
+                "the first ingest must reserve a block, i.e. hand out UID 1"
+            );
+
+            // The same bytes again: dedup short-circuits before the UID is
+            // assigned, so the counter must not move.
+            let second = super::extract_envelope_from_eml(eml, account_id, mailbox_id)
+                .await
+                .expect("second ingest");
+            assert!(matches!(second, super::ExtractOutcome::Duplicate));
+            assert_eq!(
+                Account::get(account_id).unwrap().imap_uid_next,
+                after_first,
+                "a duplicate must not consume a UID"
+            );
         });
     }
 

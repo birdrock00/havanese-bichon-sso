@@ -332,7 +332,7 @@ export function MailboxPopover() {
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder={t('search_mailbox.search_placeholder')}
-                            className="h-9 pl-8 text-xs bg-background"
+                            className="h-9 pl-8 text-xs md:text-xs bg-background"
                         />
                     </div>
                     {localSelectedIds.length > 0 && (

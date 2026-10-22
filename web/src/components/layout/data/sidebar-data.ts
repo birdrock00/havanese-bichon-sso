@@ -22,6 +22,7 @@ import {
   Download,
   FileCheck2,
   Fingerprint,
+  FolderOpen,
   Gauge,
   IdCard,
   Inbox,
@@ -68,6 +69,11 @@ export function useSidebarData(): SidebarData {
             title: t('navigation.accounts'),
             url: '/accounts',
             icon: Inbox,
+          },
+          {
+            title: t('navigation.mailbox'),
+            url: '/mailbox',
+            icon: FolderOpen,
           },
           {
             title: t('common.search'),

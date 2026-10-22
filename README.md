@@ -356,6 +356,7 @@ On first start, havanese-bichon-sso creates a built-in admin user:
 |------------|-------------|
 | `system:access` | Login and access the dashboard |
 | `system:root` | Manage system configurations (OAuth providers, proxy settings) |
+| `system:metrics` | Read server-wide operational metrics (Prometheus endpoint) |
 | `user:manage` | Create, update, and delete users |
 | `user:view` | View user list and basic profiles |
 | `token:manage` | View and revoke all API tokens |
@@ -431,6 +432,44 @@ Interactive API documentation is available at:
 | `/api-docs/spec.yaml` | Raw OpenAPI 3.0 YAML |
 
 All `/api/v1/*` endpoints require `Authorization: Bearer <token>`.
+
+### Monitoring
+
+`GET /api/v1/metrics` serves the Prometheus text exposition format
+(`text/plain; version=0.0.4`) for the whole installation. It requires a token
+whose user has the global `system:metrics` permission — use a dedicated
+monitoring user with `system:access` and `system:metrics` only. Prefer
+`Authorization: Bearer` over `?access_token=` so the token does not end up in
+proxy/access logs, and do not attach a rate limit to the monitoring token's
+ACL (scrapes would be throttled with HTTP 429).
+
+Create a **metrics-only token** so the monitoring credential cannot be used
+anywhere else in the API:
+
+```bash
+curl -X POST https://bichon.example.com/api/v1/access-token \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": 42, "name": "prometheus", "metrics_only": true}'
+```
+
+The token keeps the normal API-token lifecycle (expiry, revocation and
+last-access tracking), is accepted only on `/api/v1/metrics`, and is rejected
+by every other endpoint. Creation fails unless the token's owner holds
+`system:metrics`; the permission is checked again on every scrape.
+
+```yaml
+scrape_configs:
+  - job_name: bichon
+    scrape_interval: 30s
+    scheme: https          # or http, matching the deployment
+    authorization:
+      type: Bearer
+      credentials: <api-token-of-a-user-with-system:metrics>
+    metrics_path: /api/v1/metrics
+    static_configs:
+      - targets: ["bichon.example.com:443"]
+```
 
 ## Import & Export
 

@@ -37,16 +37,23 @@ use crate::{
     },
     raise_error,
     settings::dir::DATA_DIR_MANAGER,
-    store::tantivy::{
-        fatal_commit,
-        fields::{
-            F_ATTACHMENT_CATEGORY, F_ATTACHMENT_CONTENT_TYPE, F_ATTACHMENT_EXT, F_DATE,
-            F_INGEST_AT, F_SIZE, F_TAGS,
+    store::{
+        blob::BLOB_MANAGER,
+        tantivy::{
+            envelope::ENVELOPE_MANAGER,
+            fatal_commit,
+            fields::{
+                F_ATTACHMENT_CATEGORY, F_ATTACHMENT_CONTENT_TYPE, F_ATTACHMENT_EXT, F_DATE,
+                F_INGEST_AT, F_SIZE, F_TAGS,
+            },
+            model::{extract_senders, AttachmentModel},
+            schema::SchemaTools,
+            tokenizers::{
+                any_term_parser, text_parser, tri_analyzer, word_or_tri, word_or_tri_any,
+                EuroTokenizer,
+            },
+            WriterSlot,
         },
-        model::{extract_senders, AttachmentModel},
-        schema::SchemaTools,
-        tokenizers::EuroTokenizer,
-        WriterSlot,
     },
 };
 
@@ -59,7 +66,7 @@ use tantivy::{
     },
     collector::{Count, FacetCollector, TopDocs},
     indexer::{LogMergePolicy, UserOperation},
-    query::{AllQuery, BooleanQuery, EmptyQuery, Occur, Query, QueryParser, RangeQuery, TermQuery},
+    query::{AllQuery, BooleanQuery, EmptyQuery, Occur, Query, RangeQuery, TermQuery},
     schema::{Field, IndexRecordOption, Value},
     DocAddress, Index, IndexReader, IndexWriter, Order, TantivyDocument, Term,
 };
@@ -81,6 +88,142 @@ pub struct IndexManager {
     flush_tx: mpsc::Sender<oneshot::Sender<()>>,
     reader: IndexReader,
     handle: Mutex<Option<JoinHandle<()>>>,
+}
+
+/// Re-extract an attachment's text from its blob, the way ingest did.
+///
+/// Needed whenever an attachment document is rebuilt (a tag edit): `f_text` is
+/// not stored, so it cannot be copied. The blob key lives in the *parent* email
+/// document's `f_attachments` JSON (`storage_hash()`), so this does a point
+/// lookup there first. Returns `None` — "no text available" — when the extractor
+/// is a noop (community edition), the parent or blob is missing, or the file
+/// type/size is not extractable.
+fn reextract_attachment_text(
+    envelope_searcher: &Searcher,
+    old_doc: &TantivyDocument,
+    af: &crate::store::tantivy::fields::AttachmentFields,
+) -> Option<crate::ext::text_extractor::ExtractedText> {
+    use crate::ext::text_extractor;
+
+    if text_extractor::is_noop() {
+        return None;
+    }
+    let envelope_id = old_doc
+        .get_first(af.f_envelope_id)
+        .and_then(|v| v.as_str())?;
+    let content_hash = old_doc
+        .get_first(af.f_content_hash)
+        .and_then(|v| v.as_str())?;
+    let content_type = old_doc
+        .get_first(af.f_content_type)
+        .and_then(|v| v.as_str())?;
+    let ext = old_doc
+        .get_first(af.f_ext)
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    let size = old_doc
+        .get_first(af.f_size)
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
+
+    if !text_extractor::should_try_extract(content_type, ext) {
+        return None;
+    }
+    if size > text_extractor::max_extract_bytes() as u64 {
+        return None;
+    }
+
+    let ef = SchemaTools::email_fields();
+    let term = Term::from_field_text(ef.f_id, envelope_id);
+    let query = TermQuery::new(term, IndexRecordOption::Basic);
+    let hits = envelope_searcher
+        .search(&query, &TopDocs::with_limit(1).order_by_score())
+        .ok()?;
+    let (_, addr) = hits.first()?;
+    let parent: TantivyDocument = envelope_searcher.doc(*addr).ok()?;
+    let json = parent.get_first(ef.f_attachments).and_then(|v| v.as_str())?;
+    let infos: Vec<crate::message::content::AttachmentInfo> = serde_json::from_str(json).ok()?;
+    let info = infos.iter().find(|a| a.content_hash == content_hash)?;
+    let bytes = BLOB_MANAGER.get_attachment(info.storage_hash()).ok()??;
+    text_extractor::extract_text(content_type, ext, &bytes)
+}
+
+/// Rebuild an attachment document from an existing one, replacing its tags.
+///
+/// `field_values()` only returns stored fields, so everything not stored has to
+/// be re-derived: the address and name text (mirroring their stored
+/// counterparts), their trigram siblings, and the extracted `f_text` — which,
+/// when `envelope_searcher` is available, is re-extracted from the blob. When it
+/// cannot be restored the text flags are reset, so the document never claims to
+/// be indexed while its text is empty.
+fn rebuild_attachment_doc(
+    old_doc: &TantivyDocument,
+    af: &crate::store::tantivy::fields::AttachmentFields,
+    new_tags: impl IntoIterator<Item = String>,
+    envelope_searcher: Option<&Searcher>,
+) -> TantivyDocument {
+    let mut new_doc = TantivyDocument::new();
+
+    // Stored fields, except the tags (re-added last) and the text flags
+    // (re-derived with `f_text`).
+    for (field, value) in old_doc.field_values() {
+        if field == af.f_tags
+            || field == af.f_has_text
+            || field == af.f_is_indexed
+            || field == af.f_is_ocr
+            || field == af.f_page_count
+        {
+            continue;
+        }
+        new_doc.add_field_value(field, value);
+    }
+
+    if let Some(s) = old_doc.get_first(af.f_subject).and_then(|v| v.as_str()) {
+        new_doc.add_text(af.f_subject_tri, s);
+    }
+    for val in old_doc.get_all(af.f_from) {
+        if let Some(s) = val.as_str() {
+            new_doc.add_text(af.f_from_text, s);
+            new_doc.add_text(af.f_from_text_tri, s);
+        }
+    }
+    if let Some(s) = old_doc.get_first(af.f_name_exact).and_then(|v| v.as_str()) {
+        new_doc.add_text(af.f_name_text, s);
+        new_doc.add_text(af.f_name_text_tri, s);
+    }
+
+    let was_indexed = old_doc
+        .get_first(af.f_is_indexed)
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let extracted = if was_indexed {
+        envelope_searcher.and_then(|searcher| reextract_attachment_text(searcher, old_doc, af))
+    } else {
+        None
+    };
+
+    match extracted {
+        Some(t) => {
+            new_doc.add_text(af.f_text, &t.text);
+            new_doc.add_bool(af.f_has_text, true);
+            new_doc.add_bool(af.f_is_indexed, true);
+            new_doc.add_bool(af.f_is_ocr, t.is_ocr);
+            if let Some(pc) = t.page_count {
+                new_doc.add_u64(af.f_page_count, pc as u64);
+            }
+        }
+        None => {
+            new_doc.add_bool(af.f_has_text, false);
+            new_doc.add_bool(af.f_is_indexed, false);
+            new_doc.add_bool(af.f_is_ocr, false);
+        }
+    }
+
+    for tag in new_tags {
+        new_doc.add_facet(af.f_tags, &tag);
+    }
+
+    new_doc
 }
 
 impl IndexManager {
@@ -116,6 +259,7 @@ impl IndexManager {
     pub fn new() -> Self {
         let index = Arc::new(Self::open_or_create_index(&DATA_DIR_MANAGER.attachment_dir));
         index.tokenizers().register("euro", EuroTokenizer::new());
+        index.tokenizers().register("tri", tri_analyzer());
 
         let index_writer = Self::create_index_writer(&index).unwrap_or_else(|e| {
             panic!(
@@ -323,13 +467,27 @@ impl IndexManager {
             std::fs::create_dir_all(&index_dir).unwrap_or_else(|e| {
                 panic!("Failed to create index directory {:?}: {}", index_dir, e)
             });
-            Index::create_in_dir(&index_dir, SchemaTools::attachment_schema())
-                .unwrap_or_else(|e| panic!("Failed to create index in {:?}: {}", index_dir, e))
+            let index = Index::create_in_dir(&index_dir, SchemaTools::attachment_schema())
+                .unwrap_or_else(|e| panic!("Failed to create index in {:?}: {}", index_dir, e));
+            // Fresh installs get stamped with the current index format version.
+            // The open branch never writes — this keeps an old index from being
+            // silently upgraded in place.
+            if let Err(e) = crate::store::tantivy::format::write_index_format_version(index_dir) {
+                tracing::warn!(error = %e, "failed to write INDEX_FORMAT marker for {:?}", index_dir);
+            }
+            index
         } else {
             info!(
                 "Opening existing attachment index at {}",
                 index_dir.display()
             );
+            // Self-heal a marker lost to a crash between creating the index and
+            // stamping it. Only an index whose schema already carries the trigram
+            // sibling field is stamped; a legacy index never is, so it still hits
+            // the reindex gate.
+            if crate::store::tantivy::format::heal_index_format_marker(index_dir) {
+                tracing::warn!(dir = ?index_dir, "restored a missing INDEX_FORMAT marker");
+            }
             Self::open(&index_dir)
         }
     }
@@ -409,6 +567,15 @@ impl IndexManager {
         let f = SchemaTools::attachment_fields();
         let mut subqueries: Vec<(Occur, Box<dyn Query>)> = Vec::new();
 
+        // Default: space-separated terms are AND-ed. A legacy saved search
+        // carries `match_all: false`, restoring the OR behaviour it was authored
+        // under — for the word layer and the trigram layer alike.
+        let match_all = filter.match_all.unwrap_or(true);
+        let parse: fn(&Index, Vec<tantivy::schema::Field>) -> tantivy::query::QueryParser =
+            if match_all { text_parser } else { any_term_parser };
+        let combine: fn(Box<dyn Query>, &[tantivy::schema::Field], &str) -> Box<dyn Query> =
+            if match_all { word_or_tri } else { word_or_tri_any };
+
         if let Some(authorized_ids) = accounts {
             if authorized_ids.is_empty() {
                 let term = Term::from_field_u64(f.f_account_id, u64::MAX);
@@ -434,20 +601,24 @@ impl IndexManager {
 
         if let Some(ref text) = filter.text {
             let query_parser =
-                QueryParser::for_index(&self.index, SchemaTools::attachment_default_fields());
+                parse(&self.index, SchemaTools::attachment_default_fields());
 
-            let query = query_parser
+            let word = query_parser
                 .parse_query(text)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
-            subqueries.push((Occur::Must, Box::new(query)));
+            let tri_fields = [f.f_subject_tri, f.f_from_text_tri, f.f_name_text_tri];
+            subqueries.push((Occur::Must, combine(word, &tri_fields, text)));
         }
 
         if let Some(ref subject_val) = filter.subject {
-            let query_parser = QueryParser::for_index(&self.index, vec![f.f_subject]);
-            let q = query_parser
+            let query_parser = parse(&self.index, vec![f.f_subject]);
+            let word = query_parser
                 .parse_query(subject_val)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
-            subqueries.push((Occur::Must, q));
+            subqueries.push((
+                Occur::Must,
+                combine(word, &[f.f_subject_tri], subject_val),
+            ));
         }
 
         if let Some(ref tags) = filter.tags {
@@ -471,11 +642,11 @@ impl IndexManager {
         }
 
         if let Some(from_query) = &filter.from {
-            let query_parser = QueryParser::for_index(&self.index, vec![f.f_from_text]);
-            let q = query_parser
+            let query_parser = parse(&self.index, vec![f.f_from_text]);
+            let word = query_parser
                 .parse_query(from_query)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
-            subqueries.push((Occur::Must, q))
+            subqueries.push((Occur::Must, combine(word, &[f.f_from_text_tri], from_query)))
         }
 
         if let Some(content_hash) = &filter.content_hash {
@@ -492,12 +663,12 @@ impl IndexManager {
 
         if let Some(ref name) = filter.attachment_name {
             let query_parser =
-                QueryParser::for_index(&self.index, vec![f.f_name_text, f.f_name_exact]);
+                parse(&self.index, vec![f.f_name_text, f.f_name_exact]);
 
-            let q = query_parser
+            let word = query_parser
                 .parse_query(name)
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InvalidParameter))?;
-            subqueries.push((Occur::Must, q));
+            subqueries.push((Occur::Must, combine(word, &[f.f_name_text_tri], name)));
         }
 
         if let Some(ref extension) = filter.attachment_extension {
@@ -828,6 +999,7 @@ impl IndexManager {
     }
 
     pub async fn update_attachment_tags(&self, request: TagsRequest) -> BichonResult<()> {
+
         if request.updates.is_empty() {
             tracing::warn!("update_attachment_tags: request is empty, nothing to update");
             return Ok(());
@@ -836,8 +1008,9 @@ impl IndexManager {
         let searcher = self.create_searcher()?;
         let mut writer = self.index_writer.lock().await;
 
-        let f_tags = SchemaTools::attachment_fields().f_tags;
-        let f_id = SchemaTools::attachment_fields().f_id;
+        let af = SchemaTools::attachment_fields();
+        let f_tags = af.f_tags;
+        let f_id = af.f_id;
         let deduplicated_updates: HashMap<u64, HashSet<String>> = request
             .updates
             .into_iter()
@@ -845,6 +1018,9 @@ impl IndexManager {
             .collect();
 
         let mut operations = Vec::new();
+        // Opened lazily, and only if a rebuilt attachment actually had extracted
+        // text to restore.
+        let mut envelope_searcher: Option<Searcher> = None;
 
         for (account_id, att_ids) in &deduplicated_updates {
             for aid in att_ids {
@@ -880,16 +1056,22 @@ impl IndexManager {
                         }
                     }
 
-                    let mut new_doc = TantivyDocument::new();
-
-                    for (field, value) in old_doc.field_values() {
-                        if field != f_tags {
-                            new_doc.add_field_value(field, value);
+                    // The text flags and `f_text` are re-derived together; the
+                    // searcher is only opened when a document actually had text.
+                    let was_indexed = old_doc
+                        .get_first(af.f_is_indexed)
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    if was_indexed && envelope_searcher.is_none() {
+                        envelope_searcher = ENVELOPE_MANAGER.create_searcher().ok();
+                        if envelope_searcher.is_none() {
+                            tracing::warn!(
+                                "attachment tag update: cannot open the envelope index; extracted attachment text will be dropped"
+                            );
                         }
                     }
-                    for tag in current_tags {
-                        new_doc.add_facet(f_tags, &tag);
-                    }
+                    let new_doc =
+                        rebuild_attachment_doc(&old_doc, af, current_tags, envelope_searcher.as_ref());
 
                     let delete_term = Term::from_field_text(f_id, aid);
                     operations.push(UserOperation::Delete(delete_term));
@@ -1200,5 +1382,76 @@ impl IndexManager {
             categories: cats,
             content_types: ctypes,
         })
+    }
+}
+
+#[cfg(test)]
+mod rebuild_tests {
+    use super::*;
+
+    fn old_attachment_doc(
+        af: &crate::store::tantivy::fields::AttachmentFields,
+    ) -> TantivyDocument {
+        let mut d = TantivyDocument::new();
+        d.add_text(af.f_id, "att-1");
+        d.add_text(af.f_envelope_id, "env-1");
+        d.add_text(af.f_content_hash, "hash-1");
+        d.add_text(af.f_subject, "Rechnung");
+        d.add_text(af.f_subject_tri, "Rechnung");
+        d.add_text(af.f_from, "alice@example.com");
+        d.add_text(af.f_from_text, "alice@example.com");
+        d.add_text(af.f_from_text_tri, "alice@example.com");
+        d.add_text(af.f_name_exact, "invoice.pdf");
+        d.add_text(af.f_name_text, "invoice.pdf");
+        d.add_text(af.f_name_text_tri, "invoice.pdf");
+        d.add_bool(af.f_has_text, false);
+        d.add_bool(af.f_is_indexed, false);
+        d.add_bool(af.f_is_ocr, false);
+        d.add_bool(af.f_is_message, false);
+        d.add_facet(af.f_tags, "/old");
+        d
+    }
+
+    /// A rebuild (tag edit) must re-derive every non-stored field — otherwise
+    /// the address/name text and the trigram siblings silently disappear.
+    #[test]
+    fn rebuild_restores_non_stored_fields_and_replaces_tags() {
+        let af = SchemaTools::attachment_fields();
+        let old = old_attachment_doc(af);
+        let new_doc = rebuild_attachment_doc(&old, af, vec!["/new".to_string()], None);
+
+        for (field, expected) in [
+            (af.f_subject_tri, "Rechnung"),
+            (af.f_from_text, "alice@example.com"),
+            (af.f_from_text_tri, "alice@example.com"),
+            (af.f_name_text, "invoice.pdf"),
+            (af.f_name_text_tri, "invoice.pdf"),
+        ] {
+            assert_eq!(
+                new_doc.get_first(field).and_then(|v| v.as_str()),
+                Some(expected),
+                "non-stored field must be re-derived"
+            );
+        }
+
+        let tags: Vec<String> = new_doc
+            .get_all(af.f_tags)
+            .filter_map(|v| v.as_facet())
+            .filter_map(|enc| Facet::from_encoded(enc.as_bytes().to_vec()).ok())
+            .map(|f| f.to_string())
+            .collect();
+        assert_eq!(tags, vec!["/new".to_string()], "tags replaced");
+
+        // No text is available without a searcher/extractor, so the flags must be
+        // consistent rather than claiming an index that does not exist.
+        assert_eq!(
+            new_doc.get_first(af.f_is_indexed).and_then(|v| v.as_bool()),
+            Some(false)
+        );
+        assert_eq!(
+            new_doc.get_first(af.f_has_text).and_then(|v| v.as_bool()),
+            Some(false)
+        );
+        assert!(new_doc.get_first(af.f_text).is_none());
     }
 }

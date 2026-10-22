@@ -110,8 +110,6 @@ pub struct TantivyRef {
 pub struct ManifestObjects {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub memdb: Option<ObjectRef>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub imap_uid: Option<ObjectRef>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub blob_segments: Vec<SegmentRef>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -169,7 +167,6 @@ impl Manifest {
         };
         match &art.logical {
             ArtifactKey::Memdb => self.objects.memdb = Some(obj),
-            ArtifactKey::ImapUid => self.objects.imap_uid = Some(obj),
             ArtifactKey::BlobSegment(seg_id) => {
                 self.objects.blob_segments.push(SegmentRef {
                     seg_id: *seg_id,
@@ -226,7 +223,6 @@ impl Manifest {
         let mut keys = Vec::new();
         for slot in [
             &self.objects.memdb,
-            &self.objects.imap_uid,
             &self.objects.integrity,
             &self.objects.timestamp,
         ]
@@ -255,7 +251,6 @@ impl Manifest {
         let mut out = Vec::new();
         for slot in [
             &self.objects.memdb,
-            &self.objects.imap_uid,
             &self.objects.integrity,
             &self.objects.timestamp,
         ]
@@ -368,7 +363,6 @@ mod tests {
     fn object_keys_lists_every_reference() {
         let mut m = Manifest::new("m-1".to_string(), "manual", None);
         m.add_artifact(&artifact(ArtifactKey::Memdb, 0x01, 1)).unwrap();
-        m.add_artifact(&artifact(ArtifactKey::ImapUid, 0x02, 1)).unwrap();
         m.add_artifact(&artifact(ArtifactKey::BlobSegment(1), 0x03, 1)).unwrap();
         m.add_artifact(&artifact(ArtifactKey::BlobSegment(2), 0x04, 1)).unwrap();
         m.add_artifact(&artifact(ArtifactKey::AuditBase, 0x05, 1)).unwrap();
@@ -377,8 +371,8 @@ mod tests {
         m.add_artifact(&artifact(ArtifactKey::TimestampAnchor, 0x08, 1)).unwrap();
 
         let keys = m.object_keys();
-        assert_eq!(keys.len(), 8, "memdb+uid+2 segs+audit base+delta+integrity+timestamp");
-        assert_eq!(m.object_refs().len(), 8);
+        assert_eq!(keys.len(), 7, "memdb+2 segs+audit base+delta+integrity+timestamp");
+        assert_eq!(m.object_refs().len(), 7);
         // Content addressing ⇒ distinct bytes ⇒ distinct keys.
         let uniq: std::collections::HashSet<&str> = keys.iter().copied().collect();
         assert_eq!(uniq.len(), keys.len(), "all references must be distinct objects");

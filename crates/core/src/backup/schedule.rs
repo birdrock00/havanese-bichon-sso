@@ -91,6 +91,13 @@ async fn scheduler_tick() -> BichonResult<()> {
 /// True when a scheduled instant falls strictly between `last_trigger_at`
 /// (UTC millis) and now — i.e. the slot came due and has not been fired for.
 fn should_trigger_schedule(schedule_str: &str, last_trigger_at: i64) -> bool {
+    // An empty expression is the WebUI's "Manual" preset — the "no schedule,
+    // manual runs only" setting `config::validate` accepts — so it is checked
+    // before parsing. Without this the 60s tick would warn about a deliberate
+    // configuration on every pass.
+    if schedule_str.trim().is_empty() {
+        return false;
+    }
     let schedule = match Schedule::from_str(schedule_str) {
         Ok(s) => s,
         Err(e) => {
@@ -163,6 +170,15 @@ mod tests {
     #[test]
     fn cron_invalid_expression_never_triggers() {
         assert!(!should_trigger_schedule("not a cron", utc_now!()));
+    }
+
+    /// An empty schedule is the WebUI's "Manual" preset rather than a mistake:
+    /// it must never fire, and it must not be reported as invalid either —
+    /// this runs on every 60s tick, so a warning here would repeat forever for
+    /// a configuration the user chose on purpose.
+    #[test]
+    fn empty_schedule_means_manual_only() {
         assert!(!should_trigger_schedule("", utc_now!()));
+        assert!(!should_trigger_schedule("   ", utc_now!()));
     }
 }

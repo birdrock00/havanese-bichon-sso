@@ -19,14 +19,16 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Loader, Download, Trash2, MessageSquareMore, FileText, FileImage, FileVideo, FileArchive, FileSpreadsheet, FileCode, FileIcon, FileAudio, Upload, ShieldCheck, Pencil } from 'lucide-react';
+import { Loader, Download, Trash2, MessageSquareMore, FileText, FileImage, FileVideo, FileArchive, FileSpreadsheet, FileCode, FileIcon, FileAudio, Upload, ShieldCheck, Pencil, Copy, ChevronDown, Wrench, ExternalLink } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from '@/hooks/use-toast';
-import { formatBytes } from '@/lib/utils';
+import { cn, formatBytes } from '@/lib/utils';
+import { copyToClipboard } from '@/lib/clipboard';
 import EmailIframe from '@/components/mail-iframe';
 import {
   AttachmentInfo,
@@ -149,6 +151,12 @@ export function MailMessageView({
     ['system:root', 'data:export:batch', 'data:export:batch:all'],
     envelope.account_id
   );
+  // Repair is non-destructive (hash-verified re-fetch), so it uses the same
+  // permission as metadata management rather than the delete/restore gates.
+  const canRepair = require_any_permission(
+    ['system:root', 'data:manage'],
+    envelope.account_id
+  );
   const noPermission = t('common.noPermission', 'No permission');
   const [content, setContent] = useState<string | null>(null);
   const [contentType, setContentType] = useState<'Plain' | 'Html' | null>(null);
@@ -159,6 +167,13 @@ export function MailMessageView({
   const { getEmailById } = useMinimalAccountList();
   const [threadOpen, setThreadOpen] = useState(false);
   const [blockRemote, setBlockRemote] = useState(true);
+  // Header details (account, id, recipients, tags) are collapsed by default
+  // so the message body gets the vertical space.
+  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  useEffect(() => {
+    setDetailsOpen(false);
+  }, [envelope.id]);
   const [hasRemoteContent, setHasRemoteContent] = useState(false);
   const [previewAttachment, setPreviewAttachment] = useState<{ attachments: PreviewAttachment[]; index: number } | null>(null);
 
@@ -170,7 +185,7 @@ export function MailMessageView({
     mutationFn: ({ content_hash }: { content_hash: string }) =>
       download_attachment(envelope.account_id, envelope.id, content_hash, downloadingAttachmentFileName!),
     onSuccess: () => setDownloadingAttachmentFileName(null),
-    onError: (error: any) => {
+    onError: (error: Error) => {
       setDownloadingAttachmentFileName(null);
       toast({
         title: t('mail.failedToDownloadFile'),
@@ -189,7 +204,7 @@ export function MailMessageView({
       setContentType(data.html ? 'Html' : 'Plain');
       setHasRemoteContent(!!data.has_remote_content);
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       setLoading(false);
       toast({
         title: t('mail.failedToLoadEmail'),
@@ -260,245 +275,341 @@ export function MailMessageView({
     }
   };
 
+  // The id is what the "Advanced" popover searches on, so the header is where
+  // a user picks it up — the row is a dense one-liner, hence the icon button.
+  const copyEnvelopeId = async () => {
+    try {
+      await copyToClipboard(envelope.id);
+      toast({ title: t('mail.copied') });
+    } catch {
+      toast({ title: t('mail.copyFailed'), variant: 'destructive' });
+    }
+  };
+
+  // Inline attachments are part of the rendered body; only regular ones get a
+  // row. When there are none, the whole section is omitted so the message body
+  // gets the space instead of an empty "No attachments" line.
+  const nonInlineAttachments = (attachments ?? []).filter(
+    (attachment) => !attachment.inline
+  )
+
+  const actionButtons = (
+    <>
+      <Tooltip delayDuration={800}>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleDelete}
+            disabled={!canDelete}
+            className="h-6 w-6 hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {canDelete ? t('mail.delete') : noPermission}
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip delayDuration={800}>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={downloadEmlFile}
+            disabled={!canDownload}
+            className="h-6 w-6"
+          >
+            <Download className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {canDownload ? t('mail.download') : noPermission}
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip delayDuration={800}>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setThreadOpen(true)}
+            disabled={!canThread}
+            className="h-6 w-6"
+          >
+            <MessageSquareMore className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {canThread ? t('mail.viewThread') : noPermission}
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip delayDuration={800}>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={!canRestore}
+            onClick={() => {
+              setSelected(new Map())
+              setOpen('restore')
+            }}
+            className="h-6 w-6"
+          >
+            <Upload className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {canRestore
+            ? t('restore_message.restore_to_imap', 'Restore Mail')
+            : noPermission}
+        </TooltipContent>
+      </Tooltip>
+      <Tooltip delayDuration={800}>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={!canRepair}
+            onClick={() => {
+              setSelected(new Map())
+              setOpen('repair')
+            }}
+            className="h-6 w-6"
+          >
+            <Wrench className="h-3.5 w-3.5" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {canRepair
+            ? t('repair_message.repairAction', 'Repair message')
+            : noPermission}
+        </TooltipContent>
+      </Tooltip>
+      <Button asChild variant="ghost" size="icon" className="h-6 w-6">
+        <Link
+          to="/search"
+          search={{
+            q: JSON.stringify({ id: envelope.id }),
+            page: 1,
+            pageSize: 30,
+            sortOrder: 'desc',
+          }}
+          title={t('mail.openInSearch', 'Open in search')}
+          // Close the reader drawer (if any) before showing the search page.
+          onClick={() => setOpen(null)}
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+        </Link>
+      </Button>
+    </>
+  )
+
   return (
     <div className="flex flex-col">
-      {showHeader && <div className="grid gap-1 text-xs">
-        <div className="flex space-x-2">
-          <span className="font-medium text-gray-400">{t('mail.account')}:</span>
-          <span>{getEmailById(envelope.account_id)}</span>
-        </div>
-        <div className="flex space-x-2">
-          <span className="font-medium text-gray-400">{t('mail.id')}:</span>
-          <span>{envelope.id}</span>
-        </div>
-        {envelope.from && (
-          <div className="flex space-x-2">
-            <span className="font-medium text-gray-400">{t('mail.from')}:</span>
-            <span>{envelope.from}</span>
-          </div>
-        )}
-        {envelope.to && envelope.to.length > 0 && <Multilines title={t('mail.to')} lines={envelope.to} />}
-        {envelope.cc && envelope.cc.length > 0 && <Multilines title={t('mail.cc')} lines={envelope.cc} />}
-        {envelope.bcc && envelope.bcc.length > 0 && <Multilines title={t('mail.bcc')} lines={envelope.bcc} />}
-        {envelope.subject && (
-          <div className="flex space-x-2">
-            <span className="font-medium text-gray-400">{t('mail.subject')}:</span>
-            <span>{envelope.subject}</span>
-          </div>
-        )}
-        {envelope.internal_date && (
-          <div className="flex space-x-2">
-            <span className="font-medium text-gray-400">{t('mail.date')}:</span>
-            <span>{formatTimestamp(envelope.internal_date)}</span>
-          </div>
-        )}
-        <div className="flex items-center space-x-2">
-          <span className="font-medium text-gray-400">{t('mail.tags')}:</span>
-          <div className="flex flex-wrap gap-1 items-center">
-            {envelope.tags && envelope.tags.length > 0 ? (
-              envelope.tags.map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-[10px] h-5 px-1.5">
-                  {tag}
-                </Badge>
-              ))
-            ) : (
-              <span className="text-gray-400 italic">{t('mail.noTagsYet')}</span>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 ml-0.5"
-              disabled={!canEditTags}
-              title={!canEditTags ? noPermission : undefined}
-              onClick={() => setEditTagsOpen(true)}
-            >
-              <Pencil className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-      </div>}
+      {showHeader && (
+        <div className="text-xs">
+          {/* Compact summary: subject, sender and timestamp stay visible;
+              account, id, recipients and tags collapse behind the chevron. */}
+          <div className="flex max-w-full items-start gap-2 overflow-hidden">
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <div
+                className="max-w-full truncate text-sm font-semibold text-foreground"
+                title={envelope.subject}
+              >
+                {envelope.subject || t('mail.noSubject')}
+              </div>
+              <div className="mt-0.5 flex items-baseline gap-2 text-[11px] text-muted-foreground">
+                {envelope.from && (
+                  <span className="min-w-0 truncate" title={envelope.from}>
+                    {envelope.from}
+                  </span>
+                )}
+                {envelope.internal_date && (
+                  <span className="shrink-0 whitespace-nowrap tabular-nums">
+                    {formatTimestamp(envelope.internal_date)}
+                  </span>
+                )}
+              </div>
+            </div>
 
-      {showActions && (
-        <>
-          <div className="flex items-center mt-2 space-x-2">
-            <Separator orientation="horizontal" className="flex-1 bg-border" />
+            <div className="flex shrink-0 items-center gap-0.5">
+              {showActions && actionButtons}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => setDetailsOpen((open) => !open)}
+                title={
+                  detailsOpen
+                    ? t('mail.hideDetails', 'Hide details')
+                    : t('mail.showDetails', 'Show details')
+                }
+              >
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 transition-transform',
+                    detailsOpen && 'rotate-180'
+                  )}
+                />
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center justify-start gap-3 text-xs text-gray-500">
-            <Tooltip delayDuration={800}>
-              <TooltipTrigger asChild>
-<span className="inline-flex">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleDelete}
-                  disabled={!canDelete}
-                  className="hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </span>
-</TooltipTrigger>
-              <TooltipContent>
-                {canDelete ? t('mail.delete') : noPermission}
-              </TooltipContent>
-            </Tooltip>
-            <Separator orientation="vertical" className="h-5" />
-            <Tooltip delayDuration={800}>
-              <TooltipTrigger asChild>
-<span className="inline-flex">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={downloadEmlFile}
-                  disabled={!canDownload}
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
-              </span>
-</TooltipTrigger>
-              <TooltipContent>
-                {canDownload ? t('mail.download') : noPermission}
-              </TooltipContent>
-            </Tooltip>
-            <Separator orientation="vertical" className="h-5" />
-            <Tooltip delayDuration={800}>
-              <TooltipTrigger asChild>
-<span className="inline-flex">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setThreadOpen(true)}
-                  disabled={!canThread}
-                >
-                  <MessageSquareMore className="h-4 w-4" />
-                </Button>
-              </span>
-</TooltipTrigger>
-              <TooltipContent>
-                {canThread ? t('mail.viewThread') : noPermission}
-              </TooltipContent>
-            </Tooltip>
-            <Separator orientation="vertical" className="h-5" />
-            <Tooltip delayDuration={800}>
-              <TooltipTrigger asChild>
-<span className="inline-flex">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  disabled={!canRestore}
-                  onClick={() => {
-                    setSelected(new Map())
-                    setOpen('restore')
-                  }}
-                >
-                  <Upload className="h-4 w-4" />
-                </Button>
-              </span>
-</TooltipTrigger>
-              <TooltipContent>
-                {canRestore
-                  ? t('restore_message.restore_to_imap', 'Restore Mail')
-                  : noPermission}
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </>
-      )}
-      {showAttachments && <Separator className="my-2" />}
-      {showAttachments && (
-        <div className="mb-2">
-          {loading ? (
-            <span className="text-gray-500 text-xs" />
-          ) : attachments && attachments.length > 0 ? (
-            (() => {
-              const nonInline = attachments.filter((a) => !a.inline);
 
-              return nonInline.length > 0 ? (
-                <div className="space-y-2">
-                  {nonInline.map((attachment, i) => {
-                    const { icon, color } = getFileConfig(attachment.file_type);
-                    const is_message = attachment.is_message;
-
-                    return <div key={i} className="flex items-center">
-                      <div className="group flex items-center gap-2 p-1 hover:bg-muted/60 rounded transition-colors min-w-0 w-full">
-                        <div className={`flex-shrink-0 ${color}`}>
-                          {icon}
-                        </div>
-                        <div className="flex items-center justify-between min-w-0 flex-1 gap-2">
-                          <button
-                            type="button"
-                            className="truncate text-xs font-medium text-foreground/90 cursor-pointer hover:text-primary hover:underline transition-colors text-left"
-                            title={attachment.filename}
-                            onClick={() =>
-                              setPreviewAttachment({
-                                attachments: nonInline.map((a) => ({
-                                  content_hash: a.content_hash,
-                                  file_type: a.file_type,
-                                  filename: a.filename,
-                                })),
-                                index: i,
-                              })
-                            }
-                          >
-                            {attachment.filename}
-                          </button>
-                          <span className="flex-shrink-0 text-[9px] font-bold text-muted-foreground/60 bg-muted px-1 py-0.5 rounded uppercase">
-                            {attachment.file_type.split('/').pop()}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3 ml-auto pr-1">
-                        {is_message && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-<span className="inline-flex">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 w-7 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                                onClick={() => {
-                                  handleViewNestedEml(attachment);
-                                }}
-                              >
-                                <MessageSquareMore className="h-4 w-4" />
-                              </Button>
-                            </span>
-</TooltipTrigger>
-                            <TooltipContent>{t('mail.viewNestedEmail', 'View Embedded Email')}</TooltipContent>
-                          </Tooltip>
-                        )}
-                        <span className="text-gray-500 text-xs shrink-0">
-                          {formatBytes(attachment.size)}
-                        </span>
-                        {downloadingAttachmentFileName === attachment.filename ? (
-                          <Loader className="w-5 h-5 animate-spin" />
-                        ) : (
-                          <Download
-                            className="w-5 h-5 cursor-pointer"
-                            onClick={() => {
-                              setDownloadingAttachmentFileName(attachment.filename);
-                              downloadAttachmentMutation.mutate({ content_hash: attachment.content_hash });
-                            }}
-                          />
-                        )}
-                      </div>
-                    </div>
-                  })}
-                </div>
-              ) : (
-                <span className="text-gray-500 text-xs italic">
-                  {t('mail.onlyNonInlineAttachments')}
+          {detailsOpen && (
+            <div className="mt-2 grid gap-1 border-t pt-2">
+              <div className="flex space-x-2">
+                <span className="font-medium text-gray-400">
+                  {t('mail.account')}:
                 </span>
-              );
-            })()
-          ) : (
-            <span className="text-gray-500 text-xs">{t('mail.noAttachments')}</span>
+                <span>{getEmailById(envelope.account_id)}</span>
+              </div>
+              <div className="flex min-w-0 items-center space-x-2">
+                <span className="font-medium text-gray-400">{t('mail.id')}:</span>
+                <span className="min-w-0 truncate">{envelope.id}</span>
+                <Tooltip delayDuration={800}>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={copyEnvelopeId}
+                      className="h-5 w-5"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('mail.copyId')}</TooltipContent>
+                </Tooltip>
+              </div>
+              {envelope.to && envelope.to.length > 0 && (
+                <Multilines title={t('mail.to')} lines={envelope.to} />
+              )}
+              {envelope.cc && envelope.cc.length > 0 && (
+                <Multilines title={t('mail.cc')} lines={envelope.cc} />
+              )}
+              {envelope.bcc && envelope.bcc.length > 0 && (
+                <Multilines title={t('mail.bcc')} lines={envelope.bcc} />
+              )}
+              <div className="flex items-center space-x-2">
+                <span className="font-medium text-gray-400">
+                  {t('mail.tags')}:
+                </span>
+                <div className="flex flex-wrap gap-1 items-center">
+                  {envelope.tags && envelope.tags.length > 0 ? (
+                    envelope.tags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="secondary"
+                        className="text-[10px] h-5 px-1.5"
+                      >
+                        {tag}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-gray-400 italic">
+                      {t('mail.noTagsYet')}
+                    </span>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 ml-0.5"
+                    disabled={!canEditTags}
+                    title={!canEditTags ? noPermission : undefined}
+                    onClick={() => setEditTagsOpen(true)}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       )}
-      {showAttachments && <Separator className="mb-2" />}
+
+      {!showHeader && showActions && (
+        <div className="flex items-center justify-start gap-1 text-xs text-gray-500">
+          {actionButtons}
+        </div>
+      )}
+      {showAttachments && !loading && nonInlineAttachments.length > 0 && (
+        <>
+          <Separator className="my-2" />
+          <div className="mb-2 space-y-2">
+            {nonInlineAttachments.map((attachment, i) => {
+              const { icon, color } = getFileConfig(attachment.file_type);
+              const is_message = attachment.is_message;
+
+              return <div key={i} className="flex items-center">
+                <div className="group flex items-center gap-2 p-1 hover:bg-muted/60 rounded transition-colors min-w-0 w-full">
+                  <div className={`flex-shrink-0 ${color}`}>
+                    {icon}
+                  </div>
+                  <div className="flex items-center justify-between min-w-0 flex-1 gap-2">
+                    <button
+                      type="button"
+                      className="truncate text-xs font-medium text-foreground/90 cursor-pointer hover:text-primary hover:underline transition-colors text-left"
+                      title={attachment.filename}
+                      onClick={() =>
+                        setPreviewAttachment({
+                          attachments: nonInlineAttachments.map((a) => ({
+                            content_hash: a.content_hash,
+                            file_type: a.file_type,
+                            filename: a.filename,
+                          })),
+                          index: i,
+                        })
+                      }
+                    >
+                      {attachment.filename}
+                    </button>
+                    <span className="flex-shrink-0 text-[9px] font-bold text-muted-foreground/60 bg-muted px-1 py-0.5 rounded uppercase">
+                      {attachment.file_type.split('/').pop()}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3 ml-auto pr-1">
+                  {is_message && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+<span className="inline-flex">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                          onClick={() => {
+                            handleViewNestedEml(attachment);
+                          }}
+                        >
+                          <MessageSquareMore className="h-4 w-4" />
+                        </Button>
+                      </span>
+</TooltipTrigger>
+                      <TooltipContent>{t('mail.viewNestedEmail', 'View Embedded Email')}</TooltipContent>
+                    </Tooltip>
+                  )}
+                  <span className="text-gray-500 text-xs shrink-0">
+                    {formatBytes(attachment.size)}
+                  </span>
+                  {downloadingAttachmentFileName === attachment.filename ? (
+                    <Loader className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Download
+                      className="w-5 h-5 cursor-pointer"
+                      onClick={() => {
+                        setDownloadingAttachmentFileName(attachment.filename);
+                        downloadAttachmentMutation.mutate({ content_hash: attachment.content_hash });
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+            })}
+          </div>
+          <Separator className="mb-2" />
+        </>
+      )}
       {hasRemoteContent && (
-        <div className="flex items-center justify-between bg-muted border px-3 py-1.5 mb-3 text-xs">
+        <div className="mt-3 flex items-center justify-between bg-muted border px-3 py-1.5 mb-3 text-xs">
           <div className="flex items-center gap-1.5 min-w-0">
             <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
             {blockRemote ? (
@@ -521,7 +632,7 @@ export function MailMessageView({
           </span>
         </div>
       )}
-      <div>
+      <div className="mt-3">
         {loading ? (
           <div className="flex justify-center items-center py-8">
             <Loader className="w-6 h-6 animate-spin" />

@@ -304,7 +304,7 @@ mod tests {
     use crate::store::tantivy::fields::AttachmentFields;
     use crate::store::tantivy::fields::EmailFields;
     use crate::store::tantivy::schema::SchemaTools;
-    use crate::store::tantivy::tokenizers::EuroTokenizer;
+    use crate::store::tantivy::tokenizers::{tri_analyzer, EuroTokenizer};
     use std::collections::HashSet;
     use std::fmt::Write;
     use std::fs;
@@ -323,6 +323,7 @@ mod tests {
     fn make_index(dir: &std::path::Path, schema: tantivy::schema::Schema) -> Index {
         let index = Index::create_in_dir(dir, schema).unwrap();
         index.tokenizers().register("euro", EuroTokenizer::new());
+        index.tokenizers().register("tri", tri_analyzer());
         index
     }
 

@@ -36,6 +36,15 @@ pub struct AccessTokenCreateRequest {
     /// If not specified, the token will be created for the current authenticated user.
     /// Accessing this for another user typically requires `USER_MANAGE` permissions.
     pub user_id: Option<u64>,
+    /// Restrict this token to the metrics endpoint (`GET /api/v1/metrics`).
+    ///
+    /// The token keeps the normal API-token lifecycle (expiry, revocation,
+    /// last-access tracking), but every other endpoint rejects it. The owner
+    /// must hold the `system:metrics` permission, otherwise creation fails.
+    /// Defaults to `false` for backward compatibility.
+    #[serde(default)]
+    #[cfg_attr(feature = "web-api", oai(default))]
+    pub metrics_only: bool,
 }
 
 impl AccessTokenCreateRequest {

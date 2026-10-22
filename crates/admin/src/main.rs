@@ -31,6 +31,9 @@ fn main() {
                 .block_on(bichon_admin::restore::run_cli(args, false));
             std::process::exit(code);
         }
+        Some(AdminCommand::Reindex(args)) => {
+            std::process::exit(bichon_admin::reindex::run_cli(args));
+        }
         None => bichon_admin::run_interactive(false),
     }
 }

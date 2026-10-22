@@ -61,7 +61,7 @@ function getCategoryMap(isEnterprise: boolean): Record<'Global' | 'Account', { t
   const global: { titleKey: string; keys: string[] }[] = [
     {
       titleKey: 'roles.categories.identity',
-      keys: ['system:access', 'system:root', 'user:manage', 'user:view', 'token:manage', 'account:create'],
+      keys: ['system:access', 'system:root', 'system:metrics', 'user:manage', 'user:view', 'token:manage', 'account:create'],
     },
     {
       titleKey: 'roles.categories.global_data',

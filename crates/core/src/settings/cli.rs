@@ -654,18 +654,21 @@ mod tests {
 
     /// A server run without `--bichon-root-dir` must fail at the clap level —
     /// the requirement is enforced by the parser, not by a manual runtime
-    /// check. The env binding is lifted for the parse (other tests in this
-    /// binary legitimately set `BICHON_ROOT_DIR` to bootstrap `SETTINGS`) and
-    /// restored afterwards.
+    /// check.
+    ///
+    /// The parse is run with the env binding lifted, so the assertion is about
+    /// the *flag* being required and does not depend on the process
+    /// environment. Several test modules bootstrap `SETTINGS` by setting
+    /// `BICHON_ROOT_DIR` concurrently; clearing it here to make the parse
+    /// meaningful raced with those writes and flaked.
     #[test]
     fn server_run_without_root_dir_is_clap_error() {
-        let saved = std::env::var("BICHON_ROOT_DIR").ok();
-        std::env::remove_var("BICHON_ROOT_DIR");
-        let parsed = Settings::try_parse_from(["bichon", "--bichon-http-port", "9999"]);
-        match saved {
-            Some(v) => std::env::set_var("BICHON_ROOT_DIR", v),
-            None => std::env::remove_var("BICHON_ROOT_DIR"),
-        }
+        use clap::builder::Resettable;
+        use clap::CommandFactory;
+
+        let parsed = Settings::command()
+            .mut_arg("bichon_root_dir", |arg| arg.env(Resettable::Reset))
+            .try_get_matches_from(["bichon", "--bichon-http-port", "9999"]);
         let err = parsed.expect_err("missing --bichon-root-dir must be rejected");
         assert_eq!(err.kind(), clap::error::ErrorKind::MissingRequiredArgument);
     }
@@ -675,6 +678,7 @@ mod tests {
     /// config file.
     #[test]
     fn restore_args_parse_standalone() {
+        use clap::builder::Resettable;
         use clap::{Command as ClapCommand, FromArgMatches};
 
         let cfg = std::env::temp_dir().join("bichon-restore-cfg-test.json");
@@ -684,7 +688,15 @@ mod tests {
         )
         .unwrap();
 
-        let matches = RestoreArgs::augment_args(ClapCommand::new("restore"))
+        // The env binding is lifted so `root_dir` is None deterministically:
+        // other test modules set `BICHON_ROOT_DIR` concurrently to bootstrap
+        // `SETTINGS`, which made this assertion depend on timing.
+        let restore_command = || {
+            RestoreArgs::augment_args(ClapCommand::new("restore"))
+                .mut_arg("root_dir", |arg| arg.env(Resettable::Reset))
+        };
+
+        let matches = restore_command()
             .try_get_matches_from([
                 "restore",
                 "--config",
@@ -696,20 +708,16 @@ mod tests {
         let args = RestoreArgs::from_arg_matches(&matches).unwrap();
         assert_eq!(args.into, "/tmp/restore");
         assert!(args.point.is_none());
-        // `root_dir` binds `BICHON_ROOT_DIR`; other tests in this binary set
-        // that env concurrently, so only assert absence on a clean env.
-        if std::env::var("BICHON_ROOT_DIR").is_err() {
-            assert!(args.root_dir.is_none());
-        }
+        assert!(args.root_dir.is_none());
 
         // `--config` and `--into` are required; a missing file is rejected by
         // the value parser.
-        let err = RestoreArgs::augment_args(ClapCommand::new("restore"))
+        let err = restore_command()
             .try_get_matches_from(["restore", "--into", "/tmp/restore"])
             .expect_err("missing --config must be rejected");
         assert_eq!(err.kind(), clap::error::ErrorKind::MissingRequiredArgument);
 
-        let err = RestoreArgs::augment_args(ClapCommand::new("restore"))
+        let err = restore_command()
             .try_get_matches_from([
                 "restore",
                 "--config",

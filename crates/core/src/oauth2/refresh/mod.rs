@@ -60,11 +60,13 @@ impl BichonTask for OAuth2RefreshTask {
                                 tokio::spawn(async move {
                                     let flow = OAuth2Flow::new(token.oauth2_id.clone());
                                     if let Err(error) = flow.refresh_access_token(&token).await {
+                                        crate::metrics::count_oauth2_refresh("failure");
                                         error!(
                                             "Failed to refresh access token for {}: {}",
                                             token.account_id, error
                                         );
                                     } else {
+                                        crate::metrics::count_oauth2_refresh("success");
                                         info!(
                                             "Successfully refreshed access token for {}",
                                             token.account_id

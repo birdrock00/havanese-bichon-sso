@@ -42,6 +42,7 @@ import { toast } from '@/hooks/use-toast'
 import { ToastAction } from '@/components/ui/toast'
 import { useNavigate } from '@tanstack/react-router'
 import { dateFnsLocaleMap } from '@/lib/utils'
+import { copyToClipboard } from '@/lib/clipboard'
 import { enUS } from 'date-fns/locale'
 import { AccountModel } from '@/api/account/api'
 
@@ -67,7 +68,7 @@ export function OAuth2TokensDialog({ currentRow, open, onOpenChange }: Props) {
 
   const onCopy = useCallback(async (access: boolean, token: string) => {
     try {
-      await navigator.clipboard.writeText(token);
+      await copyToClipboard(token);
       if (access) {
         toast({
           title: t('common.ok'),

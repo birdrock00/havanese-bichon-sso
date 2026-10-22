@@ -39,6 +39,7 @@ export function getPermissions(
         // 1. Global Management
         { label: t('permission.system.access'), value: 'system:access' },
         { label: t('permission.system.root'), value: 'system:root' },
+        { label: t('permission.system.metrics'), value: 'system:metrics' },
         { label: t('permission.user.manage'), value: 'user:manage' },
         { label: t('permission.user.view'), value: 'user:view' },
         { label: t('permission.token.manage'), value: 'token:manage' },
@@ -100,6 +101,8 @@ export interface AccessToken {
     last_access_at: number;
     expire_at?: number | null;
     token_type: TokenType;
+    /** When true, the token may only call GET /api/v1/metrics. */
+    metrics_only?: boolean;
 }
 
 export interface User {

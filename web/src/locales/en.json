@@ -605,6 +605,12 @@
       "save": "Save",
       "saveChanges": "Save Changes"
     },
+    "filters": {
+      "all": "All tokens",
+      "label": "Filter",
+      "metricsOnly": "Metrics only",
+      "regular": "Regular tokens"
+    },
     "form": {
       "1day": "1 day",
       "30days": "30 days",
@@ -616,6 +622,8 @@
       "expirationDescription": "Tokens will automatically expire after the selected time.",
       "expirationLabel": "Expiration",
       "expirationPlaceholder": "Select expiration",
+      "metricsOnlyDescription": "The token can only call GET /api/v1/metrics and is rejected on every other endpoint. The owner must hold the system:metrics permission.",
+      "metricsOnlyLabel": "Metrics endpoint only",
       "nameDescription": "Optional · Max 32 characters",
       "nameLabel": "Name",
       "namePlaceholder": "Give this access token a short name",
@@ -626,7 +634,9 @@
       "deleteBtn": "Delete token",
       "expiresOnLabel": "Expires on",
       "expiresOnShort": "Expires on {{date}}",
+      "filterEmpty": "No tokens match this filter.",
       "lastUsedLabel": "Last used",
+      "metricsOnlyBadge": "Metrics only",
       "neverExpires": "Never expires",
       "neverLabel": "Never",
       "neverUsed": "Never",
@@ -958,11 +968,15 @@
     "recordsEmpty": "No backup runs yet",
     "recordsHint": "The most recent 200 backup runs.",
     "refresh": "Refresh",
+    "refreshHint": "Refresh the restore-point list (sends a request to the backup target)",
+    "refreshTooSoon": "Please wait {{seconds}}s before refreshing again",
+    "refreshTooSoonHint": "Listing restore points sends a request to the backup target.",
     "restorePoint": "Restore point",
     "runDrill": "Run restore drill",
     "runNow": "Run backup now",
     "schedule": "Schedule",
     "skippedObjects": "skipped",
+    "staleRestorePoints": "New backup available",
     "status": "Status",
     "statusCard": "Backup status",
     "statusFailed": "Failed",
@@ -1620,6 +1634,9 @@
     "blockRemoteAgain": "Block again",
     "cc": "CC",
     "clickToDownload": "Click to download",
+    "copied": "Copied to clipboard",
+    "copyFailed": "Failed to copy",
+    "copyId": "Copy ID",
     "date": "Date",
     "delete": "Delete",
     "download": "Download",
@@ -1681,9 +1698,13 @@
       "warningTitle": "Warning"
     },
     "folders": "Folders",
+    "hideDetails": "Hide details",
     "messages": "Messages",
     "noMessages": "No messages",
+    "noSubject": "(No subject)",
+    "openInSearch": "Open in search",
     "selectFolder": "Select a folder to view messages",
+    "showDetails": "Show details",
     "thread": {
       "empty": "No messages in this thread.",
       "invalidDate": "Invalid Date",
@@ -1722,6 +1743,24 @@
     "settings": "Settings",
     "timestampAnchor": "Timestamp anchoring",
     "users": "System Users"
+  },
+  "mailboxView": {
+    "allFolders": "All folders",
+    "clearSearch": "Clear search",
+    "empty": "No messages in this folder.",
+    "folders": "Folders",
+    "loadError": "Failed to load folders.",
+    "message": "Message",
+    "messageCount_one": "{{count}} message",
+    "messageCount_other": "{{count}} messages",
+    "noAccounts": "No accounts with mailboxes.",
+    "noMatches": "No messages match this search.",
+    "noSubject": "(No subject)",
+    "openInSearch": "Open in search page",
+    "searchFolders": "Search folders...",
+    "searchInFolder": "Search in this folder...",
+    "selectAccount": "Select account",
+    "selectMessage": "Select a message to read it here."
   },
   "oauth2": {
     "aSecretKeyProvidedByTheOAuthProvider": "A secret key provided by the OAuth provider to authenticate your application.",
@@ -1928,6 +1967,7 @@
     },
     "system": {
       "access": "Basic System Access",
+      "metrics": "Read Server Metrics (Prometheus endpoint)",
       "root": "Root System Control"
     },
     "timestamp": {
@@ -2277,6 +2317,7 @@
     "body": "Body",
     "button": "Search",
     "clear_history": "Clear history",
+    "hint": "All words must match. Use OR to widen, \"quotes\" for a phrase, -word to exclude.",
     "no_history": "No search history",
     "placeholder": "Search emails (use \" \" for phrase search)",
     "recent_title": "Recent searches",
@@ -2296,6 +2337,8 @@
     "attachment_name_placeholder": "e.g. invoice.pdf",
     "category": "Category",
     "content_type": "File Type",
+    "envelope_id_description": "Match the message's internal ID exactly",
+    "envelope_id_label": "Envelope ID",
     "extension": "Extension",
     "has_attachment": "Has attachment",
     "is_message": "Email format attachment",
@@ -2748,6 +2791,7 @@
   "tag": {
     "clear_all": "Clear all tags",
     "label": "Tags",
+    "no_tags": "No tags",
     "no_tags_found": "No tags found",
     "search_placeholder": "Search tags..."
   },
