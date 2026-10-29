@@ -33,6 +33,7 @@ impl PeriodicTasks {
         tasks.push(OAuth2RefreshTask::start());
         tasks.push(OidcCleanTask::start());
         tasks.push(DedupTask::start());
+        tasks.push(crate::archive::imap::cleanup::scheduler::start_scheduler());
         Self { tasks }
     }
 

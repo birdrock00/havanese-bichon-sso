@@ -41,6 +41,10 @@ use crate::{
     },
 };
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
 #[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
 pub struct DashboardStats {
@@ -50,6 +54,11 @@ pub struct DashboardStats {
     pub total_size_bytes: u64,                           // Total size of all emails (in bytes)
     pub storage_usage_bytes: u64,                        // Actual storage used (in bytes)
     pub index_usage_bytes: u64,                          // Index storage size (in bytes)
+    /// Whether the storage/index figures describe the same account scope as
+    /// `total_size_bytes`. Filesystem usage cannot be attributed per account,
+    /// so it is only meaningful for callers who can see every account.
+    #[serde(default = "default_true")]
+    pub storage_stats_available: bool,
     pub recent_activity: Vec<TimeBucket>,                // Email activity over recent days
     pub top_senders: Vec<Group>,                         // Top 10 senders
     pub top_accounts: Vec<Group>,                        // Top 10 accounts
@@ -96,11 +105,17 @@ impl DashboardStats {
 
         stat.email_count = ENVELOPE_MANAGER.total_emails(&authorized_ids)?;
         stat.attachment_count = ATTACHMENT_MANAGER.total_attachments(&authorized_ids)?;
-        stat.storage_usage_bytes = get_total_size(&DATA_DIR_MANAGER.storage_dir)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
-
-        stat.index_usage_bytes = get_total_size(&&DATA_DIR_MANAGER.envelope_dir)
-            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        stat.storage_stats_available = has_all_accounts;
+        if has_all_accounts {
+            // Every file under `blobs` is email/attachment storage.
+            stat.storage_usage_bytes = get_total_size(&DATA_DIR_MANAGER.blob_dir())
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            // Everything under `bichon-indices` is index storage (mail and
+            // attachment metadata today, any future index included). The
+            // compression ratio itself uses only the blob figure above.
+            stat.index_usage_bytes = get_total_size(&DATA_DIR_MANAGER.index_dir)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        }
 
         stat.system_version = bichon_version!().to_string();
 

@@ -21,7 +21,7 @@ use std::collections::BTreeSet;
 use crate::{
     decode_mailbox_name, raise_error,
     {
-        account::migration::{AccountModel, AccountType},
+        account::migration::{AccountModel, AccountType, REMOTE_CLEANUP_FOLDER},
         archive::imap::mailbox::{AttributeEnum, MailBox},
         archive::imap::mailbox_cache,
         error::{code::ErrorCode, BichonResult},
@@ -71,6 +71,11 @@ pub async fn get_download_folders(
             .any(|attr| matches!(attr.attr, AttributeEnum::NoSelect))
     };
 
+    // bichon_auto_created_trash is Bichon-owned cleanup output. It must never
+    // be a download source, even if a user added it to the subscription list.
+    let is_cleanup_destination =
+        |mailbox: &MailBox| mailbox.name.eq_ignore_ascii_case(REMOTE_CLEANUP_FOLDER);
+
     let is_default_mailbox = |mailbox: &MailBox| {
         mailbox.name.eq_ignore_ascii_case("INBOX")
             || mailbox
@@ -82,7 +87,11 @@ pub async fn get_download_folders(
     let mut matched_mailboxes: Vec<&Name> = if !subscribed.is_empty() {
         mailboxes
             .iter()
-            .filter(|(mailbox, _)| subscribed.contains(&mailbox.name) && !is_noselect(mailbox))
+            .filter(|(mailbox, _)| {
+                subscribed.contains(&mailbox.name)
+                    && !is_noselect(mailbox)
+                    && !is_cleanup_destination(mailbox)
+            })
             .map(|(_, name)| name)
             .collect()
     } else {
@@ -92,7 +101,11 @@ pub async fn get_download_folders(
     if matched_mailboxes.is_empty() {
         matched_mailboxes = mailboxes
             .iter()
-            .filter(|(mailbox, _)| !is_noselect(mailbox) && is_default_mailbox(mailbox))
+            .filter(|(mailbox, _)| {
+                !is_noselect(mailbox)
+                    && !is_cleanup_destination(mailbox)
+                    && is_default_mailbox(mailbox)
+            })
             .map(|(_, name)| name)
             .collect();
 
@@ -136,7 +149,11 @@ pub async fn detect_mailbox_changes(
     }
     let known_folders = account.known_folders.clone().unwrap_or_default();
     // Compute differences
-    let new_folders: Vec<String> = all_names.difference(&known_folders).cloned().collect();
+    let new_folders: Vec<String> = all_names
+        .difference(&known_folders)
+        .filter(|name| !name.eq_ignore_ascii_case(REMOTE_CLEANUP_FOLDER))
+        .cloned()
+        .collect();
     let deleted_folders: Vec<String> = known_folders.difference(&all_names).cloned().collect();
 
     let has_changes = !new_folders.is_empty() || !deleted_folders.is_empty();

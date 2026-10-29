@@ -64,6 +64,7 @@ export interface FolderProgress {
     folder_name: string;
     planned: number;
     current: number;
+    filtered: number;
     status: FolderStatus;
     message: string | null;
 }
@@ -77,6 +78,7 @@ export interface AccountError {
 export interface GapFillFolderStats {
     downloaded: number;
     failed: number;
+    filtered: number;
     candidate_count: number;
     message?: string | null;
 }
@@ -95,6 +97,7 @@ export interface GapFillRun {
     folders: Record<string, GapFillFolderStats>;
     downloaded: number;
     failed: number;
+    filtered: number;
 }
 
 export interface GapFillState {
@@ -208,6 +211,8 @@ export interface AccountModel {
     deleting?: boolean;
     /** Retention window in days (0 / undefined = keep everything). */
     retention_days?: number;
+    /** Source-mailbox cleanup configuration (community). */
+    remote_cleanup?: RemoteCleanupConfig | null;
     /** Legal hold flag (Enterprise). When true the retention sweep skips this account. */
     legal_hold?: boolean;
     hold_reason?: string | null;
@@ -239,6 +244,127 @@ export interface ViewConfig {
     sources: ViewSource[];
 }
 
+/** Configuration for moving archived mail into bichon_auto_created_trash. */
+export interface RemoteCleanupConfig {
+    enabled?: boolean;
+    schedule?: string | null;
+    folders?: string[] | null;
+    eligible_after_archive_days?: number;
+    min_message_age_days?: number | null;
+    max_messages_per_run?: number;
+    skip_flagged?: boolean;
+}
+
+export enum RemoteCleanupStatus {
+    Running = 'Running',
+    Success = 'Success',
+    Cancelled = 'Cancelled',
+    Blocked = 'Blocked',
+    Failed = 'Failed',
+}
+
+export enum RemoteCleanupTrigger {
+    Scheduled = 'Scheduled',
+    Manual = 'Manual',
+}
+
+/** One message a cleanup run did not move, named so it can be identified. */
+export interface RemoteCleanupSkippedMessage {
+    folder: string;
+    uid: number;
+    message_id: string;
+    subject?: string | null;
+    /** Stable reason key, the same one counted in skipped_reasons. */
+    reason: string;
+    /** Counted as a failure rather than a policy skip. */
+    failed: boolean;
+    size: number;
+}
+
+export interface RemoteCleanupFolderStats {
+    candidate_count: number;
+    verified: number;
+    moved: number;
+    skipped: number;
+    failed: number;
+    bytes_moved: number;
+    message?: string | null;
+    /** Why messages were skipped/stopped in this folder. */
+    skipped_reasons?: Record<string, number>;
+    /**
+     * Which messages those counters refer to, capped. `null`/absent means the
+     * report predates this field — not that nothing was skipped.
+     */
+    unprocessed?: RemoteCleanupSkippedMessage[] | null;
+}
+
+export interface RemoteCleanupRun {
+    run_id: string;
+    started_at: number;
+    finished_at: number | null;
+    trigger: RemoteCleanupTrigger;
+    user?: string | null;
+    status: RemoteCleanupStatus;
+    destination_folder: string;
+    folders: Record<string, RemoteCleanupFolderStats>;
+    moved: number;
+    skipped: number;
+    failed: number;
+    bytes_moved: number;
+    message?: string | null;
+}
+
+export interface RemoteCleanupState {
+    account_id: number;
+    active: RemoteCleanupRun | null;
+    history: RemoteCleanupRun[];
+    last_finished_at?: number | null;
+}
+
+export interface CleanupSkipCount {
+    reason: string;
+    count: number;
+}
+
+export interface CleanupFolderPreview {
+    folder: string;
+    candidates: number;
+    verified: number;
+    bytes: number;
+    skipped: CleanupSkipCount[];
+}
+
+export interface CleanupPreview {
+    account_id: number;
+    kind: 'move';
+    generated_at: number;
+    expires_at: number;
+    destination_folder: string;
+    destination_exists: boolean;
+    /** Whether the server advertises MOVE (RFC 6851); the only move path. */
+    supports_move: boolean;
+    candidates: number;
+    verified: number;
+    bytes: number;
+    folders: CleanupFolderPreview[];
+    skipped: CleanupSkipCount[];
+    warnings: string[];
+    /** Bichon backup state at preview time. */
+    backup_configured: boolean;
+    backup_last_success_at: number | null;
+    /** A successful backup finished within the last seven days. */
+    backup_is_recent: boolean;
+    /** A move execution will stop at the first identity mismatch. */
+    will_abort: boolean;
+    token: string;
+    /**
+     * Set by the server when the job is read: the confirmation token is past
+     * `expires_at`, so Execute will be refused and a new preview is required.
+     * Always false in the response that just made the preview.
+     */
+    token_expired?: boolean;
+}
+
 export const download_state = async (account_id: number) => {
     const response = await axiosInstance.get<DownloadState>(`api/v1/accounts/${account_id}/download-stats`);
     return response.data;
@@ -246,6 +372,89 @@ export const download_state = async (account_id: number) => {
 
 export const gap_fill_state = async (account_id: number) => {
     const response = await axiosInstance.get<GapFillState>(`api/v1/accounts/${account_id}/gap-fill-stats`);
+    return response.data;
+};
+
+export interface CleanupJob {
+    job_id: string;
+    account_id: number;
+    kind: CleanupJobKind;
+    status: CleanupJobStatus;
+    user?: string | null;
+    created_at: number;
+    finished_at?: number | null;
+    /** Set when a preview job succeeded. */
+    preview?: CleanupPreview | null;
+    /** Set when a move job succeeded (the run itself may still have failed). */
+    run?: RemoteCleanupRun | null;
+    error?: string | null;
+}
+
+export type CleanupJobKind = 'move_preview' | 'move_run';
+
+export enum CleanupJobStatus {
+    Running = 'Running',
+    Success = 'Success',
+    Failed = 'Failed',
+    Cancelled = 'Cancelled',
+}
+
+export const remote_cleanup_state = async (account_id: number) => {
+    const response = await axiosInstance.get<RemoteCleanupState>(`api/v1/accounts/${account_id}/remote-cleanup/state`);
+    return response.data;
+};
+
+/**
+ * Cleanup previews and moves run in the background: the request
+ * only starts the job and returns it immediately, so no HTTP deadline can kill
+ * a run (strict verification re-downloads every candidate). Poll
+ * `remote_cleanup_job` until `status` leaves `Running`.
+ */
+export const preview_remote_cleanup = async (account_id: number) => {
+    const response = await axiosInstance.post<CleanupJob>(
+        `api/v1/accounts/${account_id}/remote-cleanup/preview`,
+        undefined
+    );
+    return response.data;
+};
+
+export const execute_remote_cleanup = async (account_id: number, preview_token: string) => {
+    const response = await axiosInstance.post<CleanupJob>(`api/v1/accounts/${account_id}/remote-cleanup/execute`, {
+        preview_token,
+        confirm: true,
+        acknowledge_risk: true,
+    });
+    return response.data;
+};
+
+/**
+ * Jobs the server still knows for this account, newest first with running ones
+ * ahead of finished ones. Jobs are in memory and expire 30 minutes after they
+ * finish; an empty list therefore does not mean nothing ever ran.
+ *
+ * Used to reattach after the client lost its job id (page reload, dialog
+ * reopened): the server refuses a second job for the same account while one
+ * is running.
+ */
+export const list_remote_cleanup_jobs = async (account_id: number) => {
+    const response = await axiosInstance.get<CleanupJob[]>(
+        `api/v1/accounts/${account_id}/remote-cleanup/jobs`
+    );
+    return response.data;
+};
+
+export const remote_cleanup_job = async (account_id: number, job_id: string) => {
+    const response = await axiosInstance.get<CleanupJob>(
+        `api/v1/accounts/${account_id}/remote-cleanup/jobs/${job_id}`
+    );
+    return response.data;
+};
+
+export const cancel_remote_cleanup_job = async (account_id: number, job_id: string) => {
+    const response = await axiosInstance.post<CleanupJob>(
+        `api/v1/accounts/${account_id}/remote-cleanup/jobs/${job_id}/cancel`,
+        undefined
+    );
     return response.data;
 };
 

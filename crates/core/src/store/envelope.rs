@@ -43,6 +43,11 @@ pub struct Envelope {
     pub date: i64,
     pub internal_date: i64,
     pub ingest_at: i64,
+    /// True once source-mailbox cleanup moved this message into
+    /// `bichon_auto_created_trash`. Filtered out of later cleanup runs so a
+    /// moved message never occupies a slot again.
+    #[serde(default)]
+    pub cleanup_moved: bool,
     pub size: u32,
     pub thread_id: String,
     pub attachment_count: usize,

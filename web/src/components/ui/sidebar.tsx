@@ -418,7 +418,7 @@ const SidebarContent = React.forwardRef<
       {...props}
     >
       <ScrollArea className='min-h-0 w-full flex-1'>
-        <div className='flex flex-col gap-2'>{children}</div>
+        <div className='flex flex-col gap-1'>{children}</div>
       </ScrollArea>
     </div>
   )
@@ -433,7 +433,7 @@ const SidebarGroup = React.forwardRef<
     <div
       ref={ref}
       data-sidebar='group'
-      className={cn('relative flex w-full min-w-0 flex-col p-2', className)}
+      className={cn('relative flex w-full min-w-0 flex-col px-2 py-1', className)}
       {...props}
     />
   )

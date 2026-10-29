@@ -452,7 +452,7 @@ fn process_folder_with_progress_inner<F>(
                         match futures::executor::block_on(extract_envelope_from_eml(
                             &decoded, account_id, mailbox_id,
                         )) {
-                            Ok(ExtractOutcome::Imported) => {
+                            Ok(ExtractOutcome::Imported | ExtractOutcome::Filtered) => {
                                 *success_count += 1;
                             }
                             Ok(ExtractOutcome::Duplicate) => {

@@ -79,6 +79,10 @@ function TriggerBadge({ trigger }: { trigger: string }) {
   )
 }
 
+function sumFiltered(folders: Record<string, { filtered?: number }> | undefined): number {
+  return Object.values(folders || {}).reduce((sum, f) => sum + (f.filtered || 0), 0)
+}
+
 function FolderDetailItem({ f, t }: { f: FolderProgress, t: (key: string) => string }) {
   const percentage = Math.min(Math.round((f.current / f.planned) * 100), 100) || 0;
 
@@ -89,6 +93,11 @@ function FolderDetailItem({ f, t }: { f: FolderProgress, t: (key: string) => str
           <LongText className="text-xs font-bold text-foreground tracking-tight">
             {f.folder_name}
           </LongText>
+          {(f.filtered || 0) > 0 && (
+            <p className="text-[10px] font-medium text-muted-foreground mt-0.5">
+              {f.filtered} {t('accounts.runningState.filtered_suffix')}
+            </p>
+          )}
         </div>
         <div className="flex items-center justify-between sm:justify-end gap-4">
           <div className="flex items-center gap-2 flex-1 sm:flex-initial">
@@ -149,8 +158,11 @@ function GapFillRunDetail({ run, t }: { run: GapFillRun, t: (key: string) => str
   return (
     <div className="space-y-3">
       {folderEntries.map(([name, stats]) => {
+        // Filtered candidates are finished work even though no body was
+        // downloaded, so they count toward the progress bar.
+        const processed = stats.downloaded + (stats.filtered || 0)
         const pct = stats.candidate_count > 0
-          ? Math.min(100, Math.round((stats.downloaded / stats.candidate_count) * 100))
+          ? Math.min(100, Math.round((processed / stats.candidate_count) * 100))
           : 0
         return (
           <div key={name} className="py-1.5 border-b border-border/50 last:border-b-0">
@@ -159,11 +171,17 @@ function GapFillRunDetail({ run, t }: { run: GapFillRun, t: (key: string) => str
               <span className="text-[10px] font-bold text-muted-foreground whitespace-nowrap">
                 {isActive && stats.candidate_count > 0 ? (
                   <span className="text-blue-600">
-                    {stats.downloaded} <span className="opacity-50">/</span> {stats.candidate_count}
+                    {processed} <span className="opacity-50">/</span> {stats.candidate_count}
                   </span>
                 ) : (
                   <>
                     <span className="text-blue-600">{stats.downloaded} {t('accounts.runningState.gap_fill_downloaded_suffix')}</span>
+                    {(stats.filtered || 0) > 0 && (
+                      <>
+                        <span className="mx-1 opacity-30">·</span>
+                        <span className="text-muted-foreground">{stats.filtered} {t('accounts.runningState.filtered_suffix')}</span>
+                      </>
+                    )}
                     {stats.failed > 0 && (
                       <>
                         <span className="mx-1 opacity-30">·</span>
@@ -178,6 +196,11 @@ function GapFillRunDetail({ run, t }: { run: GapFillRun, t: (key: string) => str
               <div className="mt-1.5 h-1.5 w-full rounded-full bg-muted overflow-hidden">
                 <div className="h-full rounded-full bg-blue-500 transition-all duration-500" style={{ width: `${pct}%` }} />
               </div>
+            )}
+            {isActive && (stats.filtered || 0) > 0 && (
+              <p className="text-[10px] font-medium text-muted-foreground mt-1">
+                {stats.filtered} {t('accounts.runningState.filtered_suffix')}
+              </p>
             )}
             {stats.message && (
               <div className="mt-1.5 flex items-start gap-1.5">
@@ -427,6 +450,12 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
                                     {Object.values(h.folder_details).reduce((sum, f) => sum + (f.current || 0), 0)}
                                     <span className="mx-0.5 opacity-50">/</span>
                                     {Object.values(h.folder_details).reduce((sum, f) => sum + (f.planned || 0), 0)}
+                                    {sumFiltered(h.folder_details) > 0 && (
+                                      <>
+                                        <span className="mx-1 opacity-30">·</span>
+                                        {sumFiltered(h.folder_details)} {t('accounts.runningState.filtered_suffix')}
+                                      </>
+                                    )}
                                   </span>
                                 </div>
                               </AccordionTrigger>
@@ -539,6 +568,12 @@ export function RunningStateDialog({ currentRow, open, onOpenChange }: Props) {
                                   </div>
                                   <span className="text-[10px] font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded-full self-start sm:self-auto">
                                     <span className="text-blue-600">{run.downloaded} {t('accounts.runningState.gap_fill_downloaded_suffix')}</span>
+                                    {(run.filtered || 0) > 0 && (
+                                      <>
+                                        <span className="mx-1 opacity-30">·</span>
+                                        <span className="text-muted-foreground">{run.filtered} {t('accounts.runningState.filtered_suffix')}</span>
+                                      </>
+                                    )}
                                     {run.failed > 0 && (
                                       <>
                                         <span className="mx-1 opacity-30">·</span>

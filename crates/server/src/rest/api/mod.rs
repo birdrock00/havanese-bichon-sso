@@ -64,7 +64,7 @@ pub enum ApiTags {
     Backup,
 }
 
-type RustMailOpenApi = (
+pub type RustMailOpenApi = (
     AccessTokenApi,
     AttachmentApi,
     AutoConfigApi,

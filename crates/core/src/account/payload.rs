@@ -21,7 +21,7 @@ use std::str::FromStr;
 use crate::account::entity::{AuthType, ImapConfig};
 use crate::account::migration::{
     AccountKind, AccountKindRole, AccountModel, AccountType, ArchiveRules, ExtractionRules,
-    QuotaWindow, ViewConfig,
+    QuotaWindow, RemoteCleanupConfig, ViewConfig, REMOTE_CLEANUP_FOLDER,
 };
 use crate::account::since::{DateSince, RelativeDate};
 use crate::error::code::ErrorCode;
@@ -67,6 +67,9 @@ pub struct AccountCreateRequest {
     /// Account-level retention period in days (free/community feature).
     /// `None` or `0` = disabled (archive everything, never auto-purge).
     pub retention_days: Option<u64>,
+    /// Source-mailbox cleanup (community feature). `None` = not configured.
+    #[serde(default)]
+    pub remote_cleanup: Option<RemoteCleanupConfig>,
     /// Special role marker. It is set internally when the journaling
     /// configuration creates its archive account; a client may not choose it.
     ///
@@ -102,6 +105,18 @@ impl AccountCreateRequest {
 
         if let Some(date_before) = self.date_before.as_ref() {
             date_before.validate_date()?;
+        }
+
+        if let Some(cleanup) = &self.remote_cleanup {
+            if !matches!(self.account_type, AccountType::IMAP) {
+                return Err(raise_error!(
+                    "Source-mailbox cleanup is only supported for IMAP accounts".into(),
+                    ErrorCode::InvalidParameter
+                ));
+            }
+            cleanup.validate().map_err(|e| {
+                raise_error!(format!("remote_cleanup: {e}"), ErrorCode::InvalidParameter)
+            })?;
         }
 
         match self.account_type {
@@ -259,6 +274,13 @@ pub struct AccountUpdateRequest {
     /// Clear retention back to `None` (disabled). Cannot be combined with
     /// `retention_days`.
     pub clear_retention_days: Option<bool>,
+    /// Source-mailbox cleanup (community feature). `None` = no change.
+    #[serde(default)]
+    pub remote_cleanup: Option<RemoteCleanupConfig>,
+    /// Clear the source-mailbox cleanup configuration. Cannot be combined with
+    /// `remote_cleanup`.
+    #[serde(default)]
+    pub clear_remote_cleanup: Option<bool>,
     /// Replace a `View` account's sources and filters. `None` = no change.
     /// Only meaningful on an `AccountType::View` account.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -327,6 +349,24 @@ impl AccountUpdateRequest {
                 ErrorCode::InvalidParameter
             ));
         }
+
+        if self.clear_remote_cleanup == Some(true) && self.remote_cleanup.is_some() {
+            return Err(raise_error!(
+                "clear_remote_cleanup cannot be combined with remote_cleanup".into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+        if let Some(cleanup) = &self.remote_cleanup {
+            if !matches!(account.account_type, AccountType::IMAP) {
+                return Err(raise_error!(
+                    "Source-mailbox cleanup is only supported for IMAP accounts".into(),
+                    ErrorCode::InvalidParameter
+                ));
+            }
+            cleanup.validate().map_err(|e| {
+                raise_error!(format!("remote_cleanup: {e}"), ErrorCode::InvalidParameter)
+            })?;
+        }
         if let Some(date_since) = self.date_since.as_ref() {
             date_since.validate()?;
         }
@@ -342,6 +382,17 @@ impl AccountUpdateRequest {
                     "Invalid configuration: 'sync_folders' cannot be empty. \
                      If you are modifying the subscription list, please provide at least one mailbox to subscribe to.".into(), ErrorCode::InvalidParameter
                 ));
+                }
+                if mailboxes
+                    .iter()
+                    .any(|name| name.eq_ignore_ascii_case(REMOTE_CLEANUP_FOLDER))
+                {
+                    return Err(raise_error!(
+                        format!(
+                            "'{REMOTE_CLEANUP_FOLDER}' is reserved for cleanup output and cannot be a sync folder"
+                        ),
+                        ErrorCode::InvalidParameter
+                    ));
                 }
             }
             if self.clear_download_schedule == Some(true) && self.download_schedule.is_some() {

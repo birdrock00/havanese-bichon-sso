@@ -6,6 +6,7 @@
 pub mod access_token_tests;
 pub mod account_tests;
 pub mod backup_tests;
+pub mod cleanup_tests;
 pub mod metrics_tests;
 pub mod oauth2_tests;
 pub mod proxy_tests;

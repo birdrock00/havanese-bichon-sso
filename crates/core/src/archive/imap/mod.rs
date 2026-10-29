@@ -20,6 +20,7 @@ use std::collections::{HashMap, HashSet};
 
 use mailbox::MailBox;
 
+pub mod cleanup;
 pub mod download;
 pub mod mailbox;
 pub mod mailbox_cache;

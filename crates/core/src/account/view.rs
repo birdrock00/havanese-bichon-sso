@@ -62,6 +62,9 @@ pub struct AccountResp {
     pub extraction_rules: Option<ExtractionRules>,
     /// Account-level retention window in days (free/community). `None`/`0` = keep everything.
     pub retention_days: Option<u64>,
+    /// Source-mailbox cleanup configuration (community); `None` = not configured.
+    #[serde(default)]
+    pub remote_cleanup: Option<crate::account::migration::RemoteCleanupConfig>,
     /// Legal hold flag (Enterprise); while set the retention sweep and bulk deletion skip this account.
     #[serde(default)]
     pub legal_hold: bool,
@@ -117,6 +120,7 @@ impl AccountResp {
             archive_rules: account.archive_rules,
             extraction_rules: account.extraction_rules,
             retention_days: account.retention_days,
+            remote_cleanup: account.remote_cleanup,
             legal_hold: account.legal_hold,
             hold_reason: account.hold_reason,
             hold_placed_by: account.hold_placed_by,

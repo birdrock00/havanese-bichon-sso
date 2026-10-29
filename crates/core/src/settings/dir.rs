@@ -45,6 +45,9 @@ pub static DATA_DIR_MANAGER: LazyLock<DataDirManager> =
 #[derive(Debug)]
 pub struct DataDirManager {
     pub root_dir: PathBuf,
+    /// Root of the search indices (`bichon-indices`), either under the data
+    /// root or under `bichon_index_dir` when the operator overrides it.
+    pub index_dir: PathBuf,
     pub memdb_dir: PathBuf,
     pub temp_dir: PathBuf,
     pub tls_cert: PathBuf,
@@ -88,6 +91,13 @@ impl Initialize for DataDirManager {
 }
 
 impl DataDirManager {
+    /// The blob store directory. Everything inside it counts as archived
+    /// email/attachment storage (segments plus the blob index/metadata), per
+    /// the product definition of the dashboard's storage figure.
+    pub fn blob_dir(&self) -> PathBuf {
+        self.storage_dir.join("blobs")
+    }
+
     pub fn new(root_dir: PathBuf) -> Self {
         let index_dir = if let Some(ref index_dir) = SETTINGS.bichon_index_dir {
             PathBuf::from(index_dir).join(INDICES)
@@ -103,6 +113,7 @@ impl DataDirManager {
 
         Self {
             root_dir: root_dir.clone(),
+            index_dir: index_dir.clone(),
             memdb_dir: root_dir.join(MEMDB_DIR),
             tls_key: root_dir.join(TLS_KEY),
             tls_cert: root_dir.join(TLS_CERT),

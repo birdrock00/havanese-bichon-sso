@@ -127,6 +127,7 @@ mod tests {
             archive_rules: None,
             extraction_rules: None,
             retention_days: None,
+            remote_cleanup: None,
             kind: None,
             view: None,
         };

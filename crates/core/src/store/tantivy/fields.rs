@@ -57,6 +57,14 @@ pub const F_INTERNAL_DATE: &str = "internal_date";
 pub const F_INGEST_AT: &str = "ingest_at";
 pub const F_SIZE: &str = "size";
 pub const F_THREAD_ID: &str = "thread_id";
+/// Set once source-mailbox cleanup has moved this message into
+/// `bichon_auto_created_trash`.
+///
+/// Lives on the archived document rather than in a side table so the flag can
+/// never drift from the message it describes, and so it survives a reindex
+/// (the rebuild reads stored fields). Candidate collection filters on it, which
+/// is what keeps a moved message from consuming a slot in every later run.
+pub const F_CLEANUP_MOVED: &str = "cleanup_moved";
 pub const F_ATTACHMENT_COUNT: &str = "attachment_count";
 pub const F_REGULAR_ATTACHMENT_COUNT: &str = "regular_attachment_count";
 pub const F_ATTACHMENTS: &str = "attachments";
@@ -107,6 +115,7 @@ pub struct EmailFields {
     pub f_date: Field,
     pub f_internal_date: Field,
     pub f_ingest_at: Field,
+    pub f_cleanup_moved: Field,
     pub f_size: Field,
     pub f_thread_id: Field,
     pub f_attachment_count: Field,

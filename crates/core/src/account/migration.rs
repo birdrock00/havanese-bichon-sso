@@ -18,6 +18,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
+use std::str::FromStr;
 use tracing::info;
 
 use crate::{
@@ -298,6 +299,128 @@ fn validate_non_empty(patterns: &[String], field_name: &str) -> Result<(), Strin
     Ok(())
 }
 
+/// Fixed destination folder for source-mailbox cleanup. Bichon creates and
+/// owns this folder; it is never used as a download source.
+pub const REMOTE_CLEANUP_FOLDER: &str = "bichon_auto_created_trash";
+
+/// Minimum grace period between archiving a message and moving it out of the
+/// source mailbox: none. Zero means "eligible on the next run" and is a valid
+/// setting, because the move is reversible — the message lands in
+/// [`REMOTE_CLEANUP_FOLDER`] on the same server and the local archive keeps its
+/// copy — and a message whose local copy fails verification is skipped rather
+/// than moved. Emptying that folder is the irreversible step, and it is gated
+/// separately on a recent successful backup. Holding mail in the source
+/// mailbox while the archive fills is still the default (30 days), not a floor.
+pub const MIN_REMOTE_CLEANUP_GRACE_DAYS: u64 = 0;
+
+/// Hard ceiling on one cleanup run. The scheduled task is deliberately slow;
+/// callers may lower this, never exceed it.
+pub const MAX_REMOTE_CLEANUP_PER_RUN: u64 = 500;
+
+fn default_cleanup_grace_days() -> u64 {
+    30
+}
+
+fn default_cleanup_max_per_run() -> u64 {
+    50
+}
+
+fn default_true() -> bool {
+    true
+}
+
+/// Configuration for moving archived mail out of the source IMAP mailbox into
+/// [`REMOTE_CLEANUP_FOLDER`].
+///
+/// Moving is reversible (the message still exists on the server) and may run on
+/// a schedule. Permanently emptying that folder is a separate, explicit API
+/// operation and is never scheduled.
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "web-api", derive(poem_openapi::Object))]
+pub struct RemoteCleanupConfig {
+    /// Master switch for the scheduled move task. Default off.
+    #[serde(default)]
+    pub enabled: bool,
+    /// Cron expression for the scheduled move task.
+    #[serde(default)]
+    pub schedule: Option<String>,
+    /// Source folders. `None` = the account's download folders, minus
+    /// special-use folders and the cleanup destination.
+    #[serde(default)]
+    pub folders: Option<Vec<String>>,
+    /// Only move messages archived at least this many days ago.
+    /// Measured from the envelope's `ingest_at`.
+    #[serde(default = "default_cleanup_grace_days")]
+    pub eligible_after_archive_days: u64,
+    /// Optional additional message-age floor (based on the message date).
+    /// `None` = no extra floor; accounts using `date_before` already bound it.
+    #[serde(default)]
+    pub min_message_age_days: Option<u64>,
+    /// Maximum messages moved in one batch.
+    #[serde(default = "default_cleanup_max_per_run")]
+    pub max_messages_per_run: u64,
+    /// Leave flagged/starred messages in the source mailbox.
+    #[serde(default = "default_true")]
+    pub skip_flagged: bool,
+    // There is deliberately no pause flag: `enabled` and the schedule are the
+    // only ways to stop runs.
+}
+
+impl Default for RemoteCleanupConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            schedule: None,
+            folders: None,
+            eligible_after_archive_days: default_cleanup_grace_days(),
+            min_message_age_days: None,
+            max_messages_per_run: default_cleanup_max_per_run(),
+            skip_flagged: true,
+        }
+    }
+}
+
+impl RemoteCleanupConfig {
+    pub fn validate(&self) -> Result<(), String> {
+        // No lower bound on `eligible_after_archive_days`: 0 is a valid choice
+        // ("eligible on the next run") because the move is reversible. See
+        // MIN_REMOTE_CLEANUP_GRACE_DAYS.
+        if self.max_messages_per_run == 0 || self.max_messages_per_run > MAX_REMOTE_CLEANUP_PER_RUN {
+            return Err(format!(
+                "max_messages_per_run must be between 1 and {MAX_REMOTE_CLEANUP_PER_RUN}"
+            ));
+        }
+        if let Some(days) = self.min_message_age_days {
+            if days == 0 {
+                return Err("min_message_age_days must be greater than 0 when set".into());
+            }
+        }
+        if let Some(schedule) = &self.schedule {
+            if schedule.trim().is_empty() {
+                return Err("cleanup schedule must not be empty".into());
+            }
+            cron::Schedule::from_str(schedule)
+                .map_err(|e| format!("Invalid cleanup schedule '{schedule}': {e}"))?;
+        }
+        if let Some(folders) = &self.folders {
+            if folders.is_empty() {
+                return Err("cleanup folders must not be empty when set".into());
+            }
+            for folder in folders {
+                if folder.trim().is_empty() {
+                    return Err("cleanup folder name must not be empty".into());
+                }
+                if folder.eq_ignore_ascii_case(REMOTE_CLEANUP_FOLDER) {
+                    return Err(format!(
+                        "'{REMOTE_CLEANUP_FOLDER}' cannot be a cleanup source folder"
+                    ));
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
 /// What `kind.role` says the account is. `AccountType` stays the storage type
 /// (IMAP / NoSync); this is the *special role* on top of it.
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
@@ -483,6 +606,11 @@ pub struct Account {
     /// legal hold are always exempt.
     #[serde(default)]
     pub retention_days: Option<u64>,
+    /// Source-mailbox cleanup (community feature). `None` = not configured.
+    /// Moving archived mail to [`REMOTE_CLEANUP_FOLDER`] may be scheduled;
+    /// permanently emptying that folder never is.
+    #[serde(default)]
+    pub remote_cleanup: Option<RemoteCleanupConfig>,
     /// Legal hold flag (Enterprise feature; community edition has no setter
     /// and this stays at its default of `false` forever). While set, the
     /// account's data is frozen: the retention sweep skips the account and
@@ -603,6 +731,7 @@ impl Account {
             archive_rules: request.archive_rules,
             extraction_rules: request.extraction_rules,
             retention_days: request.retention_days,
+            remote_cleanup: request.remote_cleanup,
             legal_hold: false,
             hold_reason: None,
             hold_placed_by: None,
@@ -1192,6 +1321,12 @@ impl Account {
         if request.clear_retention_days == Some(true) {
             new.retention_days = None;
         }
+        if request.remote_cleanup.is_some() {
+            new.remote_cleanup = request.remote_cleanup;
+        }
+        if request.clear_remote_cleanup == Some(true) {
+            new.remote_cleanup = None;
+        }
         new.updated_at = utc_now!();
         Ok(new)
     }
@@ -1757,6 +1892,7 @@ mod tests {
             archive_rules: None,
             extraction_rules: None,
             retention_days: None,
+            remote_cleanup: None,
             kind: None,
             view: None,
         };
@@ -1788,11 +1924,13 @@ mod tests {
         // What an older build wrote: the keys simply are not there.
         object.remove("kind");
         object.remove("view");
+        object.remove("remote_cleanup");
 
         let parsed: AccountModel = serde_json::from_value(value)
             .expect("an account row from an older release must still parse");
         assert!(parsed.kind.is_none());
         assert!(parsed.view.is_none());
+        assert!(parsed.remote_cleanup.is_none());
         assert!(matches!(parsed.account_type, AccountType::NoSync));
     }
 
@@ -1895,10 +2033,13 @@ mod tests {
         .expect("a request from an older client must still parse");
         assert!(request.kind.is_none());
         assert!(request.view.is_none());
+        assert!(request.remote_cleanup.is_none());
 
         let update: AccountUpdateRequest = serde_json::from_str(r#"{"enabled":false}"#)
             .expect("an update from an older client must still parse");
         assert!(update.view.is_none());
+        assert!(update.remote_cleanup.is_none());
+        assert!(update.clear_remote_cleanup.is_none());
     }
 
     #[tokio::test]
@@ -1977,5 +2118,73 @@ mod tests {
             !list.iter().any(|a| a.id == free.id),
             "free account must not be listed"
         );
+    }
+}
+
+#[cfg(test)]
+mod remote_cleanup_config_tests {
+    use super::{RemoteCleanupConfig, REMOTE_CLEANUP_FOLDER};
+
+    /// Older builds stored a `verify_mode` on the cleanup config. Verification
+    /// is now metadata-only and has no setting, so the field is gone — but a
+    /// stored account must keep loading instead of being rejected as corrupt.
+    #[test]
+    fn a_legacy_verify_mode_is_ignored() {
+        let stored = serde_json::json!({
+            "enabled": true,
+            "eligible_after_archive_days": 30,
+            "max_messages_per_run": 50,
+            "skip_flagged": true,
+            "verify_mode": "strict",
+            "some_future_field": 1
+        });
+        let config: RemoteCleanupConfig =
+            serde_json::from_value(stored).expect("older configs must still load");
+        assert!(config.enabled);
+        assert_eq!(config.max_messages_per_run, 50);
+    }
+
+    #[test]
+    fn defaults_are_conservative_and_valid() {
+        let config = RemoteCleanupConfig::default();
+        assert!(!config.enabled, "cleanup must be opt-in");
+        assert_eq!(config.eligible_after_archive_days, 30);
+        assert!(config.skip_flagged);
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn a_zero_grace_period_is_allowed() {
+        // 0 means "eligible on the next run" and must stay a legal choice: the
+        // move is reversible, so an operator emptying a source mailbox that is
+        // still being archived has a real use for it.
+        let mut config = RemoteCleanupConfig::default();
+        config.eligible_after_archive_days = 0;
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn per_run_cap_is_bounded() {
+        let mut config = RemoteCleanupConfig::default();
+        config.max_messages_per_run = 0;
+        assert!(config.validate().is_err());
+        config.max_messages_per_run = super::MAX_REMOTE_CLEANUP_PER_RUN + 1;
+        assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn destination_cannot_be_a_source_folder() {
+        let mut config = RemoteCleanupConfig::default();
+        config.folders = Some(vec![REMOTE_CLEANUP_FOLDER.to_string()]);
+        assert!(config.validate().is_err());
+    }
+
+    #[test]
+    fn schedule_must_be_valid_cron() {
+        let mut config = RemoteCleanupConfig::default();
+        config.schedule = Some("not a cron".into());
+        assert!(config.validate().is_err());
+        config.schedule = Some("0 0 3 * * *".into());
+        assert!(config.validate().is_ok());
     }
 }

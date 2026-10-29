@@ -100,6 +100,49 @@ pub enum Event {
         account_id: u64,
         subject: Option<String>,
     },
+    /// A source-mailbox cleanup preview was computed (read-only).
+    RemoteCleanupPreviewed {
+        user: String,
+        account_id: u64,
+        /// Kind of preview. Only `move` exists today.
+        kind: String,
+        candidates: u64,
+        verified: u64,
+        bytes: u64,
+    },
+    /// A scheduled or manual move run finished. `moved` counts messages moved
+    /// out of the source folders; nothing in this event is a permanent delete.
+    RemoteCleanupRunFinished {
+        /// `None` for the scheduler; audit trails render it as `system`.
+        user: Option<String>,
+        account_id: u64,
+        run_id: String,
+        trigger: String,
+        status: String,
+        moved: u64,
+        skipped: u64,
+        failed: u64,
+        bytes_moved: u64,
+        message: Option<String>,
+    },
+    /// One message was moved from a source folder into the cleanup folder.
+    /// Emitted per message so the trail names exactly what left the mailbox.
+    RemoteCleanupMessageMoved {
+        user: Option<String>,
+        account_id: u64,
+        source_mailbox: String,
+        source_uid: u32,
+        destination_folder: String,
+        message_id: String,
+        size: u64,
+    },
+    /// A guard rail (legal hold, stale backup, missing MOVE, missing
+    /// destination) refused a cleanup run before anything was moved.
+    RemoteCleanupBlocked {
+        user: Option<String>,
+        account_id: u64,
+        reason: String,
+    },
     /// A blob repair re-fetched the message from IMAP and rewrote missing
     /// email or attachment blobs in place, keeping the envelope id. Emitted
     /// for every outcome the repair reports, `failed` included: an attempt

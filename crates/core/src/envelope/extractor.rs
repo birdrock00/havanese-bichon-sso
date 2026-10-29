@@ -23,7 +23,7 @@ use tracing::error;
 use uuid::Uuid;
 
 use crate::{
-    account::migration::{AccountModel, ExtractionRules},
+    account::migration::{AccountModel, ArchiveRules, ExtractionRules},
     archive::imap::mailbox::MailBox,
     backup::gate::{BACKUP_ACQUIRE_TIMEOUT, WRITE_GATE, WriteGate},
     common::AddrVec,
@@ -49,21 +49,23 @@ use crate::{
 };
 
 /// The outcome of extracting an envelope. `Duplicate` means the message was
-/// skipped because its content hash was already archived. `Imported` covers
-/// every other processed message, including mail dropped by archive rules,
-/// which has always counted as a success on the import surfaces.
+/// skipped because its content hash was already archived. `Filtered` means the
+/// account's archive rules rejected it (it was never stored). `Imported` covers
+/// every other processed message; import surfaces still count `Filtered` as a
+/// success because the file itself was processed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[must_use]
 pub enum ExtractOutcome {
     Imported,
     Duplicate,
+    Filtered,
 }
 
 pub async fn extract_envelope_and_store_it(
     fetch: Fetch,
     account_id: u64,
     mailbox_id: u64,
-) -> BichonResult<()> {
+) -> BichonResult<ExtractOutcome> {
     let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
     let internal_date = fetch
         .internal_date()
@@ -80,7 +82,7 @@ pub async fn extract_envelope_and_store_it(
             );
             // The message was not archived, so it counts as a failed ingest.
             metrics::count_email_ingested(account_id, "imap", "failed");
-            return Ok(());
+            return Ok(ExtractOutcome::Imported);
         }
     };
     let size = fetch.size.unwrap_or(body.len() as u32);
@@ -98,7 +100,6 @@ pub async fn extract_envelope_and_store_it(
         )
         .await,
     )
-    .map(|_| ())
 }
 
 pub async fn extract_envelope_from_eml(
@@ -190,9 +191,57 @@ fn record_ingest_outcome(
         Ok(ExtractOutcome::Duplicate) => {
             metrics::count_email_ingested(account_id, source, "duplicate")
         }
+        Ok(ExtractOutcome::Filtered) => {
+            metrics::count_email_ingested(account_id, source, "filtered")
+        }
         Err(_) => metrics::count_email_ingested(account_id, source, "failed"),
     }
     result
+}
+
+/// The sender archive rules see: the first address in `From`, without the
+/// display name.
+fn first_sender(message: &Message<'_>) -> Option<String> {
+    message
+        .from()
+        .and_then(|addr| AddrVec::from(addr).0.into_iter().next())
+        .and_then(|a| a.address)
+}
+
+/// Whether any configured spam header carries exactly `yes` / `true`.
+fn has_spam_header(message: &Message<'_>, spam_headers: &[String]) -> bool {
+    !spam_headers.is_empty()
+        && spam_headers.iter().any(|h| {
+            message
+                .header_raw(h.clone())
+                .map(|v| matches!(v.trim().to_lowercase().as_str(), "yes" | "true"))
+                .unwrap_or(false)
+        })
+}
+
+/// Apply an account's archive rules to a parsed message.
+///
+/// Shared by ingestion and gap-fill so both make the same decision. Gap-fill
+/// calls [`should_archive_from_headers`] with a header-only blob before it
+/// downloads the body.
+pub fn should_archive_message(rules: &ArchiveRules, message: &Message<'_>, size: u32) -> bool {
+    let sender = first_sender(message);
+    let subject = message.subject().map(|s| s.to_string());
+    let is_spam = has_spam_header(message, &rules.spam_headers);
+    rules.should_archive(sender.as_deref(), subject.as_deref(), size, is_spam)
+}
+
+/// Apply archive rules to a raw header block, without fetching the body.
+///
+/// `None` means the header block could not be parsed. Callers should then fall
+/// back to the normal body path, which makes the decision after a full parse.
+pub fn should_archive_from_headers(
+    rules: &ArchiveRules,
+    headers: &[u8],
+    size: u32,
+) -> Option<bool> {
+    let message = MessageParser::new().parse(headers)?;
+    Some(should_archive_message(rules, &message, size))
 }
 
 /// If `raw` is a journal report that wraps the original message in a
@@ -255,32 +304,16 @@ async fn extract_envelope_core(
     let account = AccountModel::get(account_id).ok();
     if let Some(ref account) = account {
         if let Some(ref rules) = account.archive_rules {
-            let sender = message.from().and_then(|addr| {
-                AddrVec::from(addr)
-                    .0
-                    .into_iter()
-                    .next()
-                    .and_then(|a| a.address)
-            });
-            let subject = message.subject().map(|s| s.to_string());
-
-            let is_spam = !rules.spam_headers.is_empty()
-                && rules.spam_headers.iter().any(|h| {
-                    message
-                        .header_raw(h.clone())
-                        .map(|v| matches!(v.trim().to_lowercase().as_str(), "yes" | "true"))
-                        .unwrap_or(false)
-                });
-
-            if !rules.should_archive(sender.as_deref(), subject.as_deref(), size, is_spam) {
+            if !should_archive_message(rules, &message, size) {
+                let sender = first_sender(&message);
                 tracing::debug!(
                     account_id,
                     uid,
                     sender = sender.as_deref().unwrap_or("?"),
-                    subject = subject.as_deref().unwrap_or("?"),
+                    subject = message.subject().unwrap_or("?"),
                     "Email filtered out by archive rules"
                 );
-                return Ok(ExtractOutcome::Imported);
+                return Ok(ExtractOutcome::Filtered);
             }
         }
     }
@@ -363,11 +396,7 @@ async fn extract_envelope_core(
     let cc = parse_addrs(message.cc());
     let to = parse_addrs(message.to());
 
-    let from = message
-        .from()
-        .and_then(|addr| AddrVec::from(addr).0.into_iter().next())
-        .and_then(|add| add.address)
-        .unwrap_or_else(|| "unknown".to_string());
+    let from = first_sender(&message).unwrap_or_else(|| "unknown".to_string());
     let attachment_count = message.attachment_count();
     let attachments = detach_and_store_attachments(
         body,
@@ -453,6 +482,8 @@ async fn extract_envelope_core(
         mailbox_id,
         uid,
         imap_uid,
+        // Just archived: nothing has moved it out of the source mailbox yet.
+        cleanup_moved: false,
         subject,
         preview,
         from,
@@ -538,11 +569,7 @@ pub fn extract_envelope_from_nested_message(
     let cc = parse_addrs(message.cc());
     let to = parse_addrs(message.to());
 
-    let from = message
-        .from()
-        .and_then(|addr| AddrVec::from(addr).0.into_iter().next())
-        .and_then(|add| add.address)
-        .unwrap_or_else(|| "unknown".to_string());
+    let from = first_sender(&message).unwrap_or_else(|| "unknown".to_string());
 
     let envelope = Envelope {
         id: Default::default(),
@@ -551,6 +578,7 @@ pub fn extract_envelope_from_nested_message(
         mailbox_id: Default::default(),
         uid: Default::default(),
         imap_uid: Default::default(),
+        cleanup_moved: false,
         subject,
         preview: text,
         from,
@@ -826,10 +854,7 @@ pub async fn detach_and_store_attachments(
         _ => None,
     };
 
-    let sender = message
-        .from()
-        .and_then(|addr| AddrVec::from(addr).0.into_iter().next())
-        .and_then(|add| add.address);
+    let sender = first_sender(&message);
 
     let filter = ExtractionFilter {
         rules: rules.as_ref(),

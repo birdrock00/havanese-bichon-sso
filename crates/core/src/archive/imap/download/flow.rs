@@ -140,6 +140,7 @@ pub async fn fetch_and_save_by_date(
     // reported so the running state carries a warning (they stay "missing"
     // locally, so gap-fill keeps detecting them).
     let mut parse_skipped = 0u64;
+    let mut filtered = 0u64;
     let mut has_error_or_cancel = false;
     for (index, batch) in uid_batches.into_iter().enumerate() {
         if token.is_cancelled() {
@@ -169,7 +170,7 @@ pub async fn fetch_and_save_by_date(
                 &batch.0,
                 account.max_email_size_bytes,
                 token.clone(),
-                Some(&|cumulative, avg_secs, stall_secs| {
+                Some(&|cumulative, _cumulative_filtered, avg_secs, stall_secs| {
                     // Per-message progress: the current batch's cumulative count
                     // keeps the UI moving while a slow server trickles messages.
                     let _ = DownloadState::update_folder_progress(
@@ -225,11 +226,13 @@ pub async fn fetch_and_save_by_date(
             Ok(outcome) => {
                 current_processed += outcome.stored;
                 parse_skipped += outcome.parse_skipped;
-                DownloadState::update_folder_progress(
+                filtered += outcome.filtered;
+                DownloadState::update_folder_progress_and_filtered(
                     account_id,
                     mailbox.name.clone(),
                     planned,
                     current_processed,
+                    filtered,
                     FolderStatus::Downloading,
                     None,
                 )?;
@@ -379,6 +382,7 @@ pub async fn fetch_and_save_full_mailbox(
     // reported so the running state carries a warning (they stay "missing"
     // locally, so gap-fill keeps detecting them).
     let mut parse_skipped = 0u64;
+    let mut filtered = 0u64;
     let mut has_error_or_cancel = false;
 
     for (index, batch) in uid_batches.into_iter().enumerate() {
@@ -417,7 +421,7 @@ pub async fn fetch_and_save_full_mailbox(
                 &batch.0,
                 account.max_email_size_bytes,
                 token.clone(),
-                Some(&|cumulative, avg_secs, stall_secs| {
+                Some(&|cumulative, _cumulative_filtered, avg_secs, stall_secs| {
                     // Per-message progress: the current batch's cumulative count
                     // keeps the UI moving while a slow server trickles messages.
                     let _ = DownloadState::update_folder_progress(
@@ -475,11 +479,13 @@ pub async fn fetch_and_save_full_mailbox(
             Ok(outcome) => {
                 current_processed += outcome.stored;
                 parse_skipped += outcome.parse_skipped;
-                DownloadState::update_folder_progress(
+                filtered += outcome.filtered;
+                DownloadState::update_folder_progress_and_filtered(
                     account_id,
                     mailbox.name.clone(),
                     planned,
                     current_processed,
+                    filtered,
                     FolderStatus::Downloading,
                     None,
                 )?;
@@ -749,6 +755,7 @@ async fn reconcile_uid_validity_change(
         // Messages skipped because they could not be parsed (not archived);
         // reported as a folder-level warning once the batch loop ends.
         let mut parse_skipped = 0u64;
+        let mut filtered = 0u64;
         for (index, batch) in batches.into_iter().enumerate() {
             if token.is_cancelled() {
                 DownloadState::update_folder_progress(
@@ -770,7 +777,7 @@ async fn reconcile_uid_validity_change(
                 &batch.0,
                 account.max_email_size_bytes,
                 token.clone(),
-                Some(&|cumulative, avg_secs, stall_secs| {
+                Some(&|cumulative, _cumulative_filtered, avg_secs, stall_secs| {
                     // Per-message progress: the current batch's cumulative count
                     // keeps the UI moving while a slow server trickles messages.
                     let _ = DownloadState::update_folder_progress(
@@ -789,11 +796,13 @@ async fn reconcile_uid_validity_change(
                 Ok(outcome) => {
                     downloaded += outcome.stored;
                     parse_skipped += outcome.parse_skipped;
-                    DownloadState::update_folder_progress(
+                    filtered += outcome.filtered;
+                    DownloadState::update_folder_progress_and_filtered(
                         account_id,
                         remote_mailbox.name.clone(),
                         planned,
                         downloaded,
+                        filtered,
                         FolderStatus::Downloading,
                         None,
                     )?;

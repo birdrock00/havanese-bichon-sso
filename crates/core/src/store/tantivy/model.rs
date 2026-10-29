@@ -36,7 +36,8 @@ use crate::{
             tantivy::{
                 fields::{
                     F_ACCOUNT_ID, F_ATTACHMENTS, F_ATTACHMENT_CATEGORY, F_ATTACHMENT_CONTENT_TYPE,
-                    F_ATTACHMENT_COUNT, F_CONTENT_HASH, F_DATE, F_ENVELOPE_ID, F_FROM, F_HAS_TEXT,
+                    F_ATTACHMENT_COUNT, F_CLEANUP_MOVED, F_CONTENT_HASH, F_DATE, F_ENVELOPE_ID,
+                    F_FROM, F_HAS_TEXT,
                     F_ID, F_IMAP_UID, F_INGEST_AT, F_INTERNAL_DATE, F_IS_INDEXED, F_IS_MESSAGE,
                     F_IS_OCR,
                     F_MAILBOX_ID, F_MESSAGE_ID, F_PREVIEW, F_REGULAR_ATTACHMENT_COUNT, F_SHARD_ID,
@@ -170,6 +171,7 @@ impl EnvelopeWithAttachments {
         doc.add_i64(fields.f_internal_date, self.envelope.internal_date);
         doc.add_u64(fields.f_size, self.envelope.size as u64);
         doc.add_i64(fields.f_ingest_at, self.envelope.ingest_at);
+        doc.add_bool(fields.f_cleanup_moved, self.envelope.cleanup_moved);
         doc.add_text(fields.f_thread_id, &self.envelope.thread_id);
 
         if let Some(ref atts) = self.attachments {
@@ -250,6 +252,12 @@ impl EnvelopeWithAttachments {
             // carries it, so a miss means a schema/format mismatch (see
             // store::tantivy::format) rather than a recoverable gap.
             imap_uid: extract_u64_field(doc, fields.f_imap_uid, F_IMAP_UID)? as u32,
+            // A document written before this field existed reads as "not
+            // moved", which is also what a reindex produces (see
+            // `bichon-admin reindex`): the cleanup ledger is not rebuilt, so
+            // every message becomes a candidate again.
+            cleanup_moved: extract_bool_field(doc, fields.f_cleanup_moved, F_CLEANUP_MOVED)
+                .unwrap_or(false),
             subject: extract_string_field(doc, fields.f_subject, F_SUBJECT)?,
             preview: extract_string_field(doc, fields.f_preview, F_PREVIEW).unwrap_or_default(),
             from: extract_string_field(doc, fields.f_from, F_FROM)?,

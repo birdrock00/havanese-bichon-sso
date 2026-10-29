@@ -1212,6 +1212,17 @@ fn envelope_from_old_doc(
         )? as usize,
         tags: (!tags.is_empty()).then_some(tags),
         content_hash: req_str(doc, of.content_hash, "content_hash")?,
+        // A reindex deliberately resets every cleanup-move marker.
+        //
+        // The flag answers "has cleanup already moved this message out of its
+        // source folder?", and a rebuild from the old index cannot answer it:
+        // the source UID may be stale and the old documents may predate the
+        // field entirely. Rather than carry a value of unknown correctness,
+        // every message becomes a candidate again and cleanup re-decides from
+        // the source mailbox — messages that are genuinely gone are skipped as
+        // `source_uid_missing`, with no data loss. Operators should expect one
+        // cleanup pass to revisit previously moved mail after a reindex.
+        cleanup_moved: false,
     };
     let shard_id = opt_u64(doc, of.shard_id).unwrap_or(0);
     Ok((envelope, attachments, shard_id))

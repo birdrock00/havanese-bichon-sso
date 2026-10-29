@@ -24,7 +24,10 @@ use bichon_core::account::migration::{AccountModel, AccountType};
 use bichon_core::account::payload::{
     filter_accessible_accounts, AccountCreateRequest, AccountUpdateRequest, MinimalAccount,
 };
-use bichon_core::account::state::{DownloadState, GapFillState};
+use bichon_core::account::state::{DownloadState, GapFillState, RemoteCleanupState};
+use bichon_core::archive::imap::cleanup::{
+    account_jobs, cancel_job, get_job, start_move_preview, start_move_run, CleanupJob, MoveRequest,
+};
 use bichon_core::account::stats::AccountStats;
 use bichon_core::account::view::AccountResp;
 use bichon_core::archive::imap::task::SYNC_TASKS;
@@ -52,6 +55,17 @@ pub struct StartDownloadRequest {
     /// sync. Defaults to false; omitted by older clients.
     #[serde(default)]
     pub run_gap_fill: bool,
+}
+
+/// Confirmation body for a manual cleanup move.
+#[derive(Clone, Debug, Default, Deserialize, Serialize, poem_openapi::Object)]
+pub struct RemoteCleanupExecuteRequest {
+    /// Token returned by the move preview.
+    pub preview_token: String,
+    /// Must be true.
+    pub confirm: bool,
+    /// Must be true; the source copy leaves the mailbox.
+    pub acknowledge_risk: bool,
 }
 
 #[OpenApi(prefix_path = "/api/v1", tag = "ApiTags::Account")]
@@ -267,6 +281,163 @@ impl AccountApi {
             history: Vec::new(),
         });
         Ok(Json(state))
+    }
+
+    /// Get the source-mailbox cleanup state of an account
+    #[oai(
+        path = "/accounts/:account_id/remote-cleanup/state",
+        method = "get",
+        operation_id = "accounts_remote_cleanup_state"
+    )]
+    async fn accounts_remote_cleanup_state(
+        &self,
+        /// The account ID to check cleanup state for
+        account_id: Path<u64>,
+        context: WrappedContext,
+    ) -> ApiResult<Json<RemoteCleanupState>> {
+        let account_id = account_id.0;
+        AccountModel::check_account_exists(account_id)?;
+        context.require_permission(Some(account_id), Permission::ACCOUNT_READ_DETAILS)?;
+        let state = RemoteCleanupState::get(account_id)?.unwrap_or(RemoteCleanupState {
+            account_id,
+            ..Default::default()
+        });
+        Ok(Json(state))
+    }
+
+    /// Starts a read-only move preview as a background job.
+    ///
+    /// Verifying every candidate takes several IMAP round trips per message,
+    /// so the preview can outlive an HTTP request. The response is the job
+    /// immediately; poll `GET /accounts/:account_id/remote-cleanup/jobs/:job_id`
+    /// for the result and `POST .../cancel` to stop it.
+    #[oai(
+        path = "/accounts/:account_id/remote-cleanup/preview",
+        method = "post",
+        operation_id = "accounts_remote_cleanup_preview"
+    )]
+    async fn accounts_remote_cleanup_preview(
+        &self,
+        /// The account ID to preview cleanup for
+        account_id: Path<u64>,
+        context: WrappedContext,
+    ) -> ApiResult<Json<CleanupJob>> {
+        let account_id = account_id.0;
+        let account = AccountModel::check_account_exists(account_id)?;
+        context.require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)?;
+        if !matches!(account.account_type, AccountType::IMAP) {
+            return Err(raise_error!(
+                "Source-mailbox cleanup is only supported for IMAP accounts".into(),
+                ErrorCode::InvalidParameter
+            ))?;
+        }
+        Ok(Json(start_move_preview(
+            account,
+            context.user.username.clone(),
+        )?))
+    }
+
+    /// Starts a previewed move into bichon_auto_created_trash as a background
+    /// job. The preview token is still validated by the worker.
+    #[oai(
+        path = "/accounts/:account_id/remote-cleanup/execute",
+        method = "post",
+        operation_id = "accounts_remote_cleanup_execute"
+    )]
+    async fn accounts_remote_cleanup_execute(
+        &self,
+        /// The account ID to run cleanup for
+        account_id: Path<u64>,
+        body: Json<RemoteCleanupExecuteRequest>,
+        context: WrappedContext,
+    ) -> ApiResult<Json<CleanupJob>> {
+        let account_id = account_id.0;
+        let account = AccountModel::check_account_exists(account_id)?;
+        context.require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)?;
+        if !body.confirm || !body.acknowledge_risk {
+            return Err(raise_error!(
+                "cleanup execution requires confirm=true and acknowledge_risk=true".into(),
+                ErrorCode::InvalidParameter
+            ))?;
+        }
+        Ok(Json(start_move_run(
+            account,
+            MoveRequest::manual(context.user.username.clone(), body.preview_token.clone()),
+        )?))
+    }
+
+    /// List the cleanup jobs still known for an account, newest first.
+    ///
+    /// Jobs live in memory and stay readable for `JOB_TTL_MS` after finishing.
+    /// A client that lost its job id (page reload, dialog reopened) uses this
+    /// to reattach to a running job or show its finished report instead of
+    /// starting a second one, which the server refuses.
+    #[oai(
+        path = "/accounts/:account_id/remote-cleanup/jobs",
+        method = "get",
+        operation_id = "accounts_remote_cleanup_jobs"
+    )]
+    async fn accounts_remote_cleanup_jobs(
+        &self,
+        /// The account to list cleanup jobs for
+        account_id: Path<u64>,
+        context: WrappedContext,
+    ) -> ApiResult<Json<Vec<CleanupJob>>> {
+        let account_id = account_id.0;
+        AccountModel::check_account_exists(account_id)?;
+        // A cleanup job can move mail, so its result is not merely account
+        // metadata; the same permission that guards reading a single job.
+        context.require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)?;
+        Ok(Json(account_jobs(account_id)))
+    }
+
+    /// Poll a running or recently finished cleanup job.
+    ///
+    /// `status` is `Running` until the worker ends; a finished job keeps its
+    /// result (`preview` or `run`) readable for a while, so a client
+    /// that lost the connection can still pick it up. `error` explains a
+    /// `Failed` job and a stop reason is attached to `Cancelled` ones.
+    #[oai(
+        path = "/accounts/:account_id/remote-cleanup/jobs/:job_id",
+        method = "get",
+        operation_id = "accounts_remote_cleanup_job"
+    )]
+    async fn accounts_remote_cleanup_job(
+        &self,
+        /// The account the job belongs to
+        account_id: Path<u64>,
+        /// The job id returned when it was started
+        job_id: Path<String>,
+        context: WrappedContext,
+    ) -> ApiResult<Json<CleanupJob>> {
+        let account_id = account_id.0;
+        AccountModel::check_account_exists(account_id)?;
+        // A cleanup job can move or delete mail, so its result is not merely
+        // account metadata.
+        context.require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)?;
+        Ok(Json(get_job(account_id, &job_id.0)?))
+    }
+
+    /// Ask a running cleanup job to stop. The worker checks between messages,
+    /// so the job ends at the next message boundary; poll the job to see the
+    /// final status and counters.
+    #[oai(
+        path = "/accounts/:account_id/remote-cleanup/jobs/:job_id/cancel",
+        method = "post",
+        operation_id = "accounts_remote_cleanup_job_cancel"
+    )]
+    async fn accounts_remote_cleanup_job_cancel(
+        &self,
+        /// The account the job belongs to
+        account_id: Path<u64>,
+        /// The job id to cancel
+        job_id: Path<String>,
+        context: WrappedContext,
+    ) -> ApiResult<Json<CleanupJob>> {
+        let account_id = account_id.0;
+        AccountModel::check_account_exists(account_id)?;
+        context.require_permission(Some(account_id), Permission::ACCOUNT_MANAGE)?;
+        Ok(Json(cancel_job(account_id, &job_id.0)?))
     }
 
     /// Start a manual download task for an account

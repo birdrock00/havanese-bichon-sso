@@ -334,6 +334,8 @@ impl NewIndexWriterV2 {
             // The legacy store predates stable UIDs: assign one from the
             // per-account counter (write-once from here on).
             imap_uid: self.uid_assigner.assign(account_id)?,
+            // The legacy store never tracked cleanup moves.
+            cleanup_moved: false,
             subject,
             preview,
             from,

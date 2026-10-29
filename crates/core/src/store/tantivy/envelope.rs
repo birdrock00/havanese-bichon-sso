@@ -108,6 +108,28 @@ pub struct EnvelopeSnapshot {
     //pub subject: String,
 }
 
+/// The local proof a cleanup candidate is built from: both the Message-ID and
+/// the content hash are needed to prove the archived copy before moving the
+/// source message. Documents missing either are never candidates.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct CleanupCandidate {
+    /// Envelope id, used to reassemble attachment-stripped EML before hashing.
+    pub envelope_id: String,
+    pub message_id: String,
+    /// Display subject from the index. Only used to name the message in run
+    /// reports; it never takes part in verification.
+    pub subject: String,
+    pub content_hash: String,
+    pub uid: u32,
+    pub size: u64,
+    /// RFC 5322 Date header (epoch millis; 0 when absent).
+    pub date: i64,
+    /// IMAP INTERNALDATE (epoch millis; 0 when absent).
+    pub internal_date: i64,
+    /// Epoch millis when Bichon archived the message.
+    pub ingest_at: i64,
+}
+
 pub struct IndexManager {
     index: Arc<Index>,
     index_writer: Arc<Mutex<WriterSlot>>,
@@ -117,6 +139,20 @@ pub struct IndexManager {
     flush_tx: mpsc::Sender<oneshot::Sender<()>>,
     reader: IndexReader,
     handle: Mutex<Option<JoinHandle<()>>>,
+}
+
+    /// Whether a document may still become a cleanup candidate.
+///
+/// `cleanup_moved` marks a message source-mailbox cleanup already moved into
+/// `bichon_auto_created_trash`. Excluding it is what stops a run from spending
+/// its per-run cap re-offering the same (oldest) messages forever.
+///
+/// A document without the field — an index written before it existed, or a
+/// reindex that deliberately resets it — reads as "not moved". Hiding it
+/// instead would silently drop mail from cleanup.
+fn is_cleanup_candidate_doc(doc: &TantivyDocument) -> bool {
+    !doc.get_all(SchemaTools::email_fields().f_cleanup_moved)
+        .any(|value| value.as_bool().unwrap_or(false))
 }
 
 impl IndexManager {
@@ -511,6 +547,81 @@ impl IndexManager {
             });
         }
         Ok(snapshots)
+    }
+
+/// Everything the source-mailbox cleanup needs about one archived message.
+    pub fn get_cleanup_candidates(
+        &self,
+        account_id: u64,
+        mailbox_id: u64,
+    ) -> BichonResult<Vec<CleanupCandidate>> {
+        let query = self.mailbox_query(account_id, mailbox_id);
+        let fields = SchemaTools::email_fields();
+        let searcher = self.create_searcher()?;
+
+        let docs = searcher
+            .search(&query, &DocSetCollector)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        let mut candidates = Vec::with_capacity(docs.len());
+        for doc_address in docs {
+            let doc = searcher
+                .doc::<TantivyDocument>(doc_address)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            let message_id = doc
+                .get_first(fields.f_message_id)
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let content_hash = doc
+                .get_first(fields.f_content_hash)
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            // A message without both keys cannot be proved locally and must
+            // never become a cleanup candidate.
+            if message_id.is_empty() || content_hash.is_empty() {
+                continue;
+            }
+            let envelope_id = doc
+                .get_first(fields.f_id)
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            // A message cleanup already moved out of its source folder must
+            // not come back as a candidate: it would keep occupying a slot in
+            // the per-run cap forever (candidates are ordered oldest-first, and
+            // the oldest are exactly the ones already moved).
+            if !is_cleanup_candidate_doc(&doc) {
+                continue;
+            }
+            candidates.push(CleanupCandidate {
+                envelope_id,
+                message_id,
+                // A report that lists only counts cannot tell an operator
+                // which messages were skipped; the subject makes each entry
+                // identifiable. Missing subjects stay empty rather than
+                // failing the scan.
+                subject: doc
+                    .get_first(fields.f_subject)
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                content_hash,
+                uid: doc.get_first(fields.f_uid).and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                size: doc.get_first(fields.f_size).and_then(|v| v.as_u64()).unwrap_or(0),
+                date: doc.get_first(fields.f_date).and_then(|v| v.as_i64()).unwrap_or(0),
+                internal_date: doc
+                    .get_first(fields.f_internal_date)
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0),
+                ingest_at: doc
+                    .get_first(fields.f_ingest_at)
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0),
+            });
+        }
+        Ok(candidates)
     }
 
     /// Check whether a specific Message-ID exists in a mailbox.
@@ -1102,6 +1213,55 @@ impl IndexManager {
                 .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
             let envelope = EnvelopeWithAttachments::from_tantivy_doc(&doc)?;
             Ok(Some(envelope))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Resolve an envelope id from its content hash within one account.
+    ///
+    /// The same content hash may occur in several mailboxes; any of them is
+    /// equally valid because the caller only uses the envelope to reassemble
+    /// and re-hash the archived EML.
+    pub fn find_envelope_id_by_content_hash(
+        &self,
+        account_id: u64,
+        content_hash: &str,
+    ) -> BichonResult<Option<String>> {
+        let searcher = self.create_searcher()?;
+        let f = SchemaTools::email_fields();
+
+        let query = BooleanQuery::new(vec![
+            (
+                Occur::Must,
+                Box::new(TermQuery::new(
+                    Term::from_field_u64(f.f_account_id, account_id),
+                    IndexRecordOption::Basic,
+                )),
+            ),
+            (
+                Occur::Must,
+                Box::new(TermQuery::new(
+                    Term::from_field_text(f.f_content_hash, content_hash),
+                    IndexRecordOption::Basic,
+                )),
+            ),
+        ]);
+
+        let docs: Vec<(f32, DocAddress)> = searcher
+            .search(&query, &TopDocs::with_limit(1).order_by_score())
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        if let Some((_, doc_address)) = docs.first() {
+            let doc: TantivyDocument = searcher
+                .doc(*doc_address)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            let id = doc
+                .get_first(f.f_id)
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            Ok((!id.is_empty()).then_some(id))
         } else {
             Ok(None)
         }
@@ -1908,7 +2068,7 @@ impl IndexManager {
                                 None
                             }
                         }
-                    }, None);
+                    }, None, None);
 
                     let delete_term = Term::from_field_text(f_id, eid);
                     operations.push(UserOperation::Delete(delete_term));
@@ -1927,6 +2087,111 @@ impl IndexManager {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         Ok(())
+    }
+
+    /// Mark archived messages as moved out of their source mailbox.
+    ///
+    /// Called by source-mailbox cleanup right after a message was moved into
+    /// `bichon_auto_created_trash`. Candidate collection filters on the flag, so
+    /// a moved message does not occupy a slot in every later run — without it
+    /// the oldest (= first moved) messages would fill the per-run cap forever.
+    ///
+    /// Mirrors [`Self::update_envelope_tags`]: tantivy cannot patch one field,
+    /// so each document is deleted and re-added through
+    /// [`rebuild_envelope_doc`], which is what keeps the body, attachment names
+    /// and trigram siblings from being lost. Idempotent — an already-flagged
+    /// document is left untouched.
+    ///
+    /// Returns how many documents were newly flagged. A message that could not
+    /// be flagged is not an error: the move already happened, and the ledger is
+    /// still the record that purge relies on.
+    pub async fn mark_cleanup_moved(
+        &self,
+        account_id: u64,
+        envelope_ids: &[String],
+    ) -> BichonResult<usize> {
+        if envelope_ids.is_empty() {
+            return Ok(0);
+        }
+        let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
+
+        let f = SchemaTools::email_fields();
+        let f_cleanup_moved = f.f_cleanup_moved;
+        let f_id = f.f_id;
+        let searcher = self.create_searcher()?;
+        let mut writer = self.index_writer.lock().await;
+
+        let mut operations = Vec::new();
+        let mut flagged = 0usize;
+        for eid in envelope_ids {
+            let query = self.envelope_query(account_id, eid);
+            let docs = searcher
+                .search(query.as_ref(), &TopDocs::with_limit(1).order_by_score())
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            let Some((_, doc_address)) = docs.first() else {
+                continue;
+            };
+            let old_doc: TantivyDocument = searcher
+                .doc(*doc_address)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            if old_doc
+                .get_first(f_cleanup_moved)
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+            {
+                continue;
+            }
+
+            // Tags are re-added from the old document by the rebuild; passing
+            // an empty iterator would drop them, so carry them explicitly.
+            let tags: Vec<String> = old_doc
+                .get_all(f.f_tags)
+                .filter_map(|val| val.as_facet())
+                .map(|facet| facet.to_string())
+                .collect();
+
+            let new_doc = rebuild_envelope_doc(
+                &old_doc,
+                tags,
+                |hash| {
+                    match BLOB_MANAGER.get_email(hash) {
+                        Ok(Some(bytes)) => Some(bytes.to_vec()),
+                        Ok(None) => {
+                            tracing::warn!(
+                                content_hash = hash,
+                                "EML not found in blob store while marking a cleanup move"
+                            );
+                            None
+                        }
+                        Err(e) => {
+                            tracing::warn!(
+                                content_hash = hash,
+                                error = %e,
+                                "Failed to fetch EML while marking a cleanup move"
+                            );
+                            None
+                        }
+                    }
+                },
+                None,
+                Some(true),
+            );
+
+            operations.push(UserOperation::Delete(Term::from_field_text(f_id, eid)));
+            operations.push(UserOperation::Add(new_doc));
+            flagged += 1;
+        }
+
+        if operations.is_empty() {
+            return Ok(0);
+        }
+        writer
+            .run(operations)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        writer
+            .commit()
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        Ok(flagged)
     }
 
     /// Assign a stable IMAP UID to every document of `account_id` that has none,
@@ -2041,6 +2306,7 @@ impl IndexManager {
                     }
                 },
                 Some(uid),
+                None,
             );
 
             operations.push(UserOperation::Delete(Term::from_field_text(f.f_id, &eid)));
@@ -2560,16 +2826,23 @@ fn rebuild_envelope_doc(
     new_tags: impl IntoIterator<Item = String>,
     body_of: impl Fn(&str) -> Option<Vec<u8>>,
     imap_uid_override: Option<u32>,
+    cleanup_moved_override: Option<bool>,
 ) -> TantivyDocument {
     let f = SchemaTools::email_fields();
     let mut new_doc = TantivyDocument::new();
 
-    // Stored fields, except tags (re-added at the end) and, when overriding, the
-    // stable UID.
+    // Stored fields, except tags (re-added at the end) and the fields an
+    // override replaces. Skipping the override must happen *here*: copying the
+    // stored value and then adding a second one would leave the stale value
+    // first, and `get_first` would keep reading it.
     for (field, value) in old_doc.field_values() {
-        if field != f.f_tags && !(imap_uid_override.is_some() && field == f.f_imap_uid) {
-            new_doc.add_field_value(field, value);
+        if field == f.f_tags
+            || (imap_uid_override.is_some() && field == f.f_imap_uid)
+            || (cleanup_moved_override.is_some() && field == f.f_cleanup_moved)
+        {
+            continue;
         }
+        new_doc.add_field_value(field, value);
     }
 
     // Non-stored text fields: word level plus trigram siblings. `subject` is
@@ -2662,6 +2935,9 @@ fn rebuild_envelope_doc(
 
     if let Some(uid) = imap_uid_override {
         new_doc.add_u64(f.f_imap_uid, uid as u64);
+    }
+    if let Some(moved) = cleanup_moved_override {
+        new_doc.add_bool(f.f_cleanup_moved, moved);
     }
 
     new_doc
@@ -2758,7 +3034,194 @@ mod tests {
             new_tags.iter().cloned(),
             |hash| eml_cache.get(hash).cloned(),
             None,
+            None,
         )
+    }
+
+    /// Read a document's tags back as display paths (`/inbox`).
+    ///
+    /// `as_facet()` yields tantivy's *encoded* form, which has no leading `/`.
+    /// Feeding that straight back into `add_facet` panics, so every read has to
+    /// go through `Facet::from_encoded` — the same conversion the production tag
+    /// update uses.
+    fn tag_paths(doc: &TantivyDocument) -> Vec<String> {
+        let f = SchemaTools::email_fields();
+        let mut out: Vec<String> = doc
+            .get_all(f.f_tags)
+            .filter_map(|v| v.as_facet())
+            .filter_map(|encoded| {
+                Facet::from_encoded(encoded.as_bytes().to_vec())
+                    .ok()
+                    .map(|facet| facet.to_string())
+            })
+            .collect();
+        out.sort();
+        out
+    }
+
+    /// Snapshot every field of a document as `name -> sorted values`, so two
+    /// documents can be compared field-by-field. Only stored fields are visible
+    /// here, which is exactly what a rebuild has to round-trip.
+    fn field_snapshot(doc: &TantivyDocument) -> std::collections::BTreeMap<String, Vec<String>> {
+        use tantivy::schema::FieldType;
+        let schema = SchemaTools::email_schema();
+        let mut out: std::collections::BTreeMap<String, Vec<String>> = Default::default();
+        for (field, value) in doc.field_values() {
+            let name = schema.get_field_name(field).to_string();
+            // Extract the typed value, not the debug form: `{value:?}` prints
+            // the whole backing container, which differs between a copied and a
+            // re-added value even when the value itself is identical.
+            let rendered = match schema.get_field_entry(field).field_type() {
+                FieldType::U64(_) => value.as_u64().map(|v| v.to_string()),
+                FieldType::I64(_) => value.as_i64().map(|v| v.to_string()),
+                FieldType::Bool(_) => value.as_bool().map(|v| v.to_string()),
+                FieldType::Str(_) => value.as_str().map(|v| v.to_string()),
+                FieldType::Facet(_) => value.as_facet().map(|v| v.to_string()),
+                _ => None,
+            };
+            if let Some(rendered) = rendered {
+                out.entry(name).or_default().push(rendered);
+            }
+        }
+        for values in out.values_mut() {
+            values.sort();
+        }
+        out
+    }
+
+    /// The same indexed document must survive every in-place edit intact.
+    ///
+    /// Tantivy has no field-level update: tags and the cleanup-move marker are
+    /// both applied by deleting the document and re-adding a rebuilt copy. If
+    /// the rebuild ever drops a field, the loss is silent — the message stays
+    /// findable but loses its body, attachment names or trigram siblings.
+    ///
+    /// This drives the exact production reconstruction through a tag add, a tag
+    /// overwrite and a cleanup-move mark, and asserts that every field other
+    /// than the one being edited is byte-for-byte unchanged at each step.
+    #[test]
+    fn tags_and_the_move_marker_leave_every_other_field_intact() {
+        let f = SchemaTools::email_fields();
+        let index = Index::create_in_ram(SchemaTools::email_schema());
+        index.tokenizers().register("euro", EuroTokenizer::new());
+        index.tokenizers().register("tri", tri_analyzer());
+
+        let eml = b"From: alice@example.com
+                         Subject: Test
+                         Message-ID: <test@msg.id>
+                         
+                         the quick brown fox jumps over the lazy dog
+";
+        let mut eml_cache = HashMap::new();
+        eml_cache.insert("test-content-hash-001".to_string(), eml.to_vec());
+
+        // Read the live document back the way production does: through the
+        // searcher, so only STORED fields are present. Rebuilding from an
+        // in-memory document would include fields the index never keeps and
+        // hide real regressions behind false duplicates.
+        let read_back = |index: &Index| -> TantivyDocument {
+            let reader = index.reader().unwrap();
+            reader.reload().unwrap();
+            let searcher = reader.searcher();
+            let query = TermQuery::new(
+                Term::from_field_text(f.f_id, "test-eid-001"),
+                IndexRecordOption::Basic,
+            );
+            let hits = searcher
+                .search(&query, &TopDocs::with_limit(1).order_by_score())
+                .unwrap();
+            assert_eq!(hits.len(), 1, "the test document must be indexed");
+            searcher.doc(hits[0].1).unwrap()
+        };
+
+        {
+            let mut writer = index.writer_with_num_threads(1, 15_000_000).unwrap();
+            writer.add_document(build_test_doc()).unwrap();
+            writer.commit().unwrap();
+        }
+
+        let baseline = field_snapshot(&read_back(&index));
+
+        // Every edit is a real index round trip: rebuild, delete, re-add,
+        // commit, read back.
+        let apply = |tags: Vec<String>, moved: Option<bool>| -> TantivyDocument {
+            let old = read_back(&index);
+            let new_doc = rebuild_envelope_doc(
+                &old,
+                tags,
+                |hash| eml_cache.get(hash).cloned(),
+                None,
+                moved,
+            );
+            let mut writer = index.writer_with_num_threads(1, 15_000_000).unwrap();
+            writer.delete_term(Term::from_field_text(f.f_id, "test-eid-001"));
+            writer.add_document(new_doc).unwrap();
+            writer.commit().unwrap();
+            drop(writer);
+            read_back(&index)
+        };
+
+        let assert_unchanged_except = |doc: &TantivyDocument, excluded: &[&str], step: &str| {
+            let after = field_snapshot(doc);
+            for (name, values) in &baseline {
+                if excluded.contains(&name.as_str()) {
+                    continue;
+                }
+                assert_eq!(
+                    after.get(name),
+                    Some(values),
+                    "field '{name}' changed during {step}"
+                );
+            }
+        };
+
+        // ── 1. Add a tag ────────────────────────────────────────────
+        let mut tags: HashSet<String> = tag_paths(&read_back(&index)).into_iter().collect();
+        tags.insert("/new-tag".to_string());
+        let after_add = apply(tags.iter().cloned().collect(), None);
+        assert_unchanged_except(&after_add, &["tags"], "a tag add");
+        assert!(
+            tag_paths(&after_add).contains(&"/new-tag".to_string()),
+            "the added tag must be present"
+        );
+
+        // ── 2. Overwrite the tag set ────────────────────────────────
+        let after_overwrite = apply(vec!["/only-this".to_string()], None);
+        assert_unchanged_except(&after_overwrite, &["tags"], "a tag overwrite");
+        assert_eq!(tag_paths(&after_overwrite), vec!["/only-this".to_string()]);
+
+        // ── 3. Mark it as moved by cleanup ──────────────────────────
+        let after_moved = apply(vec!["/only-this".to_string()], Some(true));
+        assert_unchanged_except(
+            &after_moved,
+            &["tags", "cleanup_moved"],
+            "a cleanup-move mark",
+        );
+        assert_eq!(
+            tag_paths(&after_moved),
+            vec!["/only-this".to_string()],
+            "the tags written in step 2 must survive step 3"
+        );
+        assert_eq!(
+            after_moved
+                .get_all(f.f_cleanup_moved)
+                .filter_map(|v| v.as_bool())
+                .collect::<Vec<_>>(),
+            vec![true],
+            "exactly one marker value"
+        );
+
+        // ── 4. A later tag edit must not reset the marker ───────────
+        let after_later_tag_edit = apply(vec!["/later".to_string()], None);
+        assert_unchanged_except(&after_later_tag_edit, &["tags"], "a tag edit after the move");
+        assert_eq!(
+            after_later_tag_edit
+                .get_all(f.f_cleanup_moved)
+                .filter_map(|v| v.as_bool())
+                .collect::<Vec<_>>(),
+            vec![true],
+            "a tag edit must carry the cleanup marker forward"
+        );
     }
 
     #[test]
@@ -2921,18 +3384,81 @@ mod tests {
     /// The backfill path passes an override; carrying passes `None`. Either way
     /// the rebuilt document must hold exactly one stable UID.
     #[test]
+    /// The whole point of the flag: a message cleanup already moved must not
+    /// come back as a candidate. Candidates are ordered oldest-first and the
+    /// oldest are exactly the ones already moved, so without this a run would
+    /// spend its entire per-run cap re-offering the same messages and never
+    /// reach newer mail.
+    #[test]
+    fn a_moved_message_is_not_a_cleanup_candidate() {
+        let f = SchemaTools::email_fields();
+
+        let mut moved = build_test_doc();
+        moved.add_bool(f.f_cleanup_moved, true);
+
+        let mut kept = build_test_doc();
+        kept.add_bool(f.f_cleanup_moved, false);
+
+        assert!(
+            !is_cleanup_candidate_doc(&moved),
+            "a moved message must be excluded"
+        );
+        assert!(
+            is_cleanup_candidate_doc(&kept),
+            "an unmoved message stays a candidate"
+        );
+
+        // A document written before the field existed reads as "not moved", so
+        // upgrading does not silently hide messages.
+        let legacy = build_test_doc();
+        assert!(is_cleanup_candidate_doc(&legacy));
+    }
+
+    /// Setting the cleanup flag must REPLACE the stored value, never append a
+    /// second one: `get_first` would keep reading the stale `false` and the
+    /// message would stay a candidate forever.
+    #[test]
+    fn cleanup_flag_override_replaces_the_stored_value() {
+        let f = SchemaTools::email_fields();
+        let mut old = build_test_doc();
+        old.add_bool(f.f_cleanup_moved, false);
+
+        let flagged = rebuild_envelope_doc(&old, Vec::new(), |_| None, None, Some(true));
+        let values: Vec<bool> = flagged
+            .get_all(f.f_cleanup_moved)
+            .filter_map(|v| v.as_bool())
+            .collect();
+        assert_eq!(values, vec![true], "the override must replace, not duplicate");
+    }
+
+    /// Carrying (no override) keeps whatever the document had, which is how a
+    /// tag edit or a stable-UID backfill avoids resetting the flag.
+    #[test]
+    fn cleanup_flag_is_carried_when_not_overridden() {
+        let f = SchemaTools::email_fields();
+        let mut old = build_test_doc();
+        old.add_bool(f.f_cleanup_moved, true);
+
+        let carried = rebuild_envelope_doc(&old, Vec::new(), |_| None, None, None);
+        let values: Vec<bool> = carried
+            .get_all(f.f_cleanup_moved)
+            .filter_map(|v| v.as_bool())
+            .collect();
+        assert_eq!(values, vec![true]);
+    }
+
     fn uid_override_replaces_the_stored_value() {
         let f = SchemaTools::email_fields();
         let old = build_test_doc();
 
-        let overridden = rebuild_envelope_doc(&old, Vec::new(), |_| None, Some(7777));
+        let overridden = rebuild_envelope_doc(&old, Vec::new(), |_| None, Some(7777), None);
         let uids: Vec<u64> = overridden
             .get_all(f.f_imap_uid)
             .filter_map(|v| v.as_u64())
             .collect();
         assert_eq!(uids, vec![7777], "the override must replace, not duplicate");
 
-        let carried = rebuild_envelope_doc(&old, Vec::new(), |_| None, None);
+        let carried = rebuild_envelope_doc(&old, Vec::new(), |_| None, None, None);
         let uids: Vec<u64> = carried
             .get_all(f.f_imap_uid)
             .filter_map(|v| v.as_u64())
@@ -3648,6 +4174,7 @@ mod tests {
             archive_rules: None,
             extraction_rules: None,
             retention_days: None,
+            remote_cleanup: None,
             kind: None,
             view: None,
         };
