@@ -107,17 +107,25 @@ export default function MailArchiveDashboard() {
   const stats1 = stats ?? INITIAL_DASHBOARD_STATS;
 
 
+  // Filesystem usage cannot be attributed per account. A restricted caller
+  // gets scoped email counts but no physical storage figures; the backend
+  // sends `storage_stats_available: false` (old servers omit it, which we
+  // must keep treating as available).
+  const storageAvailable = stats1.storage_stats_available !== false;
   const logicalSize = stats1.total_size_bytes ?? 0;
-  const blobSize = stats1.storage_usage_bytes ?? 0;
-  const indexSize = stats1.index_usage_bytes ?? 0;
-  const physicalTotal = blobSize + indexSize;
+  // Compression ratio is about email data only. The search indexes are shown
+  // for information but deliberately excluded from the ratio.
+  const emailDataSize = storageAvailable ? stats1.storage_usage_bytes ?? 0 : 0;
+  const indexSize = storageAvailable ? stats1.index_usage_bytes ?? 0 : 0;
 
-  const savingsPercent = logicalSize > 0
-    ? Math.max(0, ((1 - physicalTotal / logicalSize) * 100)).toFixed(1)
-    : "0.0";
+  const savingsPercent = storageAvailable && logicalSize > 0
+    ? Math.max(0, ((1 - emailDataSize / logicalSize) * 100)).toFixed(1)
+    : null;
 
-  const blobWidth = logicalSize > 0 ? (blobSize / logicalSize) * 100 : 0;
-  const indexWidth = logicalSize > 0 ? (indexSize / logicalSize) * 100 : 0;
+  // Scale by the larger of the two so the bar never overflows when the stored
+  // data exceeds the original size. The empty part is the saved space.
+  const barScale = Math.max(logicalSize, emailDataSize, 1);
+  const blobWidth = (emailDataSize / barScale) * 100;
 
   const totalAttachments = (stats1.with_attachment_count ?? 0) + (stats1.without_attachment_count ?? 0);
   const attachmentRatio = totalAttachments > 0 ? (stats1.with_attachment_count ?? 0) / totalAttachments : 0;
@@ -236,14 +244,15 @@ export default function MailArchiveDashboard() {
                   {t('dashboard.efficiency')}
                 </CardTitle>
                 <div className="flex flex-col items-end leading-none">
-                  <span className="text-sm font-black text-primary">{savingsPercent}%</span>
+                  <span className="text-sm font-black text-primary">
+                    {savingsPercent === null ? '—' : `${savingsPercent}%`}
+                  </span>
                   <span className="text-[9px] font-bold text-primary uppercase">{t('dashboard.saved', 'Saved')}</span>
                 </div>
               </CardHeader>
               <CardContent className="py-2.5 space-y-2">
                 <div className="h-2 w-full bg-muted rounded-full overflow-hidden flex">
                   <div className="h-full bg-primary transition-all" style={{ width: `${blobWidth}%` }} />
-                  <div className="h-full bg-orange-400 transition-all" style={{ width: `${indexWidth}%` }} />
                 </div>
 
                 <div className="flex flex-col gap-1">
@@ -254,23 +263,42 @@ export default function MailArchiveDashboard() {
                     </div>
                     <div className="flex items-center gap-1.5 overflow-hidden ml-2">
                       <span className="text-muted-foreground uppercase text-[9px] shrink-0">{t('dashboard.actualDiskUsage')}:</span>
-                      <span className="font-bold tracking-tight truncate">{formatBytes(physicalTotal)}</span>
+                      <span className="font-bold tracking-tight truncate">
+                        {storageAvailable ? formatBytes(emailDataSize) : '—'}
+                      </span>
                     </div>
                   </div>
                   <div className="flex justify-between items-center text-[10px]">
                     <div className="flex items-center gap-1.5 overflow-hidden">
                       <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                       <span className="text-muted-foreground truncate">
-                        {t('dashboard.dataStorage')}: <span className="text-foreground font-medium">{formatBytes(blobSize)}</span>
+                        {t('dashboard.dataStorage')}: <span className="text-foreground font-medium">
+                          {storageAvailable ? formatBytes(emailDataSize) : '—'}
+                        </span>
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 overflow-hidden ml-2">
                       <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" />
                       <span className="text-muted-foreground truncate text-right">
-                        {t('dashboard.indexSize')}: <span className="text-foreground font-medium">{formatBytes(indexSize)}</span>
+                        {t('dashboard.indexSize')}: <span className="text-foreground font-medium">
+                          {storageAvailable ? formatBytes(indexSize) : '—'}
+                        </span>
+                        {storageAvailable && (
+                          <span className="text-[9px] text-muted-foreground">
+                            ({t('dashboard.indexNotInRatio', 'not in ratio')})
+                          </span>
+                        )}
                       </span>
                     </div>
                   </div>
+                  {!storageAvailable && (
+                    <p className="text-[10px] text-muted-foreground">
+                      {t(
+                        'dashboard.storageAdminOnly',
+                        'Storage and compression figures are only available to administrators.'
+                      )}
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>

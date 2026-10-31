@@ -115,6 +115,24 @@ impl BichonContext {
                 }
                 Ok(false) => {}
             }
+            // Same for a cleanup run interrupted by a crash. It must not show
+            // as Running forever, and the next scheduled slot has to be able
+            // to start.
+            match crate::account::state::RemoteCleanupState::finalize_stale_run(account.id) {
+                Ok(true) => {
+                    info!(
+                        "Account {}: stale remote-cleanup run finalized on startup.",
+                        account.id
+                    );
+                }
+                Err(e) => {
+                    warn!(
+                        "Failed to finalize stale remote-cleanup run for account {}: {:#?}",
+                        account.id, e
+                    );
+                }
+                Ok(false) => {}
+            }
             DOWNLOAD_CONTROLLER
                 .trigger_schedule(account.id, account.email)
                 .await

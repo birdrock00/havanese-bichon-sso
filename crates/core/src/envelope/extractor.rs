@@ -23,7 +23,7 @@ use tracing::error;
 use uuid::Uuid;
 
 use crate::{
-    account::migration::{AccountModel, ExtractionRules},
+    account::migration::{AccountModel, ArchiveRules, ExtractionRules},
     archive::imap::mailbox::MailBox,
     backup::gate::{BACKUP_ACQUIRE_TIMEOUT, WRITE_GATE, WriteGate},
     common::AddrVec,
@@ -49,21 +49,23 @@ use crate::{
 };
 
 /// The outcome of extracting an envelope. `Duplicate` means the message was
-/// skipped because its content hash was already archived. `Imported` covers
-/// every other processed message, including mail dropped by archive rules,
-/// which has always counted as a success on the import surfaces.
+/// skipped because its content hash was already archived. `Filtered` means the
+/// account's archive rules rejected it (it was never stored). `Imported` covers
+/// every other processed message; import surfaces still count `Filtered` as a
+/// success because the file itself was processed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[must_use]
 pub enum ExtractOutcome {
     Imported,
     Duplicate,
+    Filtered,
 }
 
 pub async fn extract_envelope_and_store_it(
     fetch: Fetch,
     account_id: u64,
     mailbox_id: u64,
-) -> BichonResult<()> {
+) -> BichonResult<ExtractOutcome> {
     let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
     let internal_date = fetch
         .internal_date()
@@ -80,7 +82,7 @@ pub async fn extract_envelope_and_store_it(
             );
             // The message was not archived, so it counts as a failed ingest.
             metrics::count_email_ingested(account_id, "imap", "failed");
-            return Ok(());
+            return Ok(ExtractOutcome::Imported);
         }
     };
     let size = fetch.size.unwrap_or(body.len() as u32);
@@ -98,7 +100,6 @@ pub async fn extract_envelope_and_store_it(
         )
         .await,
     )
-    .map(|_| ())
 }
 
 pub async fn extract_envelope_from_eml(
@@ -190,9 +191,146 @@ fn record_ingest_outcome(
         Ok(ExtractOutcome::Duplicate) => {
             metrics::count_email_ingested(account_id, source, "duplicate")
         }
+        Ok(ExtractOutcome::Filtered) => {
+            metrics::count_email_ingested(account_id, source, "filtered")
+        }
         Err(_) => metrics::count_email_ingested(account_id, source, "failed"),
     }
     result
+}
+
+/// First mailbox of `From`: `(display name, address)`.
+fn first_mailbox(message: &Message<'_>) -> Option<(Option<String>, Option<String>)> {
+    let first = match message.from()? {
+        Address::List(list) => list.first(),
+        Address::Group(groups) => groups.iter().find_map(|group| group.addresses.first()),
+    }?;
+    Some((
+        first.name.as_ref().map(|name| name.to_string()),
+        first.address.as_ref().map(|address| address.to_string()),
+    ))
+}
+
+/// The sender archive rules see: the first address in `From`, without the
+/// display name.
+fn first_sender(message: &Message<'_>) -> Option<String> {
+    first_mailbox(message).and_then(|(_, address)| address)
+}
+
+/// The sender an envelope is stored with.
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
+pub struct ResolvedSender {
+    /// Address written to `Envelope.from`.
+    pub address: Option<String>,
+    /// Display name paired with `address`.
+    pub name: Option<String>,
+    /// Original `From` address, set only when a header rule replaced it.
+    pub wire_from: Option<String>,
+}
+
+/// Parse one header value as an RFC 5322 mailbox.
+///
+/// The value is fed through the same `From:` parser the real header uses, so
+/// MIME encoded-words are decoded exactly once and both shapes a provider may
+/// emit (a bare address, or `Name <address>`) are handled.
+fn parse_header_mailbox(raw: &str) -> Option<(Option<String>, String)> {
+    let raw = raw.trim();
+    // A header value never legitimately contains a newline; allowing one
+    // would let a crafted header inject extra header lines into the synthetic
+    // message below.
+    if raw.is_empty() || raw.contains('\r') || raw.contains('\n') {
+        return None;
+    }
+    let synthetic = format!("From: {raw}\r\n\r\n");
+    let message = MessageParser::new().parse(synthetic.as_bytes())?;
+    let (name, address) = first_mailbox(&message)?;
+    Some((name, address?))
+}
+
+/// Resolve the stored sender for an account.
+///
+/// `override_from_headers` is the account's ordered rule list. The first
+/// header that parses to a mailbox wins; an invalid or absent header leaves
+/// the real `From` untouched. The original address is preserved in
+/// `wire_from` only when the rule actually changed it.
+pub fn resolve_sender(
+    message: &Message<'_>,
+    override_from_headers: Option<&[String]>,
+) -> ResolvedSender {
+    let (actual_name, actual_address) = first_mailbox(message).unwrap_or((None, None));
+    let mut resolved = ResolvedSender {
+        address: actual_address.clone(),
+        name: actual_name,
+        wire_from: None,
+    };
+
+    let Some(headers) = override_from_headers else {
+        return resolved;
+    };
+    for header in headers {
+        let Some(raw) = message.header_raw(header.as_str()) else {
+            continue;
+        };
+        let Some((header_name, header_address)) = parse_header_mailbox(raw) else {
+            continue;
+        };
+        match &actual_address {
+            Some(actual) if actual.eq_ignore_ascii_case(&header_address) => {
+                // Same mailbox: keep the real value, but prefer a display name
+                // supplied by the rule header when it has one.
+                if header_name.is_some() {
+                    resolved.name = header_name;
+                }
+            }
+            Some(actual) => {
+                resolved.wire_from = Some(actual.clone());
+                resolved.address = Some(header_address);
+                resolved.name = header_name.or(resolved.name);
+            }
+            None => {
+                resolved.address = Some(header_address);
+                resolved.name = header_name;
+            }
+        }
+        break;
+    }
+    resolved
+}
+
+/// Whether any configured spam header carries exactly `yes` / `true`.
+fn has_spam_header(message: &Message<'_>, spam_headers: &[String]) -> bool {
+    !spam_headers.is_empty()
+        && spam_headers.iter().any(|h| {
+            message
+                .header_raw(h.clone())
+                .map(|v| matches!(v.trim().to_lowercase().as_str(), "yes" | "true"))
+                .unwrap_or(false)
+        })
+}
+
+/// Apply an account's archive rules to a parsed message.
+///
+/// Shared by ingestion and gap-fill so both make the same decision. Gap-fill
+/// calls [`should_archive_from_headers`] with a header-only blob before it
+/// downloads the body.
+pub fn should_archive_message(rules: &ArchiveRules, message: &Message<'_>, size: u32) -> bool {
+    let sender = first_sender(message);
+    let subject = message.subject().map(|s| s.to_string());
+    let is_spam = has_spam_header(message, &rules.spam_headers);
+    rules.should_archive(sender.as_deref(), subject.as_deref(), size, is_spam)
+}
+
+/// Apply archive rules to a raw header block, without fetching the body.
+///
+/// `None` means the header block could not be parsed. Callers should then fall
+/// back to the normal body path, which makes the decision after a full parse.
+pub fn should_archive_from_headers(
+    rules: &ArchiveRules,
+    headers: &[u8],
+    size: u32,
+) -> Option<bool> {
+    let message = MessageParser::new().parse(headers)?;
+    Some(should_archive_message(rules, &message, size))
 }
 
 /// If `raw` is a journal report that wraps the original message in a
@@ -255,32 +393,16 @@ async fn extract_envelope_core(
     let account = AccountModel::get(account_id).ok();
     if let Some(ref account) = account {
         if let Some(ref rules) = account.archive_rules {
-            let sender = message.from().and_then(|addr| {
-                AddrVec::from(addr)
-                    .0
-                    .into_iter()
-                    .next()
-                    .and_then(|a| a.address)
-            });
-            let subject = message.subject().map(|s| s.to_string());
-
-            let is_spam = !rules.spam_headers.is_empty()
-                && rules.spam_headers.iter().any(|h| {
-                    message
-                        .header_raw(h.clone())
-                        .map(|v| matches!(v.trim().to_lowercase().as_str(), "yes" | "true"))
-                        .unwrap_or(false)
-                });
-
-            if !rules.should_archive(sender.as_deref(), subject.as_deref(), size, is_spam) {
+            if !should_archive_message(rules, &message, size) {
+                let sender = first_sender(&message);
                 tracing::debug!(
                     account_id,
                     uid,
                     sender = sender.as_deref().unwrap_or("?"),
-                    subject = subject.as_deref().unwrap_or("?"),
+                    subject = message.subject().unwrap_or("?"),
                     "Email filtered out by archive rules"
                 );
-                return Ok(ExtractOutcome::Imported);
+                return Ok(ExtractOutcome::Filtered);
             }
         }
     }
@@ -363,11 +485,16 @@ async fn extract_envelope_core(
     let cc = parse_addrs(message.cc());
     let to = parse_addrs(message.to());
 
-    let from = message
-        .from()
-        .and_then(|addr| AddrVec::from(addr).0.into_iter().next())
-        .and_then(|add| add.address)
-        .unwrap_or_else(|| "unknown".to_string());
+    // Stored sender: a configured alias header may replace the address (see
+    // `resolve_sender`); archive rules above deliberately keep using the real
+    // `From` through `first_sender`.
+    let sender = resolve_sender(
+        &message,
+        account
+            .as_ref()
+            .and_then(|a| a.override_from_headers.as_deref()),
+    );
+    let from = sender.address.clone().unwrap_or_else(|| "unknown".to_string());
     let attachment_count = message.attachment_count();
     let attachments = detach_and_store_attachments(
         body,
@@ -419,6 +546,8 @@ async fn extract_envelope_core(
                 subject: subject.clone(),
                 content_hash: a.content_hash.clone(),
                 from: from.clone(),
+                from_name: sender.name.clone(),
+                wire_from: sender.wire_from.clone(),
                 date,
                 ingest_at: now,
                 size: a.size as u64,
@@ -453,9 +582,13 @@ async fn extract_envelope_core(
         mailbox_id,
         uid,
         imap_uid,
+        // Just archived: nothing has moved it out of the source mailbox yet.
+        cleanup_moved: false,
         subject,
         preview,
         from,
+        from_name: sender.name,
+        wire_from: sender.wire_from,
         to,
         cc,
         bcc,
@@ -538,11 +671,14 @@ pub fn extract_envelope_from_nested_message(
     let cc = parse_addrs(message.cc());
     let to = parse_addrs(message.to());
 
-    let from = message
-        .from()
-        .and_then(|addr| AddrVec::from(addr).0.into_iter().next())
-        .and_then(|add| add.address)
-        .unwrap_or_else(|| "unknown".to_string());
+    let account = AccountModel::get(account_id).ok();
+    let sender = resolve_sender(
+        &message,
+        account
+            .as_ref()
+            .and_then(|a| a.override_from_headers.as_deref()),
+    );
+    let from = sender.address.clone().unwrap_or_else(|| "unknown".to_string());
 
     let envelope = Envelope {
         id: Default::default(),
@@ -551,9 +687,12 @@ pub fn extract_envelope_from_nested_message(
         mailbox_id: Default::default(),
         uid: Default::default(),
         imap_uid: Default::default(),
+        cleanup_moved: false,
         subject,
         preview: text,
         from,
+        from_name: sender.name,
+        wire_from: sender.wire_from,
         to,
         cc,
         bcc,
@@ -826,10 +965,7 @@ pub async fn detach_and_store_attachments(
         _ => None,
     };
 
-    let sender = message
-        .from()
-        .and_then(|addr| AddrVec::from(addr).0.into_iter().next())
-        .and_then(|add| add.address);
+    let sender = first_sender(&message);
 
     let filter = ExtractionFilter {
         rules: rules.as_ref(),
@@ -2253,5 +2389,111 @@ Inner body\r\n\
         // The attachment count must still match so the consistency check
         // in reattach_eml_content doesn't fail later.
         assert_eq!(infos.len(), 1);
+    }
+}
+
+#[cfg(test)]
+mod sender_resolution_tests {
+    use super::*;
+
+    fn resolve(raw: &str, headers: &[&str]) -> ResolvedSender {
+        let message = MessageParser::new().parse(raw.as_bytes()).expect("parse");
+        let owned: Vec<String> = headers.iter().map(|h| h.to_string()).collect();
+        resolve_sender(&message, Some(&owned))
+    }
+
+    #[test]
+    fn keeps_display_name() {
+        let r = resolve("From: Jane Doe <jane@example.com>\r\n\r\nbody", &[]);
+        assert_eq!(r.address.as_deref(), Some("jane@example.com"));
+        assert_eq!(r.name.as_deref(), Some("Jane Doe"));
+        assert_eq!(r.wire_from, None);
+    }
+
+    #[test]
+    fn decodes_encoded_word_name() {
+        let r = resolve(
+            "From: =?UTF-8?B?5byg5LiJ?= <zhangsan@example.com>\r\n\r\nbody",
+            &[],
+        );
+        assert_eq!(r.name.as_deref(), Some("张三"));
+    }
+
+    #[test]
+    fn addy_bare_address_replaces_from_and_keeps_wire() {
+        let r = resolve(
+            "From: \"Jane Doe 'jane@example.com'\" <myalias@addy.io>\r\n\
+             X-AnonAddy-Original-Sender: jane@example.com\r\n\r\nbody",
+            &["X-AnonAddy-Original-Sender"],
+        );
+        assert_eq!(r.address.as_deref(), Some("jane@example.com"));
+        assert_eq!(r.wire_from.as_deref(), Some("myalias@addy.io"));
+        // The alias header has no display name, so the real From name is kept.
+        assert_eq!(r.name.as_deref(), Some("Jane Doe 'jane@example.com'"));
+    }
+
+    #[test]
+    fn simplelogin_full_value_supplies_name_and_address() {
+        let r = resolve(
+            "From: Robert via SimpleLogin <alias@simplelogin.io>\r\n\
+             X-SimpleLogin-Original-From: Robert <robert@example.com>\r\n\r\nbody",
+            &["X-SimpleLogin-Original-From"],
+        );
+        assert_eq!(r.address.as_deref(), Some("robert@example.com"));
+        assert_eq!(r.name.as_deref(), Some("Robert"));
+        assert_eq!(r.wire_from.as_deref(), Some("alias@simplelogin.io"));
+    }
+
+    #[test]
+    fn invalid_or_empty_header_falls_back() {
+        for raw in [
+            "From: Jane <jane@example.com>\r\nX-AnonAddy-Original-Sender: not an address\r\n\r\nbody",
+            "From: Jane <jane@example.com>\r\nX-AnonAddy-Original-Sender:   \r\n\r\nbody",
+        ] {
+            let r = resolve(raw, &["X-AnonAddy-Original-Sender"]);
+            assert_eq!(r.address.as_deref(), Some("jane@example.com"));
+            assert_eq!(r.name.as_deref(), Some("Jane"));
+            assert_eq!(r.wire_from, None);
+        }
+    }
+
+    #[test]
+    fn equal_address_does_not_create_a_wire_value() {
+        let r = resolve(
+            "From: Jane <jane@example.com>\r\nX-AnonAddy-Original-Sender: JANE@example.com\r\n\r\nbody",
+            &["X-AnonAddy-Original-Sender"],
+        );
+        assert_eq!(r.address.as_deref(), Some("jane@example.com"));
+        assert_eq!(r.wire_from, None);
+    }
+
+    #[test]
+    fn first_matching_header_wins() {
+        let r = resolve(
+            "From: alias@addy.io\r\n\
+             X-SimpleLogin-Original-From: b@example.com\r\n\
+             X-AnonAddy-Original-Sender: a@example.com\r\n\r\nbody",
+            &["X-AnonAddy-Original-Sender", "X-SimpleLogin-Original-From"],
+        );
+        assert_eq!(r.address.as_deref(), Some("a@example.com"));
+    }
+
+    #[test]
+    fn only_the_first_from_mailbox_is_used() {
+        let r = resolve(
+            "From: Alice <a@example.com>, Bob <b@example.com>\r\n\r\nbody",
+            &[],
+        );
+        assert_eq!(r.address.as_deref(), Some("a@example.com"));
+        assert_eq!(r.name.as_deref(), Some("Alice"));
+    }
+
+    #[test]
+    fn header_names_are_case_insensitive() {
+        let r = resolve(
+            "From: alias@simplelogin.io\r\nx-simplelogin-original-from: Carol <carol@example.com>\r\n\r\nbody",
+            &["X-SimpleLogin-Original-From"],
+        );
+        assert_eq!(r.address.as_deref(), Some("carol@example.com"));
     }
 }

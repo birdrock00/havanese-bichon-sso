@@ -155,11 +155,11 @@ pub async fn process_imap_download(
             account_id,
         )
         .await;
-        let (cancelled, total_downloaded, total_failed) = match run_outcome {
+        let (cancelled, total_downloaded, total_failed, total_filtered) = match run_outcome {
             Ok(v) => v,
             Err(e) => {
                 warn!(account_id = account_id, "Gap-fill phase error: {:#?}", e);
-                (false, 0, 1)
+                (false, 0, 1, 0)
             }
         };
         let status = if cancelled {
@@ -169,16 +169,27 @@ pub async fn process_imap_download(
         } else {
             GapFillStatus::Success
         };
-        GapFillState::finish_run(account_id, status, total_downloaded, total_failed)?;
+        GapFillState::finish_run(
+            account_id,
+            status,
+            total_downloaded,
+            total_failed,
+            total_filtered,
+        )?;
+        let skipped = if total_filtered > 0 {
+            format!(", {} skipped by archive rules", total_filtered)
+        } else {
+            String::new()
+        };
         let summary = if cancelled {
             format!(
-                "Gap-fill cancelled: {} downloaded, {} failed",
-                total_downloaded, total_failed
+                "Gap-fill cancelled: {} downloaded, {} failed{}",
+                total_downloaded, total_failed, skipped
             )
         } else {
             format!(
-                "Gap-fill finished: {} downloaded, {} failed",
-                total_downloaded, total_failed
+                "Gap-fill finished: {} downloaded, {} failed{}",
+                total_downloaded, total_failed, skipped
             )
         };
         DownloadState::update_session_message(account_id, summary.clone())?;
@@ -209,6 +220,12 @@ pub async fn process_imap_download(
     Ok(())
 }
 
+/// A gap-fill scan for one folder, boxed so the phase loop can be driven by a
+/// fake in tests without an IMAP session.
+type GapFillScanFuture<'a> = std::pin::Pin<
+    Box<dyn std::future::Future<Output = BichonResult<GapFillFolderStats>> + Send + 'a>,
+>;
+
 /// Runs the gap-fill phase across all download-folder mailboxes. Errors inside
 /// are converted into a failed-run outcome instead of propagating, so the
 /// caller can always finalize the active run.
@@ -218,9 +235,33 @@ async fn gap_fill_phase(
     remote_mailboxes: &[MailBox],
     token: CancellationToken,
     account_id: u64,
-) -> BichonResult<(bool, u64, u64)> {
+) -> BichonResult<(bool, u64, u64, u64)> {
+    run_gap_fill_folders(
+        local_mailboxes,
+        remote_mailboxes,
+        token,
+        account_id,
+        |local, remote, token| Box::pin(gap_fill::gap_fill_mailbox(account, local, remote, token)),
+    )
+    .await
+}
+
+/// The folder loop, split out from [`gap_fill_phase`] so tests can inject a
+/// fake scan and exercise the cancellation rules without an IMAP server.
+/// Returns `(cancelled, downloaded, failed, filtered)`.
+async fn run_gap_fill_folders<'a, F>(
+    local_mailboxes: &'a [MailBox],
+    remote_mailboxes: &'a [MailBox],
+    token: CancellationToken,
+    account_id: u64,
+    mut scan: F,
+) -> BichonResult<(bool, u64, u64, u64)>
+where
+    F: FnMut(&'a MailBox, &'a MailBox, CancellationToken) -> GapFillScanFuture<'a>,
+{
     let mut total_downloaded = 0u64;
     let mut total_failed = 0u64;
+    let mut total_filtered = 0u64;
     let mut cancelled = false;
     for local_mailbox in local_mailboxes {
         let Some(remote) = remote_mailboxes.iter().find(|r| r.name == local_mailbox.name) else {
@@ -231,10 +272,11 @@ async fn gap_fill_phase(
             break;
         }
         DownloadState::set_current_folder(account_id, local_mailbox.name.clone())?;
-        match gap_fill::gap_fill_mailbox(account, local_mailbox, remote, token.clone()).await {
+        match scan(local_mailbox, remote, token.clone()).await {
             Ok(stats) => {
                 total_downloaded += stats.downloaded;
                 total_failed += stats.failed;
+                total_filtered += stats.filtered;
                 GapFillState::add_folder_result(account_id, local_mailbox.name.clone(), stats)?;
             }
             Err(e) => {
@@ -251,6 +293,7 @@ async fn gap_fill_phase(
                     GapFillFolderStats {
                         downloaded: 0,
                         failed: 1,
+                        filtered: 0,
                         candidate_count: 0,
                         message: None,
                     },
@@ -258,5 +301,162 @@ async fn gap_fill_phase(
             }
         }
     }
-    Ok((cancelled, total_downloaded, total_failed))
+    // A cancellation can land inside the last folder's scan, after the loop
+    // above has already passed its check. Honour it so the run is finalized as
+    // Cancelled instead of Success.
+    if token.is_cancelled() {
+        cancelled = true;
+    }
+    Ok((cancelled, total_downloaded, total_failed, total_filtered))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::error::code::ErrorCode;
+
+    static TEST_ENV: std::sync::Once = std::sync::Once::new();
+
+    /// The state helpers read the process-global DB, so seed the same shared
+    /// test root the other DB-backed tests use.
+    fn init_test_env() {
+        TEST_ENV.call_once(|| {
+            let root = crate::test_support::unique_test_root("bichon-core-test");
+            std::env::set_var("BICHON_ROOT_DIR", &root);
+            std::env::set_var("BICHON_ENCRYPT_PASSWORD", "test-password");
+            let _ = &*crate::settings::cli::SETTINGS;
+            let _ = &*crate::database::manager::DB_MANAGER;
+        });
+    }
+
+    fn mailbox(id: u64, name: &str) -> MailBox {
+        MailBox {
+            id,
+            name: name.to_string(),
+            ..Default::default()
+        }
+    }
+
+    fn stats(downloaded: u64, filtered: u64) -> GapFillFolderStats {
+        GapFillFolderStats {
+            downloaded,
+            filtered,
+            ..Default::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn cancellation_inside_the_last_folder_is_reported_as_cancelled() {
+        init_test_env();
+        let local = vec![mailbox(1, "INBOX")];
+        let remote = local.clone();
+        let token = CancellationToken::new();
+
+        let (cancelled, downloaded, failed, filtered) = run_gap_fill_folders(
+            &local,
+            &remote,
+            token.clone(),
+            9_000_001,
+            |_local, _remote, scan_token| {
+                // The user pressed Stop after this folder's scan started; the
+                // scan still returns Ok with a partial result.
+                scan_token.cancel();
+                Box::pin(async { Ok(stats(4, 2)) })
+            },
+        )
+        .await
+        .expect("phase loop must not fail");
+
+        assert!(
+            cancelled,
+            "a cancellation during the last folder must not be finalized as success"
+        );
+        assert_eq!((downloaded, failed, filtered), (4, 0, 2));
+    }
+
+    #[tokio::test]
+    async fn completed_phase_is_not_reported_as_cancelled() {
+        init_test_env();
+        let local = vec![mailbox(1, "INBOX"), mailbox(2, "Sent")];
+        let remote = local.clone();
+        let token = CancellationToken::new();
+
+        let (cancelled, downloaded, failed, filtered) = run_gap_fill_folders(
+            &local,
+            &remote,
+            token.clone(),
+            9_000_002,
+            |_local, _remote, _token| Box::pin(async { Ok(stats(3, 1)) }),
+        )
+        .await
+        .expect("phase loop must not fail");
+
+        assert!(!cancelled);
+        assert_eq!((downloaded, failed, filtered), (6, 0, 2));
+    }
+
+    #[tokio::test]
+    async fn cancellation_between_folders_stops_before_the_next_scan() {
+        init_test_env();
+        let local = vec![mailbox(1, "INBOX"), mailbox(2, "Sent")];
+        let remote = local.clone();
+        let token = CancellationToken::new();
+        let scanned = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+
+        let scanned_in_scan = scanned.clone();
+        let (cancelled, downloaded, failed, _filtered) = run_gap_fill_folders(
+            &local,
+            &remote,
+            token.clone(),
+            9_000_003,
+            move |local, _remote, scan_token| {
+                scanned_in_scan.lock().unwrap().push(local.name.clone());
+                scan_token.cancel();
+                Box::pin(async { Ok(stats(1, 0)) })
+            },
+        )
+        .await
+        .expect("phase loop must not fail");
+
+        assert!(cancelled);
+        assert_eq!(*scanned.lock().unwrap(), vec!["INBOX".to_string()]);
+        assert_eq!((downloaded, failed), (1, 0));
+    }
+
+    #[tokio::test]
+    async fn scan_error_counts_the_folder_as_failed_and_keeps_going() {
+        init_test_env();
+        let local = vec![mailbox(1, "INBOX"), mailbox(2, "Sent")];
+        let remote = local.clone();
+        let token = CancellationToken::new();
+        let attempts = std::sync::Arc::new(std::sync::Mutex::new(0u32));
+
+        let attempts_in_scan = attempts.clone();
+        let (cancelled, downloaded, failed, filtered) = run_gap_fill_folders(
+            &local,
+            &remote,
+            token.clone(),
+            9_000_004,
+            move |_local, _remote, _token| {
+                let mut count = attempts_in_scan.lock().unwrap();
+                *count += 1;
+                if *count == 1 {
+                    Box::pin(async {
+                        Err(crate::raise_error!(
+                            "simulated scan failure".into(),
+                            ErrorCode::InternalError
+                        ))
+                    })
+                } else {
+                    Box::pin(async { Ok(stats(2, 0)) })
+                }
+            },
+        )
+        .await
+        .expect("a folder error must not abort the phase");
+
+        assert!(!cancelled);
+        assert_eq!((downloaded, failed, filtered), (2, 1, 0));
+        assert_eq!(*attempts.lock().unwrap(), 2);
+    }
 }

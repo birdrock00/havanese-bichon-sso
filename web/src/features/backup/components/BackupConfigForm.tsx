@@ -34,6 +34,7 @@ import {
 } from '@/api/backup/api'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { useToast } from '@/hooks/use-toast'
+import { isValidCronExpression } from '@/lib/cron'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -361,6 +362,17 @@ export function BackupConfigForm({ onSaved }: { onSaved?: () => void }) {
       // Keep a just-saved/error indicator visible; only clear a stale
       // "pending" dot once nothing is dirty anymore.
       setSaveState((s) => (s === 'pending' ? 'idle' : s))
+      return
+    }
+    // Same structural check the cleanup dialog uses: the server's Rust cron
+    // parser is authoritative, but a bad schedule should not leave the form.
+    if (
+      payload.schedule !== undefined &&
+      payload.schedule.trim() !== '' &&
+      !isValidCronExpression(payload.schedule)
+    ) {
+      setSaveError(t('validation.invalidCronExpression', 'Invalid cron expression'))
+      setSaveState('error')
       return
     }
     const sig = JSON.stringify(payload)

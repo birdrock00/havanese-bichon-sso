@@ -396,7 +396,7 @@ export default function MailboxView() {
                   onSelectAccount={selectAccount}
                   onSelectMailbox={selectMailbox}
                   onDeleteMailbox={handleDeleteMailbox}
-                  className="w-[230px] shrink-0"
+                  className="w-[280px] shrink-0 xl:w-[320px]"
                 />
               )}
 

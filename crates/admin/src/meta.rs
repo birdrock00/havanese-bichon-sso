@@ -264,9 +264,11 @@ impl From<AccountV3> for AccountModel {
             deleting: false,
             archive_rules: None,
             extraction_rules: None,
+            override_from_headers: None,
             // Newer fields default to the safe values: migrated accounts never
             // start auto-purging (retention disabled) and are never on hold.
             retention_days: None,
+            remote_cleanup: None,
             legal_hold: false,
             hold_reason: None,
             hold_placed_by: None,

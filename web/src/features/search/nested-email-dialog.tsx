@@ -22,7 +22,7 @@ import EmailIframe from '@/components/mail-iframe';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { formatBytes, formatTimestamp } from '@/lib/utils';
+import { formatBytes, formatSender, formatTimestamp } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { Download, Loader, Mail } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -58,8 +58,11 @@ const MessageHeader = ({
                     <span className="w-12 text-[10px] font-bold uppercase text-slate-400 shrink-0">
                         {t('mail.from')}
                     </span>
-                    <span className="text-sm font-medium text-slate-700 truncate">
-                        {envelope.from}
+                    <span
+                        className="text-sm font-medium text-slate-700 truncate"
+                        title={envelope.wire_from ? `via ${envelope.wire_from}` : undefined}
+                    >
+                        {formatSender(envelope.from_name, envelope.from)}
                     </span>
                 </div>
 
@@ -154,7 +157,7 @@ export function NestedEmailDialog({ open, onOpenChange, accountId, envelopeId, f
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
+            <DialogContent aria-describedby={undefined} className="max-w-4xl h-[90vh] flex flex-col p-0 overflow-hidden border-none shadow-2xl">
                 <div className="text-white px-4 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Mail className="h-4 w-4 text-blue-400" />

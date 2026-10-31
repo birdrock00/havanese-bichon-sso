@@ -26,9 +26,11 @@ use crate::store::tantivy::fields::{
     AttachmentFields, EmailFields, F_ACCOUNT_ID, F_ATTACHMENTS, F_ATTACHMENT_CATEGORY,
     F_ATTACHMENT_CONTENT_HASH, F_ATTACHMENT_CONTENT_TYPE, F_ATTACHMENT_COUNT, F_ATTACHMENT_EXT,
     F_ATTACHMENT_NAME_EXACT, F_ATTACHMENT_NAME_TEXT, F_ATTACHMENT_NAME_TEXT_TRI, F_AUTO_TAGS,
-    F_BCC, F_BCC_TEXT, F_BCC_TEXT_TRI, F_BODY, F_CC, F_CC_TEXT, F_CC_TEXT_TRI, F_CONTENT_HASH,
-    F_DATE, F_ENVELOPE_ID, F_FROM, F_FROM_TEXT, F_FROM_TEXT_TRI, F_HAS_TEXT, F_ID, F_IMAP_UID,
-    F_INGEST_AT, F_INTERNAL_DATE, F_IS_INDEXED, F_IS_MESSAGE, F_IS_OCR, F_MAILBOX_ID, F_MESSAGE_ID,
+    F_BCC, F_BCC_TEXT, F_BCC_TEXT_TRI, F_BODY, F_CC, F_CC_TEXT, F_CC_TEXT_TRI, F_CLEANUP_MOVED,
+    F_CONTENT_HASH,
+    F_DATE, F_ENVELOPE_ID, F_FROM, F_FROM_NAME, F_FROM_TEXT, F_FROM_TEXT_TRI, F_HAS_TEXT, F_ID,
+    F_IMAP_UID, F_INGEST_AT, F_INTERNAL_DATE, F_IS_INDEXED, F_IS_MESSAGE, F_IS_OCR, F_MAILBOX_ID,
+    F_MESSAGE_ID, F_WIRE_FROM,
     F_NAME_EXACT,
     F_NAME_TEXT, F_NAME_TEXT_TRI, F_PAGE_COUNT, F_PREVIEW, F_REGULAR_ATTACHMENT_COUNT, F_SHARD_ID,
     F_SIZE, F_SUBJECT, F_SUBJECT_TRI, F_TAGS, F_TEXT, F_THREAD_ID, F_TO, F_TO_TEXT, F_TO_TEXT_TRI,
@@ -140,6 +142,17 @@ impl EmailSchema {
             b.add_text_field(F_ATTACHMENT_CONTENT_TYPE, STRING | STORED | FAST);
         let f_tags = b.add_facet_field(F_TAGS, FacetOptions::default().set_stored());
         let f_shard_id = b.add_u64_field(F_SHARD_ID, INDEXED | STORED | FAST);
+        // Appended, never inserted earlier: a `Field` is the position of the
+        // field in the schema, so adding one in the middle shifts every field
+        // after it and an index built with the previous layout silently reads
+        // the wrong columns. STORED is what lets `rebuild_envelope_doc` and
+        // `bichon-admin reindex` carry the flag forward.
+        let f_cleanup_moved = b.add_bool_field(F_CLEANUP_MOVED, INDEXED | STORED | FAST);
+        // New fields are appended after everything that already existed: the
+        // field id is its position, so inserting earlier would shift them.
+        // STORED only — `from_text` carries the searchable copy.
+        let f_from_name = b.add_text_field(F_FROM_NAME, STORED);
+        let f_wire_from = b.add_text_field(F_WIRE_FROM, STORED);
 
         let fields = EmailFields {
             f_id,
@@ -182,6 +195,9 @@ impl EmailSchema {
             f_attachment_content_type,
             f_tags,
             f_shard_id,
+            f_cleanup_moved,
+            f_from_name,
+            f_wire_from,
         };
 
         (b.build(), fields)
@@ -226,6 +242,9 @@ impl AttachmentSchema {
         let f_name_exact = b.add_text_field(F_NAME_EXACT, STRING | STORED);
         let f_tags = b.add_facet_field(F_TAGS, FacetOptions::default().set_stored());
         let f_auto_tags = b.add_facet_field(F_AUTO_TAGS, FacetOptions::default().set_stored());
+        // Appended last, like the email schema: see the comment there.
+        let f_from_name = b.add_text_field(F_FROM_NAME, STORED);
+        let f_wire_from = b.add_text_field(F_WIRE_FROM, STORED);
 
         let fields = AttachmentFields {
             f_id,
@@ -256,6 +275,8 @@ impl AttachmentSchema {
             f_name_exact,
             f_tags,
             f_auto_tags,
+            f_from_name,
+            f_wire_from,
         };
 
         (b.build(), fields)
@@ -278,4 +299,91 @@ fn text_no_store(tokenizer: &str) -> TextOptions {
 
 fn text_store(tokenizer: &str) -> TextOptions {
     text_no_store(tokenizer).set_stored()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SchemaTools;
+
+    /// A `tantivy::schema::Field` is the *position* of the field in the schema,
+    /// and documents written by an older binary are read back through the
+    /// current `SchemaTools` handles. Inserting a field anywhere but the end
+    /// therefore shifts every later field: the reader asks for `size` and gets
+    /// whatever now sits at that position.
+    ///
+    /// That is not hypothetical — inserting `cleanup_moved` before `size` made
+    /// every search fail with "'size' field is not a u64", because the handle
+    /// pointed at `thread_id`.
+    ///
+    /// This pins the positions of the pre-existing email fields. When adding a
+    /// field, append it and update the expected count; do **not** renumber.
+    #[test]
+    fn existing_email_field_positions_are_stable() {
+        let f = SchemaTools::email_fields();
+
+        // Positions as of the schema that shipped before cleanup_moved. These
+        // must never change: an index on disk maps positions to data.
+        let locked: [(&str, tantivy::schema::Field); 41] = [
+            ("f_id", f.f_id),
+            ("f_message_id", f.f_message_id),
+            ("f_account_id", f.f_account_id),
+            ("f_mailbox_id", f.f_mailbox_id),
+            ("f_uid", f.f_uid),
+            ("f_imap_uid", f.f_imap_uid),
+            ("f_subject", f.f_subject),
+            ("f_body", f.f_body),
+            ("f_preview", f.f_preview),
+            ("f_content_hash", f.f_content_hash),
+            ("f_from", f.f_from),
+            ("f_to", f.f_to),
+            ("f_cc", f.f_cc),
+            ("f_bcc", f.f_bcc),
+            ("f_from_text", f.f_from_text),
+            ("f_to_text", f.f_to_text),
+            ("f_cc_text", f.f_cc_text),
+            ("f_bcc_text", f.f_bcc_text),
+            ("f_subject_tri", f.f_subject_tri),
+            ("f_from_text_tri", f.f_from_text_tri),
+            ("f_to_text_tri", f.f_to_text_tri),
+            ("f_cc_text_tri", f.f_cc_text_tri),
+            ("f_bcc_text_tri", f.f_bcc_text_tri),
+            ("f_date", f.f_date),
+            ("f_internal_date", f.f_internal_date),
+            ("f_ingest_at", f.f_ingest_at),
+            ("f_size", f.f_size),
+            ("f_thread_id", f.f_thread_id),
+            ("f_attachment_count", f.f_attachment_count),
+            ("f_regular_attachment_count", f.f_regular_attachment_count),
+            ("f_attachment_name_text", f.f_attachment_name_text),
+            ("f_attachment_name_text_tri", f.f_attachment_name_text_tri),
+            ("f_attachment_name_exact", f.f_attachment_name_exact),
+            ("f_attachments", f.f_attachments),
+            ("f_attachment_content_hash", f.f_attachment_content_hash),
+            ("f_attachment_ext", f.f_attachment_ext),
+            ("f_attachment_category", f.f_attachment_category),
+            ("f_attachment_content_type", f.f_attachment_content_type),
+            ("f_tags", f.f_tags),
+            ("f_shard_id", f.f_shard_id),
+            ("f_cleanup_moved", f.f_cleanup_moved),
+        ];
+
+        for (position, (name, field)) in locked.iter().enumerate() {
+            assert_eq!(
+                field.field_id(),
+                position as u32,
+                "'{name}' moved to position {position}; appending is the only safe change"
+            );
+        }
+    }
+
+    /// The cleanup flag must be STORED, or a tag edit or reindex silently drops
+    /// every moved marker and previously moved mail becomes a candidate again.
+    #[test]
+    fn the_cleanup_flag_is_stored() {
+        use tantivy::schema::{FieldType, Schema};
+        let schema: Schema = SchemaTools::email_schema();
+        let entry = schema.get_field_entry(SchemaTools::email_fields().f_cleanup_moved);
+        assert!(entry.is_stored(), "cleanup_moved must be STORED");
+        assert!(matches!(entry.field_type(), FieldType::Bool(_)));
+    }
 }

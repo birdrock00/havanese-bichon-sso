@@ -37,12 +37,26 @@ pub struct Envelope {
     pub subject: String,
     pub preview: String,
     pub from: String,
+    /// Display name paired with `from` (decoded, verbatim). `None` when the
+    /// header has no display name or the message predates this field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from_name: Option<String>,
+    /// Original `From` address, written only when an account's header rule
+    /// replaced `from`. For the UI's "via …" hint and audits; `from` remains
+    /// the value every consumer uses.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wire_from: Option<String>,
     pub to: Vec<String>,
     pub cc: Vec<String>,
     pub bcc: Vec<String>,
     pub date: i64,
     pub internal_date: i64,
     pub ingest_at: i64,
+    /// True once source-mailbox cleanup moved this message into
+    /// `bichon_auto_created_trash`. Filtered out of later cleanup runs so a
+    /// moved message never occupies a slot again.
+    #[serde(default)]
+    pub cleanup_moved: bool,
     pub size: u32,
     pub thread_id: String,
     pub attachment_count: usize,

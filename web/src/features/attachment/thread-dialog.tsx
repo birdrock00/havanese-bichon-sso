@@ -30,7 +30,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { get_thread_messages } from '@/api/mailbox/envelope/api';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from 'react-i18next'
+import { formatSender } from '@/lib/utils';
 import { format } from 'date-fns';
 import { EmailEnvelope } from '@/api';
 import { MailMessageView } from './mail-message-view';
@@ -83,7 +84,7 @@ export function MailThreadDialog({ open, onOpenChange, currentEnvelope }: MailTh
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-width-full p-0 max-h-full flex flex-col md:max-w-3xl lg:max-w-4xl">
+      <DialogContent aria-describedby={undefined} className="w-full max-width-full p-0 max-h-full flex flex-col md:max-w-3xl lg:max-w-4xl">
         {/* Header */}
         <DialogHeader className="p-4 pb-3 border-b shrink-0">
           <div className="flex items-center justify-between">
@@ -134,7 +135,7 @@ export function MailThreadDialog({ open, onOpenChange, currentEnvelope }: MailTh
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 text-sm">
-                          <span className="font-medium truncate">{msg.from}</span>
+                          <span className="font-medium truncate">{formatSender(msg.from_name, msg.from)}</span>
                           <span className="text-muted-foreground">→</span>
                           <span className="text-muted-foreground truncate">
                             {msg.to.join(', ')}

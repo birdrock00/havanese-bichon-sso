@@ -47,6 +47,10 @@ type Response = Vec<u8>;
 pub struct MockImapServer {
     greeting: Vec<u8>,
     script: Vec<(String, Response)>,
+    /// Responses consumed once, checked before `script`. Lets a test answer
+    /// the same command differently on successive calls (for example a
+    /// destination search before and after a move).
+    once_script: std::sync::Mutex<Vec<(String, Response)>>,
 }
 
 impl MockImapServer {
@@ -54,6 +58,7 @@ impl MockImapServer {
         Self {
             greeting: b"* OK Mock IMAP server ready\r\n".to_vec(),
             script: Vec::new(),
+            once_script: std::sync::Mutex::new(Vec::new()),
         }
     }
 
@@ -67,6 +72,21 @@ impl MockImapServer {
     /// respond with `response`. Steps are checked in insertion order.
     pub fn respond(mut self, pattern: impl Into<String>, response: impl Into<Vec<u8>>) -> Self {
         self.script.push((pattern.into(), response.into()));
+        self
+    }
+
+    /// Like [`Self::respond`], but the step is used at most once. One-shot
+    /// steps are checked before the persistent script so a test can vary the
+    /// answer for repeated identical commands.
+    pub fn respond_once(
+        mut self,
+        pattern: impl Into<String>,
+        response: impl Into<Vec<u8>>,
+    ) -> Self {
+        self.once_script
+            .get_mut()
+            .unwrap_or_else(|e| e.into_inner())
+            .push((pattern.into(), response.into()));
         self
     }
 
@@ -116,7 +136,7 @@ impl MockImapServer {
             let tag = extract_tag(&line).unwrap_or("A0");
             let matched = self.find_match(&line);
             if let Some(response) = matched {
-                let substituted = substitute_tag(response, tag);
+                let substituted = substitute_tag(&response, tag);
                 if writer.write_all(&substituted).await.is_err() {
                     break;
                 }
@@ -130,14 +150,23 @@ impl MockImapServer {
         }
     }
 
-    fn find_match(&self, line: &str) -> Option<&[u8]> {
+    fn find_match(&self, line: &str) -> Option<Vec<u8>> {
         let line_lower = line.to_lowercase();
-        for (pattern, response) in &self.script {
-            if line_lower.contains(&pattern.to_lowercase()) {
-                return Some(response);
-            }
+        let mut once = self
+            .once_script
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        if let Some(index) = once
+            .iter()
+            .position(|(pattern, _)| line_lower.contains(&pattern.to_lowercase()))
+        {
+            return Some(once.remove(index).1);
         }
-        None
+        drop(once);
+        self.script
+            .iter()
+            .find(|(pattern, _)| line_lower.contains(&pattern.to_lowercase()))
+            .map(|(_, response)| response.clone())
     }
 }
 
@@ -549,4 +578,17 @@ mod tests {
         assert!(all.contains("* 0 RECENT\r\n"));
         assert!(all.contains("B99 OK NOOP done\r\n"));
     }
+}
+
+/// Build a UID FETCH FLAGS response. Each entry: (uid, flagged).
+pub fn uid_fetch_flags_response(entries: &[(u32, bool)]) -> Vec<u8> {
+    let mut out = Vec::new();
+    for (uid, flagged) in entries {
+        let flags = if *flagged { "\\Flagged" } else { "" };
+        out.extend_from_slice(
+            format!("* {uid} FETCH (UID {uid} FLAGS ({flags}))\r\n").as_bytes(),
+        );
+    }
+    out.extend_from_slice(b"{TAG} OK FETCH completed\r\n");
+    out
 }

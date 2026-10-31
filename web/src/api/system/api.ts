@@ -55,6 +55,10 @@ export interface DashboardStats {
   total_size_bytes: number // Total size of all emails (in bytes)
   storage_usage_bytes: number // Actual storage used (in bytes)
   index_usage_bytes: number // Index storage size (in bytes)
+  /** False when the caller cannot see every account; storage figures are then
+   *  unavailable because filesystem usage cannot be scoped per account.
+   *  Older servers omit the field and must be treated as available. */
+  storage_stats_available?: boolean
   recent_activity: TimeBucket[] // Email activity over recent days
   top_senders: Group[] // Top 10 senders
   top_accounts: Group[] // Top 10 senders

@@ -33,13 +33,17 @@
 //! is unreadable, an I/O error) still abort, and the partial `.rebuild` dirs are
 //! cleaned up; the live dirs are untouched until the final swap.
 
-use std::io::Write;
+use std::collections::HashMap;
+use std::io::{IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use bichon_blob::{Codec, Config, Engine, Error as BlobError};
 use bichon_core::{
+    account::migration::AccountModel,
     archive::imap::stable_uid::AccountUidAssigner,
+    database::MemDbModel,
+    envelope::extractor::{resolve_sender, ResolvedSender},
     error::{code::ErrorCode, BichonResult},
     ext::text_extractor,
     message::content::AttachmentInfo,
@@ -79,6 +83,11 @@ use tracing::warn;
 /// same volume, so room for the rebuild must be available.
 const DISK_SAFETY_FACTOR: f64 = 1.15;
 
+/// Commit the rebuild writer every this many *source* documents. Committing in
+/// batches bounds the writer's memory, but the progress bar is updated for
+/// every document (see `progress_bar`), so a slow batch still looks alive.
+const COMMIT_BATCH: u64 = 10_000;
+
 /// The whole index root is rebuilt into a sibling `<name>.new` directory (same
 /// volume, so the final swap is an atomic rename), and the previous root is
 /// renamed to `<name>.old-<timestamp>`. The tool never deletes either of them —
@@ -89,15 +98,30 @@ const DEFAULT_REPORT_FILE: &str = "reindex-skipped.ndjson";
 #[derive(Parser, Debug, Default)]
 pub struct ReindexArgs {
     /// bichon data root (prompted interactively when omitted).
-    #[clap(long, env = "BICHON_ROOT_DIR", help = "Path of the bichon data root")]
+    #[clap(
+        long,
+        visible_aliases = ["root-dir", "bichon-root-dir"],
+        env = "BICHON_ROOT_DIR",
+        help = "Path of the bichon data root (same value as the server's --bichon-root-dir)"
+    )]
     pub root: Option<String>,
 
     /// Index parent directory (default: `<root>/bichon-indices`).
-    #[clap(long, env = "BICHON_INDEX_DIR", help = "Index parent directory (default: <root>/bichon-indices)")]
+    #[clap(
+        long = "index-dir",
+        visible_aliases = ["index-parent", "bichon-index-dir"],
+        env = "BICHON_INDEX_DIR",
+        help = "Parent directory of bichon-indices (default: <root>); same value as the server's --bichon-index-dir"
+    )]
     pub index_parent: Option<String>,
 
     /// Blob data parent directory (default: `<root>/bichon-storage`).
-    #[clap(long, env = "BICHON_DATA_DIR", help = "Blob data parent directory (default: <root>/bichon-storage)")]
+    #[clap(
+        long = "data-dir",
+        visible_aliases = ["data-parent", "bichon-data-dir"],
+        env = "BICHON_DATA_DIR",
+        help = "Parent directory of bichon-storage (default: <root>); same value as the server's --bichon-data-dir"
+    )]
     pub data_parent: Option<String>,
 
     /// Skip attachment text re-extraction (already a noop in the community edition).
@@ -151,6 +175,10 @@ pub fn run_cli(args: ReindexArgs) -> i32 {
 fn run(args: ReindexArgs) -> BichonResult<i32> {
     let theme = ColorfulTheme::default();
     let root = resolve_root(&args, &theme)?;
+    // A bare `bichon-admin reindex` must be enough: ask for the two optional
+    // directories right here, exactly like the v1.x migration does. Anything
+    // supplied by flag or env var is taken as-is and not asked again.
+    let args = prompt_missing_dirs(args, &theme, &root);
     let dirs = resolve_dirs(
         &root,
         args.index_parent.as_deref().map(Path::new),
@@ -181,6 +209,97 @@ pub fn run_without_confirm(args: ReindexArgs) -> i32 {
     }
 }
 
+/// Arguments for the interactive menu's "Rebuild Search Indexes" entry.
+///
+/// The menu never parses a command line, so clap's env fallbacks never run —
+/// the root is resolved from `BICHON_ROOT_DIR` or asked here. The optional
+/// index/data directories are then asked for by `run` (via
+/// [`prompt_missing_dirs`]), just like the CLI subcommand.
+pub fn interactive_args(theme: &ColorfulTheme) -> ReindexArgs {
+    let root = resolve_root(
+        &ReindexArgs {
+            root: env_value("BICHON_ROOT_DIR"),
+            ..Default::default()
+        },
+        theme,
+    )
+    .ok()
+    .map(|path| path.display().to_string());
+
+    ReindexArgs {
+        root,
+        ..Default::default()
+    }
+}
+
+/// A non-empty environment variable, trimmed; `None` when unset or blank.
+fn env_value(name: &str) -> Option<String> {
+    std::env::var(name)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+/// Ask for whichever optional directory was not supplied on the command line
+/// or via its environment variable. The prompt shows the concrete default
+/// under the resolved root, so pressing Enter twice is the normal path for a
+/// default layout.
+fn prompt_missing_dirs(
+    mut args: ReindexArgs,
+    theme: &ColorfulTheme,
+    root: &Path,
+) -> ReindexArgs {
+    // Scripts and `docker exec` without `-it` have no terminal to answer on;
+    // keep their current defaults instead of blocking or emitting a prompt.
+    if !std::io::stdin().is_terminal() {
+        return args;
+    }
+    if args.index_parent.is_none() {
+        let prompt = format!(
+            "Index parent directory (blank = {})",
+            root.join("bichon-indices").display()
+        );
+        args.index_parent = prompt_optional_dir(theme, "BICHON_INDEX_DIR", &prompt);
+    }
+    if args.data_parent.is_none() {
+        let prompt = format!(
+            "Data parent directory (blank = {})",
+            root.join("bichon-storage").display()
+        );
+        args.data_parent = prompt_optional_dir(theme, "BICHON_DATA_DIR", &prompt);
+    }
+    args
+}
+
+/// Ask for an optional directory, honouring the same env var the subcommand
+/// uses. An empty answer means "use the default under the data root".
+fn prompt_optional_dir(theme: &ColorfulTheme, env: &str, prompt: &str) -> Option<String> {
+    if let Some(value) = env_value(env) {
+        return Some(value);
+    }
+    let input: String = Input::with_theme(theme)
+        .with_prompt(prompt)
+        .allow_empty(true)
+        .validate_with(|input: &String| -> Result<(), &str> {
+            let trimmed = input.trim();
+            if trimmed.is_empty() {
+                return Ok(());
+            }
+            let path = PathBuf::from(trimmed);
+            if !path.is_absolute() {
+                return Err("Path must be absolute.");
+            }
+            if !path.exists() {
+                return Err("Directory does not exist.");
+            }
+            Ok(())
+        })
+        .interact_text()
+        .unwrap_or_default();
+    let trimmed = input.trim();
+    (!trimmed.is_empty()).then(|| trimmed.to_string())
+}
+
 /// Non-interactive body (pre-checks → both phases → swap → report).
 /// `confirm=false` lets tests drive it directly.
 fn execute(
@@ -203,7 +322,7 @@ fn execute(
         if args.index_parent.is_none() {
             println!(
                 "{}",
-                style("If this deployment uses a custom index directory (`bichon_index_dir` / BICHON_INDEX_DIR), pass it as --index-parent.").dim()
+                style("If this deployment uses a custom index directory (`bichon_index_dir` / BICHON_INDEX_DIR), pass the same value as --index-dir (or --bichon-index-dir).").dim()
             );
         }
         return Ok(0);
@@ -242,7 +361,28 @@ fn execute(
         return Ok(0);
     }
 
-    // ── Pre-check 4: service-running detection = take the blob lock ──
+    // ── Pre-check 4: the blob store must be the one that belongs to this
+    // index. Creating an empty one on a mistyped --data-dir would "succeed"
+    // with every message body missing; fail instead, before touching disk. ──
+    if email_ok && !dirs.blobs_dir.exists() {
+        let docs = Index::open_in_dir(&dirs.envelope_dir)
+            .and_then(|index| index.reader())
+            .map(|reader| reader.searcher().num_docs())
+            .unwrap_or(0);
+        if docs > 0 {
+            eprintln!(
+                "{} The email index in {} has {} document(s), but its blob store {} does not exist.\n  \
+                 Check --data-dir (pass the same value as the server's --bichon-data-dir); rebuilding against an empty store would lose every message body.",
+                style("ERROR:").red().bold(),
+                dirs.envelope_dir.display(),
+                docs,
+                dirs.blobs_dir.display()
+            );
+            return Ok(1);
+        }
+    }
+
+    // ── Pre-check 5: service-running detection = take the blob lock ──
     std::fs::create_dir_all(&dirs.blobs_dir).map_err(|e| {
         raise_error!(
             format!("cannot create blob directory {:?}: {e:#?}", dirs.blobs_dir),
@@ -283,7 +423,7 @@ fn execute(
     let new_envelope = new_root.join(leaf(&dirs.envelope_dir)?);
     let new_attachment = new_root.join(leaf(&dirs.attachment_dir)?);
 
-    // ── Pre-check 5: disk space (the rebuild coexists with the live index) ──
+    // ── Pre-check 6: disk space (the rebuild coexists with the live index) ──
     let index_parent = index_root
         .parent()
         .map(Path::to_path_buf)
@@ -301,7 +441,7 @@ fn execute(
         return Ok(1);
     }
 
-    // ── Pre-check 6: a leftover `.new` from an interrupted run is a temp
+    // ── Pre-check 7: a leftover `.new` from an interrupted run is a temp
     // artifact and is safe to drop. Existing `.old-*` backups are NEVER touched:
     // only the operator removes those. ──
     if new_root.exists() {
@@ -313,7 +453,7 @@ fn execute(
         let _ = std::fs::remove_dir_all(&new_root);
     }
 
-    // ── Pre-check 7: summary + confirmation ──
+    // ── Pre-check 8: summary + confirmation ──
     let backup = backup_path(index_root);
     println!(
         "\n{}\n  {:<18} {}\n  {:<18} {}\n  {:<18} {}\n  {:<18} {}",
@@ -367,6 +507,11 @@ fn execute(
     };
 
     // ── Phases A + B, building into the temp `.new` root. ──
+    // The rebuild re-evaluates each message's stored sender against the
+    // account's current header rules, so those rules are read up front. The
+    // database handle is dropped here: the wrap-up reopens it to persist UID
+    // counters, and only one handle may exist at a time.
+    let account_headers = load_account_headers(root)?;
     let mut uids = AccountUidAssigner::new();
     let mut report = match run_phases(
         old_email.as_ref(),
@@ -374,6 +519,7 @@ fn execute(
         &new_envelope,
         &new_attachment,
         blobs,
+        &account_headers,
         args.skip_attachment_text,
         &mut skip,
         &mut uids,
@@ -520,6 +666,27 @@ fn execute(
     Ok(0)
 }
 
+/// Read every account's `override_from_headers` before the rebuild starts.
+///
+/// The handle is dropped when this returns; the wrap-up opens the same database
+/// again to persist UID counters, and `MemDb` owns the directory while open.
+fn load_account_headers(root: &Path) -> BichonResult<HashMap<u64, Option<Vec<String>>>> {
+    let db = bichon_core::admin::meta::open_database(root.join("memdb"))?;
+    let accounts: Vec<AccountModel> = db
+        .collection(AccountModel::collection())
+        .list_all()
+        .map_err(|e| {
+            raise_error!(
+                format!("cannot read accounts from memdb: {e:#?}"),
+                ErrorCode::InternalError
+            )
+        })?;
+    Ok(accounts
+        .into_iter()
+        .map(|account| (account.id, account.override_from_headers))
+        .collect())
+}
+
 /// Run both rebuild phases and accumulate the report.
 fn run_phases(
     old_email: Option<&OldIndex>,
@@ -527,6 +694,7 @@ fn run_phases(
     email_target: &Path,
     attach_target: &Path,
     blobs: &Engine,
+    account_headers: &HashMap<u64, Option<Vec<String>>>,
     skip_text: bool,
     skip: &mut SkipReport,
     uids: &mut AccountUidAssigner,
@@ -537,6 +705,11 @@ fn run_phases(
         let schema = old.index.schema();
         let of = OldEmailFields::resolve(&schema)?;
         let total = old.searcher.num_docs();
+        println!(
+            "{} Rebuilding email index: {} document(s) to examine...",
+            style("·").dim(),
+            total
+        );
         let pb = progress_bar(total, "Rebuilding email index");
         let stats = rebuild_email(
             &old.searcher,
@@ -544,6 +717,7 @@ fn run_phases(
             &of,
             email_target,
             blobs,
+            account_headers,
             &pb,
             skip,
             uids,
@@ -564,6 +738,11 @@ fn run_phases(
             None => None,
         };
         let total = old.searcher.num_docs();
+        println!(
+            "{} Rebuilding attachment index: {} document(s) to examine...",
+            style("·").dim(),
+            total
+        );
         let pb = progress_bar(total, "Rebuilding attachment index");
         let stats = rebuild_attachments(
             &old.searcher,
@@ -572,6 +751,7 @@ fn run_phases(
             email_ctx.as_ref().map(|(s, f)| (*s, f)),
             attach_target,
             blobs,
+            account_headers,
             skip_text,
             &pb,
             skip,
@@ -616,7 +796,7 @@ fn validate_root(path: &Path) -> BichonResult<()> {
         return Err(raise_error!("Directory does not exist.".into(), ErrorCode::InvalidParameter));
     }
     // Deliberately no `bichon-indices` check here: the index directory may live
-    // elsewhere (`bichon_index_dir` / `--index-parent`), in which case nothing
+    // elsewhere (`bichon_index_dir` / `--index-dir`), in which case nothing
     // index-related exists under the root. The resolved index root is checked in
     // the pre-checks instead.
     Ok(())
@@ -677,6 +857,10 @@ struct OldEmailFields {
     attachments: Field,
     tags: Field,
     shard_id: Field,
+    /// Absent before index format 4; the rebuild recomputes both from the raw
+    /// message, so a missing field is not an error.
+    from_name: Option<Field>,
+    wire_from: Option<Field>,
 }
 
 impl OldEmailFields {
@@ -715,6 +899,8 @@ impl OldEmailFields {
             attachments: g("attachments")?,
             tags: g("tags")?,
             shard_id: g("shard_id")?,
+            from_name: schema.get_field("from_name").ok(),
+            wire_from: schema.get_field("wire_from").ok(),
         })
     }
 }
@@ -742,6 +928,10 @@ struct OldAttachmentFields {
     name_exact: Field,
     tags: Field,
     auto_tags: Field,
+    /// Absent before index format 4; recomputed from the parent email when
+    /// possible, otherwise carried from the old document.
+    from_name: Option<Field>,
+    wire_from: Option<Field>,
 }
 
 impl OldAttachmentFields {
@@ -777,6 +967,8 @@ impl OldAttachmentFields {
             name_exact: g("name_exact")?,
             tags: g("tags")?,
             auto_tags: g("auto_tags")?,
+            from_name: schema.get_field("from_name").ok(),
+            wire_from: schema.get_field("wire_from").ok(),
         })
     }
 }
@@ -790,6 +982,7 @@ fn rebuild_email(
     of: &OldEmailFields,
     rebuild_dir: &Path,
     blobs: &Engine,
+    account_headers: &HashMap<u64, Option<Vec<String>>>,
     pb: &ProgressBar,
     skip: &mut SkipReport,
     uids: &mut AccountUidAssigner,
@@ -819,7 +1012,7 @@ fn rebuild_email(
     // Memoize the last content_hash → body (`None` = blob missing). Deduplicated
     // messages share a hash, so this avoids re-fetching; a memo hit still reports
     // a missing body per document, so the report stays complete.
-    let mut last_body: Option<(String, Option<String>)> = None;
+    let mut last_body: Option<((u64, String), Option<(String, ResolvedSender)>)> = None;
 
     for seg in old_searcher.segment_readers() {
         let seg_id = seg.segment_id().uuid_string();
@@ -835,6 +1028,18 @@ fn rebuild_email(
                 if !a.is_alive(doc_id) {
                     continue;
                 }
+            }
+
+            // Advance once per *source* document, before any work and before
+            // the skip paths below, so the bar keeps moving while individual
+            // messages are being parsed and still reaches the total when some
+            // documents cannot be carried over.
+            processed += 1;
+            pb.set_position(processed);
+            if processed % COMMIT_BATCH == 0 {
+                writer
+                    .commit()
+                    .map_err(|e| raise_error!(format!("commit failed: {e:#?}"), ErrorCode::InternalError))?;
             }
 
             let doc: TantivyDocument = match store.get(doc_id) {
@@ -879,17 +1084,34 @@ fn rebuild_email(
                 envelope.imap_uid = uids.assign(envelope.account_id)?;
             }
 
-            let body = match &last_body {
-                Some((h, b)) if h == &envelope.content_hash => b.clone(),
+            // Recompute the stored sender from the raw message with the
+            // account's *current* rule list. The old document only carries the
+            // value produced at ingest time, which is exactly what a reindex
+            // must not trust when the configuration has changed.
+            let cache_key = (envelope.account_id, envelope.content_hash.clone());
+            let content = match &last_body {
+                Some((k, v)) if k == &cache_key => v.clone(),
                 _ => {
-                    let b = extract_body(blobs, &envelope.content_hash);
-                    last_body = Some((envelope.content_hash.clone(), b.clone()));
-                    b
+                    let headers = account_headers
+                        .get(&envelope.account_id)
+                        .and_then(|h| h.as_deref());
+                    let v = extract_content(blobs, &envelope.content_hash, headers);
+                    last_body = Some((cache_key, v.clone()));
+                    v
                 }
             };
-            let body = match body {
-                Some(b) => b,
+            let body = match content {
+                Some((body, sender)) => {
+                    envelope.from = sender
+                        .address
+                        .unwrap_or_else(|| "unknown".to_string());
+                    envelope.from_name = sender.name;
+                    envelope.wire_from = sender.wire_from;
+                    body
+                }
                 None => {
+                    // Keep the old sender fields: without the blob there is
+                    // nothing to re-derive them from.
                     stats.empty_bodies += 1;
                     warn!(hash = %envelope.content_hash, "blob missing, leaving body empty");
                     skip.record(skip_record(
@@ -939,16 +1161,11 @@ fn rebuild_email(
                 stats.sample_id = Some(sample_id);
             }
             stats.docs += 1;
-            processed += 1;
-            if processed % 10_000 == 0 {
-                writer
-                    .commit()
-                    .map_err(|e| raise_error!(format!("commit failed: {e:#?}"), ErrorCode::InternalError))?;
-                pb.set_position(processed);
-            }
         }
     }
 
+    pb.set_position(processed);
+    pb.set_message("Finalizing email index (committing and merging segments)");
     writer
         .commit()
         .map_err(|e| raise_error!(format!("final commit failed: {e:#?}"), ErrorCode::InternalError))?;
@@ -967,6 +1184,7 @@ fn rebuild_attachments(
     email_ctx: Option<(&Searcher, &OldEmailFields)>,
     rebuild_dir: &Path,
     blobs: &Engine,
+    account_headers: &HashMap<u64, Option<Vec<String>>>,
     skip_text: bool,
     pb: &ProgressBar,
     skip: &mut SkipReport,
@@ -994,6 +1212,9 @@ fn rebuild_attachments(
     let extract = !skip_text && !text_extractor::is_noop();
     let mut stats = PhaseStats::default();
     let mut processed = 0u64;
+    // Attachments of one message are usually adjacent; a one-entry cache keeps
+    // the parent lookup + blob parse out of the hot path.
+    let mut last_sender: Option<((u64, String), Option<ResolvedSender>)> = None;
 
     for seg in old_searcher.segment_readers() {
         let seg_id = seg.segment_id().uuid_string();
@@ -1007,6 +1228,16 @@ fn rebuild_attachments(
                 if !a.is_alive(doc_id) {
                     continue;
                 }
+            }
+
+            // See `rebuild_email`: count source documents, not just the ones
+            // written, so the bar advances on every iteration and ends at 100%.
+            processed += 1;
+            pb.set_position(processed);
+            if processed % COMMIT_BATCH == 0 {
+                writer
+                    .commit()
+                    .map_err(|e| raise_error!(format!("commit failed: {e:#?}"), ErrorCode::InternalError))?;
             }
 
             let doc: TantivyDocument = match store.get(doc_id) {
@@ -1040,6 +1271,29 @@ fn rebuild_attachments(
                     continue;
                 }
             };
+
+            // Keep the attachment's sender in step with its parent envelope:
+            // re-derive it from the parent's raw message and current rules.
+            if let Some((account_id, content_hash)) = parent_email_meta(email_ctx, &model.envelope_id)
+            {
+                let key = (account_id, content_hash);
+                let sender = match &last_sender {
+                    Some((k, v)) if k == &key => v.clone(),
+                    _ => {
+                        let headers = account_headers.get(&account_id).and_then(|h| h.as_deref());
+                        let v = extract_content(blobs, &key.1, headers).map(|(_, s)| s);
+                        last_sender = Some((key, v.clone()));
+                        v
+                    }
+                };
+                if let Some(sender) = sender {
+                    model.from = sender
+                        .address
+                        .unwrap_or_else(|| "unknown".to_string());
+                    model.from_name = sender.name;
+                    model.wire_from = sender.wire_from;
+                }
+            }
 
             if extract {
                 match reextract_attachment_text(email_ctx, &model, blobs) {
@@ -1086,16 +1340,11 @@ fn rebuild_attachments(
                 stats.sample_id = Some(sample_id);
             }
             stats.docs += 1;
-            processed += 1;
-            if processed % 10_000 == 0 {
-                writer
-                    .commit()
-                    .map_err(|e| raise_error!(format!("commit failed: {e:#?}"), ErrorCode::InternalError))?;
-                pb.set_position(processed);
-            }
         }
     }
 
+    pb.set_position(processed);
+    pb.set_message("Finalizing attachment index (committing and merging segments)");
     writer
         .commit()
         .map_err(|e| raise_error!(format!("final commit failed: {e:#?}"), ErrorCode::InternalError))?;
@@ -1129,6 +1378,23 @@ fn reextract_attachment_text(
         blobs,
     )?;
     text_extractor::extract_text(&model.content_type, &ext, &bytes)
+}
+
+/// Locate the parent email document and return its `(account_id, content_hash)`.
+/// Used to re-derive an attachment's sender from the message it belongs to.
+fn parent_email_meta(
+    email_ctx: Option<(&Searcher, &OldEmailFields)>,
+    envelope_id: &str,
+) -> Option<(u64, String)> {
+    let (email_searcher, of) = email_ctx?;
+    let term = Term::from_field_text(of.id, envelope_id);
+    let query = TermQuery::new(term, IndexRecordOption::Basic);
+    let hits = email_searcher
+        .search(&query, &TopDocs::with_limit(1).order_by_score())
+        .ok()?;
+    let (_, addr) = hits.first()?;
+    let doc: TantivyDocument = email_searcher.doc(*addr).ok()?;
+    Some((opt_u64(&doc, of.account_id)?, opt_str(&doc, of.content_hash)?))
 }
 
 /// Point-lookup the parent email → parse its f_attachments JSON → match by
@@ -1196,6 +1462,8 @@ fn envelope_from_old_doc(
         subject: req_str(doc, of.subject, "subject")?,
         preview: opt_str(doc, of.preview).unwrap_or_default(),
         from: req_str(doc, of.from, "from")?,
+        from_name: of.from_name.and_then(|f| opt_str(doc, f)),
+        wire_from: of.wire_from.and_then(|f| opt_str(doc, f)),
         to: vec_str(doc, of.to),
         cc: vec_str(doc, of.cc),
         bcc: vec_str(doc, of.bcc),
@@ -1212,6 +1480,17 @@ fn envelope_from_old_doc(
         )? as usize,
         tags: (!tags.is_empty()).then_some(tags),
         content_hash: req_str(doc, of.content_hash, "content_hash")?,
+        // A reindex deliberately resets every cleanup-move marker.
+        //
+        // The flag answers "has cleanup already moved this message out of its
+        // source folder?", and a rebuild from the old index cannot answer it:
+        // the source UID may be stale and the old documents may predate the
+        // field entirely. Rather than carry a value of unknown correctness,
+        // every message becomes a candidate again and cleanup re-decides from
+        // the source mailbox — messages that are genuinely gone are skipped as
+        // `source_uid_missing`, with no data loss. Operators should expect one
+        // cleanup pass to revisit previously moved mail after a reindex.
+        cleanup_moved: false,
     };
     let shard_id = opt_u64(doc, of.shard_id).unwrap_or(0);
     Ok((envelope, attachments, shard_id))
@@ -1233,6 +1512,8 @@ fn attachment_from_old_doc(
         subject: req_str(doc, af.subject, "subject")?,
         content_hash: req_str(doc, af.content_hash, "content_hash")?,
         from: req_str(doc, af.from, "from")?,
+        from_name: af.from_name.and_then(|f| opt_str(doc, f)),
+        wire_from: af.wire_from.and_then(|f| opt_str(doc, f)),
         date: req_i64(doc, af.date, "date")?,
         ingest_at: req_i64(doc, af.ingest_at, "ingest_at")?,
         size: req_u64(doc, af.size, "size")?,
@@ -1437,7 +1718,16 @@ fn hex_to_key(hex: &str) -> BichonResult<[u8; 32]> {
     Ok(key)
 }
 
-fn extract_body(blobs: &Engine, content_hash: &str) -> Option<String> {
+/// Rebuild the body text and the stored sender from the raw message blob.
+///
+/// The sender is resolved with the account's current header rules, which is
+/// what lets a reindex apply a newly configured (or changed) rule to mail that
+/// was archived before the rule existed.
+fn extract_content(
+    blobs: &Engine,
+    content_hash: &str,
+    override_headers: Option<&[String]>,
+) -> Option<(String, ResolvedSender)> {
     let key = hex_to_key(content_hash).ok()?;
     let bytes = blobs.get(&key).ok()??;
     let message = MessageParser::new().parse(&bytes)?;
@@ -1446,7 +1736,11 @@ fn extract_body(blobs: &Engine, content_hash: &str) -> Option<String> {
         .map(|cow| cow.into_owned())
         .or_else(|| message.body_html(0).map(|cow| extract_text(cow.into_owned())))
         .unwrap_or_default();
-    Some(text.split_whitespace().collect::<Vec<_>>().join(" "))
+    let sender = resolve_sender(&message, override_headers);
+    Some((
+        text.split_whitespace().collect::<Vec<_>>().join(" "),
+        sender,
+    ))
 }
 
 // ─── wrap-up helpers ──────────────────────────────────────────────────────────
@@ -1615,6 +1909,10 @@ fn validate_stable_uids(dir: &Path) -> BichonResult<()> {
     })?;
     let searcher = reader.searcher();
 
+    // This pass reads every rebuilt document, which on a large archive is long
+    // enough that a silent wait would look like a hang.
+    let pb = progress_bar(searcher.num_docs(), "Validating rebuilt email index");
+    let mut processed = 0u64;
     let mut pairs: Vec<(u64, u32)> = Vec::with_capacity(searcher.num_docs() as usize);
     for seg in searcher.segment_readers() {
         let seg_id = seg.segment_id().uuid_string();
@@ -1628,6 +1926,8 @@ fn validate_stable_uids(dir: &Path) -> BichonResult<()> {
                     continue;
                 }
             }
+            processed += 1;
+            pb.set_position(processed);
             let doc: TantivyDocument = store.get(doc_id).map_err(|e| {
                 raise_error!(
                     format!("validation: cannot read document {doc_id} of {seg_id}: {e:#?}"),
@@ -1654,6 +1954,7 @@ fn validate_stable_uids(dir: &Path) -> BichonResult<()> {
         }
     }
 
+    pb.set_message("Checking for duplicate stable IMAP UIDs");
     pairs.sort_unstable();
     for window in pairs.windows(2) {
         if window[0] == window[1] {
@@ -1666,6 +1967,7 @@ fn validate_stable_uids(dir: &Path) -> BichonResult<()> {
             ));
         }
     }
+    pb.finish_and_clear();
 
     println!(
         "{} email index stable UIDs validated: {} unique (account, uid) pairs",
@@ -1722,14 +2024,22 @@ fn human_bytes(bytes: u64) -> String {
     format!("{value:.1} {}", UNITS[unit])
 }
 
+const PROGRESS_TEMPLATE: &str =
+    "{msg} [{bar:32.cyan/blue}] {pos}/{len} ({percent}%) {per_sec} elapsed {elapsed_precise} ETA {eta}";
+
+/// A bar that never looks frozen: the position is advanced for every source
+/// document (see the rebuild loops), and the steady tick keeps the elapsed
+/// clock moving during long per-document work such as parsing a message or
+/// committing a batch.
 fn progress_bar(total: u64, msg: &'static str) -> ProgressBar {
     let pb = ProgressBar::new(total);
     pb.set_style(
-        ProgressStyle::with_template("{msg} [{bar:40.cyan/blue}] {pos}/{len} ({eta})")
+        ProgressStyle::with_template(PROGRESS_TEMPLATE)
             .unwrap_or_else(|_| ProgressStyle::default_bar())
             .progress_chars("=> "),
     );
     pb.set_message(msg);
+    pb.enable_steady_tick(Duration::from_millis(500));
     pb
 }
 
@@ -2193,7 +2503,7 @@ mod tests {
     }
 
     /// A deployment can put the index tree outside the data root
-    /// (`bichon_index_dir` / `--index-parent`). The root must still validate
+    /// (`bichon_index_dir` / `--index-dir`). The root must still validate
     /// even though it holds no `bichon-indices`, and the resolved directories
     /// must follow the custom parent.
     #[test]
@@ -2205,7 +2515,7 @@ mod tests {
             "fixture must not have an index under the root"
         );
 
-        // This used to be rejected outright, before `--index-parent` was even
+        // This used to be rejected outright, before `--index-dir` was even
         // taken into account.
         validate_root(&root).expect("a root without bichon-indices must still be valid");
 
@@ -2221,5 +2531,65 @@ mod tests {
         );
         // The blob store still comes from the root when no data parent is given.
         assert_eq!(dirs.blobs_dir, root.join("bichon-storage").join("blobs"));
+    }
+
+    /// `reindex` must let the operator point the index and the blob data at
+    /// different disks, using the same spellings as the server. Both the
+    /// primary names and the server-style `--bichon-*` aliases parse.
+    /// The rebuild bar must show rate, elapsed time and ETA — a typo in the
+    /// template would silently fall back to the bare default bar.
+    #[test]
+    fn progress_template_is_valid() {
+        assert!(ProgressStyle::with_template(PROGRESS_TEMPLATE).is_ok());
+    }
+
+    #[test]
+    fn index_and_data_dirs_can_be_set_separately() {
+        let args = ReindexArgs::try_parse_from([
+            "reindex",
+            "--root",
+            "/data",
+            "--index-dir",
+            "/ssd",
+            "--data-dir",
+            "/hdd",
+        ])
+        .expect("primary dir flags parse");
+        assert_eq!(args.root.as_deref(), Some("/data"));
+        assert_eq!(args.index_parent.as_deref(), Some("/ssd"));
+        assert_eq!(args.data_parent.as_deref(), Some("/hdd"));
+
+        let aliased = ReindexArgs::try_parse_from([
+            "reindex",
+            "--bichon-root-dir",
+            "/data",
+            "--bichon-index-dir",
+            "/ssd",
+            "--bichon-data-dir",
+            "/hdd",
+        ])
+        .expect("server-style aliases parse");
+        assert_eq!(aliased.index_parent.as_deref(), Some("/ssd"));
+        assert_eq!(aliased.data_parent.as_deref(), Some("/hdd"));
+
+        let dirs = resolve_dirs(
+            Path::new("/data"),
+            Some(Path::new("/ssd")),
+            Some(Path::new("/hdd")),
+        );
+        assert_eq!(
+            dirs.envelope_dir,
+            Path::new("/ssd").join("bichon-indices").join("mail_metadata")
+        );
+        assert_eq!(
+            dirs.attachment_dir,
+            Path::new("/ssd")
+                .join("bichon-indices")
+                .join("attachment_metadata")
+        );
+        assert_eq!(
+            dirs.blobs_dir,
+            Path::new("/hdd").join("bichon-storage").join("blobs")
+        );
     }
 }

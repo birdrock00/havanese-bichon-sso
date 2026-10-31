@@ -21,7 +21,7 @@ use std::str::FromStr;
 use crate::account::entity::{AuthType, ImapConfig};
 use crate::account::migration::{
     AccountKind, AccountKindRole, AccountModel, AccountType, ArchiveRules, ExtractionRules,
-    QuotaWindow, ViewConfig,
+    QuotaWindow, RemoteCleanupConfig, ViewConfig, REMOTE_CLEANUP_FOLDER,
 };
 use crate::account::since::{DateSince, RelativeDate};
 use crate::error::code::ErrorCode;
@@ -64,9 +64,16 @@ pub struct AccountCreateRequest {
     /// Attachment text extraction rules (Pro feature).
     /// `None` = extract everything (backward compatible).
     pub extraction_rules: Option<ExtractionRules>,
+    /// Ordered header names whose first valid mailbox replaces the stored
+    /// `from` address. `None` = disabled.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub override_from_headers: Option<Vec<String>>,
     /// Account-level retention period in days (free/community feature).
     /// `None` or `0` = disabled (archive everything, never auto-purge).
     pub retention_days: Option<u64>,
+    /// Source-mailbox cleanup (community feature). `None` = not configured.
+    #[serde(default)]
+    pub remote_cleanup: Option<RemoteCleanupConfig>,
     /// Special role marker. It is set internally when the journaling
     /// configuration creates its archive account; a client may not choose it.
     ///
@@ -80,7 +87,7 @@ pub struct AccountCreateRequest {
 }
 
 impl AccountCreateRequest {
-    pub fn create_entity(self, user_id: u64) -> BichonResult<AccountModel> {
+    pub fn create_entity(mut self, user_id: u64) -> BichonResult<AccountModel> {
         if self.date_before.is_some() && self.date_since.is_some() {
             return Err(raise_error!(
                 "date_before and date_since are mutually exclusive; specify only one time boundary"
@@ -102,6 +109,18 @@ impl AccountCreateRequest {
 
         if let Some(date_before) = self.date_before.as_ref() {
             date_before.validate_date()?;
+        }
+
+        if let Some(cleanup) = &self.remote_cleanup {
+            if !matches!(self.account_type, AccountType::IMAP) {
+                return Err(raise_error!(
+                    "Source-mailbox cleanup is only supported for IMAP accounts".into(),
+                    ErrorCode::InvalidParameter
+                ));
+            }
+            cleanup.validate().map_err(|e| {
+                raise_error!(format!("remote_cleanup: {e}"), ErrorCode::InvalidParameter)
+            })?;
         }
 
         match self.account_type {
@@ -171,6 +190,10 @@ impl AccountCreateRequest {
                 raise_error!(format!("archive_rules: {}", e), ErrorCode::InvalidParameter)
             })?;
         }
+        self.override_from_headers = normalize_override_from_headers(&self.override_from_headers)
+            .map_err(|e| {
+                raise_error!(format!("override_from_headers: {e}"), ErrorCode::InvalidParameter)
+            })?;
         Ok(AccountModel::new(user_id, self)?)
     }
 
@@ -252,6 +275,14 @@ pub struct AccountUpdateRequest {
     /// Attachment text extraction rules (Pro feature).
     /// `None` = no change. Use `Some(ExtractionRules { .. })` to set.
     pub extraction_rules: Option<ExtractionRules>,
+    /// Ordered header names whose first valid mailbox replaces the stored
+    /// `from` address. `None` = no change; an empty list disables the rule.
+    /// Cannot be combined with `clear_override_from_headers`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub override_from_headers: Option<Vec<String>>,
+    /// Clear the header override rule list.
+    #[serde(default)]
+    pub clear_override_from_headers: Option<bool>,
     /// Account-level retention period in days (free/community feature).
     /// `Some(0)` disables retention; `None` means no change. A background
     /// sweep purges envelopes older than the window (held accounts exempt).
@@ -259,6 +290,13 @@ pub struct AccountUpdateRequest {
     /// Clear retention back to `None` (disabled). Cannot be combined with
     /// `retention_days`.
     pub clear_retention_days: Option<bool>,
+    /// Source-mailbox cleanup (community feature). `None` = no change.
+    #[serde(default)]
+    pub remote_cleanup: Option<RemoteCleanupConfig>,
+    /// Clear the source-mailbox cleanup configuration. Cannot be combined with
+    /// `remote_cleanup`.
+    #[serde(default)]
+    pub clear_remote_cleanup: Option<bool>,
     /// Replace a `View` account's sources and filters. `None` = no change.
     /// Only meaningful on an `AccountType::View` account.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -303,6 +341,17 @@ impl AccountUpdateRequest {
                 ErrorCode::InvalidParameter
             ));
         }
+        if self.clear_override_from_headers == Some(true)
+            && self.override_from_headers.is_some()
+        {
+            return Err(raise_error!(
+                "clear_override_from_headers cannot be combined with override_from_headers".into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+        normalize_override_from_headers(&self.override_from_headers).map_err(|e| {
+            raise_error!(format!("override_from_headers: {e}"), ErrorCode::InvalidParameter)
+        })?;
         if let Some(view) = &self.view {
             if !matches!(account.account_type, AccountType::View) {
                 return Err(raise_error!(
@@ -327,6 +376,24 @@ impl AccountUpdateRequest {
                 ErrorCode::InvalidParameter
             ));
         }
+
+        if self.clear_remote_cleanup == Some(true) && self.remote_cleanup.is_some() {
+            return Err(raise_error!(
+                "clear_remote_cleanup cannot be combined with remote_cleanup".into(),
+                ErrorCode::InvalidParameter
+            ));
+        }
+        if let Some(cleanup) = &self.remote_cleanup {
+            if !matches!(account.account_type, AccountType::IMAP) {
+                return Err(raise_error!(
+                    "Source-mailbox cleanup is only supported for IMAP accounts".into(),
+                    ErrorCode::InvalidParameter
+                ));
+            }
+            cleanup.validate().map_err(|e| {
+                raise_error!(format!("remote_cleanup: {e}"), ErrorCode::InvalidParameter)
+            })?;
+        }
         if let Some(date_since) = self.date_since.as_ref() {
             date_since.validate()?;
         }
@@ -342,6 +409,17 @@ impl AccountUpdateRequest {
                     "Invalid configuration: 'sync_folders' cannot be empty. \
                      If you are modifying the subscription list, please provide at least one mailbox to subscribe to.".into(), ErrorCode::InvalidParameter
                 ));
+                }
+                if mailboxes
+                    .iter()
+                    .any(|name| name.eq_ignore_ascii_case(REMOTE_CLEANUP_FOLDER))
+                {
+                    return Err(raise_error!(
+                        format!(
+                            "'{REMOTE_CLEANUP_FOLDER}' is reserved for cleanup output and cannot be a sync folder"
+                        ),
+                        ErrorCode::InvalidParameter
+                    ));
                 }
             }
             if self.clear_download_schedule == Some(true) && self.download_schedule.is_some() {
@@ -369,6 +447,38 @@ impl AccountUpdateRequest {
         }
         Ok(())
     }
+}
+
+/// Validate and normalize an `override_from_headers` rule list.
+///
+/// `None` stays `None` (feature off). An empty list is normalized to `None`,
+/// so "enabled but nothing configured" cannot become a distinct stored state.
+/// Duplicates are removed case-insensitively while preserving precedence.
+pub(crate) fn normalize_override_from_headers(
+    headers: &Option<Vec<String>>,
+) -> Result<Option<Vec<String>>, String> {
+    let Some(headers) = headers else {
+        return Ok(None);
+    };
+    let mut normalized: Vec<String> = Vec::with_capacity(headers.len());
+    for header in headers {
+        let header = header.trim();
+        if header.is_empty() {
+            return Err("header name must not be empty".to_string());
+        }
+        // RFC 5322 field-name: printable US-ASCII except ':'; this also
+        // rejects whitespace, CR/LF and anything that could be injected.
+        if !header.bytes().all(|b| matches!(b, 33..=57 | 59..=126)) {
+            return Err(format!("invalid header name '{header}'"));
+        }
+        if !normalized
+            .iter()
+            .any(|existing| existing.eq_ignore_ascii_case(header))
+        {
+            normalized.push(header.to_string());
+        }
+    }
+    Ok((!normalized.is_empty()).then_some(normalized))
 }
 
 fn validate_cron_expression(expr: &str) -> BichonResult<()> {
@@ -577,5 +687,44 @@ mod test {
         let account: MinimalAccount =
             serde_json::from_str(r#"{"id":8,"email":"b@example.com","auth_type":null,"account_type":"NoSync"}"#).unwrap();
         assert_eq!(account.auth_type, None);
+    }
+}
+
+#[cfg(test)]
+mod override_from_headers_tests {
+    use super::normalize_override_from_headers;
+
+    #[test]
+    fn none_and_empty_mean_disabled() {
+        assert_eq!(normalize_override_from_headers(&None).unwrap(), None);
+        assert_eq!(normalize_override_from_headers(&Some(vec![])).unwrap(), None);
+        assert_eq!(
+            normalize_override_from_headers(&Some(vec!["  ".into()])),
+            Err("header name must not be empty".into())
+        );
+    }
+
+    #[test]
+    fn trims_and_deduplicates_case_insensitively() {
+        let got = normalize_override_from_headers(&Some(vec![
+            " X-AnonAddy-Original-Sender ".into(),
+            "x-anonaddy-original-sender".into(),
+            "X-SimpleLogin-Original-From".into(),
+        ]))
+        .unwrap();
+        assert_eq!(
+            got,
+            Some(vec![
+                "X-AnonAddy-Original-Sender".into(),
+                "X-SimpleLogin-Original-From".into(),
+            ])
+        );
+    }
+
+    #[test]
+    fn rejects_injection_and_non_field_names() {
+        for bad in ["X-Test: value", "X-Test\r\nInjected", "X Test", "X-Test\u{0007}"] {
+            assert!(normalize_override_from_headers(&Some(vec![bad.into()])).is_err(), "{bad:?}");
+        }
     }
 }

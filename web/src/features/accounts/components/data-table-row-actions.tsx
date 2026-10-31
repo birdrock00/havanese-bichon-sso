@@ -31,13 +31,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAccountContext } from '../context'
-import { Mailbox, MessageSquareMore, Settings } from 'lucide-react'
+import { Eraser, History, Mailbox, MessageSquareMore, Play, Settings } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/use-current-user'
 import { AccountModel, cancel_account_download } from '@/api/account/api'
 import { toast } from '@/hooks/use-toast'
 import { useNavigate } from '@tanstack/react-router'
 import { StartDownloadDialog } from './start-download-dialog'
+import { CleanupConfigDialog } from './cleanup-config-dialog'
+import { CleanupReportsDialog } from './cleanup-reports-dialog'
+import { CleanupRunDialog } from './cleanup-run-dialog'
 import { OP_ACCOUNT_DELETE } from '@/api/approvals/api'
 import { usePendingApprovals } from '@/features/approvals/use-pending-approvals'
 
@@ -50,6 +53,9 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const { setOpen, setCurrentRow } = useAccountContext()
   const navigate = useNavigate()
   const [startDialogOpen, setStartDialogOpen] = useState(false)
+  const [cleanupOpen, setCleanupOpen] = useState(false)
+  const [cleanupRunOpen, setCleanupRunOpen] = useState(false)
+  const [cleanupReportsOpen, setCleanupReportsOpen] = useState(false)
 
   const account_type = row.original.account_type;
   const { require_any_permission } = useCurrentUser()
@@ -69,12 +75,11 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   // `hasPermission` already checks. Individual sources the operator does not
   // manage are grayed out inside the dialog instead of blocking the entry.
 
+  // Keep the menu reachable for IMAP rows even without permission so the
+  // cleanup actions can be shown disabled instead of disappearing.
   const canShowAnyAction =
-    !isDeleting && (
-      (hasPermission) ||
-      (account_type === 'IMAP' && hasPermission) ||
-      (account_type === 'IMAP' && hasReadPermission)
-    );
+    !isDeleting &&
+    (hasPermission || hasReadPermission || account_type === 'IMAP');
 
   const showDownload = !isDeleting && account_type === 'IMAP' && hasPermission;
 
@@ -197,6 +202,63 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           )}
           {showDownload && <DropdownMenuSeparator />}
 
+          {account_type === 'IMAP' && (
+            <DropdownMenuItem
+              className='text-xs'
+              disabled={!hasPermission}
+              title={!hasPermission ? t('common.noPermission', 'No permission') : undefined}
+              onClick={() => setCleanupOpen(true)}
+            >
+              {t('accounts.cleanupConfigAction', 'Source cleanup')}
+              <DropdownMenuShortcut>
+                <Eraser size={16} />
+              </DropdownMenuShortcut>
+            </DropdownMenuItem>
+          )}
+
+          {account_type === 'IMAP' && (
+            <DropdownMenuItem
+              className='text-xs'
+              disabled={!hasPermission || !row.original.remote_cleanup}
+              title={
+                !hasPermission
+                  ? t('common.noPermission', 'No permission')
+                  : !row.original.remote_cleanup
+                    ? t(
+                        'accounts.cleanup.runNotConfigured',
+                        'Configure source cleanup first; manual runs use the saved configuration.'
+                      )
+                    : undefined
+              }
+              onClick={() => setCleanupRunOpen(true)}
+            >
+              {t('accounts.cleanupRunAction', 'Run cleanup now')}
+              <DropdownMenuShortcut>
+                <Play size={16} />
+              </DropdownMenuShortcut>
+            </DropdownMenuItem>
+          )}
+
+          {account_type === 'IMAP' && (
+            <DropdownMenuItem
+              className='text-xs'
+              disabled={!hasReadPermission && !hasPermission}
+              title={
+                !hasReadPermission && !hasPermission
+                  ? t('common.noPermission', 'No permission')
+                  : undefined
+              }
+              onClick={() => setCleanupReportsOpen(true)}
+            >
+              {t('accounts.cleanupReportsAction', 'Cleanup reports')}
+              <DropdownMenuShortcut>
+                <History size={16} />
+              </DropdownMenuShortcut>
+            </DropdownMenuItem>
+          )}
+
+          {hasPermission && <DropdownMenuSeparator />}
+
           {hasPermission && <DropdownMenuItem
             disabled={deleteQueued}
             onClick={() => {
@@ -223,6 +285,21 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         row={row.original}
         open={startDialogOpen}
         onOpenChange={setStartDialogOpen}
+      />
+      <CleanupConfigDialog
+        account={row.original}
+        open={cleanupOpen}
+        onOpenChange={setCleanupOpen}
+      />
+      <CleanupReportsDialog
+        account={row.original}
+        open={cleanupReportsOpen}
+        onOpenChange={setCleanupReportsOpen}
+      />
+      <CleanupRunDialog
+        account={row.original}
+        open={cleanupRunOpen}
+        onOpenChange={setCleanupRunOpen}
       />
     </>
   )

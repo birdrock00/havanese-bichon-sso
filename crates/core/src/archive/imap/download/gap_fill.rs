@@ -24,10 +24,11 @@ use crate::error::code::ErrorCode;
 use crate::raise_error;
 use crate::{
     account::{
-        migration::AccountModel,
+        migration::{AccountModel, ArchiveRules},
         state::{DownloadState, GapFillFolderStats, GapFillState},
     },
     archive::imap::mailbox::MailBox,
+    envelope::extractor::should_archive_from_headers,
     error::BichonResult,
     imap::executor::{compress_uid_list, ImapExecutor, DEFAULT_BATCH_SIZE},
     store::tantivy::envelope::EnvelopeSnapshot,
@@ -86,6 +87,64 @@ pub fn compute_missing_uids(remote: &[RemoteHeader], local: &[EnvelopeSnapshot])
         }
     }
     missing
+}
+
+/// Decide whether one missing candidate should be downloaded.
+///
+/// `headers` is the raw header block fetched for the candidate. When headers
+/// were not needed (only a size limit is configured) or could not be fetched,
+/// `None` lets `should_archive` apply the rules it can evaluate without them;
+/// sender/subject rules then stay unenforced and the body path decides after a
+/// full parse. A header block that cannot be parsed is treated the same way
+/// (`unwrap_or(true)`), so broken mail keeps its previous behaviour.
+fn candidate_should_download(
+    rules: &ArchiveRules,
+    headers: Option<&[u8]>,
+    size: u64,
+) -> bool {
+    let size = size.min(u32::MAX as u64) as u32;
+    match headers {
+        Some(headers) => should_archive_from_headers(rules, headers, size).unwrap_or(true),
+        None => rules.should_archive(None, None, size, false),
+    }
+}
+
+/// Human-readable summary of a gap-fill folder outcome.
+///
+/// Archive-rule skips are deliberately not included: they are expected and
+/// surfaced as a structured counter, not as an amber warning next to failures.
+fn summary_message(parse_skipped: u64, failed: u64) -> Option<String> {
+    let mut notes = Vec::new();
+    if parse_skipped > 0 {
+        notes.push(format!(
+            "{parse_skipped} email(s) could not be parsed and were skipped (not archived); \
+             they will be re-detected on the next gap-fill run"
+        ));
+    } else if failed > 0 {
+        notes.push(format!(
+            "{failed} email(s) could not be compared or downloaded; re-run gap-fill to retry them"
+        ));
+    }
+    if notes.is_empty() {
+        None
+    } else {
+        Some(notes.join("; "))
+    }
+}
+
+/// Advance the mailbox's `highest_uid` watermark after a scan that covered
+/// every candidate (downloaded or filtered by archive rules) without failures.
+fn advance_highest_uid(
+    local_mailbox: &MailBox,
+    remote_mailbox: &MailBox,
+    missing_uids: &[u32],
+) -> BichonResult<()> {
+    if let Some(max_uid) = missing_uids.last().copied() {
+        let mut updated = remote_mailbox.clone();
+        updated.highest_uid = Some(max_uid.max(local_mailbox.highest_uid.unwrap_or(0)));
+        MailBox::batch_upsert(&[updated])?;
+    }
+    Ok(())
 }
 
 /// Runs the gap-fill phase for one mailbox: enumerates every remote UID,
@@ -307,8 +366,153 @@ pub async fn gap_fill_mailbox(
         .await
         .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
-    let batches =
-        crate::imap::executor::generate_uid_sequence_hashset(missing_uids.clone(), batch_size);
+    // Phase 4.5: apply archive rules to the candidates from their headers,
+    // before any body is downloaded. A message the filter rejects is never
+    // fetched, so gap-fill does not keep re-downloading mail it would discard.
+    let remote_sizes: HashMap<u32, u64> =
+        remote_headers.iter().map(|h| (h.uid, h.size)).collect();
+    let archive_rules = account.archive_rules.as_ref().filter(|rules| rules.enabled);
+    let needs_headers = archive_rules
+        .map(|rules| {
+            !rules.senders.is_empty()
+                || !rules.subjects.is_empty()
+                || !rules.spam_headers.is_empty()
+        })
+        .unwrap_or(false);
+
+    let mut filtered = 0u64;
+    let mut to_download: Vec<u32> = Vec::with_capacity(missing_uids.len());
+    if let Some(rules) = archive_rules {
+        if needs_headers {
+            GapFillState::update_folder_progress(
+                account_id,
+                remote_mailbox.name.clone(),
+                planned,
+                0,
+                Some("Checking archive rules before downloading...".into()),
+            )?;
+            for chunk in missing_uids.chunks(batch_size) {
+                if token.is_cancelled() {
+                    session2.logout().await.ok();
+                    stats.filtered = filtered;
+                    GapFillState::update_folder_progress_and_filtered(
+                        account_id,
+                        remote_mailbox.name.clone(),
+                        0,
+                        0,
+                        filtered,
+                        None,
+                    )?;
+                    return Ok(stats);
+                }
+                let seq_set = compress_uid_list(chunk.to_vec());
+                match ImapExecutor::fetch_uid_header_blocks(
+                    &mut session2,
+                    &seq_set,
+                    token.clone(),
+                )
+                .await
+                {
+                    Ok(headers) => {
+                        let headers: HashMap<u32, Vec<u8>> = headers.into_iter().collect();
+                        for uid in chunk {
+                            let size = remote_sizes.get(uid).copied().unwrap_or(0);
+                            if candidate_should_download(
+                                rules,
+                                headers.get(uid).map(|h| h.as_slice()),
+                                size,
+                            ) {
+                                to_download.push(*uid);
+                            } else {
+                                crate::metrics::count_email_ingested(account_id, "imap", "filtered");
+                                filtered += 1;
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        if token.is_cancelled() {
+                            session2.logout().await.ok();
+                            stats.filtered = filtered;
+                            GapFillState::update_folder_progress_and_filtered(
+                                account_id,
+                                remote_mailbox.name.clone(),
+                                0,
+                                0,
+                                filtered,
+                                None,
+                            )?;
+                            return Ok(stats);
+                        }
+                        // Header pre-filtering is an optimization. If it fails,
+                        // download the candidates and let the normal post-parse
+                        // path apply the rules.
+                        warn!(
+                            account_id,
+                            mailbox = remote_mailbox.name,
+                            "Gap-fill: header pre-filter failed, downloading candidates: {:#?}",
+                            e
+                        );
+                        to_download.extend_from_slice(chunk);
+                        // A failed FETCH can leave the session desynchronized;
+                        // start the body phase on a fresh connection.
+                        session2.logout().await.ok();
+                        session2 = ImapExecutor::create_connection(account_id).await?;
+                        session2
+                            .examine(&remote_mailbox.encoded_name())
+                            .await
+                            .map_err(|e| {
+                                raise_error!(format!("{:#?}", e), ErrorCode::InternalError)
+                            })?;
+                    }
+                }
+            }
+        } else {
+            for uid in &missing_uids {
+                let size = remote_sizes.get(uid).copied().unwrap_or(0);
+                if candidate_should_download(rules, None, size) {
+                    to_download.push(*uid);
+                } else {
+                    crate::metrics::count_email_ingested(account_id, "imap", "filtered");
+                    filtered += 1;
+                }
+            }
+        }
+        GapFillState::set_folder_filtered(account_id, remote_mailbox.name.clone(), filtered)?;
+    } else {
+        to_download = missing_uids.clone();
+    }
+
+    if to_download.is_empty() {
+        info!(
+            account_id,
+            mailbox = remote_mailbox.name,
+            filtered,
+            "Gap-fill: all missing emails were skipped by archive rules"
+        );
+        stats.filtered = filtered;
+        // Phase-2 header failures still need their warning even when every
+        // candidate that could be diffed was filtered out.
+        stats.message = summary_message(0, stats.failed);
+        if stats.failed == 0 {
+            // Every candidate was skipped by the rules, so nothing is missing
+            // locally: advance the watermark exactly as a fully downloaded
+            // folder would, otherwise the same candidates stay "missing" and
+            // the next incremental sync may fall back to a full re-download.
+            advance_highest_uid(local_mailbox, remote_mailbox, &missing_uids)?;
+        }
+        GapFillState::update_folder_progress_and_filtered(
+            account_id,
+            remote_mailbox.name.clone(),
+            planned,
+            0,
+            filtered,
+            None,
+        )?;
+        session2.logout().await.ok();
+        return Ok(stats);
+    }
+
+    let batches = crate::imap::executor::generate_uid_sequence_hashset(to_download, batch_size);
     let mut downloaded = 0u64;
     let mut failed = 0u64;
     // Messages skipped because they could not be parsed (not archived): they
@@ -331,6 +535,7 @@ pub async fn gap_fill_mailbox(
         // count one final time before returning the error, so this is the
         // number of emails of this batch that actually made it to disk.
         let last_reported = std::sync::Mutex::new(0u64);
+        let last_filtered = std::sync::Mutex::new(0u64);
         let batch_result = loop {
             match ImapExecutor::uid_batch_retrieve_emails(
                 &mut session2,
@@ -339,8 +544,9 @@ pub async fn gap_fill_mailbox(
                 &batch.0,
                 account.max_email_size_bytes,
                 token.clone(),
-                Some(&|cumulative, avg_secs, stall_secs| {
+                Some(&|cumulative, cumulative_filtered, avg_secs, stall_secs| {
                     *last_reported.lock().unwrap() = cumulative;
+                    *last_filtered.lock().unwrap() = cumulative_filtered;
                     let _ = GapFillState::update_folder_progress(
                         account_id,
                         remote_mailbox.name.clone(),
@@ -400,13 +606,17 @@ pub async fn gap_fill_mailbox(
         };
         match batch_result {
             Ok(outcome) => {
-                downloaded += outcome.stored;
+                // `stored` is the processed count; a message the filter
+                // rejected in the fallback path was not archived.
+                downloaded += outcome.stored.saturating_sub(outcome.filtered);
                 parse_skipped += outcome.parse_skipped;
-                GapFillState::update_folder_progress(
+                filtered += outcome.filtered;
+                GapFillState::update_folder_progress_and_filtered(
                     account_id,
                     remote_mailbox.name.clone(),
                     planned,
                     downloaded,
+                    filtered,
                     None,
                 )?;
             }
@@ -417,7 +627,16 @@ pub async fn gap_fill_mailbox(
                 // retry the remainder; dedup makes re-downloading the stored
                 // ones harmless. Do not abort the phase.
                 let processed = *last_reported.lock().unwrap();
-                downloaded += processed;
+                let batch_filtered = *last_filtered.lock().unwrap();
+                downloaded += processed.saturating_sub(batch_filtered);
+                if batch_filtered > 0 {
+                    filtered += batch_filtered;
+                    GapFillState::set_folder_filtered(
+                        account_id,
+                        remote_mailbox.name.clone(),
+                        filtered,
+                    )?;
+                }
                 let remaining = batch.1.saturating_sub(processed);
                 failed += remaining;
                 let err_msg = format!(
@@ -437,21 +656,10 @@ pub async fn gap_fill_mailbox(
     // Parse-skipped messages count as failed too — they are never stored, so
     // every later gap-fill run re-detects them (and warns about them again).
     stats.failed += failed + parse_skipped;
+    stats.filtered = filtered;
     // Surface the skips and the incomplete header enumeration in the folder's
     // final message so the gap-fill running state carries a visible warning.
-    stats.message = if parse_skipped > 0 {
-        Some(format!(
-            "{parse_skipped} email(s) could not be parsed and were skipped (not archived); \
-             they will be re-detected on the next gap-fill run"
-        ))
-    } else if stats.failed > 0 {
-        Some(format!(
-            "{} email(s) could not be compared or downloaded; re-run gap-fill to retry them",
-            stats.failed
-        ))
-    } else {
-        None
-    };
+    stats.message = summary_message(parse_skipped, stats.failed);
     // Final progress write into the independent gap-fill state (the folder is
     // done; the outcome lands in GapFillRun.folders via add_folder_result).
     GapFillState::update_folder_progress(
@@ -467,12 +675,8 @@ pub async fn gap_fill_mailbox(
     // uncancelled run where every planned message was downloaded and nothing
     // failed (phase-2 header batch failures leave uids outside `planned` that
     // must still be picked up by a later gap-fill run).
-    if !cancelled && downloaded == planned && stats.failed == 0 {
-        if let Some(max_uid) = missing_uids.last().copied() {
-            let mut updated = remote_mailbox.clone();
-            updated.highest_uid = Some(max_uid.max(local_mailbox.highest_uid.unwrap_or(0)));
-            crate::archive::imap::mailbox::MailBox::batch_upsert(&[updated])?;
-        }
+    if !cancelled && downloaded + filtered == planned && stats.failed == 0 {
+        advance_highest_uid(local_mailbox, remote_mailbox, &missing_uids)?;
     }
 
     Ok(stats)
@@ -561,5 +765,98 @@ mod test {
         let local = vec![snap("generated-random-id", 1, 10, 1000)];
         let missing = compute_missing_uids(&remote, &local);
         assert_eq!(missing, vec![2]);
+    }
+
+    fn header_block(from: &str, subject: &str, spam: bool) -> Vec<u8> {
+        let mut headers = format!("From: {from}\r\nSubject: {subject}\r\n");
+        if spam {
+            headers.push_str("X-Spam-Flag: YES\r\n");
+        }
+        headers.push_str("\r\n");
+        headers.into_bytes()
+    }
+
+    fn rules_with_sender_exclude(pattern: &str) -> ArchiveRules {
+        ArchiveRules {
+            enabled: true,
+            senders: crate::account::migration::FilterRule {
+                exclude: vec![pattern.into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn candidate_sender_exclude_skips_before_download() {
+        let rules = rules_with_sender_exclude(r".*@news\.example\.com$");
+        let skipped = header_block("News <weekly@news.example.com>", "Weekly digest", false);
+        let kept = header_block("Alice <alice@ok.example>", "Hello", false);
+        assert!(!candidate_should_download(&rules, Some(&skipped), 100));
+        assert!(candidate_should_download(&rules, Some(&kept), 100));
+    }
+
+    #[test]
+    fn candidate_decodes_subject_before_matching() {
+        // "发票" encoded per RFC 2047.
+        let rules = ArchiveRules {
+            enabled: true,
+            subjects: crate::account::migration::FilterRule {
+                exclude: vec!["发票".into()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let skipped = header_block(
+            "billing@shop.example",
+            "=?UTF-8?B?5Y+R56Wo?=",
+            false,
+        );
+        let kept = header_block("alice@ok.example", "Meeting", false);
+        assert!(!candidate_should_download(&rules, Some(&skipped), 100));
+        assert!(candidate_should_download(&rules, Some(&kept), 100));
+    }
+
+    #[test]
+    fn candidate_spam_header_and_size_are_applied() {
+        let spam_rules = ArchiveRules {
+            enabled: true,
+            spam_headers: vec!["X-Spam-Flag".into()],
+            ..Default::default()
+        };
+        assert!(!candidate_should_download(
+            &spam_rules,
+            Some(&header_block("a@b.example", "Hi", true)),
+            100
+        ));
+        assert!(candidate_should_download(
+            &spam_rules,
+            Some(&header_block("a@b.example", "Hi", false)),
+            100
+        ));
+
+        // Size-only rules do not need headers at all.
+        let size_rules = ArchiveRules {
+            enabled: true,
+            skip_larger_than: Some(100),
+            ..Default::default()
+        };
+        assert!(!candidate_should_download(&size_rules, None, 101));
+        assert!(candidate_should_download(&size_rules, None, 100));
+    }
+
+    #[test]
+    fn candidate_missing_headers_falls_back_to_download() {
+        // Sender rules cannot be evaluated without headers; the body path must
+        // make the decision after a full parse.
+        let rules = rules_with_sender_exclude(r".*@news\.example\.com$");
+        assert!(candidate_should_download(&rules, None, 100));
+    }
+
+    #[test]
+    fn summary_reports_only_anomalies() {
+        assert_eq!(summary_message(0, 0), None);
+        assert!(summary_message(2, 0).unwrap().contains("could not be parsed"));
+        assert!(summary_message(0, 3).unwrap().contains("could not be compared"));
     }
 }

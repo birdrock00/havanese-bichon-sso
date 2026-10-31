@@ -173,7 +173,7 @@ impl ImportEmls {
             }
 
             match extract_envelope_from_eml(&decoded, account_id, mailbox_id).await {
-                Ok(ExtractOutcome::Imported) => {
+                Ok(ExtractOutcome::Imported | ExtractOutcome::Filtered) => {
                     success_count += 1;
                 }
                 Ok(ExtractOutcome::Duplicate) => {
@@ -708,7 +708,7 @@ fn process_mbox_file(
         match futures::executor::block_on(extract_envelope_from_eml(
             eml_bytes, account_id, mailbox_id,
         )) {
-            Ok(ExtractOutcome::Imported) => {
+            Ok(ExtractOutcome::Imported | ExtractOutcome::Filtered) => {
                 success_count += 1;
             }
             Ok(ExtractOutcome::Duplicate) => {
@@ -784,7 +784,7 @@ fn process_single_eml(
 
     match futures::executor::block_on(extract_envelope_from_eml(eml_bytes, account_id, mailbox_id))
     {
-        Ok(ExtractOutcome::Imported) => (1, 0, vec![]),
+        Ok(ExtractOutcome::Imported | ExtractOutcome::Filtered) => (1, 0, vec![]),
         Ok(ExtractOutcome::Duplicate) => (0, 1, vec![]),
         Err(e) => (
             0,

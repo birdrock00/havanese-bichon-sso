@@ -126,7 +126,9 @@ mod tests {
             download_schedule: None,
             archive_rules: None,
             extraction_rules: None,
+            override_from_headers: None,
             retention_days: None,
+            remote_cleanup: None,
             kind: None,
             view: None,
         };

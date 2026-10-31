@@ -74,9 +74,22 @@ impl AccountDownTask {
         }
     }
 
-    // async fn is_busy(&self, account_id: u64) -> bool {
-    //     self.busy_accounts.lock().await.contains(&account_id)
-    // }
+    /// Whether a scheduled sync holds the account slot. Source-mailbox
+    /// cleanup uses this to avoid two IMAP sessions mutating the same mailbox.
+    pub async fn is_account_busy(&self, account_id: u64) -> bool {
+        self.busy_accounts.lock().await.contains(&account_id)
+    }
+
+    /// Take the same per-account slot the download tasks use. Cleanup holds it
+    /// for its whole run so a sync cannot start between its pre-check and the
+    /// first move.
+    pub async fn try_lock_account(&self, account_id: u64) -> bool {
+        self.try_set_busy(account_id).await
+    }
+
+    pub async fn unlock_account(&self, account_id: u64) {
+        self.set_busy(account_id, false).await;
+    }
 
     pub async fn start_download_task(&self, account_id: u64, email: String) {
         let task_name = format!("account-download-task-{}-{}", account_id, &email);

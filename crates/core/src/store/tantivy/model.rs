@@ -18,7 +18,7 @@
 
 //use poem_openapi::Object;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{hash_map::Entry, HashMap, HashSet};
 use tantivy::{
     schema::{Facet, Value},
     TantivyDocument,
@@ -36,7 +36,8 @@ use crate::{
             tantivy::{
                 fields::{
                     F_ACCOUNT_ID, F_ATTACHMENTS, F_ATTACHMENT_CATEGORY, F_ATTACHMENT_CONTENT_TYPE,
-                    F_ATTACHMENT_COUNT, F_CONTENT_HASH, F_DATE, F_ENVELOPE_ID, F_FROM, F_HAS_TEXT,
+                    F_ATTACHMENT_COUNT, F_CLEANUP_MOVED, F_CONTENT_HASH, F_DATE, F_ENVELOPE_ID,
+                    F_FROM, F_HAS_TEXT,
                     F_ID, F_IMAP_UID, F_INGEST_AT, F_INTERNAL_DATE, F_IS_INDEXED, F_IS_MESSAGE,
                     F_IS_OCR,
                     F_MAILBOX_ID, F_MESSAGE_ID, F_PREVIEW, F_REGULAR_ATTACHMENT_COUNT, F_SHARD_ID,
@@ -148,6 +149,19 @@ impl EnvelopeWithAttachments {
         doc.add_text(fields.f_from, &self.envelope.from);
         doc.add_text(fields.f_from_text, &self.envelope.from);
         doc.add_text(fields.f_from_text_tri, &self.envelope.from);
+        // Names and the pre-override address are searchable through the same
+        // text/trigram fields: "search the sender" must keep working for the
+        // alias the user actually received the mail at.
+        if let Some(name) = &self.envelope.from_name {
+            doc.add_text(fields.f_from_name, name);
+            doc.add_text(fields.f_from_text, name);
+            doc.add_text(fields.f_from_text_tri, name);
+        }
+        if let Some(wire_from) = &self.envelope.wire_from {
+            doc.add_text(fields.f_wire_from, wire_from);
+            doc.add_text(fields.f_from_text, wire_from);
+            doc.add_text(fields.f_from_text_tri, wire_from);
+        }
         doc.add_text(fields.f_body, body_text);
 
         for to in &self.envelope.to {
@@ -170,6 +184,7 @@ impl EnvelopeWithAttachments {
         doc.add_i64(fields.f_internal_date, self.envelope.internal_date);
         doc.add_u64(fields.f_size, self.envelope.size as u64);
         doc.add_i64(fields.f_ingest_at, self.envelope.ingest_at);
+        doc.add_bool(fields.f_cleanup_moved, self.envelope.cleanup_moved);
         doc.add_text(fields.f_thread_id, &self.envelope.thread_id);
 
         if let Some(ref atts) = self.attachments {
@@ -250,9 +265,17 @@ impl EnvelopeWithAttachments {
             // carries it, so a miss means a schema/format mismatch (see
             // store::tantivy::format) rather than a recoverable gap.
             imap_uid: extract_u64_field(doc, fields.f_imap_uid, F_IMAP_UID)? as u32,
+            // A document written before this field existed reads as "not
+            // moved", which is also what a reindex produces (see
+            // `bichon-admin reindex`): the cleanup ledger is not rebuilt, so
+            // every message becomes a candidate again.
+            cleanup_moved: extract_bool_field(doc, fields.f_cleanup_moved, F_CLEANUP_MOVED)
+                .unwrap_or(false),
             subject: extract_string_field(doc, fields.f_subject, F_SUBJECT)?,
             preview: extract_string_field(doc, fields.f_preview, F_PREVIEW).unwrap_or_default(),
             from: extract_string_field(doc, fields.f_from, F_FROM)?,
+            from_name: extract_option_string_field(doc, fields.f_from_name)?,
+            wire_from: extract_option_string_field(doc, fields.f_wire_from)?,
             to: extract_vec_string_field(doc, fields.f_to)?,
             cc: extract_vec_string_field(doc, fields.f_cc)?,
             bcc: extract_vec_string_field(doc, fields.f_bcc)?,
@@ -371,14 +394,44 @@ fn extract_vec_string_field(
     Ok(value)
 }
 
-pub fn extract_contacts(doc: &TantivyDocument) -> BichonResult<HashSet<String>> {
-    let fields = SchemaTools::email_fields();
-    let mut all_contacts = HashSet::new();
-
-    if let Ok(from_val) = extract_string_field(doc, fields.f_from, F_FROM) {
-        if !from_val.is_empty() {
-            all_contacts.insert(from_val);
+/// Insert an address into a contact map, keeping the first display name seen
+/// for it.
+///
+/// The same address can arrive as a recipient (no name) in one message and as
+/// the sender (with `from_name`) in another, so a later named insertion
+/// upgrades an earlier bare one.
+pub fn merge_contact(
+    contacts: &mut HashMap<String, Option<String>>,
+    address: String,
+    name: Option<String>,
+) {
+    if address.is_empty() {
+        return;
+    }
+    match contacts.entry(address) {
+        Entry::Occupied(mut entry) => {
+            if entry.get().is_none() && name.is_some() {
+                *entry.get_mut() = name;
+            }
         }
+        Entry::Vacant(entry) => {
+            entry.insert(name);
+        }
+    }
+}
+
+/// Collect every address in the document's participant fields, paired with the
+/// sender's display name when the document records one.
+pub fn extract_contacts(doc: &TantivyDocument) -> BichonResult<HashMap<String, Option<String>>> {
+    let fields = SchemaTools::email_fields();
+    let mut all_contacts: HashMap<String, Option<String>> = HashMap::new();
+
+    let from_name = extract_option_string_field(doc, fields.f_from_name)
+        .ok()
+        .flatten()
+        .filter(|name| !name.is_empty());
+    if let Ok(from_val) = extract_string_field(doc, fields.f_from, F_FROM) {
+        merge_contact(&mut all_contacts, from_val, from_name);
     }
 
     let multi_fields = [fields.f_to, fields.f_cc, fields.f_bcc];
@@ -386,9 +439,7 @@ pub fn extract_contacts(doc: &TantivyDocument) -> BichonResult<HashSet<String>> 
     for field in multi_fields {
         if let Ok(vals) = extract_vec_string_field(doc, field) {
             for v in vals {
-                if !v.is_empty() {
-                    all_contacts.insert(v);
-                }
+                merge_contact(&mut all_contacts, v, None);
             }
         }
     }
@@ -421,6 +472,10 @@ pub struct AttachmentModel {
     pub subject: String,
     pub content_hash: String,
     pub from: String,
+    /// Display name paired with `from`; mirrors the parent envelope.
+    pub from_name: Option<String>,
+    /// Original `From` address when a header rule replaced `from`.
+    pub wire_from: Option<String>,
     pub date: i64,
     pub ingest_at: i64,
     pub size: u64,
@@ -454,6 +509,16 @@ impl AttachmentModel {
         doc.add_text(f.f_from, &self.from);
         doc.add_text(f.f_from_text, &self.from);
         doc.add_text(f.f_from_text_tri, &self.from);
+        if let Some(name) = &self.from_name {
+            doc.add_text(f.f_from_name, name);
+            doc.add_text(f.f_from_text, name);
+            doc.add_text(f.f_from_text_tri, name);
+        }
+        if let Some(wire_from) = &self.wire_from {
+            doc.add_text(f.f_wire_from, wire_from);
+            doc.add_text(f.f_from_text, wire_from);
+            doc.add_text(f.f_from_text_tri, wire_from);
+        }
         doc.add_i64(f.f_date, self.date);
         doc.add_i64(f.f_ingest_at, self.ingest_at);
         doc.add_u64(f.f_size, self.size);
@@ -538,6 +603,8 @@ impl AttachmentModel {
             subject: extract_string_field(doc, f.f_subject, F_SUBJECT)?,
             content_hash: extract_string_field(doc, f.f_content_hash, F_CONTENT_HASH)?,
             from: extract_string_field(doc, f.f_from, F_FROM)?,
+            from_name: extract_option_string_field(doc, f.f_from_name)?,
+            wire_from: extract_option_string_field(doc, f.f_wire_from)?,
             date: extract_i64_field(doc, f.f_date, F_DATE)?,
             ingest_at: extract_i64_field(doc, f.f_ingest_at, F_INGEST_AT)?,
             size: extract_u64_field(doc, f.f_size, F_SIZE)?,
@@ -559,5 +626,106 @@ impl AttachmentModel {
                 Some(auto_tags)
             },
         })
+    }
+}
+
+#[cfg(test)]
+mod sender_field_tests {
+    use super::*;
+
+    /// The display name and the pre-override address must be stored so the UI
+    /// can render them, and copied into `from_text` so sender search matches
+    /// them without a second query path.
+    #[test]
+    fn sender_name_and_wire_are_stored_and_searchable() {
+        let envelope = EnvelopeWithAttachments {
+            envelope: Envelope {
+                imap_uid: 1,
+                from: "jane@example.com".into(),
+                from_name: Some("Jane Doe".into()),
+                wire_from: Some("alias@addy.io".into()),
+                ..Default::default()
+            },
+            attachments: None,
+        };
+        let doc = envelope.to_document("body", 0).unwrap();
+        let f = SchemaTools::email_fields();
+
+        let name: Vec<&str> = doc
+            .get_all(f.f_from_name)
+            .filter_map(|v| v.as_str())
+            .collect();
+        let wire: Vec<&str> = doc
+            .get_all(f.f_wire_from)
+            .filter_map(|v| v.as_str())
+            .collect();
+        assert_eq!(name, vec!["Jane Doe"]);
+        assert_eq!(wire, vec!["alias@addy.io"]);
+
+        let text: Vec<&str> = doc
+            .get_all(f.f_from_text)
+            .filter_map(|v| v.as_str())
+            .collect();
+        for expected in ["jane@example.com", "Jane Doe", "alias@addy.io"] {
+            assert!(text.contains(&expected), "from_text is missing {expected:?}");
+        }
+    }
+}
+
+#[cfg(test)]
+mod contact_suggestion_tests {
+    use super::*;
+
+    /// The suggestion list pairs the sender with its display name; recipients
+    /// contribute a bare address, and an address that is both a sender and a
+    /// recipient appears once, with the name.
+    #[test]
+    fn contacts_pair_senders_with_their_display_name() {
+        let envelope = EnvelopeWithAttachments {
+            envelope: Envelope {
+                imap_uid: 1,
+                from: "jane@example.com".into(),
+                from_name: Some("Jane Doe".into()),
+                to: vec!["bob@example.com".into(), "jane@example.com".into()],
+                ..Default::default()
+            },
+            attachments: None,
+        };
+        let doc = envelope.to_document("body", 0).unwrap();
+        let contacts = extract_contacts(&doc).unwrap();
+
+        assert_eq!(
+            contacts.get("jane@example.com"),
+            Some(&Some("Jane Doe".to_string()))
+        );
+        assert_eq!(contacts.get("bob@example.com"), Some(&None));
+        assert_eq!(contacts.len(), 2, "one entry per address");
+    }
+
+    /// A later named merge upgrades a bare entry, but a different name never
+    /// overwrites the one already kept.
+    #[test]
+    fn merge_keeps_the_first_display_name() {
+        let mut contacts = HashMap::new();
+        merge_contact(&mut contacts, "jane@example.com".into(), None);
+        merge_contact(
+            &mut contacts,
+            "jane@example.com".into(),
+            Some("Jane Doe".into()),
+        );
+        assert_eq!(
+            contacts.get("jane@example.com"),
+            Some(&Some("Jane Doe".into()))
+        );
+
+        merge_contact(
+            &mut contacts,
+            "jane@example.com".into(),
+            Some("J. Doe".into()),
+        );
+        assert_eq!(
+            contacts.get("jane@example.com"),
+            Some(&Some("Jane Doe".into()))
+        );
     }
 }

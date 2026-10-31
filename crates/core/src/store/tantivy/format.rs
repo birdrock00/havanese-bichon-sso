@@ -36,7 +36,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::migrate::is_tantivy_index_dir;
-use crate::store::tantivy::fields::F_IMAP_UID;
+use crate::store::tantivy::fields::{F_CLEANUP_MOVED, F_IMAP_UID};
 
 /// Current index schema generation.
 ///
@@ -47,12 +47,15 @@ use crate::store::tantivy::fields::F_IMAP_UID;
 ///       (a missing marker file is treated as 1)
 /// - 2 = deterministic word tokenizer + trigram sibling fields
 /// - 3 = + imap_uid field (stable archive-side IMAP UID)
+///       + cleanup_moved flag (source-mailbox cleanup marker)
+/// - 4 = + from_name / wire_from fields (sender display name and the original
+///       address behind an account's header override rule)
 ///
 /// Bump this whenever the schema changes **or** a reindex becomes necessary for
 /// any other reason (e.g. a future tokenizer change that leaves the schema
 /// untouched). The check compares the on-disk marker against this constant, so
 /// bumping it alone is enough to gate older indexes behind the reindex flow.
-pub const CURRENT_INDEX_FORMAT_VERSION: u32 = 3;
+pub const CURRENT_INDEX_FORMAT_VERSION: u32 = 4;
 
 const INDEX_FORMAT_FILE: &str = "INDEX_FORMAT";
 
@@ -102,7 +105,15 @@ pub fn heal_index_format_marker(dir: &Path) -> bool {
     let Ok(index) = tantivy::Index::open_in_dir(dir) else {
         return false;
     };
-    if index.schema().get_field(F_IMAP_UID).is_err() {
+    // Check for a field the *current* generation introduced, not an older one:
+    // a schema-3 index also has `imap_uid`, so testing only that would stamp a
+    // stale index as current and then fail at query time. `from_name` is the
+    // newest discriminator (generation 4).
+    let schema = index.schema();
+    if schema.get_field(F_IMAP_UID).is_err()
+        || schema.get_field(F_CLEANUP_MOVED).is_err()
+        || schema.get_field("from_name").is_err()
+    {
         return false;
     }
     write_index_format_version(dir).is_ok()
@@ -252,5 +263,27 @@ mod tests {
         );
         assert_eq!(read_index_format_version(&dir), None);
         drop(v2);
+    }
+
+    /// A schema that carries `imap_uid` but not `cleanup_moved` must not be
+    /// healed. Both fields belong to generation 3; testing only for the older
+    /// one would stamp such an index as current and every cleanup query would
+    /// then fail on the missing field.
+    #[test]
+    fn an_index_without_the_cleanup_flag_is_never_healed() {
+        let dir = temp_dir("heal-no-cleanup-flag");
+        let mut b = tantivy::schema::Schema::builder();
+        b.add_u64_field(
+            crate::store::tantivy::fields::F_IMAP_UID,
+            tantivy::schema::INDEXED | tantivy::schema::STORED,
+        );
+        let partial = tantivy::Index::create_in_dir(&dir, b.build()).unwrap();
+
+        assert!(
+            !heal_index_format_marker(&dir),
+            "an index with imap_uid but no cleanup_moved must not be stamped"
+        );
+        assert_eq!(read_index_format_version(&dir), None);
+        drop(partial);
     }
 }

@@ -26,8 +26,10 @@ RUN chmod +x /usr/local/bin/bichon-cli
 RUN chmod +x /usr/local/bin/bichon-admin
 
 
-# Install ca-certificates to ensure HTTPS certificate verification works correctly
-RUN apt update && apt install -y ca-certificates curl && rm -rf /var/lib/apt/lists/*
+# Install ca-certificates to ensure HTTPS certificate verification works correctly.
+# tini becomes PID 1 so any process reparented to it (the healthcheck runs
+# through a shell) is reaped instead of accumulating as a zombie.
+RUN apt update && apt install -y ca-certificates curl tini && rm -rf /var/lib/apt/lists/*
 # Create data directory
 RUN mkdir -p /data
 
@@ -37,7 +39,11 @@ EXPOSE 15630
 # Set volume and working directory
 WORKDIR /data
 
+# --max-time stays below the healthcheck timeout so curl exits on its own
+# instead of being orphaned when Docker kills a timed-out check.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -fs http://localhost:${BICHON_HTTP_PORT:-15630}/api/status || exit 1
+  CMD curl -fs --max-time 4 http://localhost:${BICHON_HTTP_PORT:-15630}/api/status || exit 1
 
+# tini as PID 1: reaps reparented children and forwards SIGTERM to the server.
+ENTRYPOINT ["/usr/bin/tini", "--"]
 CMD ["/opt/bichon/bichon-server"]

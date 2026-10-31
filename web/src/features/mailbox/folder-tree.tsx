@@ -36,7 +36,6 @@ import type { MinimalAccount } from '@/api/account/api'
 import type { MailboxData } from '@/api/mailbox/api'
 import { OP_MAILBOX_DELETE } from '@/api/approvals/api'
 import { buildTree, type ExtendedTreeItemProps } from '@/lib/build-tree'
-import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 import { usePendingApprovals } from '@/features/approvals/use-pending-approvals'
@@ -148,10 +147,12 @@ export function FolderTree({
               </span>
               {deletable && (
                 <span className="ml-auto pl-2 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-5 w-5 text-muted-foreground hover:text-destructive"
+                  {/* Plain button instead of <Button size="icon">: the Button
+                      base style's `[&_svg]:size-4` outranks the icon's own
+                      size classes and inflates it inside this 12px row. */}
+                  <button
+                    type="button"
+                    className="flex h-4 w-4 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-accent hover:text-destructive disabled:pointer-events-none disabled:opacity-50"
                     disabled={deleteQueued}
                     title={
                       deleteQueued
@@ -170,7 +171,7 @@ export function FolderTree({
                     ) : (
                       <Trash2 className="h-3 w-3" />
                     )}
-                  </Button>
+                  </button>
                 </span>
               )}
             </TreeItemLabel>
@@ -207,7 +208,7 @@ export function FolderTree({
                 value={String(account.id)}
                 className="text-xs"
               >
-                <span className="block max-w-[190px] truncate">
+                <span className="block max-w-[230px] truncate">
                   {account.name || account.email}
                 </span>
               </SelectItem>
