@@ -318,7 +318,11 @@ checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
 name = "bichon-admin"
+<<<<<<< HEAD
 version = "2.2.1"
+=======
+version = "2.3.0"
+>>>>>>> upstream/main
 dependencies = [
  "bichon-blob",
  "bichon-core",
@@ -368,7 +372,11 @@ dependencies = [
 
 [[package]]
 name = "bichon-cli"
+<<<<<<< HEAD
 version = "2.2.1"
+=======
+version = "2.3.0"
+>>>>>>> upstream/main
 dependencies = [
  "base64 0.23.1",
  "bichon-core",
@@ -390,7 +398,11 @@ dependencies = [
 
 [[package]]
 name = "bichon-core"
+<<<<<<< HEAD
 version = "2.2.1"
+=======
+version = "2.3.0"
+>>>>>>> upstream/main
 dependencies = [
  "argon2",
  "async-imap",
@@ -471,7 +483,11 @@ dependencies = [
 
 [[package]]
 name = "bichon-server"
+<<<<<<< HEAD
 version = "2.2.1"
+=======
+version = "2.3.0"
+>>>>>>> upstream/main
 dependencies = [
  "base64 0.23.1",
  "bichon-core",
@@ -500,7 +516,11 @@ dependencies = [
 
 [[package]]
 name = "bichon-smtp"
+<<<<<<< HEAD
 version = "2.2.1"
+=======
+version = "2.3.0"
+>>>>>>> upstream/main
 dependencies = [
  "base64 0.23.1",
  "bichon-core",
