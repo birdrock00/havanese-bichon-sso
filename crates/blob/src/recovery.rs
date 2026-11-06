@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
 
@@ -9,18 +10,33 @@ use crate::segment::{self, SegmentReader};
 /// Recover after a crash: scan any unindexed portions of segments,
 /// update segment stats, and return newly discovered index records.
 ///
+/// Also returns the ids of segments that were fully rescanned from byte 0
+/// (stale cursor, interrupted GC). Records from such a scan reflect the
+/// segment's current on-disk content, which is authoritative over any
+/// same-segment record the index already holds; the caller needs the set to
+/// apply that rule without resurrecting keys deleted in newer segments.
+///
 /// The caller is responsible for inserting the returned records into
 /// the index store.
-pub fn recover(store_root: &Path, meta: &mut GlobalMeta) -> Result<Vec<IndexRecord>> {
+pub fn recover(
+    store_root: &Path,
+    meta: &mut GlobalMeta,
+) -> Result<(Vec<IndexRecord>, HashSet<u32>)> {
     scan_segments(store_root, meta, false)
 }
 
 /// Rebuild the entire index from scratch by scanning all segments from
 /// offset 0.  Used when the index database is corrupted or lost.
 ///
-/// Resets all segment stats and returns every entry found on disk.
+/// Resets all segment stats and returns every entry found on disk,
+/// plus the ids of the scanned segments (every one of them — a rebuild is
+/// a full rescan by definition; the caller works from an empty index and
+/// ignores the set).
 /// The caller should replace the index database before calling this.
-pub fn rebuild_index(store_root: &Path, meta: &mut GlobalMeta) -> Result<Vec<IndexRecord>> {
+pub fn rebuild_index(
+    store_root: &Path,
+    meta: &mut GlobalMeta,
+) -> Result<(Vec<IndexRecord>, HashSet<u32>)> {
     // Reset all segment stats — they'll be recomputed during the scan.
     // Also reset indexed_up_to_offset so we scan from 0.
     for stats in meta.segments.values_mut() {
@@ -34,11 +50,12 @@ pub fn rebuild_index(store_root: &Path, meta: &mut GlobalMeta) -> Result<Vec<Ind
 
 /// Common implementation: scan segments and collect index records.
 /// When `full_scan` is true, every segment is scanned from offset 0.
+/// Returns the records plus the ids of segments that were fully rescanned.
 fn scan_segments(
     store_root: &Path,
     meta: &mut GlobalMeta,
     full_scan: bool,
-) -> Result<Vec<IndexRecord>> {
+) -> Result<(Vec<IndexRecord>, HashSet<u32>)> {
     let seg_dir = store_root.join("segments");
     if !seg_dir.exists() {
         fs::create_dir_all(&seg_dir)?;
@@ -63,6 +80,7 @@ fn scan_segments(
     disk_segments.sort_unstable();
 
     let mut all_records: Vec<IndexRecord> = Vec::new();
+    let mut full_rescan_segments: HashSet<u32> = HashSet::new();
 
     // For each segment, scan unindexed portions
     for &seg_id in &disk_segments {
@@ -76,15 +94,43 @@ fn scan_segments(
         let is_sealed = seg_id != meta.active_segment_id;
         stats.sealed = is_sealed;
 
-        // Determine scan range.
-        let scan_start = if full_scan {
-            0
-        } else if stats.indexed_up_to_offset <= file_size {
-            stats.indexed_up_to_offset
-        } else {
-            // Segment was replaced (interrupted GC) — full rescan needed.
-            0
-        };
+        let cursor = stats.indexed_up_to_offset;
+
+        // A sealed segment is immutable and durable, so its cursor must reach
+        // EOF. If it does not, meta is stale (a pre-fix GC stored payload
+        // bytes as the cursor, or an interrupted GC replaced the file) and the
+        // cursor must not be trusted: resuming mid-file used to be mistaken
+        // for a torn tail and truncated the segment. An unsealed cursor past
+        // EOF means the file shrank under it — same treatment.
+        let cursor_stale = is_sealed && cursor != file_size;
+        let full_rescan = full_scan || cursor_stale || cursor > file_size;
+        if cursor_stale {
+            tracing::warn!(
+                segment_id = seg_id,
+                cursor,
+                file_size,
+                "sealed segment cursor does not reach EOF; rescanning from 0 \
+                 and rebuilding its index"
+            );
+        }
+
+        if full_rescan {
+            // The scan below starts at byte 0 and re-accumulates these; the
+            // stored totals describe the old indexed prefix and would
+            // otherwise be counted twice.
+            stats.total_bytes = 0;
+            stats.deleted_bytes = 0;
+            full_rescan_segments.insert(seg_id);
+        }
+        if cursor > file_size {
+            // The file shrank under the cursor, which only happens when an
+            // interrupted GC renamed a compacted file before meta was saved.
+            // The stored hash describes the pre-GC content and is now wrong;
+            // backups must rehash instead of reusing it.
+            stats.sha256 = None;
+        }
+
+        let scan_start = if full_rescan { 0 } else { cursor };
 
         if scan_start >= file_size {
             meta.segments.insert(seg_id, stats);
@@ -112,7 +158,25 @@ fn scan_segments(
 
         // Truncate if tail corruption found
         if truncation_point < file_size {
+            if is_sealed {
+                // Sealed segments are fsynced before meta records them, so
+                // this is real on-disk damage (or a stale cursor in a store
+                // written before that invariant existed), never an in-flight
+                // write. Say so instead of losing the tail silently.
+                tracing::warn!(
+                    segment_id = seg_id,
+                    file_size,
+                    truncation_point,
+                    lost_bytes = file_size - truncation_point,
+                    "sealed segment has a corrupt tail; truncating"
+                );
+            }
             segment::truncate_segment(&seg_path, truncation_point)?;
+            // The hashed bytes are gone: a stored hash no longer describes
+            // the file. Backups must rehash rather than upload truncated
+            // content under the old hash (which would poison the object at
+            // that key for the whole restore point).
+            stats.sha256 = None;
         }
 
         stats.indexed_up_to_offset = truncation_point;
@@ -122,7 +186,58 @@ fn scan_segments(
 
     meta.save(store_root)?;
 
-    Ok(all_records)
+    Ok((all_records, full_rescan_segments))
+}
+
+/// Marker recording that stored segment hashes were dropped once after the
+/// GC index-cursor fix. See [`invalidate_stale_segment_hashes`].
+pub const HASH_REPAIR_MARKER: &str = ".segment-hash-repair-v1";
+
+/// Drop every stored segment hash the first time this build opens an existing
+/// store.
+///
+/// Before the GC cursor fix, a restart could truncate the tail of a compacted
+/// segment while meta still held the hash of the *pre-truncation* file.
+/// Nothing in meta records the file size a hash belongs to, so such a hash
+/// cannot be detected or repaired in place. Dropping them all is safe:
+/// `Engine::backup_segments` rehashes any segment whose hash is `None` and
+/// persists the result, so the only cost is one full rehash at the next
+/// backup.
+///
+/// Returns `true` when the caller must write [`HASH_REPAIR_MARKER`] *after*
+/// persisting meta, so a crash can never leave the marker without the reset.
+pub fn invalidate_stale_segment_hashes(
+    store_root: &Path,
+    meta: &mut GlobalMeta,
+) -> Result<bool> {
+    if store_root.join(HASH_REPAIR_MARKER).exists() {
+        return Ok(false);
+    }
+
+    let mut cleared = 0usize;
+    for stats in meta.segments.values_mut() {
+        if stats.sha256.take().is_some() {
+            cleared += 1;
+        }
+    }
+    if cleared > 0 {
+        tracing::warn!(
+            segments = cleared,
+            "dropped stored segment hashes once after the GC cursor fix; \
+             they will be recomputed on the next backup"
+        );
+    }
+    Ok(true)
+}
+
+/// Persist [`HASH_REPAIR_MARKER`] durably.
+pub fn mark_hash_repair_done(store_root: &Path) -> Result<()> {
+    use std::io::Write;
+
+    let mut file = fs::File::create(store_root.join(HASH_REPAIR_MARKER))?;
+    file.write_all(b"1")?;
+    file.sync_all()?;
+    Ok(())
 }
 
 /// Clean up leftover temp files from interrupted GC.
