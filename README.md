@@ -14,7 +14,13 @@
   <a href="https://github.com/birdrock00/havanese-bichon-sso/stargazers">
     <img src="https://img.shields.io/github/stars/birdrock00/havanese-bichon-sso?style=for-the-badge&color=gold&label=STARS" alt="GitHub Stars">
   </a>
+<<<<<<< HEAD
   <a href="https://github.com/birdrock00/havanese-bichon-sso/pkgs/container/havanese-bichon-sso"><img src="https://img.shields.io/badge/ghcr.io-birdrock00%2Fhavanese--bichon--sso-2496ED?style=for-the-badge" alt="GHCR Image"></a>
+=======
+  <a href="https://bichon.rustmailer.com">
+    <img src="https://img.shields.io/badge/WEBSITE-bichon.rustmailer.com-blue?style=for-the-badge" alt="Website">
+  </a>
+>>>>>>> upstream/main
   <a href="https://docs.google.com/forms/d/e/1FAIpQLScOlwsiUMfyQPBCLW2MLkygdRmAutEgvXDYPzzvEGPz0HFPXQ/viewform">
     <img src="https://img.shields.io/badge/Roadmap-2026_Survey-blue?style=for-the-badge&logo=googleforms" alt="User Survey">
   </a>
@@ -49,79 +55,42 @@
 > [!NOTE]
 > havanese-bichon-sso is an **archiver**, not an email client. It does not send, compose, forward, or reply to emails. Its optional SMTP server is for **receiving** emails only.
 
-## Contents
-
-- [Features](#features)
-- [Quick Start](#quick-start)
-  - [Docker (Recommended)](#docker-recommended)
-  - [Docker Compose](#docker-compose)
-  - [Binary Installation](#binary-installation)
-  - [Build from Source](#build-from-source)
-- [Configuration Reference](#configuration-reference)
-  - [Required Settings](#required-settings)
-  - [Server & Networking](#server--networking)
-  - [Logging](#logging)
-  - [CORS](#cors)
-  - [TLS & HTTPS](#tls--https)
-  - [SMTP Server](#smtp-server)
-  - [Storage Paths](#storage-paths)
-  - [Performance Tuning](#performance-tuning)
-- [Authentication & RBAC](#authentication--rbac)
-- [CLI Tools](#cli-tools)
-- [API Reference](#api-reference)
-- [Import & Export](#import--export)
-- [Architecture](#architecture)
-- [Storage & Backup](#storage--backup)
-- [Internationalization](#internationalization)
-- [Data Migration (v0.x → v1.0)](#data-migration-v0x--v10)
-- [FAQ](#faq)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [Tech Stack](#tech-stack)
-- [License](#license)
+<p align="center">
+  <a href="https://bichon.rustmailer.com"><strong>Website</strong></a> ·
+  <a href="https://bichon.rustmailer.com/docs"><strong>Documentation</strong></a> ·
+  <a href="https://bichon.rustmailer.com/docs/quick-start"><strong>Quick Start</strong></a> ·
+  <a href="https://bichon.rustmailer.com/docs/api-reference"><strong>API Reference</strong></a>
+</p>
 
 ## Features
 
-- **Multi-Account IMAP Download**: Download multi-account concurrently. Supports password (PLAIN/LOGIN) and OAuth 2.0 (SASL XOAUTH2) with automatic token refresh and PKCE. SSL/TLS, STARTTLS, or plain connections with optional self-signed certificate acceptance.
-- **Incremental Download**: UID-based delta fetching downloads only new messages after the initial download. UIDVALIDITY changes are detected and trigger automatic cache rebuilds.
-- **Fetch Scoping**: Filter download by date range, mailbox folder limit, or specific folder names. Configurable per-account SOCKS5 proxy routing.
-- **Auto-Configuration**: Discover IMAP server settings automatically from an email domain.
-- **Full-Text Search**: Search across subject, body, sender, recipients, attachment properties, and more. Optimized for European languages.
-- **Advanced Filters**: Date range, size range, attachment presence, file type, content category, and facet-based tag combinations.
-- **Thread Grouping**: Reconstruct and view complete conversation threads across folders.
-- **Attachment Search**: Browse and filter attachments by sender, file type, size, and other attachment properties.
-- **Faceted Tags**: Add, remove, or overwrite tags on messages and attachments. Filter by tag combinations with real-time count updates.
-- **Contacts View**: Extracted and deduplicated sender/recipient address book across all authorized accounts.
-- **Three-Layer Storage**: Tantivy for full-text indexing (Zstd compression), bichon-blob with Zstd for compressed blob storage, and memdb for relational metadata. All embedded — zero external dependencies.
-- **Content Deduplication**: Identical email bodies and attachments stored once via BLAKE3 content hashing. Folder moves update metadata only.
-- **Dashboard Analytics**: Email volume trends, top senders, storage usage breakdown, attachment statistics, and per-account activity. Scoped by user permissions.
-- **OpenAPI 3.0**: Interactive API documentation at `/api-docs` (Swagger UI, ReDoc, Scalar). All endpoints documented with request/response schemas.
-- **Multi-User RBAC**: 5 built-in roles (Admin, Manager, Member, AccountManager, AccountViewer) plus custom roles with 22 granular permissions.
-- **Account-Level Isolation**: Grant users access to specific accounts with scoped roles. Permissions enforced at the API layer.
-- **CLI & WebUI Import Tools**: Import from EML directories, MBOX files (including Gmail variants), Thunderbird profiles, and Outlook PST files via CLI. Import EML files directly from the WebUI.
-- **CLI Export**: Download account data as MBOX via `bichon-cli`.
-- **Bulk Restore**: Restore emails in bulk back to their original IMAP accounts.
-- **Embedded SMTP Server**: Receive emails directly at the gateway level. STARTTLS or TLS encryption. AUTH PLAIN/LOGIN with API token authentication.
-- **Admin Tooling**: Password reset for locked-out admins. Non-destructive migration from v0.3.7 and v1.x to v2.x.
-- **API Token Management**: Create, list, and revoke long-lived API tokens for programmatic access.
-- **SOCKS5 Proxy Management**: Configure and manage proxy profiles for routing IMAP traffic per account.
-- **Scheduled Download**: Configure per-account download schedules using cron expressions. Run syncs at specific times or intervals — for example, nightly-only or business-hours-only archiving.
-- **Remote Content Blocking**: External images and tracking pixels embedded in emails are blocked by default. Users can selectively allow remote content to load on a per-message basis from the WebUI.
-- **Async Index Deduplication**: Duplicate detection in the search index is performed asynchronously, reducing write latency during high-throughput ingestion.
+- **IMAP archiving** — multiple accounts with password or OAuth 2.0 (XOAUTH2) login, incremental UID sync, gap-fill repair, UIDVALIDITY rebuilds, per-account schedules, archive scoping and SOCKS5 routing.
+- **Full-text search** — search subject, body, senders, recipients and attachment metadata; filter by date, size, folder and tags; reconstruct threads; browse an aggregated contact list.
+- **Attachment search** — attachment metadata in the Community edition; full attachment **content** indexing on Pro.
+- **Embedded storage** — Tantivy for search, bichon-blob for content-addressed blobs and memdb for metadata. Zstd compression, BLAKE3 deduplication, zero external dependencies.
+- **Import & export** — EML, MBOX (including the Gmail variant), Thunderbird profiles and Outlook PST; MBOX export; WebUI upload; bulk restore back to the source IMAP server.
+- **SMTP receiver** — receive mail at delivery time into local accounts, including mail deleted from the source before the first sync. Tenant-wide journaling is Pro/Enterprise.
+- **Message lifecycle** — tags, remote-content blocking, message repair, source-mailbox cleanup, retention and background batch deletion.
+- **Backup & restore** — incremental, content-addressed backups to S3-compatible storage or a local directory, with per-restore-point manifests and retention.
+- **Access control** — RBAC with custom roles, account-level isolation, MFA/TOTP and scoped API tokens.
+- **Compliance** — audit trail, legal hold, retention locks, GDPR erasure and dual control (Pro/Enterprise).
+- **Interfaces** — WebUI in 19 languages, OpenAPI 3.0 at `/api-docs`, plus `bichon-cli` and `bichon-admin`.
+- **Deployment** — a single Rust binary or Docker image; no external database, search engine or message queue.
 
+> **Community vs Pro/Enterprise:** attachment content search, SSO, journaling, the built-in IMAP server, analytics and the compliance workflows are commercial features. See [Editions](https://bichon.rustmailer.com/docs/editions) for the full comparison.
 
 ## Quick Start
 
-### Docker (Recommended)
-
 ```bash
+<<<<<<< HEAD
 # Pull the image
 docker pull ghcr.io/birdrock00/havanese-bichon-sso:latest
+=======
+docker pull ghcr.io/birdrock00/havanese-bichon-sso:latest
+>>>>>>> upstream/main
 
-# Create data directory
 mkdir -p ./bichon-data
 
-# Run container
 docker run -d \
   --name bichon \
   -p 15630:15630 \
@@ -132,11 +101,12 @@ docker run -d \
   ghcr.io/birdrock00/havanese-bichon-sso:latest
 ```
 
-Open **[http://localhost:15630](http://localhost:15630)** in your browser.
+Open **[http://localhost:15630](http://localhost:15630)**.
 
 > [!IMPORTANT]
 > Default login: username `admin`, password `admin@bichon`. **Change this immediately** via Settings → Profile.
 
+<<<<<<< HEAD
 ### Docker Compose
 
 ```yaml
@@ -832,24 +802,49 @@ Rules:
 - Rebase before submitting — squash WIP/fixup commits into a clean, logical sequence.
 - No vague messages like `update`, `fix bug`, `wip`.
 
+=======
+Docker Compose, binary installation, source builds and the full setup guide are in **[Quick Start](https://bichon.rustmailer.com/docs/quick-start)**.
+
+## Documentation
+
+Full documentation lives at **[bichon.rustmailer.com/docs](https://bichon.rustmailer.com/docs)**.
+
+| Topic | Guides |
+|---|---|
+| Install & configure | [Quick Start](https://bichon.rustmailer.com/docs/quick-start) · [Configuration](https://bichon.rustmailer.com/docs/configuration) |
+| Accounts & sync | [Account Setup](https://bichon.rustmailer.com/docs/account-setup) · [Accounts](https://bichon.rustmailer.com/docs/accounts) · [Archive Filters](https://bichon.rustmailer.com/docs/archive-filters) · [Source Cleanup](https://bichon.rustmailer.com/docs/source-cleanup) |
+| Search & messages | [Search](https://bichon.rustmailer.com/docs/search) · [Batch Deletion](https://bichon.rustmailer.com/docs/batch-delete) · [Message Repair](https://bichon.rustmailer.com/docs/message-repair) |
+| Users & security | [Authentication](https://bichon.rustmailer.com/docs/authentication) · [Users & Access](https://bichon.rustmailer.com/docs/users-access) |
+| Import, export & CLI | [Import & Export](https://bichon.rustmailer.com/docs/import-export) · [CLI Tools](https://bichon.rustmailer.com/docs/cli-tools) · [SMTP Receiver](https://bichon.rustmailer.com/docs/smtp-receiver) |
+| Operations | [Storage & Backup](https://bichon.rustmailer.com/docs/storage-backup) · [Monitoring](https://bichon.rustmailer.com/docs/monitoring) · [Migration](https://bichon.rustmailer.com/docs/migration) · [FAQ](https://bichon.rustmailer.com/docs/faq) |
+| Architecture & API | [Architecture](https://bichon.rustmailer.com/docs/architecture) · [Content Deduplication](https://bichon.rustmailer.com/docs/content-deduplication) · [API Reference](https://bichon.rustmailer.com/docs/api-reference) |
+| Editions & licensing | [Editions](https://bichon.rustmailer.com/docs/editions) · [Licensing](https://bichon.rustmailer.com/docs/licensing) |
+| Pro & Enterprise | [Analytics](https://bichon.rustmailer.com/docs/pro/analytics) · [SSO](https://bichon.rustmailer.com/docs/pro/sso) · [Journaling](https://bichon.rustmailer.com/docs/pro/journaling) · [MCP](https://bichon.rustmailer.com/docs/pro/mcp) · [Legal Hold](https://bichon.rustmailer.com/docs/enterprise/legal-hold) · [Dual Control](https://bichon.rustmailer.com/docs/enterprise/dual-control) |
+| Contributing | [Contributing](https://bichon.rustmailer.com/docs/contributing) |
+>>>>>>> upstream/main
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| **Backend** | Rust, Tokio, Poem + Poem OpenAPI |
-| **Full-text search** | Tantivy (Zstd compression) |
-| **Blob storage** | bichon-blob (log-structured, Zstd compression, BLAKE3 dedup) |
-| **Metadata DB** | memdb (embedded key-value store with WAL) |
-| **IMAP** | async-imap, rustls (ring), SOCKS5 proxy support |
-| **SMTP** | Embedded receiver (AUTH PLAIN/LOGIN, STARTTLS/TLS) |
-| **Cryptography** | AES-256-GCM (ring), BLAKE3 (content hashing) |
-| **Frontend** | React 18, TypeScript, Vite 6, ShadCN UI, TanStack Router/Query/Table |
-| **Charts** | Recharts |
-| **i18n** | i18next (18 languages) |
-| **Container** | Ubuntu 24.04, Docker |
+Rust (Tokio, Poem, Tantivy, bichon-blob, memdb) on the backend; React, TypeScript and Vite in the WebUI. See [Architecture](https://bichon.rustmailer.com/docs/architecture) for the design.
+
+## Roadmap
+
+Planned work is tracked in [GitHub Issues](https://github.com/birdrock00/havanese-bichon-sso/issues). Priorities come from the annual [user survey](https://docs.google.com/forms/d/e/1FAIpQLScOlwsiUMfyQPBCLW2MLkygdRmAutEgvXDYPzzvEGPz0HFPXQ/viewform).
+
+## Contributing
+
+Contributions of all kinds are welcome. Read the [Contributing guide](https://bichon.rustmailer.com/docs/contributing) first; by submitting a Pull Request you agree to the terms of the [Contributor License Agreement](CLA.md).
+
+- Open an issue before starting a new feature or a large fix.
+- Keep each PR to one logical change, and include tests for new or fixed behavior.
+- Join the [Discord](https://discord.gg/Bq4M2cDmF4) for questions and design discussions.
 
 ## License
 
+<<<<<<< HEAD
 havanese-bichon-sso is licensed under the [GNU Affero General Public License v3.0](LICENSE).
 Copyright &copy; 2025–2026 [rustmailer.com](https://rustmailer.com)
+=======
+havanese-bichon-sso is licensed under the [GNU Affero General Public License v3.0](LICENSE).
+Copyright &copy; 2025–2026 [rustmailer.com](https://rustmailer.com)
+>>>>>>> upstream/main

@@ -57,6 +57,13 @@ export type ApprovalStatus =
  *  renders *this*, not that. */
 export type ApprovalTarget =
   | { kind: 'accounts'; account_ids: number[] }
+  | {
+      kind: 'hold_case'
+      account_id: number
+      hold_id: string
+      /** Operator matter reference, when one was recorded. */
+      case_ref?: string | null
+    }
   | { kind: 'users'; user_ids: number[] }
   | {
       kind: 'mailbox'
@@ -68,8 +75,20 @@ export type ApprovalTarget =
     }
   | {
       kind: 'messages'
+      /** Inline set; empty when the ids were externalized to a detail file. */
       by_account: Record<string, string[]>
       messages: number
+      /** Accounts covered, present even when `by_account` is empty. */
+      account_ids?: number[]
+      /** Per-account frozen counts; present even when the ids themselves are
+       *  externalized to a detail file. */
+      account_counts?: { account_id: number; count: number }[]
+      /** The filter a `batch-delete` request was selected by. */
+      filter?: Record<string, unknown>
+      /** Detail-file reference; the ids themselves are not in the ledger. */
+      detail_file?: string
+      detail_sha256?: string
+      detail_bytes?: number
     }
   | {
       kind: 'token'
@@ -95,6 +114,16 @@ export type ApprovalTarget =
       /** Approximate, from the export preview the requester saw. */
       messages: number
       size_bytes: number
+    }
+  | {
+      kind: 'retention'
+      account_id: number
+      /** `null` means disabled (no maximum age). */
+      retention_days_before: number | null
+      retention_days_after: number | null
+      /** `null` means no deletion lock. */
+      min_retention_days_before: number | null
+      min_retention_days_after: number | null
     }
   | {
       kind: 'erasure'
@@ -141,6 +170,9 @@ export interface ApprovalRequest {
    *  an override means the second signature was waived, and a reader cannot
    *  infer that from the user fields alone. */
   break_glass_pending_hours?: number | null
+  /** The batch-deletion job this request started, once it has run. `null`
+   *  while pending and for operations that never create a job. */
+  job_id?: string | null
 }
 
 /** Per-account outcome of a hold release. Has no `kind` discriminator — it is
@@ -183,6 +215,14 @@ export type ApprovalOutcomeItem =
       account_id: number
       requested: number
       deleted: number
+      ok: boolean
+      error?: string | null
+    }
+  | {
+      kind: 'retention'
+      account_id: number
+      retention_days: number | null
+      min_retention_days: number | null
       ok: boolean
       error?: string | null
     }
@@ -335,14 +375,29 @@ export async function break_glass_request(
   return data
 }
 
-/** Account ids that already have a pending *hold release* (the server filters
- *  by op), so the legal-hold console can badge those rows instead of letting an
- *  operator queue them twice. */
-export async function list_pending_account_ids(): Promise<number[]> {
-  const { data } = await axiosInstance.get<{ account_ids: number[] }>(
+/**
+ * Everything the legal-hold console needs to avoid queueing a release twice.
+ *
+ * `account_ids` covers every account touched by a pending release (for the
+ * badge). `account_release_ids` is the subset with an account-level release
+ * pending (blocks every case); `hold_ids` is the case-level releases pending
+ * (blocks one row, so a second matter on the same account stays actionable).
+ */
+export interface PendingReleaseTargets {
+  account_ids: number[]
+  account_release_ids: number[]
+  hold_ids: string[]
+}
+
+export async function list_pending_release_targets(): Promise<PendingReleaseTargets> {
+  const { data } = await axiosInstance.get<PendingReleaseTargets>(
     'api/v1/approvals/pending-accounts'
   )
-  return data.account_ids
+  return {
+    account_ids: data.account_ids ?? [],
+    account_release_ids: data.account_release_ids ?? [],
+    hold_ids: data.hold_ids ?? [],
+  }
 }
 
 export async function get_approval_config(): Promise<ApprovalConfig> {

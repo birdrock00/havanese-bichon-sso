@@ -16,9 +16,11 @@ use tantivy::{indexer::NoMergePolicy, Index, IndexWriter, TantivyDocument};
 use uuid::Uuid;
 
 use bichon_core::{
-    account::migration::AccountModel,
     common::AddrVec,
-    envelope::extractor::{compute_thread_id, generate_message_id, resolve_sender},
+    envelope::extractor::{
+        attachment_parts, compute_thread_id, first_body_html, first_body_text,
+        generate_message_id, resolve_sender,
+    },
     archive::imap::stable_uid::AccountUidAssigner,
     error::{code::ErrorCode, BichonResult},
     raise_error,
@@ -212,20 +214,17 @@ impl NewIndexWriterV2 {
             .parse(eml_bytes)
             .ok_or_else(|| raise_error!("failed to parse eml".into(), ErrorCode::InternalError))?;
 
-        if message.parts.is_empty() {
+        if message.parts().next().is_none() {
             return Err(raise_error!(
                 "Malformed or completely empty EML (no parts found)".into(),
                 ErrorCode::InternalError
             ));
         }
         // ── text / preview ────────────────────────────────────────────────
-        let text = message
-            .body_text(0)
-            .map(|c| c.into_owned())
+        let text = first_body_text(&message)
             .or_else(|| {
-                message
-                    .body_html(0)
-                    .map(|html| bichon_core::utils::html::extract_text(html.as_ref()))
+                first_body_html(&message)
+                    .map(|html| bichon_core::utils::html::extract_text(&html))
             })
             .unwrap_or_default();
         let text = bichon_core::utils::normalize_whitespace(&text);
@@ -241,7 +240,9 @@ impl NewIndexWriterV2 {
             .map(String::from)
             .unwrap_or_else(generate_message_id);
 
-        let in_reply_to = message.in_reply_to().as_text().map(String::from);
+        let in_reply_to = message
+            .in_reply_to()
+            .and_then(|list| list.last().map(String::from));
         let references = extract_references(&message);
         let thread_id = compute_thread_id(in_reply_to, references, &message_id);
 
@@ -253,7 +254,7 @@ impl NewIndexWriterV2 {
             internal_date
         };
 
-        let parse_addrs = |addrs: Option<&mail_parser::Address<'_>>| {
+        let parse_addrs = |addrs: Option<mail_parser::AddressList<'_>>| {
             addrs
                 .map(|addr| {
                     AddrVec::from(addr)
@@ -265,13 +266,13 @@ impl NewIndexWriterV2 {
                 .unwrap_or_default()
         };
 
-        let account = AccountModel::get(account_id).ok();
-        let sender = resolve_sender(
-            &message,
-            account
-                .as_ref()
-                .and_then(|a| a.override_from_headers.as_deref()),
-        );
+        // Offline migration never applies account sender-override rules: a
+        // v0.3.7 account predates `override_from_headers` (the migration
+        // converts every account with the field set to `None`). Reading the
+        // account here through `AccountModel` would lazily initialise the
+        // global `DB_MANAGER`, whose Tokio workers panic in `bichon-admin`'s
+        // interactive menu — that menu runs without a Tokio runtime.
+        let sender = resolve_sender(&message, None);
         let from = sender
             .address
             .clone()
@@ -358,7 +359,7 @@ impl NewIndexWriterV2 {
             ingest_at: now,
             size: eml_bytes.len() as u32,
             thread_id,
-            attachment_count: message.attachment_count(),
+            attachment_count: attachment_parts(&message).count(),
             regular_attachment_count: attachment_docs.len(),
             tags: None,
             account_email: None,
@@ -644,32 +645,17 @@ mod tests {
         .into_bytes()
     }
 
-    /// `ingest` derefs the core `SETTINGS` global (via the stable-UID
-    /// counter). Under `cargo test` that LazyLock parses argv, which has no
-    /// `--bichon-root-dir`, and its env-only fallback then exits the whole
-    /// test process. Seed the environment first — same convention as the
-    /// core DB tests (see `account::state::tests::init_test_env`).
-    fn init_settings_env() {
-        use std::sync::Once;
-        static TEST_ENV: Once = Once::new();
-        TEST_ENV.call_once(|| {
-            let root = std::env::temp_dir()
-                .join("bichon-admin-test-settings")
-                .join(uuid::Uuid::new_v4().to_string());
-            std::fs::create_dir_all(&root).unwrap();
-            std::env::set_var("BICHON_ROOT_DIR", &root);
-            std::env::set_var("BICHON_ENCRYPT_PASSWORD", "test-password");
-            let _ = &*bichon_core::settings::cli::SETTINGS;
-        });
-    }
-
     /// The v0.3.7 migration writes documents by hand, so it is the one ingest
     /// path that does not go through the extractor. It must still give every
     /// document a distinct stable UID and leave the account counter above them —
     /// otherwise the first post-migration ingest would reissue a number.
-    #[tokio::test]
-    async fn ingest_assigns_distinct_stable_uids_and_persists_the_counter() {
-        init_settings_env();
+    ///
+    /// Deliberately a plain `#[test]`, not `#[tokio::test]`: `bichon-admin`'s
+    /// interactive menu runs the migration without a Tokio runtime, so touching
+    /// the global `DB_MANAGER` here (whose workers call `tokio::spawn`) would
+    /// panic in production. Keeping this test runtime-free guards that.
+    #[test]
+    fn ingest_assigns_distinct_stable_uids_and_persists_the_counter() {
         let root = temp_root("uids");
         let account_id = 1u64;
         let mut writer = NewIndexWriterV2::open(new_dirs(&root)).expect("open writer");

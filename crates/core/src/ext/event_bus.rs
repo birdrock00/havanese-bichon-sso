@@ -64,6 +64,12 @@ pub enum Event {
         subject: Option<String>,
         /// Snapshot of the deleted message (attachment names, from/to, ...).
         snapshot: Option<EventPayload>,
+        /// The job that performed the deletion, when it was a batch job.
+        job_id: Option<String>,
+        /// The search filter the job was created with. Recorded so the audit
+        /// trail answers "under which selection was this deleted", not only
+        /// "which messages disappeared".
+        filter: Option<crate::message::search::EmailSearchFilter>,
     },
     /// A large delete batch whose per-message detail was externalized to a
     /// detail file instead of N `email.deleted` records. The row carries the
@@ -85,6 +91,39 @@ pub enum Event {
         detail_size: u64,
         /// SHA-256 of the detail file, bound into the audit hash chain.
         detail_sha256: String,
+        /// The job that produced this batch.
+        job_id: Option<String>,
+        /// The search filter the job was created with. The detail file lists
+        /// *what* was deleted; this records *why that set existed*.
+        filter: Option<crate::message::search::EmailSearchFilter>,
+    },
+    /// The scheduled retention sweep permanently purged messages. Emitted
+    /// once per account per sweep (never per message): a GoBD auditor needs
+    /// the policy value and the cutoff, plus a way to resolve the exact ids.
+    RetentionPurged {
+        account_id: u64,
+        /// Messages removed in this sweep.
+        count: u64,
+        /// Effective cutoff: messages older than this were eligible.
+        cutoff_ms: i64,
+        /// The maximum-retention window that produced the cutoff.
+        window_days: u64,
+        /// Optional JSONL detail file listing the purged envelope ids. Absent
+        /// when audit detail is not configured (community) or the write failed.
+        detail_file: Option<String>,
+        detail_size: Option<u64>,
+        detail_sha256: Option<String>,
+    },
+    /// An account's retention policy changed. Recorded separately from the
+    /// generic `account.updated` row because the before/after values are the
+    /// evidence: "who shortened the retention window, and from what".
+    RetentionPolicyChanged {
+        user: String,
+        account_id: u64,
+        retention_days_before: Option<u64>,
+        retention_days_after: Option<u64>,
+        min_retention_days_before: Option<u64>,
+        min_retention_days_after: Option<u64>,
     },
     /// Raw EML file downloaded (export).
     EmailExported {
@@ -143,11 +182,13 @@ pub enum Event {
         account_id: u64,
         reason: String,
     },
-    /// A blob repair re-fetched the message from IMAP and rewrote missing
-    /// email or attachment blobs in place, keeping the envelope id. Emitted
-    /// for every outcome the repair reports, `failed` included: an attempt
-    /// to rewrite archived content is worth recording even when the fetched
-    /// bytes did not match and nothing was written.
+    /// A repair re-fetched the message from IMAP when its archived blobs were
+    /// missing or unreadable, and/or rebuilt the index document from the
+    /// archived EML when its presentation fields were wrong — both in place,
+    /// keeping the envelope id. Emitted for every outcome the repair reports,
+    /// `failed` included: an attempt to rewrite archived content is worth
+    /// recording even when the fetched bytes did not match and nothing was
+    /// written.
     EmailRepaired {
         email_id: String,
         user: String,
@@ -156,10 +197,12 @@ pub enum Event {
         account_id: u64,
         mailbox_id: u64,
         subject: String,
-        /// `complete` (nothing was missing), `repaired`, `partial` or `failed`.
+        /// `complete` (nothing was wrong), `repaired`, `partial` or `failed`.
         status: String,
         email_missing_before: bool,
         email_missing_after: bool,
+        /// Whether the envelope document was re-derived from the archived EML.
+        index_updated: bool,
         /// How many attachment blobs were suspected missing before / after.
         missing_before: usize,
         missing_after: usize,
@@ -394,6 +437,9 @@ pub enum Event {
     SsoLogout {
         user: String,
     },
+    /// Pro/Enterprise: an admin changed the OIDC SSO configuration from the
+    /// WebUI. The client secret is never part of the event.
+    SsoConfigUpdated { user: String },
     LicenseUploaded {
         user: String,
         email: String,
@@ -457,6 +503,10 @@ pub enum Event {
         user: String,
         export_id: String,
         saved_search_id: String,
+        /// The saved search's name, or the caller's label for an ad-hoc
+        /// export (e.g. "All images"). Empty `saved_search_id` plus a name is
+        /// how an ad-hoc export reads in the audit trail.
+        saved_search_name: String,
         format: String,
         account_count: u64,
         email_count: u64,
@@ -466,6 +516,7 @@ pub enum Event {
         user: String,
         export_id: String,
         saved_search_id: String,
+        saved_search_name: String,
         exported: u64,
         failed: u64,
         artifact_size: u64,
@@ -488,6 +539,7 @@ pub enum Event {
         user: String,
         export_id: String,
         saved_search_id: String,
+        saved_search_name: String,
         error: String,
     },
     /// A batch export job was cancelled by its owner.
@@ -539,6 +591,9 @@ pub enum Event {
         ip: Option<IpAddr>,
         reason: String,
     },
+    /// Enterprise: an admin changed the LDAP/AD configuration from the WebUI.
+    /// The service-account password is never part of the event.
+    LdapConfigUpdated { user: String },
     /// The SIEM webhook forwarder gave up on a batch after exhausting its
     /// retries (Enterprise). The cursor is NOT advanced, so the batch is
     /// retried on the next cycle (at-least-once delivery).

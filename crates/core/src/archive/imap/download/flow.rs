@@ -28,6 +28,7 @@ use crate::{
                 download::rebuild::{rebuild_mailbox_cache, rebuild_mailbox_cache_by_date},
                 find_intersecting_mailboxes, find_missing_mailboxes,
                 mailbox::MailBox,
+                tombstones,
             },
             SEMAPHORE,
         },
@@ -84,6 +85,23 @@ fn incremental_skip_target(
     let next = remote_uid_next?;
     let highest = local_highest?;
     ((next as u64) <= highest as u64 + 1).then_some(highest)
+}
+
+/// Watermark to persist after an incremental round.
+///
+/// `fetch_new_mail` returns `None` when the folder has no new mail, and a
+/// database upgraded from a version that did not store `highest_uid` has no
+/// stored watermark either. The index maximum used to pick the start UID is
+/// then the highest archived UID, i.e. the correct watermark. Returning `None`
+/// instead made reconcile keep `None`, so every later round re-ran the Tantivy
+/// query, re-opened a connection (the UIDNEXT shortcut needs a stored
+/// watermark) and re-logged the fallback warning forever (#411).
+fn incremental_highest_uid(
+    new_max_uid: Option<u32>,
+    stored_highest: Option<u32>,
+    index_max_uid: Option<u32>,
+) -> Option<u32> {
+    new_max_uid.or(stored_highest).or(index_max_uid)
 }
 
 /// Per-round result of [`reconcile_mailboxes`].
@@ -204,6 +222,23 @@ pub async fn fetch_and_save_by_date(
     // sort small -> bigger
     let mut uid_vec: Vec<u32> = uid_list.into_iter().collect();
     uid_vec.sort();
+
+    // Messages deleted locally must stay deleted. This path is reached on a
+    // re-sync (initial date window / UIDVALIDITY change), which would
+    // otherwise fetch the deleted messages again.
+    let uid_vec =
+        tombstones::filter_uids(account.id, mailbox.id, mailbox.uid_validity, uid_vec)?;
+    if uid_vec.is_empty() {
+        DownloadState::update_folder_progress(
+            account_id,
+            mailbox.name.clone(),
+            0,
+            0,
+            FolderStatus::Success,
+            Some("Nothing to download: every candidate was deleted locally.".into()),
+        )?;
+        return Ok(None);
+    }
 
     let max_uid = uid_vec.last().copied();
     let planned = uid_vec.len() as u64;
@@ -440,6 +475,10 @@ pub async fn fetch_and_save_full_mailbox(
     // ascending order (stable while new mail only grows UIDs).
     let mut uid_list: Vec<u32> = uid_list.into_iter().collect();
     uid_list.sort();
+
+    // Locally deleted messages are tombstoned; a full re-sync must not bring
+    // them back.
+    let uid_list = tombstones::filter_uids(account.id, mailbox.id, mailbox.uid_validity, uid_list)?;
 
     let planned = uid_list.len() as u64;
     if planned == 0 {
@@ -1192,6 +1231,19 @@ pub async fn reconcile_mailboxes(
                         summary.failed_folders += 1;
                     }
                 }
+            } else {
+                DownloadState::update_folder_progress(
+                    account.id,
+                    mailbox.name.clone(),
+                    0,
+                    0,
+                    FolderStatus::Success,
+                    None,
+                )?;
+                // Count it, like the incremental path counts an existing
+                // empty folder (#398): a round where one folder failed and one
+                // empty folder completed is Partial, not a total failure.
+                summary.synced_folders += 1;
             }
         }
     }
@@ -1241,6 +1293,9 @@ async fn perform_incremental_sync(
 
         // Use stored highest_uid if available; otherwise fall back to Tantivy
         // query once (backward compatibility with pre-existing databases).
+        // The index maximum doubles as the watermark when this round finds no
+        // new mail, so the fallback does not have to run again next round.
+        let mut index_max_uid: Option<u32> = None;
         let start_uid = match local_mailbox.highest_uid {
             Some(uid) => {
                 info!(
@@ -1259,7 +1314,10 @@ async fn perform_incremental_sync(
                 );
                 let local_max_uid = ENVELOPE_MANAGER.get_max_uid(account.id, local_mailbox.id)?;
                 match local_max_uid {
-                    Some(uid) => uid + 1,
+                    Some(uid) => {
+                        index_max_uid = u32::try_from(uid).ok();
+                        uid + 1
+                    }
                     None => {
                         info!(
                             "No maximum UID found in index for mailbox, assuming local storage is missing."
@@ -1329,9 +1387,23 @@ async fn perform_incremental_sync(
         .await?;
         session.logout().await.ok();
 
-        // Keep existing highest_uid if no new mail was fetched.
-        Ok(new_max_uid.or(local_mailbox.highest_uid))
+        // Keep an existing watermark when no new mail was fetched; for an
+        // upgraded database without one, adopt the index maximum so the
+        // fallback (and its warning) runs once instead of every round.
+        Ok(incremental_highest_uid(
+            new_max_uid,
+            local_mailbox.highest_uid,
+            index_max_uid,
+        ))
     } else {
+        DownloadState::update_folder_progress(
+            account.id,
+            remote_mailbox.name.clone(),
+            0,
+            0,
+            FolderStatus::Success,
+            None,
+        )?;
         Ok(local_mailbox.highest_uid)
     }
 }
@@ -1416,6 +1488,54 @@ mod tests {
         // Server did not report UIDNEXT: sync normally.
         assert_eq!(incremental_skip_target(None, Some(150)), None);
         assert_eq!(incremental_skip_target(None, None), None);
+    }
+
+    // ── Watermark persistence for upgraded databases (#411) ────────
+
+    #[test]
+    fn no_new_mail_adopts_the_index_maximum_as_the_watermark() {
+        // Upgraded database: no stored watermark and the folder has no new
+        // mail. The index maximum is the highest archived UID, so it must be
+        // persisted; returning None made every round repeat the Tantivy
+        // query, the connection and the "no stored highest_uid" warning.
+        assert_eq!(
+            incremental_highest_uid(None, None, Some(13_328)),
+            Some(13_328)
+        );
+    }
+
+    #[test]
+    fn fetched_mail_wins_over_the_fallback() {
+        assert_eq!(
+            incremental_highest_uid(Some(13_330), None, Some(13_328)),
+            Some(13_330)
+        );
+    }
+
+    #[test]
+    fn stored_watermark_wins_over_the_index_maximum() {
+        // The index can be behind (batched commits) or ahead (other archive
+        // paths); a stored watermark is authoritative and must not move.
+        assert_eq!(
+            incremental_highest_uid(None, Some(100), Some(13_328)),
+            Some(100)
+        );
+    }
+
+    #[test]
+    fn no_watermark_inputs_leave_it_unset() {
+        assert_eq!(incremental_highest_uid(None, None, None), None);
+    }
+
+    #[test]
+    fn adopted_index_maximum_enables_the_uidnext_shortcut() {
+        // Once the index maximum is saved, the next round skips the
+        // connection entirely when UIDNEXT has not moved past it.
+        let watermark = incremental_highest_uid(None, None, Some(13_328));
+        assert_eq!(
+            incremental_skip_target(Some(13_329), watermark),
+            Some(13_328)
+        );
     }
 
     // ── Session status mapping (#396) ──────────────────────────────
@@ -1522,6 +1642,124 @@ mod tests {
     fn test_generate_synthetic_uidvalidity_non_zero() {
         let uid = generate_synthetic_uidvalidity("INBOX");
         assert_ne!(uid, 0, "UIDVALIDITY should not be 0 (reserved)");
+    }
+
+    #[tokio::test]
+    async fn test_empty_folder_reconciliation_completes_only_observed_work() {
+        // Reuse upstream's per-process test root; account IDs isolate these cases.
+        let root = crate::test_support::unique_test_root("bichon-core-test");
+        std::env::set_var("BICHON_ROOT_DIR", &root);
+        std::env::set_var("BICHON_ENCRYPT_PASSWORD", "test-password");
+        let _ = &*crate::settings::cli::SETTINGS;
+
+        for (case, existing, cancelled, exists) in [
+            (0, false, false, 0),
+            (1, true, false, 0),
+            (2, false, true, 1),
+            (3, true, true, 1),
+            (4, true, false, 1),
+            (5, false, true, 0),
+            (6, true, true, 0),
+        ] {
+            let account = AccountModel {
+                id: 9_002_011 + case,
+                ..Default::default()
+            };
+            let remote = MailBox {
+                id: account.id,
+                account_id: account.id,
+                name: "Observed".into(),
+                exists,
+                uid_validity: Some(7),
+                ..Default::default()
+            };
+            let local = if existing {
+                vec![MailBox {
+                    highest_uid: Some(42),
+                    ..remote.clone()
+                }]
+            } else {
+                vec![]
+            };
+            DownloadState::init(account.id).await.unwrap();
+            DownloadState::init_folder_details(
+                account.id,
+                vec![remote.name.clone(), "Unvisited".into()],
+            )
+            .unwrap();
+            for (name, status) in [
+                ("Failed", FolderStatus::Failed),
+                ("Cancelled", FolderStatus::Cancelled),
+            ] {
+                DownloadState::update_folder_progress(account.id, name.into(), 0, 0, status, None)
+                    .unwrap();
+            }
+            let token = CancellationToken::new();
+            if cancelled {
+                token.cancel();
+            }
+            // The nonempty failure case has no stored account, so connection
+            // setup fails locally before any network access.
+            let summary = reconcile_mailboxes(&account, &[remote.clone()], &local, token)
+                .await
+                .unwrap();
+            // Since #396 a folder failure is recorded in the summary (which the
+            // caller maps to a Partial/Failed session), not returned as an Err,
+            // so every case returns Ok.
+            assert_eq!(
+                summary.failed_folders,
+                u32::from(exists > 0 && !cancelled),
+                "case {case}"
+            );
+            assert_eq!(
+                summary.synced_folders,
+                u32::from(exists == 0 && !cancelled),
+                "case {case}"
+            );
+            let state = DownloadState::get(account.id).unwrap().unwrap();
+            let session = if cancelled {
+                assert!(state.active_session.is_none());
+                let session = state.history.last().unwrap();
+                assert_eq!(session.status, DownloadStatus::Cancelled);
+                session
+            } else {
+                state.active_session.as_ref().unwrap()
+            };
+            let progress = &session.folder_details[&remote.name];
+            assert_eq!(
+                progress.status,
+                if exists == 0 && !cancelled {
+                    FolderStatus::Success
+                } else {
+                    FolderStatus::Pending
+                },
+                "case {case}, existing={existing}, cancelled={cancelled}"
+            );
+            assert_eq!(
+                (progress.planned, progress.current, &progress.message),
+                (0, 0, &None)
+            );
+            assert_eq!(
+                session.folder_details["Unvisited"].status,
+                FolderStatus::Pending
+            );
+            assert_eq!(
+                session.folder_details["Failed"].status,
+                FolderStatus::Failed
+            );
+            assert_eq!(
+                session.folder_details["Cancelled"].status,
+                FolderStatus::Cancelled
+            );
+            if exists == 0 && !cancelled {
+                assert_eq!(
+                    MailBox::get(remote.id).unwrap().highest_uid,
+                    if existing { Some(42) } else { None }
+                );
+            } else if !cancelled {
+                assert!(!session.errors.is_empty());
+            }
+        }
     }
 
     // ============================================================

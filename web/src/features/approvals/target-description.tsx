@@ -25,6 +25,8 @@
 // sign off on it.
 import { useTranslation } from 'react-i18next'
 import type { ApprovalTarget } from '@/api/approvals/api'
+import { formatBytes } from '@/lib/utils'
+import { accountMessageCounts, filterClauses } from './target-summary'
 
 /** The blast radius, phrased as what will be destroyed.
  *
@@ -37,6 +39,18 @@ export function TargetDescription({ target }: { target: ApprovalTarget }) {
   const { t } = useTranslation()
 
   switch (target.kind) {
+    case 'hold_case':
+      return (
+        <div>
+          <div className='font-medium'>
+            {target.case_ref || target.hold_id}
+          </div>
+          <div className='text-muted-foreground'>
+            {t('legalHold.account', 'Account')} {target.account_id}
+          </div>
+        </div>
+      )
+
     case 'accounts':
       return (
         <div>
@@ -86,7 +100,16 @@ export function TargetDescription({ target }: { target: ApprovalTarget }) {
       )
 
     case 'messages': {
-      const accounts = Object.keys(target.by_account)
+      const counts = accountMessageCounts(target)
+      const accounts =
+        counts.length > 0
+          ? counts.map((c) => String(c.account_id))
+          : (target.account_ids ?? []).map(String)
+      const clauses = filterClauses(target.filter)
+      const frozenBytes =
+        typeof target.detail_bytes === 'number' && target.detail_bytes > 0
+          ? target.detail_bytes
+          : null
       return (
         <div>
           <div className='font-medium'>
@@ -104,6 +127,36 @@ export function TargetDescription({ target }: { target: ApprovalTarget }) {
               }
             )}
           </div>
+          {counts.length > 0 && (
+            <ul className='mt-1 space-y-0.5 text-xs text-muted-foreground'>
+              {counts.map((c) => (
+                <li key={c.account_id}>
+                  {t(
+                    'approvals.targetMessagesAccountLine',
+                    'Account {{account}}: {{count}} message(s)',
+                    { account: c.account_id, count: c.count }
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {clauses.length > 0 && (
+            <div className='mt-1 text-xs text-muted-foreground'>
+              <span>{t('approvals.targetMessagesFilter', 'Search filter')}: </span>
+              <code className='break-all'>
+                {clauses.map((c) => `${c.field}: ${c.value}`).join('; ')}
+              </code>
+            </div>
+          )}
+          {frozenBytes !== null && (
+            <div className='mt-1 text-xs text-muted-foreground'>
+              {t(
+                'approvals.targetMessagesFrozen',
+                'The exact ids are frozen in a detail file ({{size}}). Mail that arrives after the request was made is NOT included.',
+                { size: formatBytes(frozenBytes) }
+              )}
+            </div>
+          )}
         </div>
       )
     }
@@ -119,6 +172,34 @@ export function TargetDescription({ target }: { target: ApprovalTarget }) {
           </div>
         </div>
       )
+
+    case 'retention': {
+      const days = (value: number | null) =>
+        value === null
+          ? t('approvals.retentionOff', 'off')
+          : t('approvals.retentionDays', '{{count}} days', { count: value })
+      return (
+        <div>
+          <div className='font-medium'>
+            {t('approvals.targetRetention', 'Retention policy — account {{account}}', {
+              account: target.account_id,
+            })}
+          </div>
+          <div className='text-muted-foreground'>
+            {t('approvals.retentionMax', 'Maximum retention: {{before}} → {{after}}', {
+              before: days(target.retention_days_before),
+              after: days(target.retention_days_after),
+            })}
+          </div>
+          <div className='text-muted-foreground'>
+            {t('approvals.retentionLock', 'Deletion lock: {{before}} → {{after}}', {
+              before: days(target.min_retention_days_before),
+              after: days(target.min_retention_days_after),
+            })}
+          </div>
+        </div>
+      )
+    }
 
     case 'erasure': {
       const accounts = Object.keys(target.by_account)
