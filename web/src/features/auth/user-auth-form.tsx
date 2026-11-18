@@ -148,14 +148,22 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   // used to be visible only in the server log: the page offered the button
   // and sent the user to a raw error page. The server caches the probe, so
   // this is one cheap request per page load.
+  //
+  // Fork note: GET api/auth/oidc/status is only compiled into the Pro server
+  // (neither this fork nor public upstream ships the route). On the fork's
+  // community OIDC the request falls through to the SPA fallback and answers
+  // 200 with index.html, so `available` is undefined and the button would be
+  // disabled on every login. Probe only where the answer is real, and never
+  // let a missing answer block the fork's env-configured SSO.
   const { data: ssoStatus } = useQuery({
     queryKey: ['sso-status'],
     queryFn: get_sso_status,
-    enabled: ssoEnabled,
+    enabled: isPro && ssoEnabled,
     staleTime: 30_000,
     retry: 0,
   })
-  const ssoUnavailable = ssoStatus !== undefined && !ssoStatus.available
+  const ssoUnavailable =
+    isPro && ssoStatus !== undefined && !ssoStatus.available
 
   // The OIDC callback redirects back here with ?oidc_error=<code>. Surface it
   // once and strip it from the URL so a refresh does not repeat the toast.
