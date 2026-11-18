@@ -21,6 +21,7 @@ import {
   HTMLAttributes,
   forwardRef,
   useEffect,
+  useMemo,
   useState,
   type ComponentProps,
   type ReactNode,
@@ -134,7 +135,22 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const { search } = useLocation();
-  const searchParams = toSearchParams(search);
+  // The fork's three sign-in params (`redirect`, `local`, `sso_error`) are not
+  // declared in a route `validateSearch`, and the router hands the component an
+  // empty search object on an initial hard load in that case. Every path that
+  // matters IS a hard load: the OIDC callback and the server's error bounce are
+  // full-page redirects, and `?local=1` / `?redirect=/x` are typed or linked
+  // from outside the app. Merge the raw query in as a fallback so those loads
+  // behave like in-app navigation (which still wins, since `search` has the
+  // params then). Same source upstream already uses for `oidc_error`.
+  const searchParams = useMemo(() => {
+    const params = toSearchParams(search)
+    const raw = new URLSearchParams(window.location.search)
+    for (const key of ['redirect', 'local', 'sso_error'] as const) {
+      if (!params.has(key) && raw.has(key)) params.set(key, raw.get(key) ?? '')
+    }
+    return params
+  }, [search])
   const redirect = searchParams.get('redirect') || '/';
   const localOnly = searchParams.get('local') === '1';
   const ssoError = searchParams.get('sso_error');
