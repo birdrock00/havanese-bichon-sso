@@ -34,14 +34,10 @@ import { FixedHeader } from '@/components/layout/fixed-header'
 import { Main } from '@/components/layout/main'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import SearchProvider, { SearchDialogType } from '@/features/search/context'
+import SearchProvider, {
+  SearchDialogType,
+  SelectAllScope,
+} from '@/features/search/context'
 import { EnvelopeDeleteDialog } from '@/features/search/delete-dialog'
 import { MailBoxDeleteDialog } from '@/features/search/delete-mailbox-dialog'
 import { EditTagsDialog } from '@/features/search/edit-tag-dialog'
@@ -49,6 +45,7 @@ import { MailDisplayDrawer } from '@/features/search/mail-display-dialog'
 import { RestoreMessageDialog } from '@/features/search/restore-message-dialog'
 import { RepairMessageDialog } from '@/features/repair/repair-message-dialog'
 
+import { AccountPicker } from './account-picker'
 import { FolderTree } from './folder-tree'
 import { MessageList } from './message-list'
 import { MessagePagination } from './message-pagination'
@@ -315,9 +312,12 @@ export default function MailboxView() {
   const [selected, setSelected] = React.useState<Map<number, Set<string>>>(
     new Map()
   )
+  // The mailbox view has no cross-page scope; the field exists so both views
+  // can share the search context type.
+  const [selectAllScope, setSelectAllScope] =
+    React.useState<SelectAllScope | null>(null)
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [editTagsOpen, setEditTagsOpen] = React.useState(false)
-  const [repairHistoryOpen, setRepairHistoryOpen] = React.useState(false)
   const [deleteMailboxId, setDeleteMailboxId] = React.useState<
     string | undefined
   >(undefined)
@@ -355,6 +355,8 @@ export default function MailboxView() {
             setToDelete,
             selected,
             setSelected,
+            selectAllScope,
+            setSelectAllScope,
             sorting,
             setSorting,
             filter: dialogFilter,
@@ -369,8 +371,6 @@ export default function MailboxView() {
             handleTagToggle: () => {},
             editTagsOpen,
             setEditTagsOpen,
-            repairHistoryOpen,
-            setRepairHistoryOpen,
             dateDisplay,
             setDateDisplay,
           }}
@@ -411,29 +411,14 @@ export default function MailboxView() {
                   <div className="flex min-w-0 items-center justify-between gap-2 overflow-hidden">
                     <div className="flex min-w-0 items-center gap-2">
                       {!canShowSidebar && (
-                        <Select
-                          value={
-                            activeAccountId !== undefined
-                              ? String(activeAccountId)
-                              : undefined
-                          }
-                          onValueChange={(value) => selectAccount(Number(value))}
-                        >
-                          <SelectTrigger className="h-7 w-[180px] text-xs">
-                            <SelectValue placeholder={t('mailboxView.selectAccount')} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {accounts.map((account) => (
-                              <SelectItem
-                                key={account.id}
-                                value={String(account.id)}
-                                className="text-xs"
-                              >
-                                {account.name || account.email}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="w-[180px] shrink-0">
+                          <AccountPicker
+                            accounts={accounts}
+                            value={activeAccountId}
+                            onChange={selectAccount}
+                            className="h-7 w-full text-xs font-normal"
+                          />
+                        </div>
                       )}
                       <span className="truncate text-xs font-medium">
                         {folderName}

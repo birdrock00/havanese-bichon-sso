@@ -78,7 +78,7 @@ use tantivy::{
         AllQuery, BooleanQuery, EmptyQuery, ExistsQuery, Occur, Query, RangeQuery, RegexQuery,
         TermQuery,
     },
-    schema::{IndexRecordOption, Value},
+    schema::{Field, IndexRecordOption, Value},
     DocAddress, Index, IndexReader, IndexWriter, Order, TantivyDocument, Term,
 };
 use tantivy::{schema::Facet, Searcher};
@@ -106,6 +106,38 @@ pub struct EnvelopeSnapshot {
     /// Epoch millis (internal date).
     pub internal_date: i64,
     //pub subject: String,
+}
+
+/// The source-side identity of one archived message, read right before a
+/// delete so the tombstone store can remember it. `uid` is the IMAP UID on
+/// the source mailbox (0 for messages that never came from IMAP).
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct SourceRef {
+    pub envelope_id: String,
+    pub mailbox_id: u64,
+    pub uid: u32,
+    /// RFC 5322 Date header, epoch millis (0 = unknown).
+    pub date: i64,
+    /// IMAP INTERNALDATE / import time, epoch millis (0 = unknown).
+    pub internal_date: i64,
+}
+
+/// One message removed by the retention sweep, captured before the index
+/// document disappears so the purge can be audited and tombstoned.
+#[derive(Clone, Debug, Default)]
+pub struct RetentionDeletedRow {
+    pub envelope_id: String,
+    pub mailbox_id: u64,
+    pub uid: u32,
+    pub date: i64,
+    pub internal_date: i64,
+}
+
+/// What one retention purge removed.
+#[derive(Clone, Debug, Default)]
+pub struct RetentionPurge {
+    pub purged: u64,
+    pub rows: Vec<RetentionDeletedRow>,
 }
 
 /// The local proof a cleanup candidate is built from: both the Message-ID and
@@ -547,6 +579,143 @@ impl IndexManager {
             });
         }
         Ok(snapshots)
+    }
+
+    /// Enumerate every envelope id matching the filter, paired with its source
+    /// account. Used by the asynchronous batch-delete worker: it deliberately
+    /// does not materialize `Envelope` values, whose converter looks up the
+    /// account and mailbox rows for every hit.
+    pub fn search_ids(
+        &self,
+        scope: Option<Vec<ViewScopeGroup>>,
+        mut filter: EmailSearchFilter,
+    ) -> BichonResult<Vec<(u64, String)>> {
+        if scope.is_some() {
+            // Same rule as `search_scoped`: the scope already encodes the
+            // account constraint, and a view id here would match nothing.
+            filter.account_ids = None;
+        }
+        let query = self.filter_query(scope.as_deref(), filter)?;
+        let searcher = self.create_searcher()?;
+        let fields = SchemaTools::email_fields();
+        let docs = searcher
+            .search(&query, &DocSetCollector)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        let mut out = Vec::with_capacity(docs.len());
+        for doc_address in docs {
+            let doc = searcher
+                .doc::<TantivyDocument>(doc_address)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            let account_id = doc
+                .get_first(fields.f_account_id)
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let envelope_id = doc
+                .get_first(fields.f_id)
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            if account_id != 0 && !envelope_id.is_empty() {
+                out.push((account_id, envelope_id));
+            }
+        }
+        Ok(out)
+    }
+
+    /// Source identities for a batch of envelope ids inside one account.
+    ///
+    /// One query for the whole batch: the delete path already runs per-id
+    /// index work, and one term per id is cheaper than a query per id.
+    pub fn get_source_refs(
+        &self,
+        account_id: u64,
+        ids: &[String],
+    ) -> BichonResult<Vec<SourceRef>> {
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let fields = SchemaTools::email_fields();
+        let id_queries: Vec<(Occur, Box<dyn Query>)> = ids
+            .iter()
+            .map(|id| {
+                (
+                    Occur::Should,
+                    Box::new(TermQuery::new(
+                        Term::from_field_text(fields.f_id, id),
+                        IndexRecordOption::Basic,
+                    )) as Box<dyn Query>,
+                )
+            })
+            .collect();
+        let account_query = TermQuery::new(
+            Term::from_field_u64(fields.f_account_id, account_id),
+            IndexRecordOption::Basic,
+        );
+        let query = BooleanQuery::new(vec![
+            (Occur::Must, Box::new(account_query) as Box<dyn Query>),
+            (Occur::Must, Box::new(BooleanQuery::new(id_queries))),
+        ]);
+
+        let searcher = self.create_searcher()?;
+        let docs = searcher
+            .search(&query, &DocSetCollector)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        let mut out = Vec::with_capacity(docs.len());
+        for doc_address in docs {
+            let doc = searcher
+                .doc::<TantivyDocument>(doc_address)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            let envelope_id = doc
+                .get_first(fields.f_id)
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            if envelope_id.is_empty() {
+                continue;
+            }
+            out.push(SourceRef {
+                envelope_id,
+                mailbox_id: doc
+                    .get_first(fields.f_mailbox_id)
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                uid: doc
+                    .get_first(fields.f_uid)
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0) as u32,
+                date: doc
+                    .get_first(fields.f_date)
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0),
+                internal_date: doc
+                    .get_first(fields.f_internal_date)
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0),
+            });
+        }
+        Ok(out)
+    }
+
+    /// Messages among `ids` whose effective date is still inside the
+    /// minimum-retention window. A message with no usable timestamp at all is
+    /// treated as locked: without a date there is no proof it is old enough.
+    pub fn min_retention_locked_ids(
+        &self,
+        account_id: u64,
+        ids: &[String],
+        cutoff_ms: i64,
+    ) -> BichonResult<Vec<String>> {
+        let refs = self.get_source_refs(account_id, ids)?;
+        Ok(refs
+            .into_iter()
+            .filter(|r| {
+                crate::retention::effective_date_ms(r.date, r.internal_date)
+                    .is_none_or(|date| date >= cutoff_ms)
+            })
+            .map(|r| r.envelope_id)
+            .collect())
     }
 
 /// Everything the source-mailbox cleanup needs about one archived message.
@@ -1432,6 +1601,64 @@ impl IndexManager {
         Ok(result)
     }
 
+    /// UIDs archived for `mailbox_id` that fall inside `[from, to]`.
+    ///
+    /// The full-download paths enumerate the whole (date-filtered) mailbox.
+    /// When part of it is already archived — a lost download state, a restore,
+    /// a round that was interrupted after the bodies were stored but before
+    /// the watermark was written — they can ask which UIDs are already present
+    /// and skip re-downloading those bodies, which the content-hash dedup would
+    /// discard anyway. The range query is bounded by the documents in the UID
+    /// interval, not by the mailbox size.
+    pub fn get_uids_in_range(
+        &self,
+        account_id: u64,
+        mailbox_id: u64,
+        from: u32,
+        to: u32,
+    ) -> BichonResult<HashSet<u32>> {
+        let mut uids = HashSet::new();
+        if from > to {
+            return Ok(uids);
+        }
+        let fields = SchemaTools::email_fields();
+        let range = RangeQuery::new(
+            Bound::Included(Term::from_field_u64(fields.f_uid, from as u64)),
+            Bound::Included(Term::from_field_u64(fields.f_uid, to as u64)),
+        );
+        let query = BooleanQuery::new(vec![
+            (
+                Occur::Must,
+                self.mailbox_query(account_id, mailbox_id),
+            ),
+            (Occur::Must, Box::new(range)),
+        ]);
+
+        let searcher = self.create_searcher()?;
+        let docs = searcher
+            .search(&query, &DocSetCollector)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        for address in docs {
+            let doc = searcher
+                .doc::<TantivyDocument>(address)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            if let Some(uid) = doc.get_first(fields.f_uid).and_then(|v| v.as_u64()) {
+                if uid >= from as u64 && uid <= to as u64 {
+                    uids.insert(uid as u32);
+                }
+            }
+        }
+        tracing::debug!(
+            "[account {}][mailbox {}] get_uids_in_range({}, {}) = {} archived",
+            account_id,
+            mailbox_id,
+            from,
+            to,
+            uids.len()
+        );
+        Ok(uids)
+    }
+
     pub fn get_account_stats(&self, account_id: u64) -> BichonResult<AccountStats> {
         let searcher = self.create_searcher()?;
         let query = self.account_query(account_id);
@@ -1588,16 +1815,29 @@ impl IndexManager {
         &self,
         account_id: u64,
         cutoff_ms: i64,
-    ) -> BichonResult<u64> {
-        let count = {
-            let searcher = self.create_searcher()?;
-            searcher
-                .search(&self.retention_purge_query(account_id, cutoff_ms), &Count)
-                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?
-        };
-        if count == 0 {
-            return Ok(0);
+    ) -> BichonResult<RetentionPurge> {
+        // Capture the rows before they disappear: the purge must be auditable
+        // and every IMAP-sourced message needs a tombstone so gap-fill does
+        // not treat it as a failed download.
+        let rows = self.retention_rows(account_id, cutoff_ms)?;
+        if rows.is_empty() {
+            return Ok(RetentionPurge::default());
         }
+
+        // Tombstones must exist before the index documents are gone, or
+        // gap-fill would treat the purged messages as failed downloads. The
+        // writes take the backup gate themselves, so they happen before we
+        // acquire it for the index delete.
+        let mut by_mailbox: std::collections::HashMap<u64, Vec<u32>> =
+            std::collections::HashMap::new();
+        for row in &rows {
+            // uid == 0: imported / SMTP-journal messages have no remote copy.
+            if row.uid != 0 && row.mailbox_id != 0 {
+                by_mailbox.entry(row.mailbox_id).or_default().push(row.uid);
+            }
+        }
+        crate::message::delete::record_tombstones_by_mailbox(account_id, by_mailbox).await?;
+
         let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
 
         let (eml_hashes_with_mailbox, attachments_content_hashes, leafs) = self
@@ -1630,7 +1870,62 @@ impl IndexManager {
         }
 
         crate::ext::timestamp::record_deletions(leafs, crate::utc_now!());
-        Ok(count as u64)
+        Ok(RetentionPurge {
+            purged: rows.len() as u64,
+            rows,
+        })
+    }
+
+    /// The messages a retention purge would remove, with the metadata needed
+    /// for tombstones and the purge audit record.
+    fn retention_rows(
+        &self,
+        account_id: u64,
+        cutoff_ms: i64,
+    ) -> BichonResult<Vec<RetentionDeletedRow>> {
+        let fields = SchemaTools::email_fields();
+        let searcher = self.create_searcher()?;
+        let docs = searcher
+            .search(
+                &self.retention_purge_query(account_id, cutoff_ms),
+                &DocSetCollector,
+            )
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+
+        let mut out = Vec::with_capacity(docs.len());
+        for doc_address in docs {
+            let doc = searcher
+                .doc::<TantivyDocument>(doc_address)
+                .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+            let envelope_id = doc
+                .get_first(fields.f_id)
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            if envelope_id.is_empty() {
+                continue;
+            }
+            out.push(RetentionDeletedRow {
+                envelope_id,
+                mailbox_id: doc
+                    .get_first(fields.f_mailbox_id)
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+                uid: doc
+                    .get_first(fields.f_uid)
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0) as u32,
+                date: doc
+                    .get_first(fields.f_date)
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0),
+                internal_date: doc
+                    .get_first(fields.f_internal_date)
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(0),
+            });
+        }
+        Ok(out)
     }
 
     /// Boolean query matching envelopes of `account_id` whose effective date is
@@ -2086,6 +2381,92 @@ impl IndexManager {
             .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
 
         Ok(())
+    }
+
+    /// Replaces the presentation fields a repair re-derived from the archived
+    /// EML.
+    ///
+    /// Identity, timestamps, tags, cleanup state and attachment metadata are
+    /// copied from the existing document — see [`DerivedFieldOverrides`] for
+    /// the allow-list. This is the index half of `repair-message`: blob
+    /// integrity and document correctness are independent, so a healthy blob
+    /// can still hold a document decoded by a buggy build.
+    ///
+    /// Returns `true` when the document existed and was rewritten.
+    pub async fn update_envelope_derived_fields(
+        &self,
+        account_id: u64,
+        envelope_id: &str,
+        overrides: DerivedFieldOverrides,
+    ) -> BichonResult<bool> {
+        let _write_guard = WRITE_GATE.acquire(BACKUP_ACQUIRE_TIMEOUT).await?;
+
+        // Legal hold: the same reason `update_envelope_tags` refuses metadata
+        // edits — rewriting the document changes what searches return for a
+        // held account. A no-op in the community edition, where holds are off.
+        let account = AccountModel::get(account_id)?;
+        if account.is_on_hold() {
+            return Err(raise_error!(
+                format!(
+                    "Account {} ({}) is under a legal hold; rewriting message metadata is disabled while the hold is active",
+                    account.id, account.email
+                ),
+                ErrorCode::Forbidden
+            ));
+        }
+
+        let f = SchemaTools::email_fields();
+        let searcher = self.create_searcher()?;
+        let query = self.envelope_query(account_id, envelope_id);
+        let docs = searcher
+            .search(query.as_ref(), &TopDocs::with_limit(1).order_by_score())
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        let Some((_, doc_address)) = docs.first() else {
+            return Ok(false);
+        };
+        let old_doc: TantivyDocument = searcher
+            .doc(*doc_address)
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        // `as_facet()` yields the encoded form, which `add_facet` rejects.
+        // Decode through `Facet::from_encoded`, exactly like the tag path.
+        let tags: Vec<String> = old_doc
+            .get_all(f.f_tags)
+            .filter_map(|v| v.as_facet())
+            .filter_map(|encoded| {
+                Facet::from_encoded(encoded.as_bytes().to_vec())
+                    .ok()
+                    .map(|facet| facet.to_string())
+            })
+            .collect();
+        let new_doc = rebuild_envelope_doc_with_overrides(
+            &old_doc,
+            tags,
+            |hash| match BLOB_MANAGER.get_email(hash) {
+                Ok(bytes) => bytes.map(|b| b.to_vec()),
+                Err(e) => {
+                    warn!(
+                        content_hash = hash,
+                        error = %e,
+                        "failed to read EML during derived-field repair"
+                    );
+                    None
+                }
+            },
+            None,
+            None,
+            &overrides,
+        );
+        let mut writer = self.index_writer.lock().await;
+        writer
+            .run([
+                UserOperation::Delete(Term::from_field_text(f.f_id, envelope_id)),
+                UserOperation::Add(new_doc),
+            ])
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        writer
+            .commit()
+            .map_err(|e| raise_error!(format!("{:#?}", e), ErrorCode::InternalError))?;
+        Ok(true)
     }
 
     /// Mark archived messages as moved out of their source mailbox.
@@ -2806,6 +3187,27 @@ impl IndexManager {
     }
 }
 
+/// Presentation fields re-derived from the archived EML by a repair.
+///
+/// This is an explicit allow-list: only fields named here are ever replaced.
+/// Every other stored field — identity (`id`, `uid`, `imap_uid`, `thread_id`,
+/// `content_hash`, `message_id`), timestamps, state (`tags`, `cleanup_moved`),
+/// attachment metadata — is copied verbatim from the existing document.
+/// `None` means "keep the stored value".
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct DerivedFieldOverrides {
+    pub subject: Option<String>,
+    pub preview: Option<String>,
+    pub from: Option<String>,
+    /// Outer `None` keeps the stored value; `Some(None)` clears it (the
+    /// reparsed message has no display name).
+    pub from_name: Option<Option<String>>,
+    /// See [`Self::from_name`].
+    pub wire_from: Option<Option<String>>,
+    /// Re-extracted body text. `None` means "re-extract it from the blob".
+    pub body: Option<String>,
+}
+
 /// Rebuild an envelope document from an existing one, replacing its tags.
 ///
 /// `body_of` supplies the raw EML for a content hash — the live tag-update path
@@ -2827,6 +3229,24 @@ fn rebuild_envelope_doc(
     imap_uid_override: Option<u32>,
     cleanup_moved_override: Option<bool>,
 ) -> TantivyDocument {
+    rebuild_envelope_doc_with_overrides(
+        old_doc,
+        new_tags,
+        body_of,
+        imap_uid_override,
+        cleanup_moved_override,
+        &DerivedFieldOverrides::default(),
+    )
+}
+
+fn rebuild_envelope_doc_with_overrides(
+    old_doc: &TantivyDocument,
+    new_tags: impl IntoIterator<Item = String>,
+    body_of: impl Fn(&str) -> Option<Vec<u8>>,
+    imap_uid_override: Option<u32>,
+    cleanup_moved_override: Option<bool>,
+    overrides: &DerivedFieldOverrides,
+) -> TantivyDocument {
     let f = SchemaTools::email_fields();
     let mut new_doc = TantivyDocument::new();
 
@@ -2838,34 +3258,73 @@ fn rebuild_envelope_doc(
         if field == f.f_tags
             || (imap_uid_override.is_some() && field == f.f_imap_uid)
             || (cleanup_moved_override.is_some() && field == f.f_cleanup_moved)
+            || (overrides.subject.is_some() && field == f.f_subject)
+            || (overrides.preview.is_some() && field == f.f_preview)
+            || (overrides.from.is_some() && field == f.f_from)
+            || (overrides.from_name.is_some() && field == f.f_from_name)
+            || (overrides.wire_from.is_some() && field == f.f_wire_from)
         {
             continue;
         }
         new_doc.add_field_value(field, value);
     }
 
-    // Non-stored text fields: word level plus trigram siblings. `subject` is
-    // stored, but its trigram sibling is not.
-    for val in old_doc.get_all(f.f_subject) {
-        if let Some(s) = val.as_str() {
-            new_doc.add_text(f.f_subject_tri, s);
-        }
+    // The replaced stored values themselves. They go in after the copy loop
+    // because the loop above skipped them.
+    if let Some(value) = &overrides.subject {
+        new_doc.add_text(f.f_subject, value);
     }
-    for val in old_doc.get_all(f.f_from) {
-        if let Some(s) = val.as_str() {
-            new_doc.add_text(f.f_from_text, s);
-            new_doc.add_text(f.f_from_text_tri, s);
-        }
+    if let Some(value) = &overrides.preview {
+        new_doc.add_text(f.f_preview, value);
+    }
+    if let Some(value) = &overrides.from {
+        new_doc.add_text(f.f_from, value);
+    }
+    if let Some(Some(value)) = &overrides.from_name {
+        new_doc.add_text(f.f_from_name, value);
+    }
+    if let Some(Some(value)) = &overrides.wire_from {
+        new_doc.add_text(f.f_wire_from, value);
+    }
+
+    // Non-stored text fields: word level plus trigram siblings. `subject` is
+    // stored, but its trigram sibling is not. An overridden value must feed
+    // the sibling too, or search would keep matching the stale text.
+    let values_of = |field: Field| -> Vec<String> {
+        old_doc
+            .get_all(field)
+            .filter_map(|v| v.as_str().map(String::from))
+            .collect()
+    };
+    let subject_values = match &overrides.subject {
+        Some(value) => vec![value.clone()],
+        None => values_of(f.f_subject),
+    };
+    for s in &subject_values {
+        new_doc.add_text(f.f_subject_tri, s);
+    }
+
+    let from_values = match &overrides.from {
+        Some(value) => vec![value.clone()],
+        None => values_of(f.f_from),
+    };
+    for s in &from_values {
+        new_doc.add_text(f.f_from_text, s);
+        new_doc.add_text(f.f_from_text_tri, s);
     }
     // The stored name/original address are copied by the generic loop above;
     // their searchable copies have to be rebuilt like `from`.
-    for field in [f.f_from_name, f.f_wire_from] {
-        for val in old_doc.get_all(field) {
-            if let Some(s) = val.as_str() {
-                new_doc.add_text(f.f_from_text, s);
-                new_doc.add_text(f.f_from_text_tri, s);
-            }
-        }
+    let from_name_values = match &overrides.from_name {
+        Some(value) => value.iter().cloned().collect(),
+        None => values_of(f.f_from_name),
+    };
+    let wire_from_values = match &overrides.wire_from {
+        Some(value) => value.iter().cloned().collect(),
+        None => values_of(f.f_wire_from),
+    };
+    for s in from_name_values.iter().chain(wire_from_values.iter()) {
+        new_doc.add_text(f.f_from_text, s);
+        new_doc.add_text(f.f_from_text_tri, s);
     }
     for val in old_doc.get_all(f.f_to) {
         if let Some(s) = val.as_str() {
@@ -2918,17 +3377,23 @@ fn rebuild_envelope_doc(
         }
     }
 
-    // Body text, re-extracted from the stored EML.
-    if let Some(content_hash) = old_doc
+    // Body text: the repair path already parsed the EML, so use its text
+    // directly. Otherwise re-extract it from the stored EML.
+    if let Some(body) = &overrides.body {
+        if !body.is_empty() {
+            new_doc.add_text(f.f_body, body);
+        }
+    } else if let Some(content_hash) = old_doc
         .get_first(f.f_content_hash)
         .and_then(|v| v.as_str())
     {
         if let Some(eml_bytes) = body_of(content_hash) {
             if let Some(message) = MessageParser::new().parse(&eml_bytes) {
-                let text = message
-                    .body_text(0)
-                    .map(|cow| cow.into_owned())
-                    .or_else(|| message.body_html(0).map(|cow| extract_text(cow.as_ref())))
+                let text = crate::envelope::extractor::first_body_text(&message)
+                    .or_else(|| {
+                        crate::envelope::extractor::first_body_html(&message)
+                            .map(|html| extract_text(&html))
+                    })
                     .unwrap_or_default();
                 let body_text = crate::utils::normalize_whitespace(&text);
                 if !body_text.is_empty() {
@@ -3454,6 +3919,141 @@ mod tests {
             .filter_map(|v| v.as_bool())
             .collect();
         assert_eq!(values, vec![true]);
+    }
+
+    /// A derived-field repair (issue #406) replaces only the presentation
+    /// fields whose decode was wrong, and leaves every special field —
+    /// identity, stable UIDs, timestamps, tags, cleanup state, attachment
+    /// metadata — byte-for-byte intact.
+    #[test]
+    fn derived_field_overrides_replace_presentation_and_preserve_special_fields() {
+        let f = SchemaTools::email_fields();
+        let index = Index::create_in_ram(SchemaTools::email_schema());
+        index.tokenizers().register("euro", EuroTokenizer::new());
+        index.tokenizers().register("tri", tri_analyzer());
+
+        let mut seed = build_test_doc();
+        seed.add_bool(f.f_cleanup_moved, true);
+        {
+            let mut writer = index.writer_with_num_threads(1, 15_000_000).unwrap();
+            writer.add_document(seed).unwrap();
+            writer.commit().unwrap();
+        }
+
+        // Production reads the old document through the searcher, so only
+        // stored fields are present. Rebuilding from the in-memory fixture
+        // would mask a regression behind non-stored values.
+        let old = {
+            let reader = index.reader().unwrap();
+            reader.reload().unwrap();
+            let searcher = reader.searcher();
+            let query = TermQuery::new(
+                Term::from_field_text(f.f_id, "test-eid-001"),
+                IndexRecordOption::Basic,
+            );
+            let hits = searcher
+                .search(&query, &TopDocs::with_limit(1).order_by_score())
+                .unwrap();
+            assert_eq!(hits.len(), 1, "the test document must be indexed");
+            searcher.doc(hits[0].1).unwrap()
+        };
+        let baseline = field_snapshot(&old);
+
+        let overrides = DerivedFieldOverrides {
+            subject: Some("喵喵喵的喵喵喵".into()),
+            preview: Some("喵喵喵的喵喵喵".into()),
+            from: None,
+            from_name: Some(Some("喵".into())),
+            wire_from: None,
+            body: Some("喵喵喵的喵喵喵".into()),
+        };
+        let rebuilt = rebuild_envelope_doc_with_overrides(
+            &old,
+            tag_paths(&old),
+            |_| None,
+            None,
+            None,
+            &overrides,
+        );
+
+        // Replaced stored values and their non-stored search siblings.
+        let values = |field: Field| -> Vec<&str> {
+            rebuilt.get_all(field).filter_map(|v| v.as_str()).collect()
+        };
+        assert_eq!(values(f.f_subject), vec!["喵喵喵的喵喵喵"]);
+        assert_eq!(
+            values(f.f_subject_tri),
+            vec!["喵喵喵的喵喵喵"],
+            "the trigram sibling must follow the overridden subject"
+        );
+        assert_eq!(values(f.f_preview), vec!["喵喵喵的喵喵喵"]);
+        assert_eq!(values(f.f_from_name), vec!["喵"]);
+        assert_eq!(values(f.f_body), vec!["喵喵喵的喵喵喵"]);
+        assert!(
+            values(f.f_from_text).contains(&"喵"),
+            "from_text must include the repaired display name"
+        );
+        assert!(
+            values(f.f_from_text).contains(&"alice@example.com"),
+            "from_text must keep the original address"
+        );
+
+        // Special fields are copied verbatim, never recomputed. Compare
+        // through a real index round trip so only STORED fields are in play —
+        // the rebuilt document also carries non-stored search fields, which
+        // the baseline read-back never sees.
+        {
+            let mut writer = index.writer_with_num_threads(1, 15_000_000).unwrap();
+            writer.delete_term(Term::from_field_text(f.f_id, "test-eid-001"));
+            writer.add_document(rebuilt).unwrap();
+            writer.commit().unwrap();
+        }
+        let after = field_snapshot(&{
+            let reader = index.reader().unwrap();
+            reader.reload().unwrap();
+            let searcher = reader.searcher();
+            let query = TermQuery::new(
+                Term::from_field_text(f.f_id, "test-eid-001"),
+                IndexRecordOption::Basic,
+            );
+            let hits = searcher
+                .search(&query, &TopDocs::with_limit(1).order_by_score())
+                .unwrap();
+            assert_eq!(hits.len(), 1, "the rebuilt document must be indexed");
+            searcher.doc(hits[0].1).unwrap()
+        });
+        for field in [
+            "id",
+            "message_id",
+            "account_id",
+            "mailbox_id",
+            "uid",
+            "imap_uid",
+            "content_hash",
+            "thread_id",
+            "date",
+            "internal_date",
+            "ingest_at",
+            "size",
+            "cleanup_moved",
+            "tags",
+            "attachments",
+            "attachment_name_exact",
+            "attachment_count",
+            "regular_attachment_count",
+            "shard_id",
+            "from",
+            "wire_from",
+            "to",
+            "cc",
+            "bcc",
+        ] {
+            assert_eq!(
+                after.get(field),
+                baseline.get(field),
+                "special field '{field}' must be preserved"
+            );
+        }
     }
 
     fn uid_override_replaces_the_stored_value() {
@@ -4184,6 +4784,7 @@ mod tests {
             extraction_rules: None,
             override_from_headers: None,
             retention_days: None,
+            min_retention_days: None,
             remote_cleanup: None,
             kind: None,
             view: None,
@@ -4206,6 +4807,22 @@ mod tests {
             result.err()
         );
 
+        // The derived-field rewrite path (repair) carries the same guard. A
+        // non-held account reaches the index path and gets Ok(false) because
+        // the envelope id does not exist.
+        let overrides = || DerivedFieldOverrides {
+            subject: Some("喵".into()),
+            ..Default::default()
+        };
+        let result = ENVELOPE_MANAGER
+            .update_envelope_derived_fields(account.id, "some-eid", overrides())
+            .await;
+        assert!(
+            result.is_ok(),
+            "derived-field repair for a non-held account should reach the index path: {:?}",
+            result.err()
+        );
+
         // Under a hold: refused with Forbidden before touching the index.
         AccountModel::place_legal_hold(account.id, 7, Some("freeze".into())).unwrap();
         let err = ENVELOPE_MANAGER
@@ -4213,6 +4830,16 @@ mod tests {
             .await
             .unwrap_err();
         assert_eq!(err.code(), ErrorCode::Forbidden);
+
+        let err = ENVELOPE_MANAGER
+            .update_envelope_derived_fields(account.id, "some-eid", overrides())
+            .await
+            .unwrap_err();
+        assert_eq!(
+            err.code(),
+            ErrorCode::Forbidden,
+            "repair must not rewrite a held account's document"
+        );
     }
 
     // ── BM25 relevance vs DATE desc ordering ──────────────────────

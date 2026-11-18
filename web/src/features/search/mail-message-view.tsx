@@ -134,7 +134,7 @@ export function MailMessageView({
   // the tooltip.
   const { require_any_permission } = useCurrentUser();
   const canEditTags = require_any_permission(
-    ['system:root', 'data:manage'],
+    ['system:root', 'data:manage', 'data:manage:all'],
     envelope.account_id
   );
   const canDelete = require_any_permission(
@@ -156,7 +156,7 @@ export function MailMessageView({
   // Repair is non-destructive (hash-verified re-fetch), so it uses the same
   // permission as metadata management rather than the delete/restore gates.
   const canRepair = require_any_permission(
-    ['system:root', 'data:manage'],
+    ['system:root', 'data:manage', 'data:manage:all'],
     envelope.account_id
   );
   const noPermission = t('common.noPermission', 'No permission');
@@ -288,11 +288,14 @@ export function MailMessageView({
     }
   };
 
-  // Inline attachments are part of the rendered body; only regular ones get a
-  // row. When there are none, the whole section is omitted so the message body
+  // Parts rendered in the body (a cid: reference) get no row; everything else
+  // does. A bare `Content-Disposition: inline` does not make a part body
+  // content — Apple Mail attaches PDFs that way — but older servers still
+  // report it as `inline` with no content_id (#404).
+  // When there are no rows, the whole section is omitted so the message body
   // gets the space instead of an empty "No attachments" line.
   const nonInlineAttachments = (attachments ?? []).filter(
-    (attachment) => !attachment.inline
+    (attachment) => !(attachment.inline && attachment.content_id)
   )
 
   const actionButtons = (
