@@ -88,7 +88,7 @@ export default function Settings() {
       href: '/settings/ldap',
       icon: <Building2 size={18} />,
       group: groups.authentication,
-      visible: isEnterprise && (canGlobal('system:root') || canGlobal('user:manage')),
+      visible: isPro && (canGlobal('system:root') || canGlobal('user:manage')),
     },
     {
       title: t('settings.sidebar.siem', 'SIEM'),
@@ -107,7 +107,7 @@ export default function Settings() {
       href: '/settings/journal',
       icon: <Inbox size={18} />,
       group: groups.integrations,
-      visible: (isPro || isEnterprise) && canGlobal('system:root'),
+      visible: isEnterprise && canGlobal('system:root'),
     },
     {
       title: t('settings.sidebar.proxy'),
